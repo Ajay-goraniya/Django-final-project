@@ -1,0 +1,62 @@
+<!-- /*
+* Bootstrap 5
+* Template Name: Furni
+* Template Author: Untree.co
+* Template URI: https://untree.co/
+* License: https://creativecommons.org/licenses/by/3.0/
+*/ -->
+{% extends 'seller-header.html' %}
+{% load static %}
+{% block content %}
+<!doctype html>
+<html lang="en">
+<head>
+	</head>
+
+	<body>
+		<!-- Start Hero Section -->
+			<div class="hero">
+				<div class="container">
+					<div class="row justify-content-between">
+						<div class="col-lg-5">
+							<div class="intro-excerpt">
+								<h1>Shop</h1>
+							</div>
+						</div>
+						<div class="col-lg-7">
+							
+						</div>
+					</div>
+				</div>
+			</div>
+		<!-- End Hero Section -->
+
+		
+
+		<div class="untree_co-section product-section before-footer-section">
+		    <div class="container">
+		      	<div class="row">
+		      		
+		      		<!-- Start Column 1 -->
+					<div class="col-12 col-md-6 col-lg-6 mb-5">
+						
+							<img src="{{product.product_image.url}}" style="width:300px;height:300px;" class="img-fluid product-thumbnail">
+							<h3 class="product-title">{{product.product_name}}</h3>
+							Category : <strong class="product-price">{{product.product_category}}</strong>
+							<br>
+							Price : <strong class="product-price">{{product.product_price}}</strong>
+							<br>
+							Details : <strong class="product-price">{{product.product_desc}}</strong>
+							<br><br>
+							<a href="{% url 'seller-product-edit' pk=product.pk %}"><input type="button" value="EDIT" class="btn btn-primary"></a>
+							<a href="{% url 'seller-product-delete' pk=product.pk %}"><input type="button" value="DELETE" class="btn btn-primary"></a>
+					</div> 
+					<!-- End Column 1 -->
+					
+					
+		      	</div>
+		    </div>
+		</div>
+	</body>
+</html>
+{% endblock %}

@@ -1,0 +1,118 @@
+<!-- /*
+* Bootstrap 5
+* Template Name: Furni
+* Template Author: Untree.co
+* Template URI: https://untree.co/
+* License: https://creativecommons.org/licenses/by/3.0/
+*/ -->
+{% extends 'seller-header.html' %}
+{% load static %}
+{% block content %}
+<!doctype html>
+<html lang="en">
+<head>
+  
+  </head>
+
+  <body>
+    <!-- Start Hero Section -->
+      <div class="hero">
+        <div class="container">
+          <div class="row justify-content-between">
+            <div class="col-lg-5">
+              <div class="intro-excerpt">
+                <h1>Update Product</h1>
+                
+              </div>
+            </div>
+            <div class="col-lg-7">
+              <div class="hero-img-wrap">
+                <img src="{% static 'images/couch.png' %}" class="img-fluid">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    <!-- End Hero Section -->
+
+    
+    <!-- Start Contact Form -->
+    <div class="untree_co-section">
+      <div class="container">
+
+        <div class="block">
+          <div class="row justify-content-center">
+
+
+            <div class="col-md-8 col-lg-8 pb-4">
+
+
+              
+                {% if msg %}
+                    <b style="color:blue">{{msg}}</b>
+                {% endif %}
+              <form method="post" action="{% url 'seller-product-edit' pk=product.pk %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="row">
+                  <div class="col-12">
+                    <div class="form-group">
+                      <label class="text-black" for="fname">Select Product Category</label>
+                      <select name="product_category" class="form-control" id="fname">
+                        {% if product.product_category == "Sofa" %}
+                          <option>---Select Product Category---</option>
+                          <option value="Sofa" selected="">Sofa</option>
+                          <option value="Chair">Chair</option>
+                        {% elif product.product_category == "Chair" %}
+                          <option>---Select Product Category---</option>
+                          <option value="Sofa">Sofa</option>
+                          <option value="Chair" selected="">Chair</option>
+                        {% endif %}
+                        
+                      </select>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="form-group">
+                      <label class="text-black" for="fname">Product name</label>
+                      <input type="text" class="form-control" id="fname" name="product_name" value="{{product.product_name}}">
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="form-group">
+                      <label class="text-black" for="lname">Product Price</label>
+                      <input type="text" class="form-control" id="lname" name="product_price"  value="{{product.product_price}}">
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group mb-5">
+                  <label class="text-black" for="message">Product Description</label>
+                  <textarea name="product_desc" class="form-control" id="message" cols="30" rows="5">{{product.product_desc}}</textarea>
+                </div>
+                <div class="form-group mb-5">
+                  <img src="{{product.product_image.url}}" style="width:200px;height:200px;">
+                </div>
+                <div class="form-group">
+                  <label class="text-black" for="email">Product Image</label>
+                  <input type="file" class="form-control" id="email" name="product_image">
+                </div>
+                
+                <br><br>
+                <button type="submit" class="btn btn-primary-hover-outline">Update Product</button>
+              </form>
+              
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+    </div>
+  </div>
+
+  <!-- End Contact Form -->
+  </body>
+</html>
+{% endblock %}

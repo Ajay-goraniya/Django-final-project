@@ -1,0 +1,109 @@
+<!-- /*
+* Bootstrap 5
+* Template Name: Furni
+* Template Author: Untree.co
+* Template URI: https://untree.co/
+* License: https://creativecommons.org/licenses/by/3.0/
+*/ -->
+{% extends 'header.html' %}
+{% load static %}
+{% block content %}
+<!doctype html>
+<html lang="en">
+<head>
+  
+  </head>
+
+  <body>
+    <!-- Start Hero Section -->
+      <div class="hero">
+        <div class="container">
+          <div class="row justify-content-between">
+            <div class="col-lg-5">
+              <div class="intro-excerpt">
+                <h1>Profile</h1>
+                <a href="" class="btn btn-secondary me-2">Shop Now</a><a href="#" class="btn btn-white-outline">Explore</a></p>
+              </div>
+            </div>
+            <div class="col-lg-7">
+              <div class="hero-img-wrap">
+                <img src="{% static 'images/couch.png' %}" class="img-fluid">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    <!-- End Hero Section -->
+
+    
+    <!-- Start Contact Form -->
+    <div class="untree_co-section">
+      <div class="container">
+
+        <div class="block">
+          <div class="row justify-content-center">
+
+
+            <div class="col-md-8 col-lg-8 pb-4">
+
+
+             
+                {% if msg %}
+                    <b style="color:blue">{{msg}}</b>
+                {% endif %}
+              <form method="post" action="{% url 'profile' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="row">
+                  <div class="col-6">
+                    <div class="form-group">
+                      <label class="text-black" for="fname">First name</label>
+                      <input type="text" class="form-control" id="fname" name="fname" value="{{user.fname}}">
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="form-group">
+                      <label class="text-black" for="lname">Last name</label>
+                      <input type="text" class="form-control" id="lname" name="lname" value="{{user.lname}}">
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="text-black" for="email">Email address</label>
+                  <input type="email" class="form-control" id="email" name="email" value="{{user.email}}" readonly>
+                </div>
+                <div class="form-group">
+                  <label class="text-black" for="email">Mobile</label>
+                  <input type="text" class="form-control" id="email" name="mobile" value="{{user.mobile}}">
+                </div>
+
+                <div class="form-group mb-5">
+                  <label class="text-black" for="message">Address</label>
+                  <textarea name="address" class="form-control" id="message" cols="30" rows="5">{{user.address}}</textarea>
+                </div>
+                <div class="form-group">
+                  <img src="{{user.profile_picture.url}}" style="width:100px;height:100px;border-radius:50%">
+                </div>
+                <div class="form-group">
+                  <label class="text-black" for="email">Profile Picture</label>
+                  <input type="file" class="form-control" id="email" name="profile_picture">
+                </div>
+                
+                <br><br>
+                <button type="submit" class="btn btn-primary-hover-outline">Update Profile</button>
+              </form>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+    </div>
+  </div>
+
+  <!-- End Contact Form -->
+  </body>
+</html>
+{% endblock %}

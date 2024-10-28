@@ -1,0 +1,155 @@
+<!-- /*
+* Bootstrap 5
+* Template Name: Furni
+* Template Author: Untree.co
+* Template URI: https://untree.co/
+* License: https://creativecommons.org/licenses/by/3.0/
+*/ -->
+{% extends 'header.html' %}
+{% load static %}
+{% block content %}
+<!doctype html>
+<html lang="en">
+<head>
+  <script src="https://js.stripe.com/v3/"></script>
+	</head>
+
+	<body>
+
+		
+
+		<!-- Start Hero Section -->
+			<div class="hero">
+				<div class="container">
+					<div class="row justify-content-between">
+						<div class="col-lg-5">
+							<div class="intro-excerpt">
+								<h1>Cart</h1>
+							</div>
+						</div>
+						<div class="col-lg-7">
+							
+						</div>
+					</div>
+				</div>
+			</div>
+		<!-- End Hero Section -->
+
+		
+
+		<div class="untree_co-section before-footer-section">
+            <div class="container">
+              <div class="row mb-5">
+                
+                  <div class="site-blocks-table">
+                    <table class="table">
+                      <thead>
+                        <tr>
+                          <th class="product-thumbnail">Image</th>
+                          <th class="product-name">Product</th>
+                          <th class="product-price">Price</th>
+                          <th class="product-quantity">Quantity</th>
+                          <th class="product-total">Total</th>
+                          <th class="product-remove">Remove</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                      	{% for i in carts %}
+                        <tr>
+                          <td class="product-thumbnail">
+                            <img src="{{i.product.product_image.url}}" alt="Image" class="img-fluid">
+                          </td>
+                          <td class="product-name">
+                            <h2 class="h5 text-black">{{i.product.product_name}}</h2>
+                          </td>
+                          <td>{{i.product.product_price}}</td>
+                          <td>
+        										<form method="post" action="{% url 'change-qty' %}">
+        											{% csrf_token %}
+        											<input type="hidden" name="pk" value="{{i.pk}}">
+        											<input type="number" name="product_qty" value="{{i.product_qty}}" min="1" max="10" onchange="this.form.submit();">
+        										</form>
+                          </td>
+                          <td>{{i.total_price}}</td>
+                          <td><a href="{% url 'remove-from-cart' pk=i.product.pk %}" class="btn btn-black btn-sm">X</a></td>
+                        </tr>
+        								{% endfor %}
+                        
+                      </tbody>
+                    </table>
+                  </div>
+                
+              </div>
+        
+              <div class="row">
+                
+                <div class="col-md-6 pl-5">
+                  <div class="row justify-content-end">
+                    <div class="col-md-7">
+                      <div class="row">
+                        <div class="col-md-12 text-right border-bottom mb-5">
+                          <h3 class="text-black h4 text-uppercase">Cart Totals</h3>
+                        </div>
+                      </div>
+                      
+                      <div class="row mb-5">
+                        <div class="col-md-6">
+                          <span class="text-black">Total</span>
+                        </div>
+                        <div class="col-md-6 text-right">
+                          <strong class="text-black">{{net_price}}</strong>
+                        </div>
+                      </div>
+        
+                      <div class="row">
+                        <div class="col-md-12">
+                          <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" id="net_price" name="amount" value="{{net_price}}">
+                        <button type="button" class="btn btn-lg btn-success" id="checkout-button">Checkout</button>
+                    </form>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+			<script type="text/javascript">
+
+var stripe = Stripe('pk_test_51MshH6SJuXwPfjjrrgxJ5tubbOgYAhRrqNcd4RDUSq1peWpIMZrjhIiTncSUWO9u6byeDf4KxdZPkFD4hU55mVOg00aRL5RT8x');
+var checkoutButton = document.getElementById('checkout-button');
+
+checkoutButton.addEventListener('click', function() { 
+ fetch('/create-checkout-session/', {
+ method: 'POST',
+    headers:{
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest', //Necessary to work with request.is_ajax()
+
+    },
+    body: JSON.stringify({'post_data':'{{net_price}}'})
+ })
+ .then(function(response) {
+ return response.json();
+ })
+ .then(function(session) {
+ return stripe.redirectToCheckout({ sessionId: session.id });
+ })
+ .then(function(result) {
+ // If `redirectToCheckout` fails due to a browser or network
+ // error, you should display the localized error message to your
+ // customer using `error.message`.
+ if (result.error) {
+ alert(result.error.message);
+ }
+ })
+ .catch(function(error) {
+ console.error('Error:', error);
+ });
+ });
+ </script>
+			</body>
+</html>
+{% endblock %}

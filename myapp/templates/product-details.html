@@ -1,0 +1,75 @@
+<!-- /*
+* Bootstrap 5
+* Template Name: Furni
+* Template Author: Untree.co
+* Template URI: https://untree.co/
+* License: https://creativecommons.org/licenses/by/3.0/
+*/ -->
+{% extends 'header.html' %}
+{% load static %}
+{% block content %}
+<!doctype html>
+<html lang="en">
+<head>
+	</head>
+
+	<body>
+		<!-- Start Hero Section -->
+			<div class="hero">
+				<div class="container">
+					<div class="row justify-content-between">
+						<div class="col-lg-5">
+							<div class="intro-excerpt">
+								<h1>Shop</h1>
+							</div>
+						</div>
+						<div class="col-lg-7">
+							
+						</div>
+					</div>
+				</div>
+			</div>
+		<!-- End Hero Section -->
+
+		
+
+		<div class="untree_co-section product-section before-footer-section">
+		    <div class="container">
+		      	<div class="row">
+		      		
+		      		<!-- Start Column 1 -->
+					<div class="col-12 col-md-6 col-lg-6 mb-5">
+						
+							<img src="{{product.product_image.url}}" style="width:300px;height:300px;" class="img-fluid product-thumbnail">
+							<h3 class="product-title">{{product.product_name}}</h3>
+							Category : <strong class="product-price">{{product.product_category}}</strong>
+							<br>
+							Price : <strong class="product-price">{{product.product_price}}</strong>
+							<br>
+							Details : <strong class="product-price">{{product.product_desc}}</strong>
+							<br><br>
+							{% if request.session.email %}
+								{% if cart_flag == True %}
+									<a href="{% url 'remove-from-cart' pk=product.pk %}"><input type="button" value="Remove From Cart" class="btn btn-primary"></a>
+								{% else %}
+									<a href="{% url 'add-to-cart' pk=product.pk %}"><input type="button" value="Add To Cart" class="btn btn-primary"></a>
+								{% endif %}
+								{% if wishlist_flag == True %}
+									<a href="{% url 'remove-from-wishlist' pk=product.pk %}"><input type="button" value="Remove From Wishlist" class="btn btn-primary"></a>
+								{% else %}
+									<a href="{% url 'add-to-wishlist' pk=product.pk %}"><input type="button" value="Add To Wishlist" class="btn btn-primary"></a>
+								{% endif %}
+								
+							{% else %}
+								<a href="{% url 'login' %}"><input type="button" value="Login" class="btn btn-primary"></a>
+							{% endif %}
+					</div> 
+					<!-- End Column 1 -->
+					
+					
+		      	</div>
+		    </div>
+		</div>
+	</body>
+</html>
+{% endblock %}
