@@ -10,3 +10,8 @@ work/*.log
 work/*.json
 work/__pycache__/
 __pycache__/
+
+# Delivered database copies (sent as attachments; regenerate with replay_build36.py)
+deliver/*.sqlite3
+deliver/*.sqlite3-wal
+deliver/*.sqlite3-shm

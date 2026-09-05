@@ -136,6 +136,9 @@ def main():
     if dbp.exists():
         dbp.unlink()
     store = b36.Store(dbp)
+    # Stamp this build's ownership marker so the finished database can be read
+    # straight back with `--ef-report` instead of being refused as foreign.
+    store.claim_database_namespace()
     engine = b36.Engine(store)
     # MASTER must be OFF: signals fire, are recorded, settled and counted, but
     # no venue order is ever built. Assert rather than assume.
