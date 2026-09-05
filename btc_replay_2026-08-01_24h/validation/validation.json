@@ -1,0 +1,158 @@
+{
+  "window_utc": {
+    "start": "2026-08-01T00:00:00Z",
+    "end": "2026-08-02T00:00:00Z",
+    "end_exclusive": true
+  },
+  "canonical_clock": "UTC",
+  "timestamp_unit": "microseconds",
+  "klines": {
+    "measured_candles": 288,
+    "expected": 288,
+    "exactly_288": true,
+    "consecutive_5m": true,
+    "duplicates": 0,
+    "all_completed_in_window": true,
+    "first_open_us": 1785542400000000,
+    "last_close_us": 1785628799999999,
+    "preroll_candles": 3,
+    "columns": [
+      "open_time",
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume",
+      "close_time",
+      "quote_volume",
+      "trade_count",
+      "taker_buy_base_volume",
+      "taker_buy_quote_volume"
+    ]
+  },
+  "spot_aggtrades": {
+    "files": 24,
+    "rows": 266286,
+    "first_ts_us": 1785542400207874,
+    "last_ts_us": 1785628799846767,
+    "within_window": true,
+    "monotonic_after_sort": true,
+    "duplicate_ids": 0,
+    "id_gaps_gt1": 0,
+    "id_missing_count": 0,
+    "preroll_rows": 3252
+  },
+  "perp_aggtrades": {
+    "files": 24,
+    "rows": 399219,
+    "first_ts_us": 1785542400081000,
+    "last_ts_us": 1785628799912000,
+    "within_window": true,
+    "monotonic_after_sort": true,
+    "duplicate_ids": 0,
+    "id_gaps_gt1": 0,
+    "id_missing_count": 0,
+    "preroll_rows": 5104
+  },
+  "perp_trades": {
+    "files": 24,
+    "rows": 1073872,
+    "first_ts_us": 1785542400022000,
+    "last_ts_us": 1785628799912000,
+    "within_window": true,
+    "monotonic_after_sort": true,
+    "duplicate_ids": 0,
+    "id_gaps_gt1": 5294,
+    "id_missing_count": 15887,
+    "preroll_rows": 0,
+    "id_gap_explanation": "Binance aggTrades ranges imply 1084399 individual trades in the window; Tardis `trades` contains 1073872 rows (delta 10527). Trade-id gaps reflect this difference and Binance's own non-contiguous id assignment; aggregate flow is fully covered by perp_aggtrades_*.parquet, which has zero id gaps.",
+    "binance_implied_individual_trades": 1084399
+  },
+  "perp_depth20": {
+    "files": 24,
+    "snapshots": 3217252,
+    "first_ts_us": 1785542400611000,
+    "last_ts_us": 1785628799978000,
+    "within_window": true,
+    "monotonic": true,
+    "crossed_books": 0,
+    "resync_events": 7,
+    "messages_with_fewer_than_20_levels": 0,
+    "min_bid_levels": 1025,
+    "min_ask_levels": 1015,
+    "top20_available_pct": 100.0,
+    "max_gap_us": 59956000,
+    "gap_p50_us": 26000,
+    "gap_p95_us": 28000,
+    "gap_p99_us": 28000,
+    "mean_interval_us": 26855.028407792863,
+    "pct_period_with_depth_fresher_than_1s": 99.9288,
+    "sequence_ids": "UNAVAILABLE - Tardis incremental_book_L2 CSV carries no exchange update id; ordering is by (timestamp, local_timestamp) in provider file order",
+    "stale_intervals_gt_1s": {
+      "count": 6,
+      "total_seconds": 67.849,
+      "pct_of_window": 0.0785,
+      "note": "Provider capture interruptions. The book is NOT interpolated across these; the next row after each gap carries genuine post-gap state. Consumers should treat depth as stale inside these intervals.",
+      "intervals": [
+        {
+          "from_utc": "2026-08-01T18:30:40.607000+00:00",
+          "to_utc": "2026-08-01T18:30:43.178000+00:00",
+          "gap_seconds": 2.571,
+          "from_ts_us": 1785609040607000,
+          "to_ts_us": 1785609043178000
+        },
+        {
+          "from_utc": "2026-08-01T18:31:09.740000+00:00",
+          "to_utc": "2026-08-01T18:32:09.696000+00:00",
+          "gap_seconds": 59.956,
+          "from_ts_us": 1785609069740000,
+          "to_ts_us": 1785609129696000
+        },
+        {
+          "from_utc": "2026-08-01T18:45:07.304000+00:00",
+          "to_utc": "2026-08-01T18:45:08.397000+00:00",
+          "gap_seconds": 1.093,
+          "from_ts_us": 1785609907304000,
+          "to_ts_us": 1785609908397000
+        },
+        {
+          "from_utc": "2026-08-01T18:45:08.397000+00:00",
+          "to_utc": "2026-08-01T18:45:09.450000+00:00",
+          "gap_seconds": 1.053,
+          "from_ts_us": 1785609908397000,
+          "to_ts_us": 1785609909450000
+        },
+        {
+          "from_utc": "2026-08-01T18:45:10.992000+00:00",
+          "to_utc": "2026-08-01T18:45:12.958000+00:00",
+          "gap_seconds": 1.966,
+          "from_ts_us": 1785609910992000,
+          "to_ts_us": 1785609912958000
+        },
+        {
+          "from_utc": "2026-08-01T18:45:12.958000+00:00",
+          "to_utc": "2026-08-01T18:45:14.168000+00:00",
+          "gap_seconds": 1.21,
+          "from_ts_us": 1785609912958000,
+          "to_ts_us": 1785609914168000
+        }
+      ]
+    }
+  },
+  "depth_reconstruction_crosscheck": {
+    "compared_snapshots": 1893492,
+    "matched_timestamps": 1893492,
+    "level_price_mismatches": 0,
+    "level_qty_mismatches": 0,
+    "unmatched_provider_snapshots": 0,
+    "levels_compared": 75739680,
+    "price_agreement_pct": 100.0,
+    "qty_agreement_pct": 100.0
+  },
+  "notes": {
+    "SPOT_DEPTH_UNAVAILABLE": "Binance publishes no historical spot L2 depth in any public archive (spot daily families: aggTrades, klines, trades).",
+    "PREDICT_BOOK_HISTORY_UNAVAILABLE": "api.predict.fun/v1/markets -> HTTP 401; no read credential.",
+    "PRE_ROLL_PERP_DEPTH_UNAVAILABLE": "Tardis free tier serves only the first day of each month, so 2026-07-31 perp L2 is not retrievable. Pre-roll covers spot klines/aggTrades and perp aggTrades only.",
+    "LIVE_RECEIVE_CLOCK": "AVAILABLE for Tardis products as `local_timestamp` (collector receive clock, microseconds). Binance Vision archives carry exchange time only."
+  }
+}
