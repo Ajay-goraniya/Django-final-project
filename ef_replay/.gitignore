@@ -1,0 +1,12 @@
+# Build35/36 model sources are the user's proprietary trading code, supplied as
+# session uploads. They are deliberately NOT committed to this repository.
+work/btc_model_v9_3_BUILD*.py
+
+# Run artifacts: databases, logs, caches, result JSON (regenerate with replay_build36.py)
+work/*.sqlite3
+work/*.sqlite3-shm
+work/*.sqlite3-wal
+work/*.log
+work/*.json
+work/__pycache__/
+__pycache__/
