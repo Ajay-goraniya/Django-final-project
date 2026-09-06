@@ -11,3 +11,7 @@ venv/
 btc_replay_*.tar.gz
 btc_replay_*.part*
 btc_replay_multi/
+week_data/depth/
+week_data/trades/
+week_data/predictfun/
+week_data/logs/
