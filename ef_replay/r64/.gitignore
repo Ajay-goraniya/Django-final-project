@@ -1,0 +1,8 @@
+# generated replay outputs (large, regenerable)
+*.sqlite3
+*.log
+replay_r64_full.json
+r64_fires_repriced.csv
+*.sqlite3-shm
+*.sqlite3-wal
+__pycache__/
