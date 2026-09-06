@@ -32,37 +32,42 @@ def check(day, sample_hours=None):
     hrs = sample_hours or list(range(len(fs)))
     T = load_trades(day)
     out = dict(day=day, hours=len(fs))
-    lad = []
+    T = load_trades(day)
+    per_hour = []
+    tot_in = tot_n = 0
+    L_all = []
     for i in hrs:
         if i >= len(fs): continue
         t = pq.read_table(fs[i], columns=["timestamp", "bid_px_0", "ask_px_0", "is_crossed",
                                           "is_warmup", "n_bid_levels", "n_ask_levels"]).to_pandas()
-        lad.append(t)
-    L = pd.concat(lad, ignore_index=True).sort_values("timestamp")
+        t = t.sort_values("timestamp"); L_all.append(t)
+        # compare ONLY trades that fall inside this hour's own ladder span
+        t2 = t[t.is_warmup == 0]
+        if T is None or len(t2) == 0: continue
+        ts = t2.timestamp.to_numpy() // 1000
+        bb = t2.bid_px_0.to_numpy(); ba = t2.ask_px_0.to_numpy()
+        Tt = T[(T.ts_ms >= ts.min()) & (T.ts_ms <= ts.max())]
+        if not len(Tt): continue
+        idx = np.searchsorted(ts, Tt.ts_ms.to_numpy(), side="right") - 1
+        ok = idx >= 0
+        idx = idx[ok]; p = Tt.price.to_numpy()[ok]
+        age_ms = Tt.ts_ms.to_numpy()[ok] - ts[idx]
+        fresh = age_ms <= 1000                      # ladder must be at most 1 s stale
+        idx = idx[fresh]; p = p[fresh]
+        inside = (p >= bb[idx] - 1e-9) & (p <= ba[idx] + 1e-9)
+        tot_in += int(inside.sum()); tot_n += int(len(p))
+        per_hour.append(dict(hour=i, trades=int(len(p)), inside_pct=round(100*float(inside.mean()), 3)))
+    L = pd.concat(L_all, ignore_index=True)
     out["ladders_checked"] = len(L)
     out["crossed_pct"] = round(100 * L.is_crossed.mean(), 3)
     out["warmup_rows"] = int(L.is_warmup.sum())
     out["median_levels"] = [int(L.n_bid_levels.median()), int(L.n_ask_levels.median())]
     out["spread_p50"] = round(float((L.ask_px_0 - L.bid_px_0).median()), 3)
     out["spread_p99"] = round(float((L.ask_px_0 - L.bid_px_0).quantile(.99)), 3)
-    if T is not None and len(T):
-        L2 = L[L.is_warmup == 0]
-        ts = (L2.timestamp.to_numpy() // 1000)
-        bb = L2.bid_px_0.to_numpy(); ba = L2.ask_px_0.to_numpy()
-        lo, hi = ts.min(), ts.max()
-        Tt = T[(T.ts_ms >= lo) & (T.ts_ms <= hi)]
-        if len(Tt):
-            idx = np.searchsorted(ts, Tt.ts_ms.to_numpy(), side="right") - 1
-            ok = idx >= 0
-            idx = idx[ok]; p = Tt.price.to_numpy()[ok]
-            inside = (p >= bb[idx] - 1e-9) & (p <= ba[idx] + 1e-9)
-            out["trades_checked"] = int(len(p))
-            out["trades_inside_touch_pct"] = round(100 * float(inside.mean()), 3)
-            out["trades_outside"] = int((~inside).sum())
-            if (~inside).any():
-                dev = np.where(p < bb[idx], bb[idx] - p, p - ba[idx])[~inside]
-                out["outside_dev_usd_p50"] = round(float(np.median(dev)), 2)
-                out["outside_dev_usd_p99"] = round(float(np.quantile(dev, .99)), 2)
+    out["trades_checked"] = tot_n
+    out["trades_inside_touch_pct"] = round(100 * tot_in / tot_n, 3) if tot_n else None
+    out["trades_outside"] = tot_n - tot_in
+    out["per_hour"] = per_hour
     return out
 
 if __name__ == "__main__":
