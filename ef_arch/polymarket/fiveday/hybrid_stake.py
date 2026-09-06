@@ -40,7 +40,7 @@ def run_hybrid(trades, r_fee, start=50.0, frac=0.10, win_trigger=3, loss_trigger
         log.append(dict(stake=s, q=q, win=win, pnl=pnl, capital=C))
         if wins >= win_trigger: stake = frac * C; wins = losses = 0; n_recalc_w += 1
         elif losses >= loss_trigger: stake = frac * C; wins = losses = 0; n_recalc_l += 1
-    res = dict(start=eq[0], end=C, pnl=C - eq[0], ret_pct=100 * (C - eq[0]) / eq[0], trades=n, wins=nw, losses=n - nw,
+    res = dict(start=eq[0], end=C, pnl=C - eq[0], ret_pct=(100 * (C - eq[0]) / eq[0] if eq[0] > 0 else float("nan")), trades=n, wins=nw, losses=n - nw,
                acc=100 * nw / n if n else float("nan"), start_stake=stakes[0] if stakes else st["stake"], end_stake=stake,
                min_stake=min(stakes) if stakes else float("nan"), max_stake=max(stakes) if stakes else float("nan"),
                recalc_3w=n_recalc_w, recalc_2l=n_recalc_l, maxdd=maxdd, lowest_capital=lo_cap, max_win_streak=max_ws,
