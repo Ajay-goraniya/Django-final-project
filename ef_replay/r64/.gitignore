@@ -6,3 +6,6 @@ r64_fires_repriced.csv
 *.sqlite3-shm
 *.sqlite3-wal
 __pycache__/
+run_*.sqlite3
+run_*.json
+run_*.log
