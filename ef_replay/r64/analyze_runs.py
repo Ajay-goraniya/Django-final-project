@@ -53,7 +53,8 @@ def load(tag):
 
 runs = {t: load(t) for t in ("static", "routerA", "routerB", "clean6")}
 runs = {k: v for k, v in runs.items() if v[0] is not None}
-NC = min(v[1] for v in runs.values())          # compare on the candles EVERY run completed
+import os
+NC = int(os.environ.get("NCAND", min(v[1] for v in runs.values())))
 LAST = W0 + 300 * (NC - 1)
 print("=" * 112)
 print(f"R6.4 STATIC vs ROUTED - REAL CAUSAL REPLAY 2026-08-01 - common window: first {NC} candles (00:00-{(NC*5)//60:02d}:{(NC*5)%60:02d} UTC)")
