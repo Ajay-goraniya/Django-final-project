@@ -142,7 +142,74 @@ right in spirit and has one defect -- Section 8.
 7. L0 PRIOR COMPARISON
 ======================================================================
 
-[L0_RESULTS_PLACEHOLDER]
+Your Q16, run on Build36's OWN live feature state: replay_build36.py
+--grid-dump writes engine.feature and ef_metrics at every whole second
+(harness-side observation, no model change); l0_compare.py scores the
+priors against "candle closes above open", one coherent binary, rows
+weighted 1/N per candle, CIs bootstrapped over candles.
+
+Status: 182 of 288 candles at time of writing (the dump was still
+running). Every conclusion below was already separable at 119 candles and
+did not change direction at 182; the full-day rerun is one command.
+
+FIRST, WHY THE PRIORS FAIL -- the body-hold rate:
+
+  seconds left   n       sign(spot-open)==outcome   fair_p_up mean|p-.5|
+  300-200      18,242         59.9 %                     0.161
+  200-100      18,143         67.0 %                     0.279
+  100-60        7,287         65.6 %                     0.348
+  last 60      10,903         75.1 %                     0.397
+
+With 100-60 s left the current body predicted the close 65.6 % of the
+time while fair_p_up sat at 0.5 +/- 0.35. A driftless prior assumes the
+lead persists; on 2026-08-01 it mostly did not until the last minute. That
+is not a label defect (spot at the last grid row equals the kline close to
+0 bps; fair_p_up tracks sign(spot-open) at r = 0.86) -- it is a mean-
+reverting day, i.e. the day EF exists for.
+
+THE COMPARISON (182 candles, 54,575 rows):
+
+  prior                                   Brier   logloss  ECE10   cover
+  L0-A  fair_p_up (Build36)               0.2426  0.8146   0.134   100 %
+  L0-B  Phi(z), 600 s RMS sigma           0.2239  0.6710   0.095   100 %
+  L0-C  settlement_probability_base       0.2293  0.7778   0.119    87 %
+  L0-S  shrunk fair_p_up, 1 prequential   0.2227  0.6550   0.056   100 %
+        parameter kappa
+  constant 0.5                            0.2500  0.6931   0.022   100 %
+
+  by seconds-left band (Brier; 0.2500 = coin)
+                          300-200   200-100   100-60   last 60
+  L0-A fair_p_up          0.2565    0.2416    0.2655   0.2056
+  L0-B Phi(z) RMS sigma   0.2380    0.2233    0.2391   0.1913
+  L0-S shrunk             0.2420    0.2208    0.2227   0.1933
+
+  candle-clustered 95 % CI on Brier differences:
+    A - B     [+0.0090, +0.0298]   B better than Build36's prior
+    S - A     [-0.0405, -0.0013]   shrinkage beats the unshrunk prior
+    S - 0.5   [-0.0454, -0.0093]   shrunk prior beats a coin
+
+  prequential kappa by hour: 0.29 0.28 0.35 0.37 0.39 0.31 0.34 0.40 0.43
+  0.41 0.42 0.44 0.48 0.50 0.53 -- the prior's logit confidence wanted
+  cutting to a third in the choppy morning, rising toward half as the
+  afternoon trended.
+
+VERDICT FOR Q16
+  1. Build36's fair_p_up is the WORST of the three forms and is worse than a
+     coin in the 300-200 s and 100-60 s bands. Its sigma (24-candle median
+     |close-open| x adapt_ratio) is the problem, not the Phi form.
+  2. Best unshrunk form: L0-B, Phi(ln(p/O) / (sigma sqrt(tau))) with a 600 s
+     trailing RMS of 1 s log-returns. Zero parameters. Adopt as L0.
+  3. Every Brownian-form prior is overconfident on a mean-reverting day. One
+     fitted slope on logit(P0) fixes it prequentially, which is why Section 8
+     changes your paired logit to  a * logit(P0) + w.Delta_x + v.x_sym + b.
+     A shrunk L0-B was not run here; it should be, and will almost certainly
+     be the best of all.
+  4. Build36's spot sigma_per_root_second is a tick-ring dispersion (~0.14
+     $/sqrt-s, i.e. ~$2.4 over 300 s) and must not be used as a terminal
+     sigma; the perp one (~2.55) is the right scale. Log this against
+     feasibility_factor, which reads the spot one.
+  5. Choose the prior by calibration on V2 days, as you said. On this day
+     the ranking is S > B > C > A and the CIs are clear.
 
 
 ======================================================================
