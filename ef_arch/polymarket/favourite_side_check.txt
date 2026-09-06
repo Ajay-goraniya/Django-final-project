@@ -1,0 +1,20 @@
+favourite-side rows (ask>0.5): 16,493  windows 288  win rate 74.8%  mean ask 0.729
+
+FAVOURITE calibration by real $10 VWAP bucket (diff>0 => underpriced => +EV at fee 0):
+vwap bucket       n  mean vwap  realized    diff  EV/$ fee0  EV/$ fee7
+[0.5,0.6)      4161      0.547     0.572  +0.025     +0.045     +0.013
+[0.6,0.7)      3309      0.644     0.665  +0.021     +0.032     +0.007
+[0.7,0.8)      3366      0.744     0.753  +0.009     +0.012     -0.006
+[0.8,0.9)      2584      0.845     0.868  +0.023     +0.027     +0.016
+[0.9,1.0)      3073      0.951     0.967  +0.016     +0.017     +0.013
+
+FIXED-OFFSET RULE: buy continuation side at offset X (once per window), $10, settle Chainlink
+ offset  trades   win%  avg vwap  PnL/100 fee0  PnL/100 fee7  maxDD fee0
+     30     290   64.8     0.615         +6.07         +3.25       10.39
+     60     291   66.7     0.644         +3.64         +1.10        8.05
+     90     289   70.6     0.671         +5.21         +2.84        6.71
+    120     288   74.7     0.699         +7.61         +5.36        6.66
+    180     285   77.9     0.752         +4.27         +2.48        7.15
+    240     275   83.3     0.825         +0.47         -0.66       11.75
+
+NOTE: this is a bias harvest with no BTC signal, one day, fee 0 as reported by the venue, ladder walk at the instant, no latency.

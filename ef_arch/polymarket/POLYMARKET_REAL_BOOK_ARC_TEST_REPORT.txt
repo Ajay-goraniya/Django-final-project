@@ -1,0 +1,181 @@
+CLAUDE CODE -> GPT-5.6 SOL
+HISTORICAL POLYMARKET BTC 5M REAL-BOOK TEST
+Date: 2026-09-06
+
+LABEL: POLYMARKET HISTORICAL BOOK BACKTEST. Real ask ladders (pmxt v2 full
+book snapshots), real Chainlink-resolved outcomes (Gamma), one day
+(2026-08-01, 288 windows), stake $10 unless stated. Not Predict.fun PnL.
+Fee r=0.00 is what the venue's trade stream reported on every one of the
+470,976 trades that day; r=0.07 is the official published crypto taker rate,
+shown as a stress. Fills are ladder walks at the decision instant; no
+signal-to-post latency is modelled.
+
+
+======================================================================
+1. HEADLINE -- IN THE METRIC ORDER YOU FIXED
+======================================================================
+
+Seven frozen policies, constants imported unchanged from ef_arc_capture.py,
+walk-forward P from the clean causal BTC grid (hours 4-23, 240 candles,
+14,160 decision rows, 100 % real-quote coverage):
+
+  policy           fee  PnL/100   fires/100   total   maxDD  worstHr  worst3h  ASIA  LONDON     US   acc%  avg q
+  P0 greedy        .00   -19.03      96.2    -45.68   56.86   -9.44   -18.47  -6.14  -11.75 -27.79  23.8  0.286
+  P1 runway>=60    .00   -15.63      88.8    -37.52   48.15   -9.44   -15.47  -4.14   -9.04 -24.34  24.9  0.298
+  P2 persist2      .00   -20.53      92.5    -49.26   63.53   -8.56   -18.46  -6.82  -13.61 -28.84  21.2  0.256
+  P3 timebuffer    .00   -20.65      83.8    -49.55   60.14  -11.00   -16.28  -4.55  -22.27 -22.74  22.4  0.271
+  P4 floor.35      .00   -15.62      70.0    -37.48   45.64   -9.44   -16.04  -5.14  -12.21 -20.13  25.6  0.320
+  P5 P2+P3+P4      .00    -3.35      47.1     -8.04   20.31   -6.00   -14.00  +3.05   -4.34  -6.74  24.8  0.286
+  P6 P5+governor   .00    -0.82       2.1     -1.97    4.00   -1.97    -1.97  -1.97    0.00   0.00  20.0  0.350
+  (r=0.07: every row 1-8 units worse; P5 -4.82/100. $100 stake: every row
+   1-5 units worse from slippage; P5 -6.92/100. Full tables in
+   real_book_backtest_s10.txt / s100.txt and the two CSVs.)
+
+  ALL SEVEN LOSE. Worst session is the US session for six of seven.
+  Executability: $10 fill 98.3 %, VWAP-best_ask p50 0.000; $100 98.2 %,
+  p50 +0.009; $1000 97.8 %, p50 +0.074. Spread p50 $0.01. Book age p50 208 ms.
+
+BUILD 36's OWN 19 FIRES, repriced at the real ladders at their own fire time:
+  priced 19/19   accuracy vs Chainlink 52.6 %   avg entry 0.522
+  PnL fee0 -1.50 total = -0.52 / 100 candles     fee7 -2.01
+  (10 wins, 9 losses; the winners were bought near 0.50 and paid ~+1.0 each;
+   the losers cost -1.0 each; two late wins at 0.87/0.78 paid +0.15/+0.28.)
+
+Calibration of the reversal side, real mid price vs realized win rate:
+  mid bucket      n    mean mid  realized   diff
+  [0.0,0.1)    2314     0.048     0.029   -0.019
+  [0.1,0.2)    1821     0.148     0.096   -0.052
+  [0.2,0.3)    2140     0.250     0.222   -0.028
+  [0.3,0.4)    2006     0.350     0.304   -0.046
+  [0.4,0.5)    2146     0.449     0.388   -0.061
+  [0.5,0.6)    1415     0.540     0.493   -0.047
+  [0.6,0.8)    1345     0.698     0.664   -0.034
+  [0.8,1.0)     439     0.860     0.859   -0.001
+  The reversal side is priced 2-6 points ABOVE its realized rate in every
+  bucket below 0.8. That is the favourite-longshot bias, measured on the
+  venue, and it is the whole reason the reversal policies lose.
+
+
+======================================================================
+2. THE DECISIVE TEST -- DOES OUR P ADD ANYTHING BEYOND THE PRICE?
+======================================================================
+
+Walk-forward logistic on the Chainlink outcome, hour h trained on hours < h:
+
+  model                 AUC     logloss
+  market mid only       0.792   0.4914
+  our P only            0.575   0.6051
+  market mid + our P    0.790   0.4944
+  standardized coefficient on our P: mean -0.087, positive in 1 of 19 hours
+  logloss change from adding P to the price: -0.0030 (worse)
+
+The Polymarket price predicts the outcome far better than the BTC-
+microstructure model (0.792 vs 0.575), and adding the model to the price
+makes prediction slightly worse. On this day the market already contains
+everything the perp book, flow and 120 s memory contain, and more.
+
+Note the AUC drop 0.622 -> 0.575 for our P: 0.622 was against Binance
+close>open; 0.575 is against Chainlink. The two disagree on 25/288 windows
+(8.7 %). Any model trained on Binance labels pays that against this venue.
+
+
+======================================================================
+3. THE MIRROR -- THE ONLY +EV REGION ON THIS DAY
+======================================================================
+
+If the reversal side is overpriced by 2-6 points, the continuation side is
+underpriced by the same. Measured at real $10 VWAP on the favourite (ask > 0.5):
+
+  vwap bucket     n    mean vwap  realized   diff   EV/$ fee0   EV/$ fee7
+  [0.5,0.6)    4161     0.547     0.572   +0.025    +0.045     +0.013
+  [0.6,0.7)    3309     0.644     0.665   +0.021    +0.032     +0.007
+  [0.7,0.8)    3366     0.744     0.753   +0.009    +0.012     -0.006
+  [0.8,0.9)    2584     0.845     0.868   +0.023    +0.027     +0.016
+  [0.9,1.0)    3073     0.951     0.967   +0.016    +0.017     +0.013
+
+Fixed rule, NO search, NO signal: buy the favourite once per window at a
+fixed offset X, $10, settle Chainlink:
+
+  offset  trades  win%   avg vwap   PnL/100 fee0   PnL/100 fee7   maxDD
+     30     290   64.8    0.615        +6.07          +3.25        10.39
+     60     291   66.7    0.644        +3.64          +1.10         8.05
+     90     289   70.6    0.671        +5.21          +2.84         6.71
+    120     288   74.7    0.699        +7.61          +5.36         6.66
+    180     285   77.9    0.752        +4.27          +2.48         7.15
+    240     275   83.3    0.825        +0.47          -0.66        11.75
+
+Every offset is positive at fee 0; four of six at 7 %. In dollars at $10 per
+window: roughly +$0.10 to +$0.22 per window, +$30 to +$60 for the day, with a
+worst drawdown of $67-$117. At $100 the ladder slippage (p50 +0.009) eats
+about a third of the 1-2.5 point edge; at $1000 (p50 +0.074) it is gone.
+
+What this is: a favourite-longshot bias harvest that uses no BTC information
+at all. What it is not: an EF signal, a multi-day result, a latency-adjusted
+result, or a Predict.fun result. It is the one thing on this day that had the
+sign the user wants.
+
+
+======================================================================
+4. WHAT THIS MEANS FOR THE GOAL
+======================================================================
+
+The user's goal is PnL with useful frequency that survives bad sessions.
+Against real prediction-market prices on this day:
+
+  a. The EF reversal thesis, as a BTC-microstructure signal, has no edge over
+     the market price. Not "needs tuning" -- the price out-predicts the
+     model 0.79 to 0.58, and the model adds nothing on top of the price.
+  b. Buying the reversal side is structurally -EV here because the market
+     overprices it. Every admission policy that keeps buying it loses; the
+     ones that lose least are the ones that trade least.
+  c. The favourite side carries a small, measurable positive edge with no
+     signal at all, at retail size, before latency.
+
+I am not recommending (c) as a strategy from one day. I am reporting that
+it is the only positive number in the real-book test, and that it points
+the same way my synthetic sweep pointed weeks ago: continuation survives,
+reversal does not.
+
+
+======================================================================
+5. WHAT I WOULD DO NEXT (AND CAN DO WITH THE PIPELINE AS IT STANDS)
+======================================================================
+
+  1. Freeze everything and run the SAME code on 2026-07-01 and 2026-06-01.
+     Both days exist in pmxt (coverage from 2026-04-13) and both are free
+     Tardis first-of-month days, so the BTC causal grid and the real books
+     can be built by the existing scripts with no new tooling. Report each
+     day alone: the seven reversal policies, Build 36's fires, the market-
+     residual test, and the favourite fixed-offset table. If (c) survives
+     two more days at fee 0 and 7 %, it is a candidate; if the residual test
+     stays at "P adds nothing", the reversal-signal line is closed.
+  2. Latency: pmxt gives timestamp_received; re-walk the ladder at T + p95
+     received latency (300 ms) and at T + 1 s to see what (c) loses to a
+     realistic post delay.
+  3. Do NOT build Build 37A capture as planned. There is nothing to capture
+     that the market price does not already contain, and the venue that
+     matters for the user is Predict.fun, whose books we still do not have.
+     The right capture is Predict.fun books, and the right first test on
+     them is exactly Sections 1-3 of this report, unchanged.
+  4. If a BTC model is to be tried again, it must be a MARKET-RESIDUAL model
+     from the start: logit(P) = logit(P_market) + alpha . features, promoted
+     only if alpha's out-of-sample coefficient is positive across days. On
+     this day it is negative.
+
+
+======================================================================
+6. ARTEFACTS
+======================================================================
+
+  polymarket_btc5m_2026-08-01_books.parquet   33,984 ladder rows (deliverable)
+  aug01_btc5m_markets.json                    288 Gamma market objects
+  real_book_backtest_s10.txt / s100.txt       full policy tables + B36 repricing
+  real_book_policy_summary_s10.csv / s100.csv
+  market_residual_test.txt                    calibration + residual test
+  favourite_side_check.txt                    section 3
+  POLYMARKET_AUG01_BTC5M_DATA_REPORT.txt      sources, mapping, extraction, fees
+  scripts: map_markets.py, pmxt_range_reader.py, extract_day.py,
+           build_ladders.py, real_book_backtest.py, market_residual_test.py,
+           favourite_side_check.py
+
+-- Claude Code
