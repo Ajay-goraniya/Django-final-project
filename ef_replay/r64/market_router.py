@@ -116,3 +116,66 @@ def apply_preset(mod, preset):
     mod.EF_EARLY_QUALITY_MIN = float(preset["quality"])
     mod.EF_EARLY_CHOP_MAX = float(preset["chop"])
     mod.EF_EARLY_SCORE_MIN = float(preset["score"])
+
+
+# ======================================================================
+# CLEAN6 -- GPT-5.6 Sol's FINAL VERIFIED spec (2026-09-06), superseding the 6/36 handoff.
+# fast = 8 completed candles, slow = last min(24, available), ready after 8.
+# Six observable features; the seventh (activity = volatility/liquidity) was a synthetic latent
+# and is deliberately dropped rather than proxied. Scaler and projected centroids supplied frozen.
+# ======================================================================
+CLEAN6_FEATURES = ("rv_ratio", "eff", "wick", "crosses", "persistence", "absret")
+CLEAN6_MEAN = np.array([1.0348285036518456, 0.4121866807706514, 0.4057648354836863,
+                        2.5682788051209102, 0.3061877667140825, 0.720658426519248])
+CLEAN6_SCALE = np.array([0.2900799519226345, 0.2040954907833692, 0.17490636923715536,
+                         1.6256444142333286, 0.24919667010393015, 0.15961425080790148])
+CLEAN6_CENTROIDS = np.array([
+    [-0.26553490135703633, -0.7646776850192353, 0.7711519301034174, 0.695770017878343, -0.04385751230090337, -0.6905242524035625],
+    [-0.2466323639125014, 1.0023376091885732, -0.9857024488974996, -0.8329381481051576, 0.09616864074326485, 0.8960368055888578],
+    [1.6884282259927006, 0.037584739562221726, -0.10867559209508662, -0.2569695851409911, -0.10681472681742876, 0.0595784599156762],
+])
+CLEAN6_FAST, CLEAN6_SLOW, CLEAN6_READY = 8, 24, 8
+
+
+class Clean6Router:
+    """Sol's final verified router. Consumes CLOSED candle statistics only.
+
+    Each closed candle contributes (rv, eff, wick, crosses, dir, body, range) where eff and
+    crosses are measured on the real trade path inside that candle (precompute_candle_stats.py),
+    which is what the synthetic generator supplied natively and an OHLC bar cannot.
+    """
+
+    def __init__(self):
+        self.hist = []          # list of dicts, oldest first
+
+    def add_closed_candle(self, rv, eff, wick, crosses, direction, body, rng):
+        self.hist.append(dict(rv=float(rv), eff=float(eff), wick=float(wick), crosses=float(crosses),
+                              dir=float(direction), body=float(body), rng=float(rng)))
+        if len(self.hist) > CLEAN6_SLOW:
+            self.hist = self.hist[-CLEAN6_SLOW:]          # "previous max 24 completed candles only"
+
+    def ready(self):
+        return len(self.hist) >= CLEAN6_READY
+
+    def features(self):
+        if not self.ready():
+            return None
+        h = self.hist[-CLEAN6_SLOW:]
+        fast = h[-CLEAN6_FAST:]
+        rv_fast = np.mean([x["rv"] for x in fast]); rv_slow = np.mean([x["rv"] for x in h])
+        rv_ratio = rv_fast / rv_slow if rv_slow > 1e-15 else 1.0
+        eff = float(np.mean([x["eff"] for x in fast]))
+        wick = float(np.mean([x["wick"] for x in fast]))
+        crosses = float(np.mean([x["crosses"] for x in fast]))
+        persistence = float(abs(np.mean([x["dir"] for x in fast])))
+        mb = float(np.mean([x["body"] for x in fast])); mr = float(np.mean([x["rng"] for x in fast]))
+        absret = mb / mr if mr > 1e-12 else 0.0
+        return np.array([rv_ratio, eff, wick, crosses, persistence, absret])
+
+    def bucket(self):
+        f = self.features()
+        if f is None:
+            return None, dict(STATIC), None
+        z = (f - CLEAN6_MEAN) / CLEAN6_SCALE
+        b = int(np.argmin(((CLEAN6_CENTROIDS - z) ** 2).sum(axis=1)))
+        return b, dict(PRESETS[b]), f

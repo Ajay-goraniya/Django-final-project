@@ -84,7 +84,7 @@ def main():
     ap.add_argument("--out", default=str(ROOT / "replay_r64_result.json"))
     ap.add_argument("--hours", default="0-23")
     ap.add_argument("--progress", type=int, default=500_000)
-    ap.add_argument("--router", default="off", choices=["off", "A", "B"],
+    ap.add_argument("--router", default="off", choices=["off", "A", "B", "CLEAN6"],
                     help="off = static r6.4 baseline; A/B = Sol's frozen 3-bucket router (normalisation mode)")
     args = ap.parse_args()
     a, b = args.hours.split("-"); hours = list(range(int(a), int(b) + 1))
@@ -105,7 +105,15 @@ def main():
     official = {int(r.open_time // 1000): r for r in kl.itertuples()}
 
     # ---- external market router (Sol's frozen presets; EF itself untouched) ----
-    router = MR.MarketRouter() if args.router != "off" else None
+    if args.router == "CLEAN6":
+        import pandas as _pd
+        _cs = _pd.read_parquet(ROOT / "candle_stats_2026-08-01.parquet")
+        CSTAT = {int(r.cid): r for r in _cs.itertuples()}
+        router = MR.Clean6Router()
+    elif args.router == "off":
+        router = None; CSTAT = None
+    else:
+        router = MR.MarketRouter(); CSTAT = None
     base = dict(reach=m.EF_EARLY_REACH_MIN, control=m.EF_EARLY_CONTROL_MIN,
                 settlement=m.EF_EARLY_SETTLEMENT_MIN, quality=m.EF_EARLY_QUALITY_MIN,
                 chop=m.EF_EARLY_CHOP_MAX, score=m.EF_EARLY_SCORE_MIN)
@@ -118,7 +126,7 @@ def main():
         the six frozen numbers into the untouched r6.4 module."""
         if router is None:
             return
-        b, preset, feats = router.bucket(args.router)
+        b, preset, feats = router.bucket() if args.router == "CLEAN6" else router.bucket(args.router)
         cur_bucket["b"] = b; cur_bucket["preset"] = preset
         MR.apply_preset(m, preset)
         bucket_log.append({"candle_open_ms": int(cid), "bucket": b,
@@ -186,11 +194,17 @@ def main():
                         emit_kline(cur["cid"], True, cur["cid"] + CANDLE_MS - 1)
                         stats["candles_settled"] += 1
                         if router is not None:
-                            k = official.get(cur["cid"])
-                            if k is not None:
-                                router.add_closed_candle(k.open, k.high, k.low, k.close, k.volume)
+                            if args.router == "CLEAN6":
+                                cs = CSTAT.get(int(cur["cid"]))
+                                if cs is not None:
+                                    router.add_closed_candle(cs.rv, cs.eff, cs.wick, cs.crosses,
+                                                             getattr(cs, "dir"), cs.body, getattr(cs, "range"))
                             else:
-                                router.add_closed_candle(cur["o"], cur["h"], cur["l"], cur["c"], cur["v"])
+                                k = official.get(cur["cid"])
+                                if k is not None:
+                                    router.add_closed_candle(k.open, k.high, k.low, k.close, k.volume)
+                                else:
+                                    router.add_closed_candle(cur["o"], cur["h"], cur["l"], cur["c"], cur["v"])
                         timeline.append({"candle_open_ms": cur["cid"],
                                          "regime": (engine.feature or {}).get("regime"),
                               "router_bucket": cur_bucket["b"],
