@@ -15,3 +15,6 @@ __pycache__/
 deliver/*.sqlite3
 deliver/*.sqlite3-wal
 deliver/*.sqlite3-shm
+
+# replay working set: model copies, DBs, grid dumps, logs (regenerable)
+work/
