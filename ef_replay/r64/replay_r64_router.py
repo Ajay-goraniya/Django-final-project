@@ -51,7 +51,16 @@ def hour_events(h):
         bpx = [cols[f"bid_px_{i}"] for i in range(5)]; bqt = [cols[f"bid_qty_{i}"] for i in range(5)]
         apx = [cols[f"ask_px_{i}"] for i in range(5)]; aqt = [cols[f"ask_qty_{i}"] for i in range(5)]
         lts = cols["local_timestamp"]
-        for i in range(n): ev.append((lts[i] // 1000, 0, "PD", i))
+        # r6.4 subscribes to btcusdt@depth5@100ms: ten book states per second. The Tardis
+        # reconstruction carries every tick (~37/s), four times production rate, which also
+        # makes EF's 320-entry ef_depth_history ring cover 8.6 s instead of the 32 s it spans
+        # live. Deliver the LAST reconstructed book of each 100 ms bucket so the lane matches
+        # production cadence. No book state is invented; every delivered snapshot is a real
+        # reconstructed book carried at its own receive time.
+        keep = {}
+        for i in range(n):
+            keep[lts[i] // 100_000] = i          # local_timestamp is microseconds
+        for i in sorted(keep.values()): ev.append((lts[i] // 1000, 0, "PD", i))
         depth_cols = (bpx, bqt, apx, aqt, n)
     f = DATA / f"spot_aggtrades_{h:02d}.parquet"
     st = None
