@@ -20,7 +20,8 @@ reconstruction, plus is_warmup:
   ask_px_0..19, ask_qty_0..19, is_resync, n_bid_levels, n_ask_levels, is_crossed, is_warmup
 """
 import glob, json, pathlib, sys, time
-import numpy as np, pyarrow as pa, pyarrow.parquet as pq
+import gc
+import numpy as np, pyarrow as pa, pyarrow.parquet as pq, pyarrow.compute as pc
 from sortedcontainers import SortedDict
 
 K = 20
@@ -50,15 +51,23 @@ def run_day(day):
     t0 = time.time(); prev_u = None
     for f in files:
         hh = pathlib.Path(f).stem.split("_")[-1]
+        # memory-lean read: pyarrow sort, then one numpy array per column, table freed
+        # immediately. A pandas frame of this hour costs several GB and gets OOM-killed.
         t = pq.read_table(f, columns=["received_time", "event_time", "final_update_id",
-                                      "prev_final_update_id", "side", "price", "quantity"]).to_pandas()
-        t = t.sort_values(["received_time", "final_update_id"], kind="stable")
-        st["rows"] += len(t)
+                                      "prev_final_update_id", "side", "price", "quantity"])
+        t = t.take(pc.sort_indices(t, sort_keys=[("received_time", "ascending"),
+                                                 ("final_update_id", "ascending")]))
+        st["rows"] += t.num_rows
+        recv = t.column("received_time").to_numpy(zero_copy_only=False)
+        evt = t.column("event_time").to_numpy(zero_copy_only=False)
+        fu = t.column("final_update_id").to_numpy(zero_copy_only=False)
+        pu = t.column("prev_final_update_id").to_numpy(zero_copy_only=False)
+        is_bid = pc.equal(t.column("side"), "bid").to_numpy(zero_copy_only=False)
+        px = t.column("price").to_numpy(zero_copy_only=False).astype(float)
+        qy = t.column("quantity").to_numpy(zero_copy_only=False).astype(float)
+        n = t.num_rows; del t; gc.collect()
         buf = {c: [] for c in COLS}
-        recv = t.received_time.to_numpy(); evt = t.event_time.to_numpy()
-        fu = t.final_update_id.to_numpy(); pu = t.prev_final_update_id.to_numpy()
-        side = t.side.to_numpy(); px = t.price.to_numpy(dtype=float); qy = t.quantity.to_numpy(dtype=float)
-        n = len(t); i = 0; last_evt = None
+        i = 0; last_evt = None
         while i < n:
             j = i
             u = fu[i]
@@ -68,7 +77,7 @@ def run_day(day):
                 resync = 1; st["resyncs"] += 1
             prev_u = u
             for k in range(i, j):
-                book = bids if side[k] == "bid" else asks
+                book = bids if is_bid[k] else asks
                 if qy[k] == 0.0: book.pop(px[k], None)
                 else: book[px[k]] = qy[k]
             st["events"] += 1
@@ -98,8 +107,10 @@ def run_day(day):
             i = j
         tbl = pa.Table.from_pydict({c: buf[c] for c in COLS}, schema=SCHEMA)
         pq.write_table(tbl, OUT / f"perp_depth20_{day}_{hh}.parquet", compression="zstd")
-        st["emitted"] += tbl.num_rows
-        print(f"  {day} {hh}  events {tbl.num_rows:,}  book {len(bids)}x{len(asks)}  {time.time()-t0:.0f}s", flush=True)
+        _n = tbl.num_rows
+        st["emitted"] += _n
+        del tbl, buf, recv, evt, fu, pu, is_bid, px, qy; gc.collect()
+        print(f"  {day} {hh}  events {_n:,}  book {len(bids)}x{len(asks)}  {time.time()-t0:.0f}s", flush=True)
     st["elapsed_s"] = round(time.time() - t0, 1)
     st["final_book_levels"] = [len(bids), len(asks)]
     json.dump(st, open(OUT / f"recon_stats_{day}.json", "w"), indent=1)
