@@ -121,6 +121,10 @@ def main():
     ap.add_argument("--out", default=str(ROOT / "work" / "replay_result.json"))
     ap.add_argument("--clock", default="recv", choices=["recv", "exchange"])
     ap.add_argument("--progress", type=int, default=250_000)
+    ap.add_argument("--grid-dump", default=None,
+                    help="CSV path: dump Build36's own fair_p_up / sigma / "
+                         "settlement_probability_base on a fixed 1-second grid "
+                         "(harness-side observation, no model change)")
     args = ap.parse_args()
 
     a, _, b = args.hours.partition("-")
@@ -168,6 +172,12 @@ def main():
     last_kline_emit = 0
     ef_last = 0
     t0 = time.time()
+    grid_fh = None; grid_next = None
+    if args.grid_dump:
+        grid_fh = open(args.grid_dump, "w")
+        grid_fh.write("ts_ms,candle_open_ms,phase_s,seconds_left,spot,fair_p_up,"
+                      "sigma_per_root_second,ef_direction,settlement_probability_base,"
+                      "settlement_probability,extension_sigma,inputs_ready,micro_source\n")
 
     def emit_kline(cid, closed, ts_ms):
         if cur["o"] is None:
@@ -238,6 +248,20 @@ def main():
                 ef_last = delivery_ms
                 engine._compute_ef_metrics(delivery_ms)
                 stats["ef_ticks"] += 1
+                if grid_fh is not None:
+                    # fixed wall-clock 1 s grid: first EF tick at or after each
+                    # whole second records the state that exists at that moment
+                    sec = delivery_ms // 1000
+                    if grid_next is None or sec >= grid_next:
+                        grid_next = sec + 1
+                        fe = engine.feature or {}; em_ = engine.ef_metrics or {}
+                        cid_ = int(engine.candle["time"]) if engine.candle else 0
+                        grid_fh.write(f"{delivery_ms},{cid_},{(delivery_ms-cid_)/1000:.3f},"
+                                      f"{fe.get('seconds_left','')},{fe.get('price','')},"
+                                      f"{fe.get('fair_p_up','')},{fe.get('sigma_per_root_second','')},"
+                                      f"{em_.get('direction','')},{em_.get('settlement_probability_base','')},"
+                                      f"{em_.get('settlement_probability','')},{em_.get('extension_sigma','')},"
+                                      f"{int(bool(em_.get('inputs_ready')))},{em_.get('micro_source','')}\n")
                 em = engine.ef_metrics or {}
                 if em.get("inputs_ready"): stats["perp_ready_ticks"] += 1
                 src = em.get("micro_source")
@@ -281,6 +305,8 @@ def main():
         emit_kline(cur["cid"], True, cur["cid"] + CANDLE_MS - 1)
         stats["candles_settled"] += 1
 
+    if grid_fh is not None:
+        grid_fh.close()
     stats["elapsed_s"] = round(time.time() - t0, 1)
     result = {"stats": stats, "blockers": dict(sorted(blockers.items(),
                    key=lambda kv: -kv[1])[:40]), "fires": fires, "timeline": timeline,
