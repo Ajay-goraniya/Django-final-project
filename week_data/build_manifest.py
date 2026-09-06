@@ -92,6 +92,26 @@ for f in sorted(glob.glob(str(FD/"markets/btc5m_markets_*.json"))):
         start=day+"T00:00:00Z", end=day+"T23:59:59Z", resolution="1 record per 5-minute market",
         rows=len(j["rows"]), bytes=p.stat().st_size,
         complete="yes" if len(j["rows"]) == 288 else "partial", gaps=f"{288-len(j['rows'])} markets missing" if len(j["rows"]) != 288 else "")
+
+# --- Binance USD-M perp L2 incremental depth (CryptoHFTData free tier) ---
+import collections as _c, pyarrow.parquet as _pq
+_l2 = sorted(glob.glob(str(H/"depth/l2/*.parquet")))
+_byday = _c.defaultdict(list)
+for _f in _l2: _byday[pathlib.Path(_f).stem.split("_")[-2]].append(pathlib.Path(_f))
+for _day, _ps in sorted(_byday.items()):
+    _rows = sum(_pq.ParquetFile(_p).metadata.num_rows for _p in _ps)
+    _hrs = sorted(int(_p.stem.split("_")[-1]) for _p in _ps)
+    _missing = [h for h in range(24) if h not in _hrs]
+    add(filename="depth/l2/BTCUSDT_orderbook_%s_HH.parquet (%d hourly files)" % (_day, len(_ps)),
+        dataset_type="futures_L2_incremental_depth_updates (tier 1: diff depth with update-id chain)",
+        source="CryptoHFTData free tier (Binance USD-M perpetual)",
+        url="https://api.cryptohftdata.com file binance_futures/<date>/<hh>/BTCUSDT_orderbook.parquet",
+        start="%sT%02d:00:00Z" % (_day, _hrs[0]), end="%sT%02d:59:59Z" % (_day, _hrs[-1]),
+        resolution="every book diff; received_time ns, event_time+transaction_time ms, first/final/prev_final update ids, side, price, quantity",
+        rows=_rows, bytes=sum(_p.stat().st_size for _p in _ps),
+        complete="yes (24/24 hours)" if len(_ps) == 24 else "partial (%d/24 hours)" % len(_ps),
+        gaps="" if not _missing else "hours %s not published yet (day still in progress)" % _missing)
+
 out = H/"MANIFEST.csv"
 cols = ["filename","dataset_type","source","url","start","end","resolution","rows","bytes","complete","gaps"]
 with out.open("w", newline="") as fh:
