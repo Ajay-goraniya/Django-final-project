@@ -1,0 +1,37 @@
+grid rows with an EF direction, inputs ready, real quote: 15,979  candles 288  EF side = venue favourite in 21.9% of rows
+
+(3) CALIBRATION of Build 36 settlement_probability for EF's side (raw, all hours):
+bucket            n  mean p_ef  realized  venue mid
+[0.0,0.1)      6776      0.028     0.192      0.224
+[0.1,0.2)      2586      0.146     0.310      0.336
+[0.2,0.3)      2205      0.256     0.380      0.403
+[0.3,0.4)      2951      0.346     0.448      0.469
+[0.4,0.5)      1241      0.441     0.519      0.508
+[0.5,0.6)       215      0.531     0.447      0.540
+[0.6,0.7)         5      0.612     0.200      0.524
+
+(key) WALK-FORWARD, hours 4-23, 13,252 rows, 240 candles  (AUC, candle-clustered 95% CI):
+  EF settlement_probability (calibrated)   AUC 0.675  [0.630, 0.718]
+  venue mid alone                          AUC 0.790  [0.750, 0.829]
+  venue mid + EF                           AUC 0.789  [0.750, 0.829]
+  rows where calibrated EF probability exceeds the all-in ask (fee 0): 8323 of 13,252   at fee 0.07: 7793
+  rows where RAW Build 36 probability exceeds the ask (fee 0): 1399
+
+(4) PRICE-GATED EF on Build 36's own direction calls (hours 4-23, 240 candles), $10 real ask VWAP, one fire per candle:
+variant                                       fee fires   /100  acc%  avg q  PnL/100  fixed$5  hyb$50
+calibrated EF, gate margin 0.00              0.00   236   98.3  30.9  0.371   -17.63  -211.51    1.00
+calibrated EF, gate margin 0.02              0.00   236   98.3  30.9  0.350   -11.43  -137.16    0.93
+calibrated EF, gate margin 0.05              0.00   233   97.1  28.3  0.315   -10.55  -126.56    0.97
+RAW Build 36 probability, gate margin 0.00   0.00   170   70.8  27.1  0.330   -18.81  -225.73    0.99
+venue mid + EF combined, gate margin 0.00    0.00   151   62.9  49.7  0.551    -5.24   -62.91    6.41
+calibrated EF, gate margin 0.00              0.07   236   98.3  30.5  0.355   -18.72  -224.65    0.98
+calibrated EF, gate margin 0.02              0.07   235   97.9  29.8  0.330   -13.77  -165.19    1.00
+calibrated EF, gate margin 0.05              0.07   231   96.2  25.5  0.296   -17.72  -212.66    0.93
+RAW Build 36 probability, gate margin 0.00   0.07   155   64.6  24.5  0.296   -15.06  -180.72    0.99
+venue mid + EF combined, gate margin 0.00    0.07    92   38.3  57.6  0.579    -1.16   -13.89   25.39
+BUILD 36 AS-IS (actual fires, hours 4-23)    0.00    16    6.7  43.8  0.527    -1.89   -22.74   30.20
+BUILD 36 AS-IS (actual fires, hours 4-23)    0.07    16    6.7  43.8  0.527    -2.02   -24.30   29.20
+
+Build 36's 496 watched candidates: 496 priced; settlement_probability mean 0.371, realized 43.1%, avg ask 0.420; candidates whose own probability beats the ask at fee 0: 208, at fee 0.07: 182
+
+LABEL: Build 36 signal unchanged; only calibration and a price gate added on top, walk-forward, real Aug-1 Polymarket asks, Chainlink outcomes.
