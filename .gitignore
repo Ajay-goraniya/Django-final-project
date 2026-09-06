@@ -10,3 +10,4 @@ venv/
 # BTC replay bundle payloads (delivered as split archive, not via git)
 btc_replay_*.tar.gz
 btc_replay_*.part*
+btc_replay_multi/
