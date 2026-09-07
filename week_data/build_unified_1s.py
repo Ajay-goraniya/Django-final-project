@@ -17,7 +17,7 @@ import numpy as np, pandas as pd
 H = pathlib.Path(__file__).resolve().parent
 Q = H / "predictfun/quotes_1s"
 OUT = H / "predictfun/quotes_1s_unified"; OUT.mkdir(parents=True, exist_ok=True)
-DAYS = ["2026-08-31", "2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04", "2026-09-05", "2026-09-06"]
+DAYS = ["2026-08-29", "2026-08-30", "2026-08-31", "2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04", "2026-09-05", "2026-09-06"]
 KEY = ["window_epoch", "side", "offset_s"]
 LAD = [f"{p}_s{s}" for s in (2, 5, 10, 100) for p in ("vwap", "shares", "levels", "fill_ok")]
 

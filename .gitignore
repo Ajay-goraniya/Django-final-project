@@ -19,3 +19,7 @@ week_data/deliver/
 week_data/depth/l2/
 week_data/depth/depth20/
 week_data/weekend_raw/
+
+# Model sources are supplied per-run, not tracked (see make_pricegate_build.py)
+week_replay/scripts/btc_model_*.py
+week_replay/runs/
