@@ -50,7 +50,8 @@ for f in sorted(glob.glob(str(H/"trades/*.csv"))):
         start=ts(body[0][tcol]), end=ts(body[-1][tcol]),
         resolution="every aggTrade" if "aggTrades" in p.name else "5m bars",
         rows=len(body), bytes=p.stat().st_size,
-        complete="PARTIAL - day still in progress at collection time", gaps="from 00:00:00Z to collection time only")
+        complete=("yes (full UTC day)" if body[-1][tcol] and int(body[-1][tcol]) >= 1788739199000 else "PARTIAL - day still in progress at collection time"),
+        gaps=("" if body[-1][tcol] and int(body[-1][tcol]) >= 1788739199000 else "from 00:00:00Z to collection time only"))
 # --- Polymarket L2 books (cross-venue proxy for Predict.fun) ---
 poly = sorted(glob.glob(str(H/"predictfun/polymarket_l2/*.zip")))
 if poly:
