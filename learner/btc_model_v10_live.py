@@ -18049,6 +18049,15 @@ class Engine:
         except Exception:
             ask_up = ask_dn = bid_up = bid_dn = None
         self.v10_state.on_venue_quote(ask_up, bid_up, ask_dn, bid_dn)
+        # warm-up: the features need >= 10 min of spot history (previous-candle
+        # moves) and >= 60 s of perp flow; deciding earlier runs on zeros.
+        _s, _p = self.v10_state.s_ts, self.v10_state.p_ts
+        _spot_span = (_s[-1] - _s[0]) / 1_000_000 if len(_s) > 1 else 0.0
+        _perp_span = (_p[-1] - _p[0]) / 1_000_000 if len(_p) > 1 else 0.0
+        if _spot_span < 600 or _perp_span < 60:
+            self.ef_monitor = {**evidence, "status": f"v10 warming up: spot {_spot_span:.0f}s/600s · perp {_perp_span:.0f}s/60s",
+                               "ready": False}
+            return
         try:
             d = self.v10.decide(self.v10_state, cid * 1000, ts_ms * 1000, mode=self.v10_mode)
         except Exception as problem:
