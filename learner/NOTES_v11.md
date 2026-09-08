@@ -73,3 +73,12 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Polymarket early-window 11/14 +70 remains the single best bucket: Polymarket book + first minute + p>=0.6 is where the money is tonight.
 - Venue gap -0.082; Polymarket right on disagreement 357:119 (3:1) over 81 candles.
 - No bugs, 5 processes healthy.
+
+## 22:51 UTC check-in
+- Predict pnl 12/23 +2.3; Predict accuracy 11/13 +11.0; Poly pnl 21/33 +90.3; Poly accuracy 3/3 +8.2 (live since 22:25).
+- Retro on 56 pooled fires: none 33/56 +93 | p>=0.56 28/42 +96 | p>=0.60 24/33 +104 | ask>0.45 26/36 +113 | p>=0.56 & ask>0.45 26/36 +113 (identical set to ask>0.45 alone).
+- Calibration bins: p 0.50-0.56 5/14 -4 | 0.56-0.62 4/9 -8 | 0.62-0.70 21/28 +106 | 0.70+ 3/5 -2. ALL the profit is in the 0.62-0.70 band. Below it the model is guessing; above it the ask is too high for the hit rate. -> v11 pnl rule: p in [0.62, 0.70] band, or EV recomputed with realized calibration per band (the isotonic map is off live: claimed 0.68 realizes 0.75, claimed 0.51 realizes 0.36).
+- Accuracy mode: both venues ~85-100% on 16 fires but +$19 total: consistent with backtest (small margin per win). Accuracy mode is the safe product; pnl mode with the 0.62-0.70 band is the money product.
+- Polymarket early window 13/17 +82 (still the best bucket). Predict.fun early recovered to 5/10.
+- Venue gap -0.084; Polymarket right on disagreement 384:150 over 87 candles.
+- No bugs; 5 processes healthy.
