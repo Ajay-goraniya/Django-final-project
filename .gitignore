@@ -23,3 +23,11 @@ week_data/weekend_raw/
 # Model sources are supplied per-run, not tracked (see make_pricegate_build.py)
 week_replay/scripts/btc_model_*.py
 week_replay/runs/
+
+# replay outputs and large local datasets (regenerable, too big for git)
+week_replay/runs/
+week_replay/2026-*/
+week_data/depth/
+week_data/trades/
+week_data/weekend_raw/
+week_data/predictfun/
