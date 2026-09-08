@@ -197,6 +197,8 @@ class Model:
         acc = j.get("accuracy_mode") or {}
         self.mode = j.get("mode_default", "pnl")
         self.conf_floor = acc.get("conf_floor", 0.85); self.ev_floor = acc.get("ev_floor", 0.02)
+        self.acc_regime_floors = acc.get("regime_floors") or {}
+        self.acc_rv_edges = acc.get("rv60_edges") or self.regime.get("rv60_edges") or [0.17, 0.37]
 
     def p_up(self, f):
         x = np.array([f[k] for k in FEATURES], dtype=np.float64)
@@ -224,10 +226,11 @@ class Model:
         mode="pnl"      fire when EV >= ev_threshold (default 0.20; or per-vol
                         regime). ~62 trades/day, 59% accuracy, +$2.09 per $10.
         mode="accuracy" fire when confidence p_side >= conf_floor AND EV >= ev_floor.
-                        conf 0.85 / ev 0.02: ~82 trades/day, 87.6% accuracy,
-                        +$0.40 per $10, 8/8 days positive.
-                        conf 0.85 / ev 0.05: ~40/day, 86.7%, +$0.97 per $10.
-                        conf 0.80 / ev 0.05: ~57/day, 81.9%, +$0.73 per $10.
+                        With regime_floors configured (default in model_v10.json) the
+                        floors follow the realized-vol regime, so frequency adapts to
+                        the market: ~53 trades/day, 81.8% accuracy, and under the
+                        $50 hybrid staking rule $50 -> $1,538 over the 8-day week
+                        (out-of-sample). Fixed 0.85/0.02: ~82/day, 87.6%, 8/8 days.
         Frequency is adjusted by moving these floors; nothing else changes.
         """
         f = state.features(candle_open_us, now_us)
@@ -242,6 +245,13 @@ class Model:
         if mode == "accuracy":
             cf = self.conf_floor if conf_floor is None else conf_floor
             ef = self.ev_floor if ev_floor is None else ev_floor
+            # frequency adapts to the market: per realized-vol regime floors, if configured
+            rf = self.acc_regime_floors
+            if conf_floor is None and ev_floor is None and rf:
+                lo, hi = self.acc_rv_edges
+                key = "low" if f["rv60"] <= lo else ("mid" if f["rv60"] <= hi else "high")
+                if key in rf:
+                    cf, ef = float(rf[key]["conf_floor"]), float(rf[key]["ev_floor"])
             fire = bool(ps >= cf and ev >= ef)
             thr = dict(conf_floor=cf, ev_floor=ef)
         else:

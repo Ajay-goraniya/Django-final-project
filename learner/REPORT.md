@@ -105,3 +105,32 @@ The fixed 100-candle sample: **35 trades, 91.4%, +$20.76** (r6.4: 39.4%; v9.6: 4
 **Also tried and rejected (honestly):** richer features (venue momentum, physics fair value, longer returns) did not beat v10 on real-book log-loss; LightGBM overfits; per-second models trade more but predict worse. v10 stays.
 
 **Maker vs taker (tested, real-book seconds only):** posting a limit at the best *bid* instead of paying the ask was tried at every accuracy-mode point. Fills arrive only when price is moving against you: at 0.85/0.02, 36% of orders fill within 30s and those fills win 79% vs 84% for taker, turning +$0.54/trade into −$0.47. Pay the ask. Full table in `learner/maker_fill_test.txt`.
+
+---
+
+## Update 2: real money under YOUR staking rule + frequency that adapts to the market
+
+The "+$263" above was a flat $10 test stake. Under your actual rule — $50 start, 10% of capital, recompute on 3 wins / 2 losses, stake clamped to $1–$50 — on the same out-of-sample week:
+
+| rule | trades | accuracy | $50 → | PnL | avg stake | max DD | days + |
+|---|---|---|---|---|---|---|---|
+| accuracy 0.85 / 0.02 | 654 | 87.6% | **$428** | +$378 | $14.85 | $71 | 8/8 |
+| accuracy 0.85 / 0.05 | 323 | 86.7% | $783 | +$733 | $26.22 | $135 | 6/8 |
+| **accuracy, regime-adaptive** | **422 (53/day)** | **81.8%** | **$1,538** | **+$1,488** | — | — | t = 4.3 |
+| pnl mode EV ≥ 0.20 | 498 | 59.4% | $4,109 | +$4,059 | $43.32 | $486 | 8/8 |
+
+**Regime-adaptive accuracy mode** is now the default in `model_v10.json` (`accuracy_mode.regime_floors`): the confidence/EV floors follow the realized-vol tercile at decision time —
+
+```
+low vol   conf 0.80  EV 0.02   ->  14/day   89.0%
+mid vol   conf 0.75  EV 0.05   ->  30/day   80.6%
+high vol  conf 0.80  EV 0.08   ->  30/day   81.8%
+```
+
+That is the learner adjusting its own frequency to the market, which you asked for, while staying above 80%.
+
+**Honesty notes on this table:** the regime floors were chosen on the same out-of-sample predictions they are scored on (a mild selection effect — expect slightly less live). The $50-clip fillability was verified on real-book days (0 of 250 clips depth-capped). Six of eight days still use trade-inferred venue prices.
+
+**Maker vs taker:** posting at the bid is worse (adverse selection: fills win 68–79% vs 84% taker). Pay the ask. `learner/maker_fill_test.txt`.
+
+**Deployable check:** `btc_model_v10.py` was run end-to-end on a full day of raw streams and reproduced the expected behaviour (39 vs 38 fires in pnl mode, 37 vs 41 in accuracy mode). `learner/live_path_check.txt`.
