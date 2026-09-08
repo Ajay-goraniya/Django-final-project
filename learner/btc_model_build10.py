@@ -17773,6 +17773,19 @@ class Engine:
             self.ef_monitor = {**evidence, "status": f"v10 warming up: spot {_spot_span:.0f}s/600s \u00b7 perp {_perp_span:.0f}s/60s",
                                "ready": False}
             return
+        # The book must belong to THIS candle's market. Right after a candle
+        # opens the cached book is still the previous market's, whose losing
+        # side sits at 0.01 with thousands of shares; pricing that as a 99%
+        # discount produced instant bogus fires (14:45 and 14:55 UTC, 2026-09-08).
+        try:
+            _book_cid = int(getattr(self.book, "market_candle_id", None) or 0)
+        except (TypeError, ValueError):
+            _book_cid = 0
+        if _book_cid != int(cid):
+            self.v10_state.on_venue_quote(None, None, None, None)
+            self.ef_monitor = {**evidence, "status": f"v10 {self.v10_mode}: waiting for this candle's Predict.fun market",
+                               "ready": False}
+            return
         # venue quote: UP = Yes ask; DOWN price = 1 - Yes bid  (PredictBook.quote)
         try:
             qu = self.book.quote("UP"); qd = self.book.quote("DOWN")
