@@ -82,3 +82,11 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Polymarket early window 13/17 +82 (still the best bucket). Predict.fun early recovered to 5/10.
 - Venue gap -0.084; Polymarket right on disagreement 384:150 over 87 candles.
 - No bugs; 5 processes healthy.
+
+## 23:23 UTC check-in (backup taken 23:23; pushed 23:20)
+- Predict pnl 15/27 +13.9; Predict acc 15/18 +12.0; Poly pnl 25/39 +110.1; Poly acc 6/7 +6.4. Five processes healthy, 14 GB free.
+- Retro on 66 pooled fires: none 40/66 +124 | p>=0.56 35/50 +148 | p>=0.60 28/38 +124 | ask>0.45 32/43 +153 | band 0.62-0.70 23/30 +123.
+  -> The 0.56-0.62 bin recovered (7/12 +24); the only consistently negative bin is p<0.56 (5/16 -24). Best rules now: ask>0.45 (+23% PnL, 65% of fires kept) and p>=0.56 (+19%, 76% kept). These are the frequency dial candidates for v11: p floor 0.56 = high frequency, ask>0.45 = high PnL.
+- Predict.fun pnl engine has recovered to +14 as vol dropped (low-vol fires 10/14 +37). Its problem is specifically mid-vol/high-vol (0/3, 5/10).
+- Polymarket early window 15/21 +82: still the money bucket.
+- Venue gap -0.083; Polymarket right on disagreement 454:189 over 94 candles.
