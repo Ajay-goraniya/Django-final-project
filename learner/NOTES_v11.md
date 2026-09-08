@@ -64,3 +64,12 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Polymarket early-window fires now 10/13 +62; Predict.fun early 3/7. The venue difference is concentrated in the first minute.
 - Regime: high-vol on Polymarket 9/14 +53 - high vol is profitable THERE (cheap contrarian asks); on Predict.fun 3/7. Confirms: regime handling must be venue-aware.
 - No bugs. Accuracy-mode engine behaving as designed.
+
+## 22:19 UTC check-in
+- Predict pnl 11/21 +1.0; Predict accuracy 7/8 +11.3; Poly pnl 19/30 +77.5; Poly accuracy warming (live 22:25).
+- Retro on 51 pooled fires: none 30/51 +78 | p>=0.56 26/38 +97 | p>=0.60 23/32 +95 | p>=0.65 18/24 +75. Floor 0.56-0.60 both good; 0.56 keeps more fires for the same PnL -> frequency dial range 0.56-0.60.
+- Per venue with floor 0.60: Polymarket 16/20 +94 (from 19/30 +77); Predict.fun 7/12 +2 (from 11/21 +1). The floor fixes accuracy on both, PnL only on Polymarket: Predict.fun's remaining problem is price, not selection.
+- NEW: entry price split. ask<=0.45 fires 5/16 -27; ask>0.45 fires 25/35 +105. Tonight the cheap contrarian entries are the losers, opposite of the 8-day backtest where cheap entries were ~break-even and the edge came from disagreement. Candidate rule: min ask 0.45 (or equivalently p floor, they overlap). Needs more days before trusting; note the backtest had this regime under-represented.
+- Polymarket early-window 11/14 +70 remains the single best bucket: Polymarket book + first minute + p>=0.6 is where the money is tonight.
+- Venue gap -0.082; Polymarket right on disagreement 357:119 (3:1) over 81 candles.
+- No bugs, 5 processes healthy.
