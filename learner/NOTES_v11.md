@@ -90,3 +90,11 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Predict.fun pnl engine has recovered to +14 as vol dropped (low-vol fires 10/14 +37). Its problem is specifically mid-vol/high-vol (0/3, 5/10).
 - Polymarket early window 15/21 +82: still the money bucket.
 - Venue gap -0.083; Polymarket right on disagreement 454:189 over 94 candles.
+
+## 23:55 UTC check-in (backup 23:55 local; last push 23:23)
+- Predict pnl 17/30 +21.1; Predict acc 18/22 +10.2; Poly pnl 28/43 +140.2; Poly acc 9/11 +3.7. Five processes healthy, 14 GB free.
+- Retro on 73 pooled fires: none 45/73 +161 | p>=0.56 37/53 +155 | p>=0.60 30/40 +141 | ask>0.45 34/46 +161. In the calm regime since ~21:00 the low-p / cheap-ask fires have started winning (p<0.56 bin now 8/20 +7, was 5/16 -24 at 23:23). So the filters' benefit is REGIME-SPECIFIC: they save money in high vol and cost fires in calm markets. -> v11: the floor / min-ask must be a function of regime (learner-set), not a constant. This is the concrete "adjustable frequency" mechanism: floor high in high vol, low in calm.
+- Calibration bins: 0.62-0.70 still the core (25/32 +140).
+- Frequency: Poly pnl 45 fires in 6.4 h (~7/h); Predict pnl 31 (~5/h); accuracy modes ~4-8/h.
+- Venue gap -0.084; leaders agree 83%; Polymarket right on disagreement 519:222 over 100 candles.
+- No bugs.
