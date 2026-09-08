@@ -24,7 +24,7 @@ btc_model_v10.py and model_v10.json in the same folder.
 import argparse, asyncio, json, math, os, pathlib, sqlite3, threading, time, urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import numpy as np
-from btc_model_v10 import Model, FeatureState
+from btc_model_v10 import FEATURES, Model, FeatureState
 
 US = 1_000_000
 UA = {"User-Agent": "learner-v10/1.0"}
@@ -51,9 +51,9 @@ class Store:
         self.con.executescript("""
         CREATE TABLE IF NOT EXISTS trades(candle_epoch INTEGER PRIMARY KEY, ts_ms INTEGER, mode TEXT,
             side TEXT, p REAL, ask REAL, ev REAL, sec INTEGER, rv60 REAL, stake REAL,
-            actual TEXT, win INTEGER, pnl REAL, graded_ms INTEGER);
+            actual TEXT, win INTEGER, pnl REAL, graded_ms INTEGER, feat TEXT);
         CREATE TABLE IF NOT EXISTS decisions(ts_ms INTEGER, candle_epoch INTEGER, sec INTEGER, side TEXT,
-            p REAL, ask REAL, ev REAL, fire INTEGER);
+            p REAL, ask REAL, ev REAL, fire INTEGER, feat TEXT);
         CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT);""")
         self.con.execute("INSERT OR REPLACE INTO meta VALUES('build','learner-v10-paper')")
         self.con.commit()
@@ -61,15 +61,15 @@ class Store:
 
     def trade(self, **r):
         with self.lock:
-            self.con.execute("INSERT OR IGNORE INTO trades(candle_epoch,ts_ms,mode,side,p,ask,ev,sec,rv60,stake) "
-                             "VALUES(?,?,?,?,?,?,?,?,?,?)",
-                             (r["epoch"], r["ts_ms"], r["mode"], r["side"], r["p"], r["ask"], r["ev"], r["sec"], r["rv60"], r["stake"]))
+            self.con.execute("INSERT OR IGNORE INTO trades(candle_epoch,ts_ms,mode,side,p,ask,ev,sec,rv60,stake,feat) "
+                             "VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                             (r["epoch"], r["ts_ms"], r["mode"], r["side"], r["p"], r["ask"], r["ev"], r["sec"], r["rv60"], r["stake"], r.get("feat")))
             self.con.commit()
 
     def decision(self, ts_ms, epoch, d):
         with self.lock:
-            self.con.execute("INSERT INTO decisions VALUES(?,?,?,?,?,?,?,?)",
-                             (ts_ms, epoch, d.get("sec"), d.get("side"), d.get("p"), d.get("ask"), d.get("ev"), int(bool(d.get("fire")))))
+            self.con.execute("INSERT INTO decisions VALUES(?,?,?,?,?,?,?,?,?)",
+                             (ts_ms, epoch, d.get("sec"), d.get("side"), d.get("p"), d.get("ask"), d.get("ev"), int(bool(d.get("fire"))), d.get("feat")))
             self.con.commit()
 
     def ungraded(self, before_epoch):
@@ -193,13 +193,28 @@ class Runner:
             if fresh and ep not in self.fired and 5 <= now - ep <= 285:
                 d = self.m.decide(self.st, ep * US, int(now * US), mode=self.a.mode,
                                   ev_threshold=(self.a.ev if self.a.mode == "pnl" and self.a.ev is not None else None))
+                # diagnostics: the full feature vector behind every decision, plus the
+                # standardized contribution of each feature to the logit
+                try:
+                    f = self.st.features(ep * US, int(now * US)) or {}
+                    x = np.nan_to_num(np.array([f.get(k, 0.0) for k in FEATURES], dtype=float))
+                    zc = (x - self.m.mean) / self.m.scale * self.m.coef
+                    d["feat"] = json.dumps({k: (None if not np.isfinite(v) else round(float(v), 6)) for k, v in f.items()}
+                                           | {"_contrib": {k: round(float(c), 4) for k, c in zip(FEATURES, zc)},
+                                              "_spot_n": len(self.st.s_ts), "_perp_n": len(self.st.p_ts),
+                                              "_spot_span_s": (self.st.s_ts[-1] - self.st.s_ts[0]) / US if self.st.s_ts else 0})
+                    top = sorted(zip(FEATURES, zc, x), key=lambda t: -abs(t[1]))[:4]
+                    d["top"] = " ".join(f"{k}={v:.3g}({c:+.2f})" for k, c, v in top)
+                except Exception as e:
+                    d["feat"] = None; d["top"] = f"diag error {e!r}"
                 self.last_decision = dict(d, epoch=ep, ts=int(now))
                 if d.get("fire"):
                     self.fired.add(ep)
                     self.db.trade(epoch=ep, ts_ms=int(now * 1000), mode=self.a.mode, side=d["side"], p=d["p"],
-                                  ask=d["ask"], ev=d["ev"], sec=d["sec"], rv60=d["rv60"], stake=self.a.stake)
-                    print(f"[{time.strftime('%H:%M:%S')}] FIRE {d['side']} p={d['p']} ask={d['ask']} ev={d['ev']} sec={d['sec']}", flush=True)
-                elif int(now) % 15 == 0:
+                                  ask=d["ask"], ev=d["ev"], sec=d["sec"], rv60=d["rv60"], stake=self.a.stake, feat=d["feat"])
+                    print(f"[{time.strftime('%H:%M:%S')}] FIRE {d['side']} p={d['p']} ask={d['ask']} ev={d['ev']} sec={d['sec']} | {d['top']}", flush=True)
+                elif now - getattr(self, "_last_dec_log", 0) >= 15:
+                    self._last_dec_log = now
                     self.db.decision(int(now * 1000), ep, d)
             await asyncio.sleep(0.25)
 
