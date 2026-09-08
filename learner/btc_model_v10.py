@@ -80,11 +80,17 @@ class FeatureState:
                     q.popleft()
 
     def on_spot_trade(self, ts_us, price, qty, is_buyer_maker):
+        if not (price > 0):
+            return
         self.s_ts.append(int(ts_us)); self.s_px.append(float(price))
         self.s_buy.append(0.0 if is_buyer_maker else float(qty)); self.s_sell.append(float(qty) if is_buyer_maker else 0.0)
         self._trim(int(ts_us))
 
     def on_perp_trade(self, ts_us, price, qty, signed_quote_notional, quote_notional):
+        # Binance futures @trade emits "X":"NA" prints with p=0,q=0 (about 15/min live);
+        # one of those as the latest perp print makes basis_bps = -10000 and pins p.
+        if not (price > 0):
+            return
         self.p_ts.append(int(ts_us)); self.p_px.append(float(price))
         self.p_sig.append(float(signed_quote_notional)); self.p_abs.append(float(quote_notional))
 
