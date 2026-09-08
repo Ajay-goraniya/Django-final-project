@@ -134,3 +134,21 @@ That is the learner adjusting its own frequency to the market, which you asked f
 **Maker vs taker:** posting at the bid is worse (adverse selection: fills win 68–79% vs 84% taker). Pay the ask. `learner/maker_fill_test.txt`.
 
 **Deployable check:** `btc_model_v10.py` was run end-to-end on a full day of raw streams and reproduced the expected behaviour (39 vs 38 fires in pnl mode, 37 vs 41 in accuracy mode). `learner/live_path_check.txt`.
+
+---
+
+## Update 3: 14 more days of data — tested, did not beat v10
+
+Collected 14 extra real days (Aug 15–28: Binance spot + perp, Polymarket markets + trade tape; no order-book depth exists for them) and retrained the same design on 22 days, scored only on the original 8 so the comparison is like-for-like.
+
+| training set | real-book log-loss (8 days) | pnl mode thr 0.20 | accuracy mode 0.85/0.02 |
+|---|---|---|---|
+| **v10, 8 days** | **0.5042** | 498 trades, 59.4%, +$1,041 | 654 trades, 87.6%, +$263 |
+| no-depth feats, 22 days | 0.5107 | 205 trades, 64.9%, +$703 | 336 trades, 89.0%, +$99 |
+| v10 feats (depth=0 on extra), 22 days | 0.5110 | 315 trades, 59.7%, +$807 | 455 trades, 88.1%, +$138 |
+
+More days made the model **more selective and slightly more accurate per trade, but worse at predicting the price and lower in total PnL**. The mid-August tape has no depth and no real book, so the extra rows are lower-quality and from a different regime; they pulled the fit away from the week you actually trade. Under the pre-declared criterion (out-of-sample real-book log-loss), **v10 stays the winner**.
+
+Also rejected tonight, same criterion: richer venue-momentum/physics features (0.5104), LightGBM (0.5262), per-second models (0.5167), blends, per-second calibration (0.5072). Every one was tested out-of-sample and none beat 0.5042.
+
+**Where that leaves you:** the edge in v10 is real but small — it beats the market's price by ~1.7 points of log-loss, which turns into +$2 per $10 at 59% or +$0.40 per $10 at 87%. Getting materially past that will take better data (real order books for more days), not a cleverer fit on this data.
