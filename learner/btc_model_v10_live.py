@@ -18049,6 +18049,14 @@ class Engine:
         except Exception:
             ask_up = ask_dn = bid_up = bid_dn = None
         self.v10_state.on_venue_quote(ask_up, bid_up, ask_dn, bid_dn)
+        # throttle: the feature pass walks ~15 min of trade history (about 15 ms
+        # on a laptop, far more on a phone); deciding on every tick starved the
+        # processor thread. Two decisions per second is plenty (training used
+        # one every 15 s).
+        _last = getattr(self, "_v10_last_decide_ms", 0)
+        if ts_ms - _last < 500:
+            return
+        self._v10_last_decide_ms = int(ts_ms)
         # warm-up: the features need >= 10 min of spot history (previous-candle
         # moves) and >= 60 s of perp flow; deciding earlier runs on zeros.
         _s, _p = self.v10_state.s_ts, self.v10_state.p_ts
