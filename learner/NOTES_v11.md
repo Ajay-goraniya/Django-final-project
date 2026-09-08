@@ -56,3 +56,11 @@
 - trend filter (no fade of prev candle): 12/24, -16.1 (removed 7 losses, 8 wins)  <- does not work as a simple rule; drop it
 - floor + high-vol: 12/18, +39.2 (worse than floor alone)
 Conclusion: regime handling must be venue-aware and learned, not a hand rule; the confidence floor is the one hand rule justified by tonight.
+
+## 21:48 UTC check-in
+- pnl engine 9/19, -14.9 (three straight wins 21:30-21:40); runner 17/27, +74.8; accuracy-mode engine 4/5, +2.5 (asks 0.70-0.88, tiny payoff per win, as in backtest).
+- Retro floor test, 46 pooled fires: none 26/46 +60 | p>=0.56 22/33 +78 | p>=0.60 20/28 +87 | p>=0.65 15/21 +56. Floor 0.60 still best: +45% PnL with 39% fewer fires. Frequency lever: floor 0.56 keeps 72% of fires at +30%.
+- Calibration: p 0.51 bucket recovered to 4/10; p>=0.62 buckets 22/29 (76%).
+- Polymarket early-window fires now 10/13 +62; Predict.fun early 3/7. The venue difference is concentrated in the first minute.
+- Regime: high-vol on Polymarket 9/14 +53 - high vol is profitable THERE (cheap contrarian asks); on Predict.fun 3/7. Confirms: regime handling must be venue-aware.
+- No bugs. Accuracy-mode engine behaving as designed.
