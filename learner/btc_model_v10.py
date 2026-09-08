@@ -194,6 +194,9 @@ class Model:
         self.iso_x = np.array(j["iso_x"]); self.iso_y = np.array(j["iso_y"])
         self.fee = j["fee_rate"]; self.thr = j["ev_threshold_default"]
         self.regime = j.get("regime") or {}
+        acc = j.get("accuracy_mode") or {}
+        self.mode = j.get("mode_default", "pnl")
+        self.conf_floor = acc.get("conf_floor", 0.85); self.ev_floor = acc.get("ev_floor", 0.02)
 
     def p_up(self, f):
         x = np.array([f[k] for k in FEATURES], dtype=np.float64)
@@ -214,7 +217,19 @@ class Model:
             return float(r["thresholds"].get(key, self.thr))
         return self.thr
 
-    def decide(self, state, candle_open_us, now_us, ev_threshold=None):
+    def decide(self, state, candle_open_us, now_us, ev_threshold=None, mode=None,
+               conf_floor=None, ev_floor=None):
+        """Two modes, both out-of-sample tested on 8 days / 2,272 candles:
+
+        mode="pnl"      fire when EV >= ev_threshold (default 0.20; or per-vol
+                        regime). ~62 trades/day, 59% accuracy, +$2.09 per $10.
+        mode="accuracy" fire when confidence p_side >= conf_floor AND EV >= ev_floor.
+                        conf 0.85 / ev 0.02: ~82 trades/day, 87.6% accuracy,
+                        +$0.40 per $10, 8/8 days positive.
+                        conf 0.85 / ev 0.05: ~40/day, 86.7%, +$0.97 per $10.
+                        conf 0.80 / ev 0.05: ~57/day, 81.9%, +$0.73 per $10.
+        Frequency is adjusted by moving these floors; nothing else changes.
+        """
         f = state.features(candle_open_us, now_us)
         if f is None:
             return dict(fire=False, reason="no spot history in candle")
@@ -223,10 +238,18 @@ class Model:
         if not (isinstance(ask, float) and np.isfinite(ask) and 0 < ask < 1):
             return dict(fire=False, side=side, p=ps, reason="no venue ask for that side")
         ev = ps * (1 / self.cost(ask) - 1) - (1 - ps)
-        thr = self.thr if ev_threshold is None else ev_threshold
-        if ev_threshold is None and self.regime:
-            thr = self.threshold(f)
-        return dict(fire=bool(ev >= thr), side=side, p=round(ps, 4), ask=ask, ev=round(ev, 4),
+        mode = mode or self.mode
+        if mode == "accuracy":
+            cf = self.conf_floor if conf_floor is None else conf_floor
+            ef = self.ev_floor if ev_floor is None else ev_floor
+            fire = bool(ps >= cf and ev >= ef)
+            thr = dict(conf_floor=cf, ev_floor=ef)
+        else:
+            thr = self.thr if ev_threshold is None else ev_threshold
+            if ev_threshold is None and self.regime:
+                thr = self.threshold(f)
+            fire = bool(ev >= thr)
+        return dict(fire=fire, mode=mode, side=side, p=round(ps, 4), ask=ask, ev=round(ev, 4),
                     threshold=thr, breakeven=round(self.cost(ask), 4), rv60=round(f["rv60"], 3),
                     sec=int(300 - f["sec_left"]))
 

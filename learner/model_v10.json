@@ -391,5 +391,22 @@
   "2026-09-06"
  ],
  "n_rows": 22720,
- "n_candles": 2272
+ "n_candles": 2272,
+ "mode_default": "pnl",
+ "accuracy_mode": {
+  "conf_floor": 0.85,
+  "ev_floor": 0.02,
+  "oos_8day": {
+   "trades_per_day": 81.8,
+   "accuracy": 87.6,
+   "pnl_8d": 263,
+   "per_trade": 0.4,
+   "t": 2.48,
+   "positive_days": "8/8"
+  },
+  "alternatives": {
+   "0.85/0.05": "40/day 86.7% +$314 t=3.77",
+   "0.80/0.05": "57/day 81.9% +$335 t=2.93"
+  }
+ }
 }

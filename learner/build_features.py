@@ -44,7 +44,7 @@ def load_settlement(d):
 
 
 def load_quotes(d):
-    """(epoch, offset) -> (ask_up, ask_dn, bid_up, bid_dn, is_book)."""
+    """(epoch, second) -> (ask_up, ask_dn, bid_up, bid_dn, is_book), every second."""
     t = pq.read_table(ROOT / f"week_data/predictfun/quotes_1s_unified/poly_1s_{d}.parquet",
                       columns=["window_epoch", "side", "offset_s", "quote_source",
                                "best_ask", "best_bid"])
@@ -212,6 +212,27 @@ def build_day(d):
             else:
                 p_venue = np.nan
             hod = ((ep % 86400) / 86400.0) * 2 * math.pi
+            # ---- v11 additions (all causal)
+            def pv_at(sec):
+                qq = Q.get((ep, sec))
+                if not qq: return np.nan
+                if np.isfinite(qq[0]) and np.isfinite(qq[2]): return (qq[0] + qq[2]) / 2
+                if np.isfinite(qq[0]) and np.isfinite(qq[1]): return (qq[0] + (1 - qq[1])) / 2
+                return np.nan
+            pv_now = pv_at(off)
+            dpv15 = pv_now - pv_at(off - 15) if off >= 15 and np.isfinite(pv_now) and np.isfinite(pv_at(off - 15)) else 0.0
+            dpv30 = pv_now - pv_at(off - 30) if off >= 30 and np.isfinite(pv_now) and np.isfinite(pv_at(off - 30)) else 0.0
+            dpv60 = pv_now - pv_at(off - 60) if off >= 60 and np.isfinite(pv_now) and np.isfinite(pv_at(off - 60)) else 0.0
+            venue_spread = (ask_up + ask_dn - 1.0) if (q and np.isfinite(ask_up) and np.isfinite(ask_dn)) else np.nan
+            # physics fair value: P(close > open | current move, realized vol, time left), Brownian
+            sec_left_ = 300 - off
+            sig = rv60 * math.sqrt(max(sec_left_, 1))      # bps std of remaining move
+            z = (p / open_px - 1) * 1e4 / sig if sig > 1e-9 else (50.0 if p > open_px else (-50.0 if p < open_px else 0.0))
+            phys_p = 0.5 * (1 + math.erf(z / math.sqrt(2)))
+            ret120 = ret(120); ret180 = ret(180)
+            vwap_seg = spot["quantity"][i0:i + 1]
+            vwap = float(np.sum(seg * vwap_seg) / np.sum(vwap_seg)) if np.sum(vwap_seg) > 0 else p
+            vwap_dev = (p / vwap - 1) * 1e4
             rows.append(dict(
                 date=d, epoch=ep, offset=off, y=S[ep],
                 move_bps=(p / open_px - 1) * 1e4,
@@ -230,6 +251,8 @@ def build_day(d):
                 sec_left=300 - off, hod_sin=math.sin(hod), hod_cos=math.cos(hod),
                 ask_up=ask_up, ask_dn=ask_dn, bid_up=bid_up, bid_dn=bid_dn,
                 p_venue=p_venue, is_book=(q[4] if q else 0),
+                dpv15=dpv15, dpv30=dpv30, dpv60=dpv60, venue_spread=venue_spread,
+                phys_p=phys_p, ret120=ret120, ret180=ret180, vwap_dev=vwap_dev,
             ))
     return rows
 
