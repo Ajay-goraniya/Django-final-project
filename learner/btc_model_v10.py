@@ -204,6 +204,7 @@ class Model:
         x = np.array([f[k] for k in FEATURES], dtype=np.float64)
         x = np.nan_to_num(x, nan=0.0)
         z = float(((x - self.mean) / self.scale) @ self.coef + self.b)
+        z = max(-60.0, min(60.0, z))            # numerically safe sigmoid
         raw = 1.0 / (1.0 + math.exp(-z))
         return float(np.interp(raw, self.iso_x, self.iso_y))
 
