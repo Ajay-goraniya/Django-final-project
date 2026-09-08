@@ -111,52 +111,83 @@ class ReplayClock:
     def __init__(self): self.ms = WIN_START_US // 1000
 
 
-def hour_events(h, clock_src="recv"):
-    """Yield (delivery_ms, order, kind, payload) for one UTC hour, merged."""
+import pyarrow.compute as _pc
+
+_TBL_CACHE = {}
+
+
+def _table(day, h, kind, cols=None):
+    """Arrow table for one hour, cached. Reading the parquet is cheap; turning
+    it into Python is not, so the raw table is what we keep."""
+    key = (day, h, kind)
+    t = _TBL_CACHE.get(key)
+    if t is None:
+        f = DATA_HOLDER["dir"] / f"{kind}_{h:02d}.parquet"
+        if not f.exists():
+            _TBL_CACHE[key] = False
+            return None
+        t = pq.read_table(f, columns=cols)
+        if len(_TBL_CACHE) > 9:
+            for k in list(_TBL_CACHE)[:3]:
+                _TBL_CACHE.pop(k, None)
+        _TBL_CACHE[key] = t
+    return None if t is False else t
+
+
+def window_events(day, h, t0_ms, t1_ms, clock_src="recv"):
+    """Events for hour `h` restricted to [t0_ms, t1_ms).
+
+    Only rows inside the window are converted to Python. A whole hour of
+    depth20 is ~11M Python objects; the windows we actually score are a small
+    fraction of that, so slicing before converting is what makes this tractable.
+    """
     ev = []
-    # ---- perp depth20 (Tardis incremental_book_L2 reconstruction)
-    f = DATA_HOLDER["dir"] / f"perp_depth20_{h:02d}.parquet"
-    if f.exists():
-        t = pq.read_table(f)
-        cols = {c: t.column(c).to_pylist() for c in t.column_names}
-        n = len(cols["timestamp"])
-        bpx = [cols[f"bid_px_{i}"] for i in range(20)]
-        bqt = [cols[f"bid_qty_{i}"] for i in range(20)]
-        apx = [cols[f"ask_px_{i}"] for i in range(20)]
-        aqt = [cols[f"ask_qty_{i}"] for i in range(20)]
-        lts, xts = cols["local_timestamp"], cols["timestamp"]
-        # v9.4 subscribes to btcusdt@depth20@100ms: ten book states per second. The reconstruction
-        # carries every diff (~36/s), 3.6x production rate, which would also shrink EF's depth
-        # history ring to a fraction of the window it spans live. Deliver the LAST real
-        # reconstructed book of each 100 ms bucket so the lane matches production cadence.
-        keep = {}
-        for i in range(n):
-            keep[(lts[i] if clock_src == "recv" else xts[i]) // 100_000] = i
-        for i in sorted(keep.values()):
-            ev.append((lts[i] // 1000 if clock_src == "recv" else xts[i] // 1000,
-                       0, "PD", i))
-        depth_cols = (bpx, bqt, apx, aqt, xts, n)
-    else:
-        depth_cols = None
-    # ---- perp trades (Tardis tick)
-    f = DATA_HOLDER["dir"] / f"perp_trades_{h:02d}.parquet"
+    lo, hi = t0_ms * 1000, t1_ms * 1000
+    clk = "local_timestamp" if clock_src == "recv" else "timestamp"
+
+    depth_cols = None
+    t = _table(day, h, "perp_depth20")
+    if t is not None:
+        col = t.column(clk)
+        t = t.filter(_pc.and_(_pc.greater_equal(col, lo), _pc.less(col, hi)))
+        if t.num_rows:
+            cols = {c: t.column(c).to_pylist() for c in t.column_names}
+            n = t.num_rows
+            bpx = [cols[f"bid_px_{i}"] for i in range(20)]
+            bqt = [cols[f"bid_qty_{i}"] for i in range(20)]
+            apx = [cols[f"ask_px_{i}"] for i in range(20)]
+            aqt = [cols[f"ask_qty_{i}"] for i in range(20)]
+            lts, xts = cols["local_timestamp"], cols["timestamp"]
+            keep = {}
+            for i in range(n):
+                keep[(lts[i] if clock_src == "recv" else xts[i]) // 100_000] = i
+            for i in sorted(keep.values()):
+                ev.append((lts[i] // 1000 if clock_src == "recv" else xts[i] // 1000,
+                           0, "PD", i))
+            depth_cols = (bpx, bqt, apx, aqt, xts, n)
+
     pt = None
-    if f.exists():
-        t = pq.read_table(f, columns=["timestamp", "local_timestamp", "id",
-                                      "aggressor", "price", "quantity"])
-        pt = {c: t.column(c).to_pylist() for c in t.column_names}
-        for i in range(len(pt["timestamp"])):
-            ev.append((pt["local_timestamp"][i] // 1000 if clock_src == "recv"
-                       else pt["timestamp"][i] // 1000, 1, "PT", i))
-    # ---- spot aggTrades (exchange clock only; no receive clock archived)
-    f = DATA_HOLDER["dir"] / f"spot_aggtrades_{h:02d}.parquet"
+    t = _table(day, h, "perp_trades",
+               ["timestamp", "local_timestamp", "id", "aggressor", "price", "quantity"])
+    if t is not None:
+        col = t.column(clk)
+        t = t.filter(_pc.and_(_pc.greater_equal(col, lo), _pc.less(col, hi)))
+        if t.num_rows:
+            pt = {c: t.column(c).to_pylist() for c in t.column_names}
+            for i in range(t.num_rows):
+                ev.append((pt[clk][i] // 1000, 1, "PT", i))
+
     st = None
-    if f.exists():
-        t = pq.read_table(f, columns=["timestamp", "agg_trade_id", "price",
-                                      "quantity", "is_buyer_maker"])
-        st = {c: t.column(c).to_pylist() for c in t.column_names}
-        for i in range(len(st["timestamp"])):
-            ev.append((st["timestamp"][i] // 1000, 2, "ST", i))
+    t = _table(day, h, "spot_aggtrades",
+               ["timestamp", "agg_trade_id", "price", "quantity", "is_buyer_maker"])
+    if t is not None:
+        col = t.column("timestamp")
+        t = t.filter(_pc.and_(_pc.greater_equal(col, lo), _pc.less(col, hi)))
+        if t.num_rows:
+            st = {c: t.column(c).to_pylist() for c in t.column_names}
+            for i in range(t.num_rows):
+                ev.append((st["timestamp"][i] // 1000, 2, "ST", i))
+
     ev.sort(key=lambda r: (r[0], r[1], r[3]))
     return ev, depth_cols, pt, st
 
@@ -184,6 +215,11 @@ def main():
     ap.add_argument("--hours", default="0-23")
     ap.add_argument("--out", default=str(ROOT.parent / "v94_week_result.json"))
     ap.add_argument("--clock", default="recv", choices=["recv", "exchange"])
+    ap.add_argument("--shard", default="",
+                    help="i/n -- replay only shard i of n of the candle list. Safe ONLY for "
+                         "builds with no cross-candle state: the r6.4 family has no learner, "
+                         "so its candle windows are independent. Sharding a learner build "
+                         "would split its learning history and is not equivalent.")
     ap.add_argument("--price-feed", action="store_true",
                     help="attach the archived venue price to engine.ef_price_feed so an "
                          "in-signal price gate can read it (real prices only)")
@@ -295,6 +331,9 @@ def main():
       state carries exactly as it would in a continuous run."""
       import json as _json
       sel = _json.loads(pathlib.Path(CANDLE_LIST).read_text())["candles"]
+      if args.shard:
+          _i, _n = (int(x) for x in args.shard.split("/"))
+          sel = [c for k, c in enumerate(sel) if k % _n == _i]
       todo = [c for c in sel if c["date"] == CURRENT_DAY[0]]
       if not todo:
           return
@@ -306,19 +345,14 @@ def main():
           return int((ms - day0) // 3_600_000)
       for c in todo:
           c0 = int(c["candle_open_ms"]); c1 = c0 + CANDLE_MS
-          t0 = c0 - WARMUP_MS
-          hs = sorted({hour_of(t0), hour_of(c0), hour_of(c1 - 1)})
+          t0w = c0 - WARMUP_MS
+          hs = sorted({hour_of(t0w), hour_of(c0), hour_of(c1 - 1)})
           hs = [h for h in hs if 0 <= h <= 23]
-          for h in hs:
-              if h not in cache:
-                  cache.clear()                      # keep memory flat
-                  cache[h] = hour_events(h, args.clock)
           ev_all = []
           for h in hs:
-              ev, dcols, pt, st = cache.setdefault(h, hour_events(h, args.clock))
+              ev, dcols, pt, st = window_events(CURRENT_DAY[0], h, t0w, c1, args.clock)
               for e in ev:
-                  if t0 <= e[0] < c1:
-                      ev_all.append((e, dcols, pt, st))
+                  ev_all.append((e, dcols, pt, st))
           ev_all.sort(key=lambda x: (x[0][0], x[0][1]))
           for (delivery_ms, _order, kind, i), dcols, pt, st in ev_all:
             bpx = bqt = apx = aqt = xts = None
