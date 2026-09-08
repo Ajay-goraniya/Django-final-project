@@ -188,6 +188,7 @@ class FeatureState:
                  p_venue=(p_venue if np.isfinite(p_venue) else 0.0), lv=lv,
                  mv_x_sec=move * sec_left / 300.0, lv_x_sec=lv * sec_left / 300.0)
         f["_ask_up"], f["_ask_dn"], f["_price"] = ask_up, ask_dn, p
+        f["_venue_ok"] = bool(np.isfinite(p_venue))   # both sides quoted -> venue features are real, not zero-filled
         return f
 
 
@@ -245,6 +246,17 @@ class Model:
             return dict(fire=False, reason="no spot history in candle")
         p = self.p_up(f)
         side, ps, ask = ("UP", p, f["_ask_up"]) if p >= 0.5 else ("DOWN", 1 - p, f["_ask_dn"])
+        off = 300 - f["sec_left"]
+        # Only decide inside the window the model was trained and validated on
+        # (offsets 15..240 s). Earlier there is no information yet; later the book
+        # is one-sided and near-resolved, which is where the 0.01 "dust" asks live.
+        if off < 15 or off > 240:
+            return dict(fire=False, side=side, p=ps, reason=f"outside decision window (15-240 s), at {off:.0f} s")
+        # A venue quote with one side missing zero-fills p_venue/lv, so p collapses to
+        # ~0.51 while the remaining ask can be a 0.01 leftover: EV explodes on nothing.
+        # Every bogus fire seen live (2026-09-08) had exactly this signature.
+        if not f.get("_venue_ok", True):
+            return dict(fire=False, side=side, p=ps, reason="venue quote incomplete (one side missing)")
         if not (isinstance(ask, float) and np.isfinite(ask) and 0 < ask < 1):
             return dict(fire=False, side=side, p=ps, reason="no venue ask for that side")
         ev = ps * (1 / self.cost(ask) - 1) - (1 - ps)
