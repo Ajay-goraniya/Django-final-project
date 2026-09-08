@@ -44,11 +44,18 @@ def load_settlement(d):
 
 
 def load_quotes(d):
-    """(epoch, second) -> (ask_up, ask_dn, bid_up, bid_dn, is_book), every second."""
-    t = pq.read_table(ROOT / f"week_data/predictfun/quotes_1s_unified/poly_1s_{d}.parquet",
-                      columns=["window_epoch", "side", "offset_s", "quote_source",
-                               "best_ask", "best_bid"])
-    c = {n: t.column(n).to_numpy(zero_copy_only=False) for n in t.column_names}
+    """(epoch, second) -> (ask_up, ask_dn, bid_up, bid_dn, is_book), every second.
+    Falls back to the trade-inferred touch file for days with no unified file."""
+    f = ROOT / f"week_data/predictfun/quotes_1s_unified/poly_1s_{d}.parquet"
+    if f.exists():
+        t = pq.read_table(f, columns=["window_epoch", "side", "offset_s", "quote_source", "best_ask", "best_bid"])
+        c = {n: t.column(n).to_numpy(zero_copy_only=False) for n in t.column_names}
+    else:
+        t = pq.read_table(ROOT / f"week_data/predictfun/quotes_1s/poly_touch_1s_{d}.parquet",
+                          columns=["window_epoch", "side", "offset_s", "ask_inferred", "bid_inferred"])
+        c = {n: t.column(n).to_numpy(zero_copy_only=False) for n in t.column_names}
+        c["best_ask"], c["best_bid"] = c["ask_inferred"], c["bid_inferred"]
+        c["quote_source"] = np.where(np.isfinite(c["best_ask"]) | np.isfinite(c["best_bid"]), "trade_inferred", "none")
     Q = {}
     for i in range(t.num_rows):
         if c["quote_source"][i] == "none":
@@ -258,6 +265,8 @@ def build_day(d):
 
 
 if __name__ == "__main__":
+    import os
+    out_path = pathlib.Path(os.environ.get("FEATURES_OUT", str(OUT)))
     days = sys.argv[1:] or DAYS
     all_rows = []
     for d in days:
@@ -266,6 +275,6 @@ if __name__ == "__main__":
         print(f"{d}: {len(r):,} rows  ({len(r)//len(OFFSETS)} candles)", flush=True)
     import pandas as pd
     df = pd.DataFrame(all_rows)
-    df.to_parquet(OUT, index=False)
-    print(f"\nwrote {len(df):,} rows x {df.shape[1]} cols -> {OUT}")
+    df.to_parquet(out_path, index=False)
+    print(f"\nwrote {len(df):,} rows x {df.shape[1]} cols -> {out_path}")
     print("label balance UP:", round(df.drop_duplicates('epoch')['y'].mean(), 3))
