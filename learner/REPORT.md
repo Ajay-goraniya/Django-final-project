@@ -152,3 +152,16 @@ More days made the model **more selective and slightly more accurate per trade, 
 Also rejected tonight, same criterion: richer venue-momentum/physics features (0.5104), LightGBM (0.5262), per-second models (0.5167), blends, per-second calibration (0.5072). Every one was tested out-of-sample and none beat 0.5042.
 
 **Where that leaves you:** the edge in v10 is real but small — it beats the market's price by ~1.7 points of log-loss, which turns into +$2 per $10 at 59% or +$0.40 per $10 at 87%. Getting materially past that will take better data (real order books for more days), not a cleverer fit on this data.
+
+**Hybrid rule (tested):** accuracy-mode first, fall back to pnl-mode on candles that never clear the floors — 94 trades/day, 68.6%, $50 → $2,516 under your staking (6/8 days). Sits between the two pure modes; nothing new, but it's there if you want more volume. `learner/hybrid_rule.txt`.
+
+## Final state for the morning
+
+| mode (all out-of-sample, 8 days, your staking rule) | trades/day | accuracy | $50 → | days + |
+|---|---|---|---|---|
+| **accuracy, regime-adaptive (default)** | 53 | **81.8%** | **$1,538** | 7/8 |
+| accuracy, fixed 0.85 / 0.02 | 82 | **87.6%** | $428 | 8/8 |
+| pnl, EV ≥ 0.20 | 62 | 59.4% | $4,109 | 8/8 |
+| hybrid | 94 | 68.6% | $2,516 | 6/8 |
+
+Winner build: `learner/btc_model_v10.py` + `learner/model_v10.json` (sent). Everything on branch `claude/your-task-3wbq8u`.
