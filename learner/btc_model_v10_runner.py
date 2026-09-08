@@ -30,6 +30,7 @@ US = 1_000_000
 UA = {"User-Agent": "learner-v10/1.0"}
 GAMMA = "https://gamma-api.polymarket.com/events?slug=btc-updown-5m-{}"
 CLOB = "https://clob.polymarket.com/book?token_id={}"
+POLY_WS = "wss://ws-subscriptions-clob.polymarket.com/ws/market"
 FEE = 0.07
 cost = lambda q: q / (1 - FEE * (1 - q))
 
@@ -104,6 +105,8 @@ class Runner:
         self.msgs = {}
         self._agg = None
         self.market = {}          # epoch -> (token_up, token_dn)
+        self.ladders = {}         # token -> {"asks": {price: size}, "bids": {price: size}}
+        self.venue_ws_up = 0.0
         self.fired = set()
         self.last_decision = {}
         self.started = time.time()
@@ -146,37 +149,115 @@ class Runner:
                          sum(q for _, q in b[:5]), sum(q for _, q in a[:5]),
                          sum(q for _, q in b), sum(q for _, q in a))
 
+    async def resolve_market(self, ep):
+        """Gamma lookup: (UP token, DOWN token) for the 5m market at epoch `ep`, cached."""
+        if ep in self.market:
+            return self.market[ep]
+        j = await asyncio.to_thread(http_json, GAMMA.format(ep))
+        toks = []
+        if j:
+            mk = (j[0].get("markets") or [{}])[0]
+            try:
+                toks = json.loads(mk.get("clobTokenIds") or "[]")
+                outs = json.loads(mk.get("outcomes") or "[]")
+                if outs and str(outs[0]).strip().upper() != "UP":
+                    toks = toks[::-1]
+            except Exception:
+                toks = []
+        self.market[ep] = tuple(toks) if len(toks) == 2 else None
+        for old in [k for k in self.market if k < ep - 1800]:
+            self.market.pop(old, None)
+        return self.market[ep]
+
+    def _publish_venue(self):
+        """Best ask/bid of the current candle's two tokens -> feature state."""
+        ep = int(time.time() // 300) * 300
+        toks = self.market.get(ep)
+        if not toks:
+            return
+        def best(tok):
+            lad = self.ladders.get(tok)
+            if not lad:
+                return (None, None)
+            asks = [p for p, q in lad["asks"].items() if q > 0 and 0 < p < 1]
+            bids = [p for p, q in lad["bids"].items() if q > 0 and 0 < p < 1]
+            return (min(asks) if asks else None, max(bids) if bids else None)
+        au, bu = best(toks[0]); ad, bd = best(toks[1])
+        self.st.on_venue_quote(au, bu, ad, bd)
+        if au is not None or ad is not None:
+            self.age["venue"] = time.time()
+
+    def _apply_ws(self, ev):
+        k = ev.get("event_type")
+        if k == "book":
+            tok = str(ev.get("asset_id"))
+            self.ladders[tok] = {
+                "asks": {float(x["price"]): float(x["size"]) for x in ev.get("asks", [])},
+                "bids": {float(x["price"]): float(x["size"]) for x in ev.get("bids", [])},
+            }
+        elif k == "price_change":
+            for ch in ev.get("price_changes", []):
+                tok = str(ch.get("asset_id")); lad = self.ladders.get(tok)
+                if lad is None:
+                    continue
+                side = "asks" if str(ch.get("side", "")).upper() == "SELL" else "bids"
+                try:
+                    price, size = float(ch["price"]), float(ch["size"])
+                except (KeyError, TypeError, ValueError):
+                    continue
+                if size <= 0:
+                    lad[side].pop(price, None)
+                else:
+                    lad[side][price] = size
+        else:
+            return
+        self.msgs["venue_ws"] = self.msgs.get("venue_ws", 0) + 1
+        self._publish_venue()
+
     async def venue(self):
-        """Resolve the current 5m market each candle and poll both books at 1 Hz."""
+        """Polymarket CLOB market websocket (free, no key): full book snapshots plus
+        every price change for the current and the next 5m market. Reconnects once
+        per candle (at ~30 s in) so the next market's tokens are already subscribed
+        before the rollover. Needs a text PING every <10 s or the server drops it."""
+        import websockets
         while True:
             now = time.time(); ep = int(now // 300) * 300
-            if ep not in self.market:
-                j = await asyncio.to_thread(http_json, GAMMA.format(ep))
-                toks = []
-                if j:
-                    mk = (j[0].get("markets") or [{}])[0]
+            cur = await self.resolve_market(ep); nxt = await self.resolve_market(ep + 300)
+            toks = [t for pair in (cur, nxt) if pair for t in pair]
+            if not toks:
+                await asyncio.sleep(5); continue
+            try:
+                async with websockets.connect(POLY_WS, ping_interval=None, max_size=2**23) as w:
+                    await w.send(json.dumps({"assets_ids": toks, "type": "market"}))
+                    self.venue_ws_up = time.time()
+                    async def pinger():
+                        while True:
+                            await asyncio.sleep(5); await w.send("PING")
+                    pt = asyncio.create_task(pinger())
                     try:
-                        toks = json.loads(mk.get("clobTokenIds") or "[]")
-                        outs = json.loads(mk.get("outcomes") or "[]")
-                        if outs and str(outs[0]).strip().upper() != "UP":
-                            toks = toks[::-1]
-                    except Exception:
-                        toks = []
-                self.market[ep] = tuple(toks) if len(toks) == 2 else None
-                for old in [k for k in self.market if k < ep - 1800]:
-                    self.market.pop(old, None)
-            toks = self.market.get(ep)
-            if toks:
-                bu, bd = await asyncio.gather(asyncio.to_thread(http_json, CLOB.format(toks[0]), 4),
-                                              asyncio.to_thread(http_json, CLOB.format(toks[1]), 4))
-                def best(bk):
-                    if not bk: return (None, None)
-                    asks = [float(x["price"]) for x in bk.get("asks", []) if 0 < float(x["price"]) < 1]
-                    bids = [float(x["price"]) for x in bk.get("bids", []) if 0 < float(x["price"]) < 1]
-                    return (min(asks) if asks else None, max(bids) if bids else None)
-                au, bu_ = best(bu); ad, bd_ = best(bd)
-                self.st.on_venue_quote(au, bu_, ad, bd_); self.age["venue"] = time.time()
-            await asyncio.sleep(1.0)
+                        while True:
+                            # resubscribe once the next candle needs a market we do not hold yet
+                            ep_now = int(time.time() // 300) * 300
+                            if ep_now > ep and time.time() - ep_now >= 30:
+                                break
+                            try:
+                                m = await asyncio.wait_for(w.recv(), timeout=15)
+                            except asyncio.TimeoutError:
+                                print("[venue] websocket silent 15 s; reconnecting", flush=True); break
+                            if m == "PONG":
+                                continue
+                            try:
+                                d = json.loads(m)
+                            except Exception:
+                                continue
+                            for ev in (d if isinstance(d, list) else [d]):
+                                if isinstance(ev, dict):
+                                    self._apply_ws(ev)
+                    finally:
+                        pt.cancel()
+            except Exception as e:
+                print(f"[venue] reconnect: {type(e).__name__}", flush=True)
+                await asyncio.sleep(2)
 
     # ---------------- decisions + grading
     async def decide_loop(self):
