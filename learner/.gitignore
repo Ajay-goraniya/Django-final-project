@@ -1,5 +1,5 @@
-# generated data: rebuilt by build_features.py / train.py, too large for git
-features.parquet
-oof_predictions.parquet
-best_variant_oof.npy
+# generated data: rebuilt by build_features.py / train.py / collect_extra_days.py, too large for git
+*.parquet
+*.npy
+*.log
 __pycache__/

@@ -31,3 +31,7 @@ week_data/depth/
 week_data/trades/
 week_data/weekend_raw/
 week_data/predictfun/
+
+# replay data (hundreds of MB per day, rebuilt by normalize_day.py / collect_extra_days.py)
+week_replay/2026-*/normalized/
+week_replay/runs/
