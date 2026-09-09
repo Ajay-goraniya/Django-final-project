@@ -73,3 +73,7 @@ Old-version findings keep going to NOTES_v11.md.
 - 21:10:53 EF DOWN, candle 21:10, quoted 0.63, stake $1, signed and submitted in 406 ms; Predict.fun answered HTTP 403 "This operation is not available in your jurisdiction". Auth, approvals and the read-only API all work from here; only order placement is refused. The container's egress is in the US (Ohio), where Predict.fun does not accept orders. Not a code bug.
 - Master switched OFF at 21:11 to stop a 403 loop; v11 on 8794 continues as a paper run on the reset database (fires still recorded, executor in SHADOW).
 - Consequence: real orders must be sent from a jurisdiction Predict.fun serves (the user's phone in the UK). The container keeps signal, paper grading and notes.
+
+### 21:21 UTC (19 min since reset, paper, master OFF): 1/2, -4.4 at $10
+- 21:10 DOWN 0.63 won (the order Predict.fun refused with the jurisdiction 403); 21:15 UP 0.48 lost with Predict.fun v10. Signal since reset: polymarket 1112, held 37, one-sided 114, fallback 0. No new failed attempts; executor idle in SHADOW.
+- Trend-guard candidate on 340 fires (archived paper fires included): 12c/20bps kept +370 vs +348 as run, removed 37/78 -21; the gain shrank from +66 to +22 as the tape turned; 9c +458, 6c +304 - still parameter-sensitive. Not shipping.
