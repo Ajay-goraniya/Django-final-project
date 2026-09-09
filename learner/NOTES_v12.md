@@ -105,3 +105,4 @@ Old-version findings keep going to NOTES_v11.md.
 - Same window since 21:55: Predict.fun v10 6/9 +18.1, Polymarket v10 5/10 +0.4, v11 live 7/15 -1.64 (about -16 at $10). Same-candle: 22:55 and 23:10 v11 UP lost where Predict.fun v10 DOWN won; 22:40 and 23:05 all right.
 - Paper twin (container): 8/19 -45.7 since reset; extras 5/14 -57 vs strict 3/5 +11; first-minute fires 6/15 -42; low-vol 4/11 -40. The twin is doing worse than Tokyo on the same tape (different fire ticks). EV-scale review point is 60 settled live fires (at 15 now).
 - Trend guard on 382 fires unchanged (+348 vs +277 realised-fire basis; fails the v11 replay) - off.
+- 23:31 UTC: daily stop-loss removed at the user's request (stop_loss 0); no daily limits on the live run.
