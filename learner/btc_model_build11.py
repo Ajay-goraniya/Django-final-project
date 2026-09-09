@@ -14564,7 +14564,7 @@ class Engine:
         self.v11_conv_gate = (os.environ.get("V11_CONV_GATE") or "accuracy").strip().lower()
         self._v11_settings_loaded = False   # Trade Controls override env defaults; loaded on the first tick
 
-        self.v11_signal_counts = {"polymarket": 0, "predict": 0}
+        self.v11_signal_counts = {"polymarket": 0, "polymarket-held": 0, "predict": 0}
         # v4.5: aggressive cluster detection on top-of-book quote volume
         self.bid_volume_history: Deque[float] = deque(maxlen=CLUSTER_WINDOW)
         self.ask_volume_history: Deque[float] = deque(maxlen=CLUSTER_WINDOW)
@@ -17890,9 +17890,20 @@ class Engine:
             poly = self.v11_poly.quote(int(cid // 1000))
         except Exception:
             poly = None
-        if poly and poly.get("age_s") is not None and poly["age_s"] <= self.v11_poly_max_age_s and poly.get("ask_up") and poly.get("ask_dn"):
-            self.v10_state.on_venue_quote(poly["ask_up"], poly.get("bid_up"), poly["ask_dn"], poly.get("bid_dn"))
+        poly_ok = bool(poly and poly.get("age_s") is not None and poly["age_s"] <= self.v11_poly_max_age_s
+                       and poly.get("ask_up") and poly.get("ask_dn"))
+        if poly_ok:
+            self._v11_poly_held = (int(ts_ms), int(cid), dict(poly))
             src = "polymarket"
+        else:
+            # A one-sided or momentarily empty Polymarket ladder (seen ~5 s per candle around
+            # snapshots) must not flip the model's venue features to the other book: hold the
+            # last complete Polymarket quote of THIS candle for up to 10 s before falling back.
+            held = getattr(self, "_v11_poly_held", None)
+            if held and held[1] == int(cid) and 0 <= ts_ms - held[0] <= 10000:
+                poly = held[2]; poly_ok = True; src = "polymarket-held"
+        if poly_ok:
+            self.v10_state.on_venue_quote(poly["ask_up"], poly.get("bid_up"), poly["ask_dn"], poly.get("bid_dn"))
         else:
             bid_up = None if p_ask_dn is None else 1.0 - p_ask_dn
             bid_dn = None if p_ask_up is None else 1.0 - p_ask_up
