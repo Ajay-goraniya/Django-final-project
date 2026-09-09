@@ -27,3 +27,8 @@ Old-version findings keep going to NOTES_v11.md.
 - Trailing 12-candle Polymarket leader conversion (at 60 s) does NOT separate it: the worst hours had 54-61% conversion, but so did 21:00 and 23:00 yesterday, which were the best (69%). By band, pooled: conv<=55% 15/25 +43 | 55-70% 59/117 +15 | >70% 85/154 +229. A gate at 55% would have cost the Polymarket v10 run $67 (+240 -> +173) and given v11 +20. Not a gate; the >70% band is where the money is, the middle band is flat.
 - rv60 median does not separate either (16:00 chop 0.38 vs 17:00 win hour 0.31; 15:00 0.93 was 50%).
 - Conclusion for v12: no single trailing statistic found yet that flags the losing hours before they happen; still a frequency dial, not a switch. Keep collecting; test a two-signal rule (conversion + book-gap width) once day 2 is complete.
+
+### 18:56 UTC (146 min): 12/27, -30.7 at $10
+- Same window v10: Predict.fun pnl 5/14 -48.4, Polymarket pnl 3/12 -67.6 -> v11 still loses least of the three pnl runs on this tape, at 2x the fires.
+- This half hour the extras stopped carrying: strict-thr 5/13 -22.7, x0.75 extras 7/14 -8.0. p>=0.62 8/18 -28.6 is where the losses sit (18:30, 18:45, 18:50 all UP at p 0.62-0.68 and lost; 18:45 all three runs UP and wrong). p<0.62 4/9 -2.1. Regime: low 2/5, mid 6/14, high 4/8 - flat everywhere.
+- Signal: polymarket 2378, held 37, one-sided 296, fallback 0; 34 reconnects bridged. No errors, no relaunch.

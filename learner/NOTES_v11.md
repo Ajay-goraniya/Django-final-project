@@ -432,3 +432,8 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Predict pnl 64/117 +88.6 (day high was +185.8 at 15:49: -97 since); Predict acc 163/208 +42.6; Poly pnl 82/147 +260.5 (-38 from its 15:49 high... high was +298 at 16:31); Poly acc 120/162 -45.6. Last hour pooled 3/9 -34.
 - Second evening is the opposite of the first: 16:00-18:20 UTC today is the worst stretch of the run on both venues (Predict.fun 4/10 -27, Polymarket 3/9 -38 since 16:30), while yesterday's same hours were the best. Confirms A.4: time of day is not a gate; the tape is (today's US afternoon = range chop, low follow-through).
 - Retro on 264 fires: none +349 | p>=0.56 +262 | ask>0.45 +172 - constant filters still lose overall.
+
+## 18:56 UTC check-in (backup 18:56) - all processes healthy, 13 GB free
+- Predict pnl 65/121 +67.5; Predict acc 169/215 +64.8; Poly pnl 82/150 +230.5; Poly acc 123/166 -48.2. Last hour pooled 1/13 -111: the single worst hour of the run on both venues (17:55-18:55 UTC).
+- Since 16:30 the pnl runs are 5/14 -48 (Predict.fun) and 3/12 -68 (Polymarket); the accuracy runs are +9 / +11 in the same two hours (78% / 82%). The mode complementarity (A.4) held for a second day, the other way round: accuracy mode earns the chop, pnl mode earns the trend.
+- Retro on 271 fires: none +298 | p>=0.56 +241 | ask>0.45 +151.
