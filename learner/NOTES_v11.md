@@ -384,3 +384,10 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Smoke relaunched 15:04 on the patched build (scratch DB kept): thr 0.75, calibration off, signal polymarket, no errors.
 - 15:08 UTC: Polymarket signal dropped to the Predict.fun fallback twice mid-candle (5 s and 2 s) with the socket alive (age <50 ms): a one-sided/empty ladder moment, not staleness. Build 11 now holds the last complete Polymarket quote of the same candle for up to 10 s ("polymarket-held" in signal counts) before falling back, so a fire never switches venue features for a blink. Smoke relaunched 15:13 on that build.
 - Pre-launch tests passed: fresh --reset launch from the launch file set (22 tables, no errors), executor path with master OFF records EF fires as SHADOW with break-even = ask*1.02 (2% notional fee confirmed in Build36's own numbers), report/backup/check-in tooling extended for the 8794 database (report section verified on the smoke DB).
+
+## 15:14 UTC check-in (backup 15:13) - five v10 processes healthy, feeds live, 13 GB free
+- Predict pnl 58/97 +178.2 (new high); Predict acc 134/171 +18.6; Poly pnl 73/127 +243.9 (new high); Poly acc 92/129 -92.1. Last hour pooled 8/12 +68.
+- Both pnl runs are earning the London/US afternoon again: Predict.fun high-vol cell 22/35 +130, Polymarket high-vol 26/45 +125 - the active-hours pattern (A.4) holds for a second afternoon.
+- Retro on 224 fires: none 130/224 +422 | p>=0.56 +338 | ask>0.45 +264 (constant filters still cost).
+- Build 11 smoke: 15 fires 8/7 (+18.8 at 2% fee), all on the Polymarket signal; relaunched 15:13 on the held-quote build, warming.
+- No bugs, no restarts on the v10 processes. Collector single instance, no duplicate samples.
