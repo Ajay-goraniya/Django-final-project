@@ -391,3 +391,8 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Retro on 224 fires: none 130/224 +422 | p>=0.56 +338 | ask>0.45 +264 (constant filters still cost).
 - Build 11 smoke: 15 fires 8/7 (+18.8 at 2% fee), all on the Polymarket signal; relaunched 15:13 on the held-quote build, warming.
 - No bugs, no restarts on the v10 processes. Collector single instance, no duplicate samples.
+
+## 15:45 UTC check-in (backup 15:45) - five v10 processes healthy, feeds live, 13 GB free
+- Predict pnl 60/102 +165.9; Predict acc 141/178 +48.8; Poly pnl 74/130 +262.6; Poly acc 98/135 -68.3. Last hour pooled 8/14 +44.
+- High-vol cell still carries both pnl runs (Predict.fun 24/40 +118, Polymarket 28/48 +144). Retro on 232 fires: none +428 | p>=0.56 +349 | ask>0.45 +262.
+- Build 11 smoke (held-quote build since 15:13): 19 fires 10/9; 1 Hz sampling over 10 min shows the Polymarket signal is complete for the first 3 min of every candle and one-sided (loser side has no asks) in the last 2 min: 0 fallbacks at 60-180 s, ~50% at 180-240 s, ~50% after 240 s. The fallback to the Predict.fun quote therefore only happens when the market is already decided; the proven Polymarket runner refuses one-sided quotes instead of switching venue.
