@@ -288,3 +288,9 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Build 11 (v11) built and live-smoke-tested on port 8793 (scratch DB): first fire end-to-end with Polymarket signal (89% of decisions), Predict.fun ask 0.34 / 152 shares, 2% fee, current market. Retro through the real decide_v11 on the recorded 19 h: v10-as-run +186 (110 tr) -> v11 pnl +241 (118 tr, 63%) -> v11 pnl + live calibration (refuse if calibrated p<0.5) +332 (97 tr, 69%); accuracy mode 97 tr 85% +140. Calibration table is in-sample; retro uses 15-s/5-s samples.
 - Venue gap -0.074; Polymarket right on disagreement 1108:555 over 257 candles.
 - No bugs, no restarts on the five v10 processes.
+
+## 13:15 UTC - leader-conversion window (item 13) retro-tested and implemented in Build 11
+- Per candle (fired or not): Polymarket leader at >=60 s, its Predict.fun ask*1.02 as break-even, graded at settlement, window = last 12 settled candles. 254 candles: leader converts 73% vs mean break-even 65%; window ON 65% of candles.
+- pnl lane (contrarian fires): switch REMOVES 24 wins / 10 losses -> +340 -> +225. Wrong signal for that lane: contrarian fires win exactly when the leader under-converts. NOT gated.
+- accuracy lane (leader fires): 100 tr 85% +150 -> 63 tr 89% +137 (W=12); W=24 67 tr 90% +137. Gated by default (V11_CONV_GATE=accuracy; all/off available).
+- Regime floor / activity-driven frequency for the pnl lane: with Predict.fun execution + 2% fee the low-vol cell is +121 (52 tr 67%) in the retro, so no floor is justified by this data; left as env dials (V11_THR_SCALE) rather than a rule. Needs day 2.

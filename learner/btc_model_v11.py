@@ -213,10 +213,61 @@ class Calibration:
         return p_side
 
 
+# ---------------------------------------------------------------- leader-conversion window
+class ConversionWindow:
+    """Per CANDLE (fired or not): the signal book's leader at ~60 s and its Predict.fun ask;
+    graded at settlement. Window = last N settled candles. ok() is False while the leader
+    converts under its Predict.fun break-even (ask*1.02). Reacts within ~N candles whatever the
+    lane's own fire rate. Retro (19 h, 2026-09-08/09): accuracy lane 85% -> 89-90% with N=12
+    (PnL +150 -> +137); pnl lane (contrarian fires) LOSES with it (removed 24 wins / 10 losses),
+    so it gates the accuracy lane only by default."""
+
+    def __init__(self, n: int = 12, at_sec: int = 60):
+        self.n = int(n); self.at_sec = int(at_sec)
+        self.pending: Dict[int, Dict[str, Any]] = {}     # epoch -> {side, be}
+        self.settled: "collections.deque[tuple]" = collections.deque(maxlen=self.n)
+        self.lock = threading.Lock()
+
+    def observe(self, epoch: int, sec: float, poly: Optional[Dict[str, Any]], pred: Dict[str, Any]) -> None:
+        if sec < self.at_sec or not poly:
+            return
+        with self.lock:
+            if epoch in self.pending:
+                return
+            au, ad = poly.get("ask_up"), poly.get("ask_dn")
+            if not (au and ad):
+                return
+            side = "UP" if au >= ad else "DOWN"
+            pask = pred.get("ask_up" if side == "UP" else "ask_dn")
+            if not (isinstance(pask, (int, float)) and 0 < pask < 1):
+                return
+            self.pending[epoch] = {"side": side, "be": float(pask) * (1.0 + float(pred.get("fee_rate") or 0.02))}
+
+    def settle(self, epoch: int, actual: str) -> None:
+        with self.lock:
+            rec = self.pending.pop(epoch, None)
+            if rec and actual in ("UP", "DOWN"):
+                self.settled.append((1.0 if rec["side"] == actual else 0.0, rec["be"]))
+            for old in [k for k in self.pending if k < epoch - 3600]:
+                self.pending.pop(old, None)
+
+    def stats(self) -> Dict[str, Any]:
+        with self.lock:
+            n = len(self.settled)
+            if n == 0:
+                return {"n": 0, "conversion": None, "break_even": None, "ok": True}
+            conv = sum(w for w, _ in self.settled) / n; be = sum(b for _, b in self.settled) / n
+            return {"n": n, "conversion": round(conv, 3), "break_even": round(be, 3), "ok": bool(n < self.n or conv >= be)}
+
+    def ok(self) -> bool:
+        return bool(self.stats()["ok"])
+
+
 # ---------------------------------------------------------------- decision
 def decide_v11(model, f: Dict[str, Any], pred_quote: Dict[str, Any], *, mode: str = "pnl",
                thr_scale: float = 1.0, min_notional: float = 10.0, calib: Optional[Calibration] = None,
-               acc_conf: float = 0.75, acc_margin: float = 0.05) -> Dict[str, Any]:
+               acc_conf: float = 0.75, acc_margin: float = 0.05, conv_ok: bool = True,
+               conv_gate: str = "accuracy") -> Dict[str, Any]:
     """f: v10 feature dict (venue features already injected from the signal book).
     pred_quote: {'ask_up','size_up','ask_dn','size_dn','fee_rate'} from PREDICT.FUN.
     Every price used here is Predict.fun's; Polymarket only shaped f."""
@@ -256,5 +307,8 @@ def decide_v11(model, f: Dict[str, Any], pred_quote: Dict[str, Any], *, mode: st
     else:
         fire = bool(ev >= regime * thr_scale)
         thr = dict(ev=round(regime * thr_scale, 3))
+    if fire and not conv_ok and (conv_gate == "all" or conv_gate == lane):
+        return dict(base, p=ps_c, ask=float(ask), size=float(size), fee=fee, cost=round(cost, 4), ev=round(ev, 4),
+                    lane=lane, threshold=thr, fire=False, reason="leader converting under its price (12-candle window)")
     return dict(base, p=ps_c, ask=float(ask), size=float(size), fee=fee, cost=round(cost, 4), ev=round(ev, 4),
                 lane=lane, threshold=thr, fire=fire, reason=None if fire else "waiting")

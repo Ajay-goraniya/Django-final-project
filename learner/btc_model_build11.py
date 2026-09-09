@@ -292,7 +292,7 @@ from typing import Any, Deque, Dict, Iterable, List, Optional, Tuple
 
 try:
     from btc_model_v10 import Model as _V10Model, FeatureState as _V10State
-    from btc_model_v11 import PolyBook as _PolyBook, Calibration as _V11Calibration, decide_v11 as _decide_v11
+    from btc_model_v11 import PolyBook as _PolyBook, Calibration as _V11Calibration, decide_v11 as _decide_v11, ConversionWindow as _V11ConvWindow
 except Exception as _exc:  # pragma: no cover
     raise SystemExit("btc_model_v10.py, btc_model_v11.py, model_v10.json and v11_calibration.json must sit next to this file: %r" % (_exc,))
 
@@ -14540,6 +14540,9 @@ class Engine:
             self.v11_poly.start()
         self.v11_signal_src = "none"
         self.started_ms = now_ms()
+        # leader-conversion window: gates the accuracy lane by default (V11_CONV_GATE = accuracy | all | off)
+        self.v11_conv = _V11ConvWindow(n=int(os.environ.get("V11_CONV_N") or 12))
+        self.v11_conv_gate = (os.environ.get("V11_CONV_GATE") or "accuracy").strip().lower()
         self.v11_signal_counts = {"polymarket": 0, "predict": 0}
         # v4.5: aggressive cluster detection on top-of-book quote volume
         self.bid_volume_history: Deque[float] = deque(maxlen=CLUSTER_WINDOW)
@@ -15345,6 +15348,10 @@ class Engine:
             self.ef_post_progress = None
         # Learn from causal candidate snapshots only AFTER the candle settles.
         learner_changed = self.ef_learner.close_candle(candle_id)
+        try:
+            self.v11_conv.settle(int(candle_id // 1000), str(actual).upper())
+        except Exception:
+            pass
         try:
             # Build 11: the Build36 EF learner no longer influences fires (v11 decides);
             # its updates are off unless V11_EF_LEARNER=on, to keep the DB/state stable.
@@ -17812,6 +17819,10 @@ class Engine:
             src = "predict"
         self.v11_signal_src = src
         self.v11_signal_counts[src] = self.v11_signal_counts.get(src, 0) + 1
+        try:
+            self.v11_conv.observe(int(cid // 1000), (ts_ms - cid) / 1000.0, poly, pred_quote)
+        except Exception:
+            pass
         # --- warm-up
         _s, _p = self.v10_state.s_ts, self.v10_state.p_ts
         _spot_span = (_s[-1] - _s[0]) / 1_000_000 if len(_s) > 1 else 0.0
@@ -17825,7 +17836,9 @@ class Engine:
                 self.ef_monitor = {**evidence, "status": "v11: no spot history in candle", "ready": False}
                 return
             d = _decide_v11(self.v10, f, pred_quote, mode=self.v11_mode, thr_scale=self.v11_thr_scale,
-                            min_notional=self.v11_min_notional, calib=self.v11_calib)
+                            min_notional=self.v11_min_notional, calib=self.v11_calib,
+                            conv_ok=(self.v11_conv.ok() if self.v11_conv_gate != "off" else True),
+                            conv_gate=("off" if self.v11_conv_gate == "off" else self.v11_conv_gate))
         except Exception as problem:
             self.record_error(f"v11 decide: {problem}")
             self.ef_monitor = {**evidence, "status": f"v11 error: {problem}", "ready": False}
@@ -18362,6 +18375,8 @@ class Engine:
             "v11": {"mode": getattr(self, "v11_mode", None), "thr_scale": getattr(self, "v11_thr_scale", None),
                     "signal_src": getattr(self, "v11_signal_src", None), "signal_counts": dict(getattr(self, "v11_signal_counts", {})),
                     "polymarket": (self.v11_poly.snapshot() if getattr(self, "v11_poly", None) is not None else None),
+                    "conversion_window": (self.v11_conv.stats() if getattr(self, "v11_conv", None) is not None else None),
+                    "conv_gate": getattr(self, "v11_conv_gate", None),
                     "calibration": (getattr(self, "v11_calib", None).meta if getattr(self, "v11_calib", None) is not None else None)},
             "ef_telemetry": self.ef_ledger.snapshot(recent=5),
             "economics": {key: value for key, value in trade_summary.items() if key != "curve"},
