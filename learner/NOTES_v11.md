@@ -210,3 +210,9 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Retro on 151 fires: none 84/151 +159 | p>=0.56 67/107 +167 | ask>0.45 63/99 +161. Calibration: 0.62-0.70 39/57 +157 (core); 0.70+ 15/22 +26; below 0.62 30/72 -24.
 - Venue gap -0.079; Polymarket right on disagreement 863:395 over 184 candles.
 - No bugs, no restarts.
+
+## 07:26 UTC check-in (backup 07:26) - five healthy, feeds live, 13 GB free
+- Predict pnl 36/67 +17.3; Predict acc 74/89 +64.1 (83%); Poly pnl 51/90 +142.0; Poly acc 48/63 -2.9. Last hour pooled 3/7 -9 (London open still quiet on BTC).
+- Retro on 157 fires: none 87/157 +159 | p>=0.56 69/110 +174 | ask>0.45 65/102 +169. Calibration: 0.62-0.70 39/58 +147; 0.70+ 16/23 +34; 0.50-0.56 18/47 -15; 0.56-0.62 14/29 -6. The below-0.62 bins have been net negative for 10 hours now (32/76 -21).
+- Venue gap -0.079; Polymarket right on disagreement 893:412 over 191 candles (2.17:1).
+- No bugs, no restarts.
