@@ -174,3 +174,11 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Low-vol regime is now the majority of fires for both venues (32-34 each) and is roughly break-even on both (Predict -2, Poly +16): in dead markets the edge is thin regardless of venue. The night's profit came from mid/high vol on Polymarket (+108 on 37 fires) - the edge scales with activity, and the frequency rule should follow the same signal (more in active markets, fewer in dead ones), the opposite of a naive "quiet = safe" prior.
 - Venue gap -0.077; Polymarket right on disagreement 716:332 over 152 candles.
 - No bugs, no restarts.
+
+## 04:45 UTC check-in (backup 04:45) - five healthy, feeds live, 14 GB free
+- Predict pnl 30/57 -0.3; Predict acc 51/63 +21.2 (81%); Poly pnl 42/75 +117.7; Poly acc 32/45 -33.1. Last hour pooled 5/12 -24 (dead pre-London tape).
+- Low-vol regime now 36-37 fires per venue and negative/flat on both (Predict -10, Poly +5): confirms 04:12 note - dead markets carry no edge for this model; all the night's profit is mid/high vol on Polymarket (+112 on 38).
+- Retro on 132 fires: none 72/132 +117 | p>=0.56 +100 | ask>0.45 +105. Calibration: 0.62-0.70 33/50 +115; 0.56-0.62 10/24 -36 (worst bin now); 0.70+ 13/19 +21.
+- Predict.fun accuracy mode is the only run improving through the quiet hours (+21): buying the leader on the cheaper venue when the market is calm and the leader converts ~81%.
+- Venue gap -0.080; Polymarket right on disagreement 801:358 over 159 candles.
+- No bugs, no restarts.
