@@ -251,3 +251,6 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - All-lanes on Predict.fun (10:05): pnl engine MAIN 107/150 -106, REV 32/51 +102, EF 43/77 +47 -> +43 total; accuracy engine MAIN 83/117 -80, REV 25/39 +87, EF 96/117 +68 -> +74 total. MAIN wins 71% and loses ~100 on both (buys the leader at ~0.75); REVERSAL is the best lane per fire (+2/fire from cheap contrarian entries).
 - Venue gap -0.076; Polymarket right on disagreement 1034:469 over 223 candles.
 - No bugs, no restarts.
+
+## Refinement of the rolling-conversion switch (user request, 10:20 UTC 2026-09-09)
+- Do NOT window on the lane's own fires (20 fires = 3-24 h at night's fire rates - would stop late and re-arm late). Window on CANDLES: every 5-min candle has a book leader and an outcome, so measure leader-conversion-vs-price over the last 12 candles (1 h) on every candle, fired or not. Switch off when it is under break-even, back on when above; same rule both ways, no cool-down timer. Combine with rv60 (reacts in minutes) so the lane is quiet in dead tape and live in active tape within an hour of the change.
