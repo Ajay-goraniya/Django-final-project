@@ -442,3 +442,8 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Predict pnl 66/122 +80.9; Predict acc 173/221 +57.2; Poly pnl 82/150 +230.5 (4 fires ungraded); Poly acc 124/167 -43.4 (4 ungraded). Last hour pooled 1/4 -17 (few fires: the engines stopped finding EV in the 19:00 tape).
 - Polymarket resolution lag: every 5-min market from 18:55 UTC onward is still unresolved on Gamma at 19:30 (closed=false, prices 0.9995/0.0005, UMA status none) while 18:45 resolved normally. The two Polymarket runners grade only on resolution, so their PnL lags until Polymarket's resolver catches up; the grade loop retries every 20 s, nothing lost. Also found: Gamma returns 403 to Python's default user agent (all our processes send their own UA, unaffected).
 - Retro on 272 fires: none +311 | p>=0.56 +241 | ask>0.45 +151.
+
+## 20:00 UTC check-in (backup 20:00) - all processes healthy, 13 GB free
+- Predict pnl 67/123 +95.4; Predict acc 177/225 +72.1; Poly pnl 82/151 +220.5 (7 ungraded); Poly acc 126/169 -36.9 (7 ungraded). Last hour pooled 2/3 +18 (few fires).
+- Polymarket resolution still stalled: no 5-min market since 18:45 UTC has resolved by 20:00 (75 min). Both Polymarket runners' PnL and any "since 16:30" comparison against them are incomplete until it clears; the grade loop keeps retrying.
+- Retro on 274 fires: none +316 | p>=0.56 +231 | ask>0.45 +141.
