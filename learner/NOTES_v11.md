@@ -107,3 +107,11 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Polymarket accuracy mode slipped negative (10/13, -3.8): at asks ~0.8, 3 losses cost more than 10 wins earn. Accuracy mode needs >85% to pay at those prices; tonight it is 77-85%. -> for v11, accuracy mode's floors should be venue-specific and its stake rule should size by payoff, not flat.
 - Predict.fun early-window fires back to 7/14 -1: first-minute Predict.fun book remains unreliable; mid-window on Predict.fun is 8/13 +22. -> venue-specific timing window (Polymarket early, Predict.fun mid).
 - Venue gap -0.081; Polymarket right on disagreement 542:242 over 107 candles.
+
+## 00:59 UTC check-in (backup 00:59)
+- Predict pnl 19/33 +33.4; Predict acc 24/31 -7.2; Poly pnl 30/48 +135.8; Poly acc 13/18 -12.4. Five processes healthy, 14 GB free.
+- BOTH accuracy modes are now negative despite 72-77% hit rates: at asks of ~0.80 the break-even is ~81%, and in this quiet market the leader is not converting at the 87% the backtest week showed. -> accuracy mode is structurally fragile: it buys the leader at the market's own price and needs the market to be UNDER-confident. v11 accuracy mode: require p_model - ask >= margin (e.g. 0.05) instead of a raw confidence floor, so it only takes the leader when the model sees more than the price does.
+- Pnl modes hold: Poly +136 (62%), Predict +33 (58%).
+- Retro on 81 fires: none 49/81 +169 | p>=0.56 +143 | ask>0.45 +149: constant filters keep losing value as the market stays calm (p<0.56 bin 10/23 +26). Regime-dependent floor confirmed as the right shape.
+- Venue gap -0.082; Polymarket right on disagreement 560:245 over 113 candles.
+- No bugs.
