@@ -32,3 +32,8 @@ Old-version findings keep going to NOTES_v11.md.
 - Same window v10: Predict.fun pnl 5/14 -48.4, Polymarket pnl 3/12 -67.6 -> v11 still loses least of the three pnl runs on this tape, at 2x the fires.
 - This half hour the extras stopped carrying: strict-thr 5/13 -22.7, x0.75 extras 7/14 -8.0. p>=0.62 8/18 -28.6 is where the losses sit (18:30, 18:45, 18:50 all UP at p 0.62-0.68 and lost; 18:45 all three runs UP and wrong). p<0.62 4/9 -2.1. Regime: low 2/5, mid 6/14, high 4/8 - flat everywhere.
 - Signal: polymarket 2378, held 37, one-sided 296, fallback 0; 34 reconnects bridged. No errors, no relaunch.
+
+### 19:28 UTC (178 min): 17/33, +3.7 at $10 - back above zero
+- 19:00-19:20: 4/5 (19:00 DOWN 0.54 W with both v10 runs DOWN; 19:10/19:15/19:20 UP at 0.46-0.54 W where neither v10 pnl run fired, and the Polymarket runner fired DOWN on 19:15 and 19:20 - opposite side, ungraded yet). Same window v10 since 16:30: Predict.fun pnl 6/15 -35, Polymarket pnl 3/12 -68; v11 +4 on the same tape.
+- Breakdown: strict-thr 8/16 +2.3 | extras 9/17 +1.5; p<0.62 6/12 +8.8 | p>=0.62 11/21 -5.1; <60 s 16/28 +36.8 | 60-180 s 1/5 -33.1 (all five mid-candle fires but one lost - watch); regime low 4/7 +11, mid 6/14 -11, high 7/12 +4.
+- Signal: polymarket 2653, held 37, one-sided 296, fallback 0; 41 reconnects bridged. v11 grades from Predict.fun/Binance settlement, so it is not affected by the Polymarket resolution lag. No errors, no relaunch.

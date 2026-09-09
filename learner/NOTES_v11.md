@@ -437,3 +437,8 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Predict pnl 65/121 +67.5; Predict acc 169/215 +64.8; Poly pnl 82/150 +230.5; Poly acc 123/166 -48.2. Last hour pooled 1/13 -111: the single worst hour of the run on both venues (17:55-18:55 UTC).
 - Since 16:30 the pnl runs are 5/14 -48 (Predict.fun) and 3/12 -68 (Polymarket); the accuracy runs are +9 / +11 in the same two hours (78% / 82%). The mode complementarity (A.4) held for a second day, the other way round: accuracy mode earns the chop, pnl mode earns the trend.
 - Retro on 271 fires: none +298 | p>=0.56 +241 | ask>0.45 +151.
+
+## 19:28 UTC check-in (backup 19:28) - all processes healthy, 13 GB free
+- Predict pnl 66/122 +80.9; Predict acc 173/221 +57.2; Poly pnl 82/150 +230.5 (4 fires ungraded); Poly acc 124/167 -43.4 (4 ungraded). Last hour pooled 1/4 -17 (few fires: the engines stopped finding EV in the 19:00 tape).
+- Polymarket resolution lag: every 5-min market from 18:55 UTC onward is still unresolved on Gamma at 19:30 (closed=false, prices 0.9995/0.0005, UMA status none) while 18:45 resolved normally. The two Polymarket runners grade only on resolution, so their PnL lags until Polymarket's resolver catches up; the grade loop retries every 20 s, nothing lost. Also found: Gamma returns 403 to Python's default user agent (all our processes send their own UA, unaffected).
+- Retro on 272 fires: none +311 | p>=0.56 +241 | ask>0.45 +151.
