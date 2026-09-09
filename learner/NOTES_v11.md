@@ -476,3 +476,6 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 
 ## 23:27 UTC check-in (backup 23:27) - all container processes healthy, 13 GB free
 - Predict pnl 76/139 +118.1; Poly pnl 96/175 +271.6 (2 ungraded). Last hour pooled 7/11 +10. Retro on 314 fires: none +390 | p>=0.56 +292 | ask>0.45 +220.
+
+## 23:50 UTC - input bug found in the Build 10/11 engine's v10 lane (applies to the Predict.fun pnl engine on 8789)
+- The engine feeds raw Binance perp @trade prints into the v10 feature state; the runner and the training data aggregate them like aggTrade (same timestamp/side/price -> one print). Raw prints run ~2.6x the aggTrade count, so perp_n15 is inflated (coef 0.0464 per 752 prints: ~+0.02 logit typical, larger in busy tape). Fixed in build 11.1; the 8789 run keeps the old input so its history stays one series. Part of the Predict.fun-vs-Polymarket gap is therefore an input difference, not only the book.

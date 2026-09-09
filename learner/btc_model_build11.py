@@ -297,7 +297,7 @@ except Exception as _exc:  # pragma: no cover
     raise SystemExit("btc_model_v10.py, btc_model_v11.py, model_v10.json and v11_calibration.json must sit next to this file: %r" % (_exc,))
 
 VERSION = "11"
-BUILD_REVISION = "11.1-slow-trend-guard"
+BUILD_REVISION = "11.1-perp-agg-fix"
 BUILD_NUMBER = 11
 DATABASE_NAMESPACE_KEY = "model_storage_namespace"
 DATABASE_NAMESPACE = "btc-model-v9.1.1-r6.6-selective-adaptive-ef"
@@ -2852,8 +2852,19 @@ class EFPerpPrep:
             exch_ms = 0
         _st = getattr(self, "v10_state", None)
         if _st is not None:
+            # v11.1: aggregate raw @trade prints exactly like Binance aggTrade (same timestamp,
+            # side and price -> one print) before feeding the v10 feature state, as the runner and
+            # the training data do; raw prints run ~2.6x the aggTrade count and inflate perp_n15.
             try:
-                _st.on_perp_trade(int(exch_ms or recv_ms) * 1000, price, qty, signed, quote)
+                _key = (int(exch_ms or recv_ms), bool(data.get("m")), price)
+                _agg = getattr(self, "_v10_perp_agg", None)
+                if _agg is not None and _agg[0] == _key:
+                    _agg[1] += qty
+                else:
+                    if _agg is not None:
+                        (_t0, _m0, _p0), _q0 = _agg
+                        _st.on_perp_trade(int(_t0) * 1000, _p0, _q0, _p0 * _q0 * (-1.0 if _m0 else 1.0), _p0 * _q0)
+                    self._v10_perp_agg = [_key, qty]
             except Exception:
                 pass
         with self.lock:
@@ -17970,6 +17981,11 @@ class Engine:
             return
         side = str(d.get("side") or "")
         p_side = safe_float(d.get("p"), safe_float(d.get("p_raw"), 0.5))
+        try:
+            evidence["v11_f"] = {k: (round(float(v), 6) if isinstance(v, (int, float)) and math.isfinite(float(v)) else v)
+                                 for k, v in f.items() if not isinstance(v, (list, dict))}
+        except Exception:
+            pass
         evidence.update({
             "v11_mode": self.v11_mode, "v11_lane": d.get("lane"), "v11_signal": src, "v11_side": side,
             "v11_p": p_side, "v11_p_raw": d.get("p_raw"), "v11_ask": d.get("ask"), "v11_size": d.get("size"),
