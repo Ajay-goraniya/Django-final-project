@@ -59,3 +59,8 @@ Old-version findings keep going to NOTES_v11.md.
 - Breakdown: strict 10/23 -32 | extras 11/22 -14; p<0.62 7/19 -42 | p>=0.62 14/26 -4; <60 s 19/37 +1 | 60-180 s 2/8 -47; regime low 5/8 +21 | mid 7/22 -73 | high 9/15 +7. The mid-vol regime holds the whole loss.
 - Trend-guard re-test on 325 fires: 12c/20bps kept 135/239 +356 vs +290 as run; parameter spread unchanged (9c +462, 6c +239; 15 bps +427, 30 bps +296). Still candidate-only.
 - Signal: polymarket 4201, held 55, one-sided 462, fallback 0; 57 reconnects bridged. No errors, no relaunch.
+
+## 20:53 UTC - Build 11 on 8794 switched to LIVE execution (user decision)
+- Same process/database as the paper run (history kept, paper fires stay SHADOW rows). Credentials in a root-only file next to launch.sh (never in the repo). Auth: JWT obtained, account verified, BUY approvals present, wallet 25.58 USDT at start.
+- Settings: master ON, EF only (MAIN and REVERSAL manually off), stake fixed $1.00 (min 1, max 50), v11 mode pnl, EV scale 0.75, calibration off, min size $10 within 2c of ask, slippage cap 100 bps, 3 retries.
+- Purpose: measure real fill VWAP vs quoted ask, fill rate, rejections; the money is a rounding error.
