@@ -21,3 +21,9 @@ Old-version findings keep going to NOTES_v11.md.
 - Strict-threshold fires 3/9 -27.8 vs x0.75 extras 6/11 +5.1 (second check-in in a row the "extra" fires are the better half). p<0.62 4/9 -2.1, p>=0.62 5/11 -20.7. Timing <60 s 8/17, 60-180 s 1/3. Regime low 2/4, mid 4/10 -16, high 3/6.
 - 18:05 and 18:15: all three (v11, both v10) fired UP and lost - same-signal losses, the model, not the layer. 18:00: v11 DOWN won where Polymarket v10 UP lost.
 - Signal: polymarket 2011, held 37, one-sided 296, fallback 0; 27 reconnects bridged. No errors, no relaunch.
+
+## Market-change detector test (18:50 UTC, all 296 pnl fires of the three pnl runs, 25 h)
+- Hourly hit rate swings 24%-73% on every run; losing hours today 16:00 (29%), 18:00 (24%), and 01:00 (25%) yesterday. The change is real and visible after the fact.
+- Trailing 12-candle Polymarket leader conversion (at 60 s) does NOT separate it: the worst hours had 54-61% conversion, but so did 21:00 and 23:00 yesterday, which were the best (69%). By band, pooled: conv<=55% 15/25 +43 | 55-70% 59/117 +15 | >70% 85/154 +229. A gate at 55% would have cost the Polymarket v10 run $67 (+240 -> +173) and given v11 +20. Not a gate; the >70% band is where the money is, the middle band is flat.
+- rv60 median does not separate either (16:00 chop 0.38 vs 17:00 win hour 0.31; 15:00 0.93 was 50%).
+- Conclusion for v12: no single trailing statistic found yet that flags the losing hours before they happen; still a frequency dial, not a switch. Keep collecting; test a two-signal rule (conversion + book-gap width) once day 2 is complete.
