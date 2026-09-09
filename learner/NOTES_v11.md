@@ -132,3 +132,10 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - US/EU-overlap (13-21): Poly 13/22 +43, Predict 6/13 -11.  Late US (21-01): Poly 17/27 +82, Predict 13/20 +44.  Asia (01-08): Poly 3/5 +15, Predict 0/5 -50 (early, few fires).
 - Hourly pooled: 21:00 +46 and 23:00 +58 best; 01:00 -35 worst. The model's edge is largest in the late-US hours (moderate vol, active books) and weakest in the Asia drift (thin books, Predict.fun especially). Only one day - do not hard-code hours; use it as a prior and let the regime floor (rv60 + book depth/activity) handle it. Add hour-of-day is already a feature (hod_sin/cos) - but trained on one week; needs more days.
 
+
+## Two-book rule for v11 (agreed with user, 02:00 UTC 2026-09-09)
+- Predict.fun is THE platform: market discovery, candle id, current market, book state, empty-book handling, size at ask, fee (2% of notional), fills, settlement, hot orders. Polymarket is unavailable for trading in the user's region.
+- Polymarket book (CLOB websocket, fresh, from a machine near their servers) is an INPUT only: it supplies the venue features (ask_up/ask_dn, implied probability, leader) to the model. It never selects the market, never sets the price used for EV/break-even/order, never drives the candle id.
+- Keying: Polymarket quotes are attached to Predict.fun's candle id/market; if the Polymarket feed is stale, one-sided, or on a different candle, the lane falls back to Predict.fun's own quote for the features or waits. Engine keeps running on Predict.fun alone when Polymarket is down.
+- Every price in EV, size check and order = Predict.fun ask. Require Predict.fun size at the ask >= stake before a fire counts (cheap price with 5 shares is not a trade).
+- Purpose: get the Polymarket-signal PnL curve (+$130 tonight) executed on Predict.fun without book-mismatch bugs (the two bugs found live tonight were both book-mismatch: old-market ask at candle open, one-sided dust ask near close).
