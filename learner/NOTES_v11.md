@@ -421,3 +421,9 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Build 11 (52 min): 9 fires, 2/8, -38.5. It fired on 9 of 10 candles (v10 runs 4-5 of 10): with thr x0.75 the cheap-ask entries at p 0.53-0.63 all went through and 5 of 6 lost in the chop; the two p>=0.68 fires split 1/1. Same-candle view: 16:50 v11 DOWN won where both v10 UP lost; 17:05 v11 DOWN (p 0.73) lost where both v10 UP won (different fire times -> different p). Too early to judge; frequency effect of the 0.75 scale is visible and is what the dial is for.
 - Signal since launch: polymarket 1483, held 36, one-sided 296, Predict.fun fallback 0; 12 socket reconnects, all bridged. Spot feeds back to live on all engines (REST fallback episodes resolved themselves). No errors, no relaunch.
 - Retro on 253 fires: none +369 | p>=0.56 +282 | ask>0.45 +195 (constant filters still lose overall even after this chop hour).
+
+## 17:53 UTC check-in (backup 17:53) - all processes healthy, 13 GB free
+- Predict pnl 63/113 +106.3; Predict acc 160/202 +61.9; Poly pnl 82/143 +283.5; Poly acc 116/156 -38.7. Last hour pooled 5/7 +16 (chop easing).
+- Build 11 (83 min): 15 fires, 7/14, -4.6. Five straight wins 17:25-17:45 (asks 0.42-0.70) after the 2/8 open; on 17:30-17:40 it fired three DOWN winners on candles where neither v10 run fired (cheap asks 0.42-0.50 with p 0.54-0.63 clear the 0.75-scaled threshold). By p: <0.62 3/7, >=0.62 4/7. Still a small sample.
+- Signal: polymarket 1842, held 37, one-sided 296, fallback 0; 19 socket reconnects, all bridged. Spot live on all engines. No errors, no relaunch.
+- Retro on 256 fires: none +390 | p>=0.56 +302 | ask>0.45 +215.
