@@ -147,3 +147,9 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - States at 02:07: Predict pnl 19/38 -16.6; Predict acc 29/40 -32.9; Poly pnl 33/56 +120.3; Poly acc 16/25 -43.9 (the two pending Poly pnl trades settled as losses).
 - Retro on 92 fires: none 52/92 +124 | p>=0.56 +123 | ask>0.45 +129. Calibration: p 0.62-0.70 28/37 +148; p 0.70+ 5/10 -19; below 0.62 roughly flat. Overnight (00:30-02:00) 2/9 -51 pooled.
 - Staking check on tonight's Poly pnl sequence and the 8-day OOS trades: hybrid ~= fixed 10% (152 vs 150 tonight; 4109 vs 4248 on 8 days); drawdown brakes and quarter-Kelly reduce return without reducing the capped-stake drawdown (486 on 8 days is the $50-cap era, ~10 losses in a row). Danger zone is the first $50-100 (20% DD from a 2-loss start). Keep hybrid.
+
+## 02:37 UTC check-in (backup 02:37) - all five healthy after the 02:06 relaunch, feeds live
+- Predict pnl 21/40 -3.1; Predict acc 32/44 -33.1; Poly pnl 35/58 +132.8; Poly acc 18/28 -47.7. Last hour pooled 4/5 +16.
+- Retro on 98 fires: none 56/98 +130 | p>=0.56 45/69 +139 | ask>0.45 42/62 +145 (filters back to slightly positive as the market thinned again). Calibration: p 0.62-0.70 28/38 +138; p 0.70+ 9/14 +7; below 0.62 11-8/46 -15.
+- Venue gap -0.079; Polymarket right on disagreement 610:303 over 133 candles.
+- No bugs, no restarts since 02:06, 14 GB free.
