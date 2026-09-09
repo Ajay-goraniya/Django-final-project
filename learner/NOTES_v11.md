@@ -427,3 +427,8 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Build 11 (83 min): 15 fires, 7/14, -4.6. Five straight wins 17:25-17:45 (asks 0.42-0.70) after the 2/8 open; on 17:30-17:40 it fired three DOWN winners on candles where neither v10 run fired (cheap asks 0.42-0.50 with p 0.54-0.63 clear the 0.75-scaled threshold). By p: <0.62 3/7, >=0.62 4/7. Still a small sample.
 - Signal: polymarket 1842, held 37, one-sided 296, fallback 0; 19 socket reconnects, all bridged. Spot live on all engines. No errors, no relaunch.
 - Retro on 256 fires: none +390 | p>=0.56 +302 | ask>0.45 +215.
+
+## 18:24 UTC check-in (backup 18:24) - all processes healthy, 13 GB free
+- Predict pnl 64/117 +88.6 (day high was +185.8 at 15:49: -97 since); Predict acc 163/208 +42.6; Poly pnl 82/147 +260.5 (-38 from its 15:49 high... high was +298 at 16:31); Poly acc 120/162 -45.6. Last hour pooled 3/9 -34.
+- Second evening is the opposite of the first: 16:00-18:20 UTC today is the worst stretch of the run on both venues (Predict.fun 4/10 -27, Polymarket 3/9 -38 since 16:30), while yesterday's same hours were the best. Confirms A.4: time of day is not a gate; the tape is (today's US afternoon = range chop, low follow-through).
+- Retro on 264 fires: none +349 | p>=0.56 +262 | ask>0.45 +172 - constant filters still lose overall.
