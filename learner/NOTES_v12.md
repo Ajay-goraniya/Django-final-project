@@ -76,4 +76,4 @@ Old-version findings keep going to NOTES_v11.md.
 
 ### 21:21 UTC (19 min since reset, paper, master OFF): 1/2, -4.4 at $10
 - 21:10 DOWN 0.63 won (the order Predict.fun refused with the jurisdiction 403); 21:15 UP 0.48 lost with Predict.fun v10. Signal since reset: polymarket 1112, held 37, one-sided 114, fallback 0. No new failed attempts; executor idle in SHADOW.
-- Trend-guard candidate on 340 fires (archived paper fires included): 12c/20bps kept +370 vs +348 as run, removed 37/78 -21; the gain shrank from +66 to +22 as the tape turned; 9c +458, 6c +304 - still parameter-sensitive. Not shipping.
+- Trend-guard candidate on 342 fires (archived paper fires included): 12c/20bps kept 142/255 +333 vs 182/342 +281 as run, removed 40/87 -51; 15 bps +385, 30 bps +287; 9c +453, 6c +216 - still parameter-sensitive. Not shipping.
