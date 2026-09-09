@@ -98,3 +98,12 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Frequency: Poly pnl 45 fires in 6.4 h (~7/h); Predict pnl 31 (~5/h); accuracy modes ~4-8/h.
 - Venue gap -0.084; leaders agree 83%; Polymarket right on disagreement 519:222 over 100 candles.
 - No bugs.
+
+## 00:27 UTC check-in (2026-09-09; backup 00:28)
+- Predict pnl 18/32 +24.5; Predict acc 22/26 +18.1; Poly pnl 29/45 +139.9; Poly acc 10/13 -3.8. Five processes healthy, 14 GB free.
+- retro on 77 fires: none 47/77 +164 | p>=0.56 38/56 +144 | ask>0.45 35/49 +150
+- calibration bins: p0.50-0.56 9/21 +20 | p0.56-0.62 8/14 +24 | p0.62-0.70 25/34 +120 | p0.70-1.00 5/8 +1
+- last hour both venues: 3/6 +6  (quiet overnight market: fewer fires, mixed results)
+- Polymarket accuracy mode slipped negative (10/13, -3.8): at asks ~0.8, 3 losses cost more than 10 wins earn. Accuracy mode needs >85% to pay at those prices; tonight it is 77-85%. -> for v11, accuracy mode's floors should be venue-specific and its stake rule should size by payoff, not flat.
+- Predict.fun early-window fires back to 7/14 -1: first-minute Predict.fun book remains unreliable; mid-window on Predict.fun is 8/13 +22. -> venue-specific timing window (Polymarket early, Predict.fun mid).
+- Venue gap -0.081; Polymarket right on disagreement 542:242 over 107 candles.
