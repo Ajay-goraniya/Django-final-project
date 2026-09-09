@@ -114,6 +114,11 @@ Old-version findings keep going to NOTES_v11.md.
 - Consequence: the Predict.fun v10 paper engine (build 10) has had the same raw-print input since 17:21 09-08; part of "venue > model" may be this. Not changed mid-run (comparison continuity); v10 notes updated.
 - Tokyo runs the original v11 (raw prints). The fix reaches Tokyo only when the user pulls and restarts; recommended in the morning once pcmp.py confirms the twin now matches the runner.
 
+### 23:58 UTC - v11 LIVE Tokyo, 2.1 h: 21 orders, 21 filled, 0 failed; 13/8 (62%), realized +2.78 at $1, wallet 25.58 -> 28.36, no open
+- Fair window since 21:55: v11 live 13/8 +27.8@$10 | Predict.fun v10 7/6 +0.4 | Polymarket v10 6/8 -22.9. v11 leads both v10 runs on the same candles; 5 of its last 6 won. Fill quality: 19 of 21 at the quote, worst +3c (one 3-attempt fill), mean delay 352 ms.
+- Test twins A-D all up, no fires yet since the 23:34/23:50 launches (A past warm-up; ledger unchanged). pcmp input-match: no A fires with feature dicts yet.
+- Trend guard on 394 realised fires: +376 vs +272 (removed 45/101 -104) - the realised-fire view keeps favouring it; the v11-replay view does not; twin B answers it live.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
@@ -122,5 +127,5 @@ Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is 
 | B | 09-09 23:50 | A + slow-trend guard 9 candles / 20 bps (port 8795) | fewer against-lean losses; realised-fire retro +459 vs +296, v11 replay -111 -> undecided | pending |
 | C | 09-09 23:50 | A + EV scale 1.0 (port 8796) | v10-like frequency; fewer early cheap fires, higher hit rate, lower PnL per retro | pending |
 | D | 09-09 23:50 | A + auto mode (accuracy lane in low vol) (port 8797) | earns in calm/chop hours where pnl mode bleeds | pending |
-| Tokyo | 09-09 21:55 | original v11 live, $1 | execution quality + live edge | 18 fills, 10/8, +0.82, fills at quote |
+| Tokyo | 09-09 21:55 | original v11 live, $1 | execution quality + live edge | 23:58: 21 fills 0 failed, 13/8 (62%), +2.78 real (+27.8@$10) vs v10 paper +0.4 / -22.9 same window |
 Decision rule: a variant replaces the baseline setting only when, over the same candles, it is ahead on PnL at $10 AND not behind on hit rate after >= 100 graded fires, and the sign holds on both halves of its own run.
