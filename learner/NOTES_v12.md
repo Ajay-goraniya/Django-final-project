@@ -99,3 +99,9 @@ Old-version findings keep going to NOTES_v11.md.
 - Paper twin (container, restarted 22:31 for v11.1, guard off) 7/14 -14.9 over the same window while Tokyo is 6/4: different machines fire at slightly different ticks and asks (twin 22:15 DOWN 0.43 L, 22:25 UP 0.54 L; Tokyo's fills at 21:55/22:20/22:40 won). Same-candle vs v10: 22:00 and 22:25 v11 UP lost where both v10 runs DOWN won; 22:40 all DOWN won.
 - Twin breakdown since reset: p>=0.62 5/7 +11, p<0.62 2/7 -26; high-vol 0/4 -40. Trend guard on 369 fires unchanged (+366 vs +301 on realised fires; fails on the v11 replay) - dial stays off.
 - 23:24 UTC: daily stop-loss set on Tokyo at $5 (day resets 12:00 BST); the engine halts new orders for the day when realized daily PnL <= -5. Take-profit off. Overnight max loss is therefore bounded at ~$5 plus one open position.
+
+### 23:27 UTC - v11 LIVE Tokyo, 92 min: 16 orders, 16 filled, 0 failed; 7/8 settled (47%), realized -1.64 at $1, wallet 22.94 (+1 open), daily stop-loss $5 not hit
+- First fill that needed retries: 23:25 candle, quoted 0.50, filled 0.53 on attempt 3 (+3c, inside the 9% tolerance band); mean delay rose to 311 ms because of it. Others at the quote. Fill quality over 16: mean about +0.3c, worst +3c.
+- Same window since 21:55: Predict.fun v10 6/9 +18.1, Polymarket v10 5/10 +0.4, v11 live 7/15 -1.64 (about -16 at $10). Same-candle: 22:55 and 23:10 v11 UP lost where Predict.fun v10 DOWN won; 22:40 and 23:05 all right.
+- Paper twin (container): 8/19 -45.7 since reset; extras 5/14 -57 vs strict 3/5 +11; first-minute fires 6/15 -42; low-vol 4/11 -40. The twin is doing worse than Tokyo on the same tape (different fire ticks). EV-scale review point is 60 settled live fires (at 15 now).
+- Trend guard on 382 fires unchanged (+348 vs +277 realised-fire basis; fails the v11 replay) - off.

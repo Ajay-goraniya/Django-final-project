@@ -473,3 +473,6 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 
 ## 22:56 UTC check-in (backup 22:56) - all container processes healthy, 13 GB free
 - Predict pnl 74/136 +98.4; Poly pnl 94/170 +284.5 (5 ungraded). Last hour pooled 6/10 +22. Retro on 306 fires: none +383 | p>=0.56 +265 | ask>0.45 +183.
+
+## 23:27 UTC check-in (backup 23:27) - all container processes healthy, 13 GB free
+- Predict pnl 76/139 +118.1; Poly pnl 96/175 +271.6 (2 ungraded). Last hour pooled 7/11 +10. Retro on 314 fires: none +390 | p>=0.56 +292 | ask>0.45 +220.
