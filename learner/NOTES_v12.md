@@ -88,3 +88,8 @@ Old-version findings keep going to NOTES_v11.md.
 - Wallet 25.58 -> 23.91 with one $1 position open (equity 25.62). Capital truth shows "unexplained -1.73" = the open position's shares; verify it clears at settlement, else a ledger bug.
 - Paper twin (container) 5/10 -8.1: p>=0.62 4/5 +18.6, p<0.62 1/5 -26.7; extras 3/7 -20 vs strict 2/3 +12 this window. Same candles: 21:40 v11 UP won where Polymarket v10 DOWN lost; 22:00 v11 UP lost where Predict.fun v10 DOWN won; 22:15 both DOWN lost.
 - Trend guard on 358 fires: 12c/20bps +335 vs +281 as run, removed 41/89 -54; 9c +445, 6c +216 - unchanged verdict.
+
+## Slow-trend guard: implemented as a dial, shipped OFF (22:45 UTC)
+- User's idea: an identifier of how the candles moved over the last 30-40 min. Tested as "no fire against the net move of the last N closed candles beyond X bps" on the realised fires of the three pnl runs (359 fires): 30 min windows LOSE (+186..+267 vs +296 as run: they remove winners); 40-60 min / 15-25 bps all gain (+335..+459), positive on both halves and on every run, 5 of 8 four-hour blocks.
+- BUT replayed through v11's own decision path (runner decision log every 15 s, Predict.fun book, launch settings) the same guard HURTS: no guard 143/220 +532, 45 min/20 bps 112/176 +421, 40 min +411, 60 min +435, 30 min +422; the 44 fires it removes won 31 (70%). v11's early cheap against-lean entries are winners in that replay while the v10 runs' later against-lean fires were losers. Two fire sets, opposite verdicts -> not robust.
+- Shipped in v11.1 as Trade Controls fields (trend guard candles / bps, 0 = off) with default OFF; evidence in code comments; retro script v11/retro_trend.py. Re-test when a third day exists; the deciding test is the v11 path, not the v10 fires.

@@ -267,7 +267,8 @@ class ConversionWindow:
 def decide_v11(model, f: Dict[str, Any], pred_quote: Dict[str, Any], *, mode: str = "pnl",
                thr_scale: float = 1.0, min_notional: float = 10.0, calib: Optional[Calibration] = None,
                acc_conf: float = 0.75, acc_margin: float = 0.05, conv_ok: bool = True,
-               conv_gate: str = "accuracy") -> Dict[str, Any]:
+               conv_gate: str = "accuracy", trend_bps: Optional[float] = None,
+               trend_guard_bps: float = 0.0) -> Dict[str, Any]:
     """f: v10 feature dict (venue features already injected from the signal book).
     pred_quote: {'ask_up','size_up','ask_dn','size_dn','fee_rate'} from PREDICT.FUN.
     Every price used here is Predict.fun's; Polymarket only shaped f."""
@@ -279,6 +280,14 @@ def decide_v11(model, f: Dict[str, Any], pred_quote: Dict[str, Any], *, mode: st
         return dict(base, fire=False, reason=f"outside decision window (15-240 s), at {off:.0f} s")
     if not f.get("_venue_ok", True):
         return dict(base, fire=False, reason="signal quote incomplete (one side missing)")
+    # Slow-trend guard (v11.1, OFF by default): never fire against the lean of the last N closed
+    # candles when the net move exceeds trend_guard_bps. Mixed evidence on 09-08/09-09: on the
+    # v10 runs' realised fires 45 min / 20 bps kept +459 vs +296; replayed through THIS function
+    # on the runner's decision log it kept +421 vs +532 (the removed against-lean fires won 70%).
+    base["trend_bps"] = None if trend_bps is None else round(float(trend_bps), 1)
+    if trend_bps is not None and trend_guard_bps > 0:
+        if (side == "UP" and trend_bps <= -trend_guard_bps) or (side == "DOWN" and trend_bps >= trend_guard_bps):
+            return dict(base, fire=False, reason=f"against the lean ({trend_bps:+.0f} bps over the window)")
     ps_c = calib.apply(ps) if calib else ps
     if ps_c < 0.5:
         return dict(base, p=ps_c, fire=False, reason="live calibration puts the model's side under 50%")

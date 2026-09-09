@@ -297,7 +297,7 @@ except Exception as _exc:  # pragma: no cover
     raise SystemExit("btc_model_v10.py, btc_model_v11.py, model_v10.json and v11_calibration.json must sit next to this file: %r" % (_exc,))
 
 VERSION = "11"
-BUILD_REVISION = "11-polymarket-signal-predict-execution"
+BUILD_REVISION = "11.1-slow-trend-guard"
 BUILD_NUMBER = 11
 DATABASE_NAMESPACE_KEY = "model_storage_namespace"
 DATABASE_NAMESPACE = "btc-model-v9.1.1-r6.6-selective-adaptive-ef"
@@ -14554,6 +14554,12 @@ class Engine:
         # Live calibration table: OFF by default. Fitted on the first 2/3 of the live day it lost money
         # on the last 1/3 (both time splits), so it is a Trade Controls toggle, not a default.
         self.v11_calib_on = (os.environ.get("V11_CALIB") or "off").strip().lower() == "on"
+        # v11.1 slow-trend guard: no fire against the net move of the last N closed candles when it
+        # exceeds V11_TREND_BPS. Default OFF (0): it helped the v10 runs' realised fires (+459 vs
+        # +296) but HURT v11's own decision path in replay (+421 vs +532) - the two fire sets
+        # disagree, so it stays a Trade Controls dial until a third day settles it.
+        self.v11_trend_n = int(os.environ.get("V11_TREND_N") or 9)
+        self.v11_trend_bps = float(os.environ.get("V11_TREND_BPS") or 0.0)
         self.v11_poly = _PolyBook()
         if (os.environ.get("V11_POLY_SIGNAL") or "on").strip().lower() != "off":
             self.v11_poly.start()
@@ -17802,7 +17808,8 @@ class Engine:
 
     def v11_settings(self) -> Dict[str, Any]:
         return {"mode": self.v11_mode, "conv_gate": self.v11_conv_gate, "thr_scale": self.v11_thr_scale,
-                "min_notional": self.v11_min_notional, "calibration": "on" if self.v11_calib_on else "off"}
+                "min_notional": self.v11_min_notional, "calibration": "on" if self.v11_calib_on else "off",
+                "trend_n": self.v11_trend_n, "trend_bps": self.v11_trend_bps}
 
     def apply_v11_settings(self, payload: Dict[str, Any], persist: bool = True) -> Dict[str, Any]:
         """Validate and apply lane settings from Trade Controls. Unknown keys are ignored."""
@@ -17820,8 +17827,14 @@ class Engine:
         try:
             scale = float(payload.get("thr_scale", self.v11_thr_scale))
             notional = float(payload.get("min_notional", self.v11_min_notional))
+            trend_n = int(payload.get("trend_n", self.v11_trend_n))
+            trend_bps = float(payload.get("trend_bps", self.v11_trend_bps))
         except (TypeError, ValueError):
-            return {"ok": False, "error": "thr_scale and min_notional must be numbers"}
+            return {"ok": False, "error": "thr_scale, min_notional, trend_n and trend_bps must be numbers"}
+        if not (3 <= trend_n <= 36):
+            return {"ok": False, "error": "trend_n must be between 3 and 36 candles"}
+        if not (0.0 <= trend_bps <= 200.0):
+            return {"ok": False, "error": "trend_bps must be between 0 (off) and 200"}
         if not (0.25 <= scale <= 4.0):
             return {"ok": False, "error": "thr_scale must be between 0.25 and 4"}
         if not (0.0 <= notional <= 1000.0):
@@ -17829,10 +17842,22 @@ class Engine:
         with self.lock:
             self.v11_mode, self.v11_conv_gate, self.v11_thr_scale, self.v11_min_notional = mode, gate, scale, notional
             self.v11_calib_on = (calib == "on")
+            self.v11_trend_n, self.v11_trend_bps = trend_n, trend_bps
             self.state_revision = int(getattr(self, "state_revision", 0)) + 1
         if persist:
             self.store.save_v11_settings(self.v11_settings())
         return {"ok": True, "settings": self.v11_settings()}
+
+    def _v11_trend_bps(self, cid: int) -> Optional[float]:
+        """Net close-to-open move, in bps, of the last v11_trend_n CLOSED 5-min candles before `cid`."""
+        try:
+            prev = [c for c in self.candles if int(c.get("time") or 0) < int(cid) and c.get("closed")]
+            prev = prev[-int(self.v11_trend_n):]
+            if len(prev) < min(6, int(self.v11_trend_n)):
+                return None
+            return float(sum((float(c["close"]) - float(c["open"])) / float(c["open"]) * 1e4 for c in prev if float(c.get("open") or 0) > 0))
+        except Exception:
+            return None
 
     def _v11_depth_size(self, direction: str, best_ask: Optional[float], top_size: float, slip: float = 0.02) -> float:
         """Shares on offer at or within `slip` of the best ask on Predict.fun's ladder for `direction`."""
@@ -17937,7 +17962,8 @@ class Engine:
                             min_notional=self.v11_min_notional,
                             calib=(self.v11_calib if self.v11_calib_on else None),
                             conv_ok=(self.v11_conv.ok() if self.v11_conv_gate != "off" else True),
-                            conv_gate=("off" if self.v11_conv_gate == "off" else self.v11_conv_gate))
+                            conv_gate=("off" if self.v11_conv_gate == "off" else self.v11_conv_gate),
+                            trend_bps=self._v11_trend_bps(int(cid)), trend_guard_bps=float(self.v11_trend_bps))
         except Exception as problem:
             self.record_error(f"v11 decide: {problem}")
             self.ef_monitor = {**evidence, "status": f"v11 error: {problem}", "ready": False}
@@ -17948,7 +17974,7 @@ class Engine:
             "v11_mode": self.v11_mode, "v11_lane": d.get("lane"), "v11_signal": src, "v11_side": side,
             "v11_p": p_side, "v11_p_raw": d.get("p_raw"), "v11_ask": d.get("ask"), "v11_size": d.get("size"),
             "v11_fee": d.get("fee"), "v11_ev": d.get("ev"), "v11_threshold": str(d.get("threshold")),
-            "v11_rv60": d.get("rv60"), "v11_sec": d.get("sec"),
+            "v11_rv60": d.get("rv60"), "v11_sec": d.get("sec"), "v11_trend_bps": d.get("trend_bps"),
             "direction": side, "settlement_probability": p_side,
         })
         if not d.get("fire"):
@@ -18473,6 +18499,7 @@ class Engine:
             "ef_perp": perp_ef,
             "v11": {"mode": getattr(self, "v11_mode", None), "thr_scale": getattr(self, "v11_thr_scale", None),
                     "calibration_on": bool(getattr(self, "v11_calib_on", False)), "min_notional": getattr(self, "v11_min_notional", None),
+                    "trend_n": getattr(self, "v11_trend_n", None), "trend_bps": getattr(self, "v11_trend_bps", None),
                     "signal_src": getattr(self, "v11_signal_src", None), "signal_counts": dict(getattr(self, "v11_signal_counts", {})),
                     "polymarket": (self.v11_poly.snapshot() if getattr(self, "v11_poly", None) is not None else None),
                     "conversion_window": (self.v11_conv.stats() if getattr(self, "v11_conv", None) is not None else None),
@@ -18969,6 +18996,8 @@ CONTROLS_HTML = r"""<!doctype html>
 <label class="small">EV threshold scale <input id="v11_scale" type="number" step="0.05" min="0.25" max="4" style="width:70px"></label>
 <label class="small">min size within 2c of ask $ <input id="v11_notional" type="number" step="1" min="0" max="1000" style="width:70px"></label>
 <label class="small">live calibration <select id="v11_calib"><option value="off">off</option><option value="on">on</option></select></label>
+<label class="small">trend guard: candles <input id="v11_trend_n" type="number" step="1" min="3" max="36" style="width:55px"></label>
+<label class="small">bps (0=off) <input id="v11_trend_bps" type="number" step="5" min="0" max="200" style="width:60px"></label>
 <button id="saveV11" type="button" class="btn">Apply v11</button></div></div></section>
 
 <section class="card"><div class="label">Shared staking · all three signals</div><div class="row"><div><div id="nextStake" class="big">--</div><div class="small">one current stake and one combined streak</div></div><div id="streak" class="small"></div></div>
@@ -19043,7 +19072,7 @@ function render(){
  e('ready').className='small readiness '+(ready.ready?'up':'warn');
  e('kindStates').innerHTML=KINDS.map(function(k){var s=state.kinds[k]||{},manual=s.manual_enabled!==false;return '<div class="cell"><div class="label '+(k==='MAIN'?'main':k==='REVERSAL'?'rev':'ef')+'">'+k+'</div>'+'<div class="kindLine"><b class="'+(s.effective_enabled?'up':s.auto_banned?'warn':'down')+'">'+(s.effective_enabled?'TRADING':s.auto_banned?'BANNED':'BLOCKED')+'</b>'+'<button type="button" class="miniToggle'+(manual?'':' off')+'" data-kind-toggle="'+k+'">'+(manual?'ON':'OFF')+'</button></div>'+'<div class="small">'+(s.status||'')+'</div></div>'}).join('');bindSignalToggles();
  e('stateXToggle').textContent=sxOn?'ON':'OFF';e('stateXToggle').className='miniToggle'+(sxOn?'':' off');
- var v=state.v11||{};if(!v11Dirty){if(v.mode)e('v11_mode').value=v.mode;if(v.conv_gate)e('v11_gate').value=v.conv_gate;if(v.thr_scale!=null)e('v11_scale').value=v.thr_scale;if(v.min_notional!=null)e('v11_notional').value=v.min_notional;e('v11_calib').value=v.calibration_on?'on':'off';}
+ var v=state.v11||{};if(!v11Dirty){if(v.mode)e('v11_mode').value=v.mode;if(v.conv_gate)e('v11_gate').value=v.conv_gate;if(v.thr_scale!=null)e('v11_scale').value=v.thr_scale;if(v.min_notional!=null)e('v11_notional').value=v.min_notional;e('v11_calib').value=v.calibration_on?'on':'off';if(v.trend_n!=null)e('v11_trend_n').value=v.trend_n;if(v.trend_bps!=null)e('v11_trend_bps').value=v.trend_bps;}
  var cw=v.conversion_window||{};e('v11Status').textContent='mode '+(v.mode||'--')+' · signal '+(v.signal_src||'--')+' · gate '+(v.conv_gate||'--')+' · EV scale '+(v.thr_scale==null?'--':v.thr_scale)+' · window '+(cw.n||0)+' candles'+(cw.conversion==null?'':' · leader '+Math.round(cw.conversion*100)+'% vs break-even '+Math.round(cw.break_even*100)+'%'+(cw.ok?' · OK':' · GATED'));
  e('stateXStatus').textContent=sxActive?(sxOn?'SX ACTIVE · BLOCKING':'SX ACTIVE · SHADOW'):(sxOn?'ARMED':'SHADOW');e('stateXStatus').className='big '+(sxActive?'sxActive':'up');e('stateXStatus').style.fontSize='17px';
  e('stateXDetails').textContent=sxActive?((sxOn?'no new orders until ':'would block until ')+(sx.resume_time||'--')+' · '+(sx.trigger_reason||'--')+' · triggered '+Number(sx.trigger_count||0)+'x'):('2 consecutive settled losses → 15 min no new orders · '+(sxOn?'ON: blocks':'OFF: tracks only, never blocks')+' · loss streak '+Number(sx.loss_streak||0)+' · triggered '+Number(sx.trigger_count||0)+'x');
@@ -19059,8 +19088,8 @@ function render(){
 function load(){request('GET','/api/controls',null,function(r){state=r;render()})}
 function finish(r){if(!r.ok){show(r.error||'Change failed.',false);return}show('Applied.',true);load()}
 e('master').onclick=function(){var target=!state.master_enabled;var warning=target?'ARM REAL MAINNET ORDERS for MAIN, REVERSAL and EF?':'Turn OFF all new live orders? Existing accepted orders are not cancelled.';if(!confirm(warning))return;request('POST','/api/controls/apply',{confirmed:true,system:{manual_enabled:target}},finish)};
-var v11Dirty=false;['v11_mode','v11_gate','v11_scale','v11_notional','v11_calib'].forEach(function(k){e(k).onchange=function(){v11Dirty=true}});
-e('saveV11').onclick=function(){var s={mode:e('v11_mode').value,conv_gate:e('v11_gate').value,thr_scale:Number(e('v11_scale').value),min_notional:Number(e('v11_notional').value),calibration:e('v11_calib').value};if(!confirm('Apply v11 lane settings: mode '+s.mode+', gate '+s.conv_gate+', EV scale '+s.thr_scale+', min size $'+s.min_notional+', calibration '+s.calibration+'?'))return;request('POST','/api/controls/v11',{confirmed:true,v11:s},function(r){v11Dirty=false;finish(r)})};
+var v11Dirty=false;['v11_mode','v11_gate','v11_scale','v11_notional','v11_calib','v11_trend_n','v11_trend_bps'].forEach(function(k){e(k).onchange=function(){v11Dirty=true}});
+e('saveV11').onclick=function(){var s={mode:e('v11_mode').value,conv_gate:e('v11_gate').value,thr_scale:Number(e('v11_scale').value),min_notional:Number(e('v11_notional').value),calibration:e('v11_calib').value,trend_n:Number(e('v11_trend_n').value),trend_bps:Number(e('v11_trend_bps').value)};if(!confirm('Apply v11 lane settings: mode '+s.mode+', gate '+s.conv_gate+', EV scale '+s.thr_scale+', min size $'+s.min_notional+', calibration '+s.calibration+', trend guard '+s.trend_n+' candles / '+s.trend_bps+' bps?'))return;request('POST','/api/controls/v11',{confirmed:true,v11:s},function(r){v11Dirty=false;finish(r)})};
 e('stateXToggle').onclick=function(){var sx=state.state_x||{},target=!sx.enabled,warning=target?'Turn State X ON? After 2 consecutive settled losses no new orders are placed for 15 minutes.':'Turn State X OFF? The window is still tracked and shown, but it will never block an order.';if(!confirm(warning))return;request('POST','/api/controls/state-x',{confirmed:true,manual_enabled:target},finish)};
 e('take_profit').oninput=function(){limitsDirty=true;};
 e('stop_loss').oninput=function(){limitsDirty=true;};
