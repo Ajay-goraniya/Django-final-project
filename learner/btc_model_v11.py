@@ -15,8 +15,9 @@ quote. Every price in EV, size and order is Predict.fun's ask.
 
 Retro-test on the recorded 19 h (Polymarket decisions x Predict.fun book x outcomes):
   v10 baseline (Polymarket exec, 7% fee)   110 trades  56%  +$186
-  v11 (Predict.fun exec, 2% fee, size>=$10) 138 trades  64%  +$315
-  v11 accuracy (margin 0.05, conf 0.75)     114 trades  83%  +$141
+  v11 pnl, no calibration                   118 trades  63%  +$241
+  v11 pnl + live calibration (default)       97 trades  69%  +$332  (calibration in-sample)
+  v11 accuracy (margin 0.05, conf 0.75)      97 trades  85%  +$140
 """
 from __future__ import annotations
 import json, math, threading, time, socket, urllib.request, collections
@@ -208,7 +209,7 @@ class Calibration:
     def apply(self, p_side: float) -> float:
         for i in range(len(self.edges) - 1):
             if self.edges[i] <= p_side < self.edges[i + 1] or (i == len(self.edges) - 2 and p_side >= self.edges[i + 1]):
-                return float(min(0.99, max(0.5, p_side + self.shift[i])))
+                return float(min(0.99, max(0.30, p_side + self.shift[i])))
         return p_side
 
 
@@ -228,6 +229,8 @@ def decide_v11(model, f: Dict[str, Any], pred_quote: Dict[str, Any], *, mode: st
     if not f.get("_venue_ok", True):
         return dict(base, fire=False, reason="signal quote incomplete (one side missing)")
     ps_c = calib.apply(ps) if calib else ps
+    if ps_c < 0.5:
+        return dict(base, p=ps_c, fire=False, reason="live calibration puts the model's side under 50%")
     ask = pred_quote.get("ask_up" if side == "UP" else "ask_dn")
     size = pred_quote.get("size_up" if side == "UP" else "size_dn") or 0.0
     fee = pred_quote.get("fee_rate")
