@@ -68,3 +68,8 @@ Old-version findings keep going to NOTES_v11.md.
 ## 21:02 UTC - v11 database RESET for a clean live run (user decision); paper history kept
 - Paper run 16:30-21:00 saved as learner/live_backup/v11_paper_1630-2100.sqlite3.gz (final 22/49, -67 at $10, vs Predict.fun v10 8/19 and Polymarket v10 6/21 on the same candles).
 - Fresh database, relaunched with credentials; re-applied: fixed $1 stake, EF only, master ON at 21:03; v11 mode pnl, EV scale 0.75, calibration off. Counters for v11 start here. Name: v11 (version 11).
+
+## 21:11 UTC - FIRST LIVE ORDER REJECTED: Predict.fun geo-block from the container
+- 21:10:53 EF DOWN, candle 21:10, quoted 0.63, stake $1, signed and submitted in 406 ms; Predict.fun answered HTTP 403 "This operation is not available in your jurisdiction". Auth, approvals and the read-only API all work from here; only order placement is refused. The container's egress is in the US (Ohio), where Predict.fun does not accept orders. Not a code bug.
+- Master switched OFF at 21:11 to stop a 403 loop; v11 on 8794 continues as a paper run on the reset database (fires still recorded, executor in SHADOW).
+- Consequence: real orders must be sent from a jurisdiction Predict.fun serves (the user's phone in the UK). The container keeps signal, paper grading and notes.
