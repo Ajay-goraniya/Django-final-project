@@ -261,3 +261,10 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Retro on 180 fires: none 101/180 +218 | p>=0.56 +206 | ask>0.45 +198 (filters cost money in active tape). Calibration: 0.62-0.70 44/66 +161; 0.70+ 18/25 +48; 0.50-0.56 22/54 +12; 0.56-0.62 17/35 -2.
 - Venue gap -0.076; Polymarket right on disagreement 1041:478 over 229 candles.
 - No bugs, no restarts.
+
+## 11:19 UTC check-in (backup 11:19) - five healthy, feeds live, 13 GB free
+- Predict pnl 44/78 +61.9 (idle since 10:05); Predict acc 104/128 +63.0 (81%); Poly pnl 59/105 +163.0 (new high); Poly acc 68/94 -58.2. Last hour pooled 4/5 +31.
+- Poly pnl mid-vol cell 15/26 +64, high-vol 17/29 +69: the pre-US window (10:00-11:30) is paying on Polymarket; Predict.fun pnl has not fired in 75 min - its ask on the model's side keeps landing 3-6c above the EV line (the contrarian side is dearer on Predict.fun).
+- Retro on 183 fires: none 103/183 +225 | p>=0.56 +223 | ask>0.45 +215. Calibration: 0.62-0.70 46/68 +178 (core), 0.70+ 18/25 +48, below 0.62 39/90 flat.
+- Venue gap -0.075; Polymarket right on disagreement 1059:497 over 237 candles.
+- No bugs, no restarts.
