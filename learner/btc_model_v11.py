@@ -290,7 +290,7 @@ def decide_v11(model, f: Dict[str, Any], pred_quote: Dict[str, Any], *, mode: st
         return dict(base, p=ps_c, fire=False, reason="no Predict.fun ask for that side")
     if size * ask < min_notional:
         return dict(base, p=ps_c, ask=ask, size=size, fire=False,
-                    reason=f"Predict.fun size at ask ${size * ask:.0f} < ${min_notional:.0f}")
+                    reason=f"Predict.fun size within 2c of ask ${size * ask:.0f} < ${min_notional:.0f}")
     cost = ask * (1.0 + fee)                       # Predict.fun: fee on notional
     if cost >= 1.0:
         return dict(base, p=ps_c, ask=ask, fire=False, reason="ask too high to pay after fee")

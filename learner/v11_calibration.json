@@ -7,39 +7,39 @@
   1.0
  ],
  "shift": [
-  -0.0459,
-  0.0076,
-  -0.023,
-  -0.0283
+  -0.0364,
+  -0.012,
+  -0.0058,
+  -0.0296
  ],
  "meta": {
   "bin0": {
-   "n": 12,
-   "wins": 4,
-   "claimed": 0.532,
-   "realized": 0.333,
-   "adj": 0.486
+   "n": 13,
+   "wins": 5,
+   "claimed": 0.533,
+   "realized": 0.385,
+   "adj": 0.497
   },
   "bin1": {
-   "n": 18,
+   "n": 20,
    "wins": 11,
-   "claimed": 0.587,
-   "realized": 0.611,
-   "adj": 0.594
+   "claimed": 0.586,
+   "realized": 0.55,
+   "adj": 0.574
   },
   "bin2": {
-   "n": 44,
-   "wins": 27,
+   "n": 48,
+   "wins": 31,
    "claimed": 0.657,
-   "realized": 0.614,
-   "adj": 0.635
+   "realized": 0.646,
+   "adj": 0.651
   },
   "bin3": {
-   "n": 44,
-   "wins": 32,
-   "claimed": 0.781,
-   "realized": 0.727,
-   "adj": 0.753
+   "n": 47,
+   "wins": 34,
+   "claimed": 0.778,
+   "realized": 0.723,
+   "adj": 0.749
   }
  },
  "source": "live fires 2026-09-08 17:31 -> 09-09 12:24 UTC, v11 rule, n0=40"

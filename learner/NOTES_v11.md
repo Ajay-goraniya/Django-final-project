@@ -12,9 +12,16 @@ collector (5-s samples, 257 candles). All numbers are EF-only, quoted asks, no s
 2. EXECUTE ON PREDICT.FUN CORRECTLY: fee is 2% of notional (cost = ask*1.02), not 7% of payout; require
    size at the ask >= stake (2-17 shares seen behind "cheap" prices). Retro on the recorded 19 h through
    the real v11 code: v10-as-run +186 (110 tr) -> v11 +241 (118 tr, 63%).
-3. LIVE CALIBRATION: claimed p 0.50-0.56 realized 33-40%; 0.62-0.70 realized ~62-69%; top band ~74%.
-   Shrunk per-bin shift (n0=40) + refuse a fire when the shifted side is < 50%: retro +241 -> +332
-   (97 tr, 69%). In-sample table; must be refreshed from live outcomes (v11 ships the table from these fires).
+3. LIVE CALIBRATION FAILED OUT OF SAMPLE (15:00 UTC pre-launch check, 128 v11 trades): fitted on the
+   first 1/2 or 2/3 of the day it LOST on the rest (+193 -> +160 and +71 -> +57); the fires it refuses
+   (p<0.56, cheap asks) were net winners later. In-sample gain shrank from +91 to +9 with more data.
+   -> ships OFF (Trade Controls toggle, table still displayed); refresh with day 2+ before trusting.
+   EV THRESHOLD SCALE 0.75 holds out of sample (both splits, 5 of 6 four-hour blocks): the v10 per-vol
+   thresholds were fitted for Polymarket at 7% fee; with Predict.fun's 2% fee they are too strict.
+   Full-span retro: x1.0 +286 (128 tr) | x0.75 +403 (167 tr, 66%) | x0.5 +469 (monotonic -> the
+   threshold itself is miscalibrated for this venue; 0.75 is the conservative default, dial stays).
+   SIZE RULE: top-of-book size refused 7 fills the executor's ladder walk would have made (+80 in retro);
+   v11 now counts shares within 2c of the best ask.
 4. MODES ARE REGIME-COMPLEMENTARY on Predict.fun: pnl mode earned in active hours (evening, London/US),
    accuracy mode earned in calm hours (01:00-08:00 +75, 83%) and lost in active hours. Dead tape has ~zero
    edge for pnl mode (00:30-02:00: 2/9 -51 pooled). Time of day is NOT a gate (one night, 1-in-8 chance);
@@ -366,3 +373,12 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 ## 14:39 UTC - second container restart / proxy-port change (43519 -> 38961)
 - All six processes (v10 x4, collector, Build 11 smoke) went to "reconnecting"; detected within ~1 min (harness notice), relaunched via proxy_restart.sh at 14:41 on the SAME databases; feeds live again by 14:42. Histories intact (Predict pnl 94 fires, Poly pnl 124, Predict acc 167, Poly acc 127). ~90 s gap.
 - Confirms the feed-age watchdog in Build 11 (exit 3 -> relaunch) is the right ops fix; the v10 processes lack it and depend on the check-in.
+
+## 15:00-15:15 UTC - pre-launch data review of Build 11 (changes made before the 16:30 launch)
+- Replay check: v10-as-run replay +222.7 (125 tr) vs live Polymarket pnl +224.8 (124 fires): the retro reproduces live.
+- Calibration table fails out of sample (see A.3) -> default OFF, toggle added to Trade Controls (tested: POST on/off, invalid value rejected, persisted in meta, survives relaunch).
+- EV threshold scale default 1.0 -> 0.75 (out-of-sample +193 -> +262 and +71 -> +130; extra 39 trades 74%, p~0.68, ask~0.56, spread over all three vol regimes).
+- Size check now uses shares within 2c of the best ask from the Predict.fun ladder (executor walks the ladder anyway); min notional stays $10.
+- Evidence persistence verified: every fire stores ef_v11_signal/ask/size/p/ev/threshold/sec/rv60 in ef_predictions.features (all 15 smoke fires on the Polymarket signal).
+- Candle boundary measured at 1 Hz: Predict.fun market switches in <=2 s, Polymarket signal for the new epoch ready at +2 s; the 19% "predict" fallback count was the post-restart warm-up, not a live gap.
+- Smoke relaunched 15:04 on the patched build (scratch DB kept): thr 0.75, calibration off, signal polymarket, no errors.
