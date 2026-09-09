@@ -14564,7 +14564,7 @@ class Engine:
         self.v11_conv_gate = (os.environ.get("V11_CONV_GATE") or "accuracy").strip().lower()
         self._v11_settings_loaded = False   # Trade Controls override env defaults; loaded on the first tick
 
-        self.v11_signal_counts = {"polymarket": 0, "polymarket-held": 0, "predict": 0}
+        self.v11_signal_counts = {"polymarket": 0, "polymarket-held": 0, "polymarket-onesided": 0, "predict": 0}
         # v4.5: aggressive cluster detection on top-of-book quote volume
         self.bid_volume_history: Deque[float] = deque(maxlen=CLUSTER_WINDOW)
         self.ask_volume_history: Deque[float] = deque(maxlen=CLUSTER_WINDOW)
@@ -17904,6 +17904,12 @@ class Engine:
                 poly = held[2]; poly_ok = True; src = "polymarket-held"
         if poly_ok:
             self.v10_state.on_venue_quote(poly["ask_up"], poly.get("bid_up"), poly["ask_dn"], poly.get("bid_dn"))
+        elif poly and poly.get("age_s") is not None and poly["age_s"] <= self.v11_poly_max_age_s:
+            # Fresh but one-sided Polymarket book (the loser side has no asks: seen in the last
+            # 2 min of ~every candle) = the market is decided. That is information, not an outage:
+            # refuse like the Polymarket runner does instead of switching to the other venue.
+            self.v10_state.on_venue_quote(None, None, None, None)
+            src = "polymarket-onesided"
         else:
             bid_up = None if p_ask_dn is None else 1.0 - p_ask_dn
             bid_dn = None if p_ask_up is None else 1.0 - p_ask_up
