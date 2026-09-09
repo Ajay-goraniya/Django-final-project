@@ -447,3 +447,9 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Predict pnl 67/123 +95.4; Predict acc 177/225 +72.1; Poly pnl 82/151 +220.5 (7 ungraded); Poly acc 126/169 -36.9 (7 ungraded). Last hour pooled 2/3 +18 (few fires).
 - Polymarket resolution still stalled: no 5-min market since 18:45 UTC has resolved by 20:00 (75 min). Both Polymarket runners' PnL and any "since 16:30" comparison against them are incomplete until it clears; the grade loop keeps retrying.
 - Retro on 274 fires: none +316 | p>=0.56 +231 | ask>0.45 +141.
+
+## 20:31 UTC check-in (backup 20:31) - all processes healthy, 13 GB free
+- Predict pnl 68/124 +105.1; Predict acc 182/230 +89.3; Poly pnl 84/156 +230.7 (5 ungraded); Poly acc 131/175 -28.1 (7 ungraded). Last hour pooled 5/7 +34.
+- Polymarket resolution resumed ~20:20 (18:55-19:30 markets graded); the runners are catching up.
+- Ask bands, whole run: Polymarket pnl earns in 0.30-0.60 (81/147 +258), Predict.fun pnl in 0.30-0.50 (31/57 +124) and loses in 0.50-0.60 (28/55 -43); no pnl run has bought under 0.30 except 3 Polymarket fires (0/3). Cheap tail is thin and the model rarely disagrees with the book by that much.
+- Retro on 280 fires: none +336 | p>=0.56 +251 | ask>0.45 +171.

@@ -53,3 +53,9 @@ Old-version findings keep going to NOTES_v11.md.
 - Candle-majority rules (>=67-75% of the last 6/12/24 candles one way) touch almost nothing (12-20 fires) - the grinds here are made of small mixed candles, not runs of one colour.
 - Cumulative-move rule "no fire against the last 12 candles' net move when it exceeds 20 bps": all 171/320 +282 -> kept 133/236 +348, removed 38/84 -66. Positive on both halves (+4 / +62), on all three runs (Predict.fun +17, Polymarket +28, v11 +20), and it catches the 17:35-21:35 block today (removed 4/15 -71). But it COSTS in the reversal-rich winning blocks (09-08 17:35 removed 4/6 +16, 21:35 5/8 +32, 09-09 09:35 9/13 +61) and it is parameter-sensitive: window 6c +241 | 9c +464 | 12c +348 | 18c +345; threshold 15 bps +419 | 20 +348 | 30 +278. That spread is the signature of a rule fitted to one day.
 - Decision: keep it as the v12 candidate, re-run at each check-in as data grows; ship only if the 9-18 candle / 15-25 bps region stays positive on a third day and the removed set stays net negative. Do not tune to the maximum.
+
+### 20:31 UTC (242 min): 21/45, -45.6 at $10 - run low
+- 20:00-20:25: 2/6. 20:00 all three runs DOWN and right; 20:05 v11 DOWN lost where Polymarket v10 UP won; 20:10/20:25 v11 UP lost where Polymarket v10 fired DOWN (ungraded). Same window since 16:30: Predict.fun v10 8/17 -11, Polymarket v10 6/18 -67 (5 ungraded).
+- Breakdown: strict 10/23 -32 | extras 11/22 -14; p<0.62 7/19 -42 | p>=0.62 14/26 -4; <60 s 19/37 +1 | 60-180 s 2/8 -47; regime low 5/8 +21 | mid 7/22 -73 | high 9/15 +7. The mid-vol regime holds the whole loss.
+- Trend-guard re-test on 325 fires: 12c/20bps kept 135/239 +356 vs +290 as run; parameter spread unchanged (9c +462, 6c +239; 15 bps +427, 30 bps +296). Still candidate-only.
+- Signal: polymarket 4201, held 55, one-sided 462, fallback 0; 57 reconnects bridged. No errors, no relaunch.
