@@ -397,3 +397,9 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - High-vol cell still carries both pnl runs (Predict.fun 24/40 +118, Polymarket 28/48 +144). Retro on 232 fires: none +428 | p>=0.56 +349 | ask>0.45 +262.
 - Build 11 smoke (held-quote build since 15:13): 19 fires 10/9; 1 Hz sampling over 10 min shows the Polymarket signal is complete for the first 3 min of every candle and one-sided (loser side has no asks) in the last 2 min: 0 fallbacks at 60-180 s, ~50% at 180-240 s, ~50% after 240 s. The fallback to the Predict.fun quote therefore only happens when the market is already decided; the proven Polymarket runner refuses one-sided quotes instead of switching venue.
 - 15:47: Build 11 changed accordingly - a fresh but one-sided Polymarket quote now refuses the fire ("polymarket-onesided" in signal counts) instead of falling back to the Predict.fun quote; fallback is reserved for a stale/missing Polymarket feed. Smoke relaunched 15:47 on that build.
+
+## 16:16 UTC check-in (backup 16:16) - five v10 processes healthy, feeds live, 13 GB free
+- Predict pnl 60/105 +135.9 (three straight losses 15:50-16:10); Predict acc 146/184 +57.6; Poly pnl 78/136 +260.5; Poly acc 103/141 -59.9. Last hour pooled 4/14 -62: both venues lost the same candles (a chop hour after the 15:00 run-up), no venue or timing pattern in the 14.
+- Retro on 241 fires: none +396 | p>=0.56 +337 | ask>0.45 +250.
+- Build 11 smoke: 24 fires 13/11; signal counts since 15:47: polymarket 999, held 18, one-sided refusals 55, Predict.fun fallback 0 -> the one-sided rule and the 10-s hold cover every gap; no venue switch happened. Polymarket socket reconnects 14 in 30 min (rotation + the 15-s silence rule), each bridged by the hold, no signal loss.
+- No bugs, no restarts on the v10 processes.
