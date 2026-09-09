@@ -7003,6 +7003,22 @@ class Store:
             raise ValueError("invalid EF frequency checkpoint; existing state was not reset")
         return payload
 
+    def load_v11_settings(self) -> Dict[str, Any]:
+        """Build 11 lane settings chosen in Trade Controls (mode, conversion gate, EV scale)."""
+        with self.lock:
+            row = self.db.execute("SELECT value FROM meta WHERE key=?", ("v11_settings",)).fetchone()
+        try:
+            payload = json.loads(row[0]) if row else {}
+        except Exception:
+            payload = {}
+        return payload if isinstance(payload, dict) else {}
+
+    def save_v11_settings(self, settings: Dict[str, Any]) -> None:
+        body = json.dumps(settings, allow_nan=False, separators=(",", ":"))
+        with self.lock:
+            with self.db:
+                self.db.execute("INSERT OR REPLACE INTO meta(key,value) VALUES(?,?)", ("v11_settings", body))
+
     def save_ef_frequency_state(self, state: Dict[str, Any], closed: bool = False) -> None:
         body = json.dumps(state, allow_nan=False, separators=(",", ":"))
         with self.lock:
@@ -14543,6 +14559,8 @@ class Engine:
         # leader-conversion window: gates the accuracy lane by default (V11_CONV_GATE = accuracy | all | off)
         self.v11_conv = _V11ConvWindow(n=int(os.environ.get("V11_CONV_N") or 12))
         self.v11_conv_gate = (os.environ.get("V11_CONV_GATE") or "accuracy").strip().lower()
+        self._v11_settings_loaded = False   # Trade Controls override env defaults; loaded on the first tick
+
         self.v11_signal_counts = {"polymarket": 0, "predict": 0}
         # v4.5: aggressive cluster detection on top-of-book quote volume
         self.bid_volume_history: Deque[float] = deque(maxlen=CLUSTER_WINDOW)
@@ -17779,12 +17797,50 @@ class Engine:
         except Exception as problem:
             self.record_error(f"EF final frequency close: {problem}")
 
+    def v11_settings(self) -> Dict[str, Any]:
+        return {"mode": self.v11_mode, "conv_gate": self.v11_conv_gate, "thr_scale": self.v11_thr_scale,
+                "min_notional": self.v11_min_notional}
+
+    def apply_v11_settings(self, payload: Dict[str, Any], persist: bool = True) -> Dict[str, Any]:
+        """Validate and apply lane settings from Trade Controls. Unknown keys are ignored."""
+        if not isinstance(payload, dict):
+            return {"ok": False, "error": "settings must be an object"}
+        mode = str(payload.get("mode") or self.v11_mode).strip().lower()
+        gate = str(payload.get("conv_gate") or self.v11_conv_gate).strip().lower()
+        if mode not in ("pnl", "accuracy", "auto"):
+            return {"ok": False, "error": f"mode must be pnl, accuracy or auto (got {mode!r})"}
+        if gate not in ("accuracy", "all", "off"):
+            return {"ok": False, "error": f"conversion gate must be accuracy, all or off (got {gate!r})"}
+        try:
+            scale = float(payload.get("thr_scale", self.v11_thr_scale))
+            notional = float(payload.get("min_notional", self.v11_min_notional))
+        except (TypeError, ValueError):
+            return {"ok": False, "error": "thr_scale and min_notional must be numbers"}
+        if not (0.25 <= scale <= 4.0):
+            return {"ok": False, "error": "thr_scale must be between 0.25 and 4"}
+        if not (0.0 <= notional <= 1000.0):
+            return {"ok": False, "error": "min_notional must be between 0 and 1000"}
+        with self.lock:
+            self.v11_mode, self.v11_conv_gate, self.v11_thr_scale, self.v11_min_notional = mode, gate, scale, notional
+            self.state_revision = int(getattr(self, "state_revision", 0)) + 1
+        if persist:
+            self.store.save_v11_settings(self.v11_settings())
+        return {"ok": True, "settings": self.v11_settings()}
+
     def _watch_v11(self, ts_ms: int, cid: int) -> None:
         """Build 11: Polymarket signal, Predict.fun execution. One fire per candle."""
         _last = getattr(self, "_v11_last_decide_ms", 0)
         if ts_ms - _last < 500:
             return
         self._v11_last_decide_ms = int(ts_ms)
+        if not getattr(self, "_v11_settings_loaded", False):
+            self._v11_settings_loaded = True
+            try:
+                saved = self.store.load_v11_settings()
+                if saved:
+                    self.apply_v11_settings(saved, persist=False)
+            except Exception as problem:
+                self.record_error(f"v11 settings load: {problem}")
         evidence = dict(self.ef_metrics or {})
         # --- Predict.fun quote (execution venue): must be THIS candle's market
         try:
@@ -18861,7 +18917,14 @@ CONTROLS_HTML = r"""<!doctype html>
 <section class="card"><div class="row"><div><div class="label">Master live-order switch</div><div class="big">MAIN · REVERSAL · EF</div><div id="masterStatus" class="small">loading safe state…</div></div><button id="master" class="toggle off">OFF</button></div>
 <div id="kindStates" class="stateGrid"></div><div class="note">Master controls all new real orders; the small MAIN / REVERSAL / EF switches can block each stream individually. Master starts OFF after every terminal launch. Individual choices persist across restarts. Signal generation, settlement and accuracy remain active while trading is OFF or banned.</div>
 <div id="ready" class="small readiness" style="margin-top:9px"></div>
-<div class="stateXBox"><div class="row"><div><div class="label">State X Protection</div><div id="stateXStatus" class="big" style="font-size:17px">NORMAL</div><div id="stateXDetails" class="small">loading…</div></div><button id="stateXToggle" type="button" class="miniToggle off">OFF</button></div></div></section>
+<div class="stateXBox"><div class="row"><div><div class="label">State X Protection</div><div id="stateXStatus" class="big" style="font-size:17px">NORMAL</div><div id="stateXDetails" class="small">loading…</div></div><button id="stateXToggle" type="button" class="miniToggle off">OFF</button></div></div>
+<div class="stateXBox"><div class="label">v11 EF lane</div><div id="v11Status" class="small">loading…</div>
+<div class="row" style="gap:8px;flex-wrap:wrap;margin-top:6px">
+<label class="small">mode <select id="v11_mode"><option value="pnl">pnl</option><option value="accuracy">accuracy</option><option value="auto">auto</option></select></label>
+<label class="small">leader-conversion gate <select id="v11_gate"><option value="accuracy">accuracy lane</option><option value="all">all lanes</option><option value="off">off</option></select></label>
+<label class="small">EV threshold scale <input id="v11_scale" type="number" step="0.05" min="0.25" max="4" style="width:70px"></label>
+<label class="small">min size at ask $ <input id="v11_notional" type="number" step="1" min="0" max="1000" style="width:70px"></label>
+<button id="saveV11" type="button" class="btn">Apply v11</button></div></div></section>
 
 <section class="card"><div class="label">Shared staking · all three signals</div><div class="row"><div><div id="nextStake" class="big">--</div><div class="small">one current stake and one combined streak</div></div><div id="streak" class="small"></div></div>
 <div class="formGrid">
@@ -18935,6 +18998,8 @@ function render(){
  e('ready').className='small readiness '+(ready.ready?'up':'warn');
  e('kindStates').innerHTML=KINDS.map(function(k){var s=state.kinds[k]||{},manual=s.manual_enabled!==false;return '<div class="cell"><div class="label '+(k==='MAIN'?'main':k==='REVERSAL'?'rev':'ef')+'">'+k+'</div>'+'<div class="kindLine"><b class="'+(s.effective_enabled?'up':s.auto_banned?'warn':'down')+'">'+(s.effective_enabled?'TRADING':s.auto_banned?'BANNED':'BLOCKED')+'</b>'+'<button type="button" class="miniToggle'+(manual?'':' off')+'" data-kind-toggle="'+k+'">'+(manual?'ON':'OFF')+'</button></div>'+'<div class="small">'+(s.status||'')+'</div></div>'}).join('');bindSignalToggles();
  e('stateXToggle').textContent=sxOn?'ON':'OFF';e('stateXToggle').className='miniToggle'+(sxOn?'':' off');
+ var v=state.v11||{};if(!v11Dirty){if(v.mode)e('v11_mode').value=v.mode;if(v.conv_gate)e('v11_gate').value=v.conv_gate;if(v.thr_scale!=null)e('v11_scale').value=v.thr_scale;if(v.min_notional!=null)e('v11_notional').value=v.min_notional;}
+ var cw=v.conversion_window||{};e('v11Status').textContent='mode '+(v.mode||'--')+' · signal '+(v.signal_src||'--')+' · gate '+(v.conv_gate||'--')+' · EV scale '+(v.thr_scale==null?'--':v.thr_scale)+' · window '+(cw.n||0)+' candles'+(cw.conversion==null?'':' · leader '+Math.round(cw.conversion*100)+'% vs break-even '+Math.round(cw.break_even*100)+'%'+(cw.ok?' · OK':' · GATED'));
  e('stateXStatus').textContent=sxActive?(sxOn?'SX ACTIVE · BLOCKING':'SX ACTIVE · SHADOW'):(sxOn?'ARMED':'SHADOW');e('stateXStatus').className='big '+(sxActive?'sxActive':'up');e('stateXStatus').style.fontSize='17px';
  e('stateXDetails').textContent=sxActive?((sxOn?'no new orders until ':'would block until ')+(sx.resume_time||'--')+' · '+(sx.trigger_reason||'--')+' · triggered '+Number(sx.trigger_count||0)+'x'):('2 consecutive settled losses → 15 min no new orders · '+(sxOn?'ON: blocks':'OFF: tracks only, never blocks')+' · loss streak '+Number(sx.loss_streak||0)+' · triggered '+Number(sx.trigger_count||0)+'x');
  var dl=state.daily_limits||{};var dlp=Number(dl.pnl||0);e('dlToday').textContent=(dlp>=0?'+':'')+dlp.toFixed(2)+' USD today';e('dlToday').className='big '+(dl.halted?'sxActive':(dlp>=0?'up':'down'));
@@ -18949,6 +19014,8 @@ function render(){
 function load(){request('GET','/api/controls',null,function(r){state=r;render()})}
 function finish(r){if(!r.ok){show(r.error||'Change failed.',false);return}show('Applied.',true);load()}
 e('master').onclick=function(){var target=!state.master_enabled;var warning=target?'ARM REAL MAINNET ORDERS for MAIN, REVERSAL and EF?':'Turn OFF all new live orders? Existing accepted orders are not cancelled.';if(!confirm(warning))return;request('POST','/api/controls/apply',{confirmed:true,system:{manual_enabled:target}},finish)};
+var v11Dirty=false;['v11_mode','v11_gate','v11_scale','v11_notional'].forEach(function(k){e(k).onchange=function(){v11Dirty=true}});
+e('saveV11').onclick=function(){var s={mode:e('v11_mode').value,conv_gate:e('v11_gate').value,thr_scale:Number(e('v11_scale').value),min_notional:Number(e('v11_notional').value)};if(!confirm('Apply v11 lane settings: mode '+s.mode+', gate '+s.conv_gate+', EV scale '+s.thr_scale+', min size $'+s.min_notional+'?'))return;request('POST','/api/controls/v11',{confirmed:true,v11:s},function(r){v11Dirty=false;finish(r)})};
 e('stateXToggle').onclick=function(){var sx=state.state_x||{},target=!sx.enabled,warning=target?'Turn State X ON? After 2 consecutive settled losses no new orders are placed for 15 minutes.':'Turn State X OFF? The window is still tracked and shown, but it will never block an order.';if(!confirm(warning))return;request('POST','/api/controls/state-x',{confirmed:true,manual_enabled:target},finish)};
 e('take_profit').oninput=function(){limitsDirty=true;};
 e('stop_loss').oninput=function(){limitsDirty=true;};
@@ -19779,6 +19846,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 "capital": self.server.store.capital_state(),
                 "execution": self.server.engine.executor.readiness(),
                 "version": VERSION,
+                "v11": {**self.server.engine.v11_settings(),
+                        "signal_src": self.server.engine.v11_signal_src,
+                        "conversion_window": self.server.engine.v11_conv.stats(),
+                        "options": {"mode": ["pnl", "accuracy", "auto"], "conv_gate": ["accuracy", "all", "off"]}},
             })
         elif path == "/events":
             self._events()
@@ -19894,6 +19965,15 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     self._send_json(result)
                     return
                 self._send_json({"ok": True, "state": controls.snapshot()})
+            elif path == "/api/controls/v11":
+                if payload.get("confirmed") is not True:
+                    self._send_json({"ok": False, "error": "Changes must be confirmed before applying."})
+                    return
+                outcome = self.server.engine.apply_v11_settings(payload.get("v11") or {})
+                if not outcome.get("ok"):
+                    self._send_json(outcome)
+                    return
+                self._send_json({"ok": True, "result": outcome, "state": controls.snapshot()})
             elif path == "/api/controls/state-x":
                 if payload.get("confirmed") is not True:
                     self._send_json({
