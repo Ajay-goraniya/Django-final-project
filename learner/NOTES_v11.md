@@ -244,3 +244,10 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Retro on 171 fires: none 95/171 +182 | p>=0.56 +178 | ask>0.45 +170. Calibration unchanged (0.62-0.70 41/62 +143).
 - Venue gap -0.077; Polymarket right on disagreement 1006:460 over 216 candles.
 - No bugs, no restarts.
+
+## 10:08 UTC check-in (backup 10:08) - five healthy, feeds live, 13 GB free
+- Predict pnl 43/77 +53.3; Predict acc 96/117 +69.8 (82%); Poly pnl 56/101 +140.7; Poly acc 64/87 -41.4. Last hour pooled 5/8 +23.
+- Retro on 178 fires: none 99/178 +194 | p>=0.56 +197 | ask>0.45 +190. Calibration: 0.62-0.70 43/65 +152; 0.70+ 18/25 +48; below 0.62 38/88 -6 (flat; was -35 at 08:30 - London hours favour the cheap fires again).
+- All-lanes on Predict.fun (10:05): pnl engine MAIN 107/150 -106, REV 32/51 +102, EF 43/77 +47 -> +43 total; accuracy engine MAIN 83/117 -80, REV 25/39 +87, EF 96/117 +68 -> +74 total. MAIN wins 71% and loses ~100 on both (buys the leader at ~0.75); REVERSAL is the best lane per fire (+2/fire from cheap contrarian entries).
+- Venue gap -0.076; Polymarket right on disagreement 1034:469 over 223 candles.
+- No bugs, no restarts.
