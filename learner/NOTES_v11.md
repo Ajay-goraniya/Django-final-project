@@ -1,3 +1,50 @@
+# v11 notes - WHAT MATTERS MOST (revised 2026-09-09 13:25 UTC)
+
+Live evidence: four parallel runs of the same v10 model, 2026-09-08 17:21 -> 09-09 13:00 UTC (~20 h),
+Predict.fun (pnl + accuracy modes) and Polymarket (pnl + accuracy), $10 flat, plus a both-venue book
+collector (5-s samples, 257 candles). All numbers are EF-only, quoted asks, no slippage.
+
+## A. The five findings that decide PnL (ranked)
+1. VENUE > MODEL. Same weights, same candles: Polymarket pnl +212 (58%) vs Predict.fun pnl +69 (56%).
+   Polymarket's book forecasts better (leader right 2:1 on all 1,663 disagreement samples; leader
+   converts 76% vs 71%) and sells the model's side cheaper on the leader side (median -0.06, mean -0.074).
+   -> v11: Polymarket websocket as the model's ONLY signal input; Predict.fun for everything else.
+2. EXECUTE ON PREDICT.FUN CORRECTLY: fee is 2% of notional (cost = ask*1.02), not 7% of payout; require
+   size at the ask >= stake (2-17 shares seen behind "cheap" prices). Retro on the recorded 19 h through
+   the real v11 code: v10-as-run +186 (110 tr) -> v11 +241 (118 tr, 63%).
+3. LIVE CALIBRATION: claimed p 0.50-0.56 realized 33-40%; 0.62-0.70 realized ~62-69%; top band ~74%.
+   Shrunk per-bin shift (n0=40) + refuse a fire when the shifted side is < 50%: retro +241 -> +332
+   (97 tr, 69%). In-sample table; must be refreshed from live outcomes (v11 ships the table from these fires).
+4. MODES ARE REGIME-COMPLEMENTARY on Predict.fun: pnl mode earned in active hours (evening, London/US),
+   accuracy mode earned in calm hours (01:00-08:00 +75, 83%) and lost in active hours. Dead tape has ~zero
+   edge for pnl mode (00:30-02:00: 2/9 -51 pooled). Time of day is NOT a gate (one night, 1-in-8 chance);
+   activity (rv60, book) is the signal. Hand rules tested and REJECTED: fixed high-vol EV threshold
+   (removed 3 losses/5 wins), previous-candle trend filter (7/8), fixed p band (kills all cheap entries).
+5. LEADER-CONVERSION WINDOW (12 candles, fired or not): gates the accuracy lane (85% -> 89-90%, PnL
+   150 -> 137) and must NOT gate the pnl lane (removes 24 wins / 10 losses). Implemented that way.
+
+## B. Bugs found live and fixed (all in Build 11)
+- Candle-open fire priced from the previous market's 0.01 loser side (engine lane + now the executor too).
+- Dust-ask fire on a one-sided book near close (no fire outside 15-240 s, none on one-sided quotes).
+- Binance perp "NA" prints at price 0 -> basis -10000 -> p pinned 0.99 (dropped).
+- Per-tick feature pass starved the phone engine thread (2 decisions/s).
+- Feeds silently dead after a network-route change (proxy port) for 25 min -> feed-age watchdog + relaunch loop.
+
+## C. Still open for v12 (need day 2+ of paired-book data)
+- Regime-dependent floor / activity-driven frequency for the pnl lane (with Predict.fun execution the
+  low-vol cell was +121 in the retro, so no floor is justified by one day; EV scale is a dial in Trade Controls).
+- Venue-specific timing windows; payoff-sized stakes for accuracy mode; retrain the core on both venues'
+  prices + gap (collector has 257 candles; not enough yet). Wire-or-remove the idle Build36 learner (disconnected now).
+- Staking: hybrid ~= fixed 10%; drawdown brakes and quarter-Kelly cut return without cutting the capped-stake
+  drawdown. Keep hybrid; Kelly sizing only once calibration is trusted.
+
+## D. Two-book rule (design law for v11+)
+Predict.fun: market discovery, candle id, current market, book state, size, fee, fills, settlement, orders.
+Polymarket: model input only, keyed to Predict.fun's candle; stale/one-sided/other-candle -> fall back to
+Predict.fun's own quote; every price in EV/size/order is Predict.fun's ask.
+
+---
+# Running log (chronological, live-data findings only)
 # Findings for the next version (running log, 2026-09-08)
 
 ## Bugs found live (fixed in code, already shipped)
