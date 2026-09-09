@@ -8,7 +8,7 @@ while true; do
   python3 btc_model_build11.py "${ARGS[@]}"
   code=$?
   # drop --reset after the first launch so a relaunch never wipes the database
-  ARGS=("${ARGS[@]/--reset/}")
+  NEW=(); for a in "${ARGS[@]}"; do if [ "$a" != "--reset" ] && [ -n "$a" ]; then NEW+=("$a"); fi; done; ARGS=("${NEW[@]}")
   if [ "$code" -eq 0 ] || [ "$code" -eq 130 ]; then exit 0; fi
   echo "[run_v11] exited with $code at $(date -u +%T) UTC; relaunching in 5 s (same database)"
   sleep 5
