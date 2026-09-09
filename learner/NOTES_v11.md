@@ -254,3 +254,10 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 
 ## Refinement of the rolling-conversion switch (user request, 10:20 UTC 2026-09-09)
 - Do NOT window on the lane's own fires (20 fires = 3-24 h at night's fire rates - would stop late and re-arm late). Window on CANDLES: every 5-min candle has a book leader and an outcome, so measure leader-conversion-vs-price over the last 12 candles (1 h) on every candle, fired or not. Switch off when it is under break-even, back on when above; same rule both ways, no cool-down timer. Combine with rv60 (reacts in minutes) so the lane is quiet in dead tape and live in active tape within an hour of the change.
+
+## 10:40 UTC check-in (backup 10:40) - five healthy, feeds live, 13 GB free
+- Predict pnl 44/78 +61.9; Predict acc 99/122 +55.6 (81%); Poly pnl 57/102 +155.9 (new high); Poly acc 65/89 -50.0. Last hour pooled 5/7 +37.
+- Pnl modes waking with London/pre-US activity: Predict pnl +29 since 08:00 (mid-vol cell 6/11 +18). Accuracy modes giving back (Predict acc -14 since 08:00, Poly acc -10): the day/night mirror between the two modes holds a second time.
+- Retro on 180 fires: none 101/180 +218 | p>=0.56 +206 | ask>0.45 +198 (filters cost money in active tape). Calibration: 0.62-0.70 44/66 +161; 0.70+ 18/25 +48; 0.50-0.56 22/54 +12; 0.56-0.62 17/35 -2.
+- Venue gap -0.076; Polymarket right on disagreement 1041:478 over 229 candles.
+- No bugs, no restarts.
