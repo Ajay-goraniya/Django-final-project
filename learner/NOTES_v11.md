@@ -409,3 +409,9 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Final retro on all recorded data (09-08 17:31 -> 09-09 16:22, 139 fires, 267 candles): v10-as-run replay = live; v11 launch settings (thr 0.75, calibration off) in-sample +422 on 163 trades (65%); calibration still adds only +18 in-sample and loses out of sample -> off.
 - Launch settings: mode pnl, EV scale 0.75, calibration off, min size $10 within 2c of ask, conversion gate accuracy lane, Polymarket signal with 10-s hold and one-sided refusal. All four v10 runs, the collector and the smoke keep running untouched.
 - 16:30:40: feeds live (spot, perp, Predict.fun book websocket), Polymarket signal live, warming up.
+
+## 16:51 UTC check-in (backup 16:51) - six model processes + collector healthy, 13 GB free
+- Predict pnl 60/108 +105.9 (five straight losses since 15:50: 16:00 chop); Predict acc 151/191 +66.1; Poly pnl 79/139 +288.1; Poly acc 108/146 -43.8. Last hour pooled 4/11 -13.
+- Build 11 (8794, 21 min): 3 fires, 0/2 (16:40 UP ask 0.41, 16:45 UP ask 0.37 - cheap-ask entries in the chop, both lost; 16:45 also lost on Predict.fun v10), 16:50 open. Signal since launch: polymarket 969, held 36, one-sided refusals 296 (last 2 min of candles), Predict.fun fallback 0. No relaunch, no errors in b11.log.
+- Binance spot websocket (stream.binance.com) resets by peer intermittently on every engine; the engine drops to REST fallback and comes back on data-stream.binance.vision within minutes (seen on 8794 at 16:50 -> live by 16:52; Predict.fun pnl engine 8789 on rest-fallback at 16:52, watching). Not a v11 issue.
+- Retro on 247 fires: none +394 | p>=0.56 +307 | ask>0.45 +220.
