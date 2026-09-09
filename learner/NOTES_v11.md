@@ -189,3 +189,10 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Regime: every venue/regime cell is flat-to-negative since 03:00; the two profitable cells remain Poly mid-vol (12/20 +56) and Poly high-vol (13/22 +58), both earned before 01:00. The overnight edge on this model is ~zero on both venues; v11 frequency rule should be near-zero fires in the dead hours (rv60 < ~0.17 and thin books), not "fewer".
 - Venue gap -0.079; Polymarket right on disagreement 814:372 over 165 candles.
 - No bugs, no restarts.
+
+## 05:49 UTC check-in (backup 05:50) - five healthy, feeds live, 14 GB free
+- Predict pnl 34/62 +28.3; Predict acc 62/75 +49.2 (83%); Poly pnl 47/84 +127.0; Poly acc 40/54 -19.6. Last hour pooled 7/11 +26 (London pre-open activity picking up).
+- Predict.fun accuracy mode is the overnight winner: +49 on 75 fires at 83%, all earned since ~01:00 in the quiet regime. In calm tape the Predict.fun leader is cheap (6-8c under Polymarket) AND converts at ~83%, above its ~78% break-even: exactly the "buy the leader where it is under-priced" case. Accuracy mode on Polymarket in the same hours: 74% at ~0.80 asks -> negative. Venue-specific floors for accuracy mode confirmed.
+- Retro on 146 fires: none 81/146 +155 | p>=0.56 +153 | ask>0.45 +148. Calibration: 0.62-0.70 36/54 +133; 0.70+ 15/21 +36; 0.56-0.62 13/28 -16; 0.50-0.56 17/43 +2.
+- Venue gap -0.079; Polymarket right on disagreement 823:383 over 171 candles.
+- No bugs, no restarts.
