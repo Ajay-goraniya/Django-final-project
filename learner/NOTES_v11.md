@@ -123,3 +123,7 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Calibration: p 0.62-0.70 27/36 +138 remains the only solidly profitable bin; p 0.70+ is 5/9 -9. High-confidence fires are NOT paying at the asks they get -> the isotonic map over-trusts the top; recalibrate on live data.
 - Venue gap -0.079; Polymarket right on disagreement 592:269 over 120 candles.
 - No bugs, no restarts.
+
+## Correction (01:45 UTC): the 0.62-0.70 band is NOT a gate
+- Every cheap entry (ask<=0.45) tonight has p<0.62 because p_venue/lv dominate the logit; a p band would remove all cheap entries. Cheap entries tonight: 14/35 -5 (break-even); mid-price agree-with-market fires: 28/37 +148. In the 8-day backtest cheap entries carried the edge. Regime, not rule.
+- v11 change is model-side: (a) recalibrate p on cheap entries so BTC evidence is not swamped by the venue feature (separate calibration by ask bucket, or interaction terms venue x BTC features), (b) the regime-dependent floor decides how many cheap entries to take. Do NOT hard-gate on p band or ask level.
