@@ -355,3 +355,10 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Build 11 smoke (scratch, pnl): 6 fires since 13:05, 5/6 wins, all with Polymarket signal, Predict.fun asks 0.42-0.51. Fallback to Predict.fun quote happens at candle ends when Polymarket has one side empty (harmless: one-sided quotes never fire anyway). Conversion window filling (6 candles, leader 83% vs break-even 74%).
 - Venue gap -0.074 (median -0.05); Polymarket right on disagreement 1188:590 over 270 candles.
 - No bugs, no restarts on the v10 processes.
+
+## 14:34 UTC check-in (backup 14:35) - five healthy, feeds live, 13 GB free
+- Predict pnl 55/93 +146.9 (new high); Predict acc 130/166 +25.3; Poly pnl 68/122 +202.0; Poly acc 89/125 -92.9. Last hour pooled 6/12 +25.
+- Predict.fun pnl has caught most of the day's US-session move (high-vol cell 19/31 +99 - its best cell now), while Polymarket pnl is flat since 12:30: in the fast US tape the Predict.fun book is lagging Polymarket by enough that the same fires get cheaper fills there. Cumulative gap unchanged (-0.075) but it is where and when it shows that pays.
+- Retro on 215 fires: none 123/215 +349 | p>=0.56 +314 | ask>0.45 +256: in active tape every constant filter costs (fourth time).
+- Build 11 smoke (scratch, pnl): 11 fires, 7/11, all on Polymarket signal; window 10 candles, leader 80% vs 74% break-even.
+- No bugs, no restarts on the v10 processes.
