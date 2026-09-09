@@ -348,3 +348,10 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Build 11 smoke (scratch): signal source Polymarket 796 / Predict.fun fallback 339 decisions (30% fallback, up from 11% earlier) - watch: fallback should only happen at rollover; check PolyBook freshness/ladder coverage before launch. 1 fire so far (13:05 UP @0.42 lost). Conversion window filling (3 candles).
 - Venue gap -0.074; Polymarket right on disagreement 1154:585 over 263 candles.
 - No bugs, no restarts on the v10 processes.
+
+## 14:03 UTC check-in (backup 14:03) - five healthy, feeds live, 13 GB free
+- Predict pnl 53/90 +127.1 (new high); Predict acc 126/159 +28.8; Poly pnl 67/119 +200.3; Poly acc 85/119 -86.3. Last hour pooled 8/11 +67 (US open: pnl lanes on, accuracy lanes off - third time the mirror shows).
+- Retro on 209 fires: none 120/209 +327 | p>=0.56 +319 | ask>0.45 +266. Calibration: 0.62-0.70 53/78 +211; 0.56-0.62 23/43 +53; 0.70+ 19/26 +55; 0.50-0.56 25/62 +8.
+- Build 11 smoke (scratch, pnl): 6 fires since 13:05, 5/6 wins, all with Polymarket signal, Predict.fun asks 0.42-0.51. Fallback to Predict.fun quote happens at candle ends when Polymarket has one side empty (harmless: one-sided quotes never fire anyway). Conversion window filling (6 candles, leader 83% vs break-even 74%).
+- Venue gap -0.074 (median -0.05); Polymarket right on disagreement 1188:590 over 270 candles.
+- No bugs, no restarts on the v10 processes.
