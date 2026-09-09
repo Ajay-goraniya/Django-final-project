@@ -77,3 +77,8 @@ Old-version findings keep going to NOTES_v11.md.
 ### 21:21 UTC (19 min since reset, paper, master OFF): 1/2, -4.4 at $10
 - 21:10 DOWN 0.63 won (the order Predict.fun refused with the jurisdiction 403); 21:15 UP 0.48 lost with Predict.fun v10. Signal since reset: polymarket 1112, held 37, one-sided 114, fallback 0. No new failed attempts; executor idle in SHADOW.
 - Trend-guard candidate on 342 fires (archived paper fires included): 12c/20bps kept 142/255 +333 vs 182/342 +281 as run, removed 40/87 -51; 15 bps +385, 30 bps +287; 9c +453, 6c +216 - still parameter-sensitive. Not shipping.
+
+### 21:52 UTC (50 min since reset, paper, master OFF): 3/5, +0.8 at $10
+- p>=0.62 3/3 +20.8, p<0.62 0/2 -20.0. Same window: Predict.fun v10 1/3 -13, Polymarket v10 3/4 +30. 21:40 v11 UP won with Predict.fun v10 where Polymarket v10 DOWN lost.
+- Signal since reset: polymarket 2325, held 102, one-sided 540, fallback 0. No new failed attempts. Trend guard on 349 fires: 12c/20bps +356 vs +305 as run, removed 40/87 -51; 9c +476, 6c +240 - unchanged verdict.
+- Execution move: v11 deployed on the user's AWS Tokyo server (ap-northeast-1) via learner/aws_setup.sh as a systemd service with HTTPS dashboard (Caddy, basic auth); master OFF until reachable from here; security-group rules for 80/443 being added.
