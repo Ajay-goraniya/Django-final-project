@@ -466,3 +466,7 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 ## 21:52 UTC check-in (backup 21:52) - Predict.fun pnl, Polymarket pnl, collector, v11 healthy, 13 GB free
 - Predict pnl 71/130 +100.0; Poly pnl 91/165 +271.3 (2 ungraded). Last hour pooled 4/7 +17.
 - Retro on 295 fires: none +371 | p>=0.56 +273 | ask>0.45 +191.
+
+## 22:25 UTC check-in (backup 22:25) - Predict.fun pnl, Polymarket pnl, collector, v11 twin healthy, 13 GB free
+- Predict pnl 72/133 +95.2; Poly pnl 91/166 +261.3 (5 ungraded). Last hour pooled 2/6 -18.
+- Retro on 299 fires: none +356 | p>=0.56 +253 | ask>0.45 +171.

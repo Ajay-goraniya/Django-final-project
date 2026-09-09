@@ -82,3 +82,9 @@ Old-version findings keep going to NOTES_v11.md.
 - p>=0.62 3/3 +20.8, p<0.62 0/2 -20.0. Same window: Predict.fun v10 1/3 -13, Polymarket v10 3/4 +30. 21:40 v11 UP won with Predict.fun v10 where Polymarket v10 DOWN lost.
 - Signal since reset: polymarket 2325, held 102, one-sided 540, fallback 0. No new failed attempts. Trend guard on 349 fires: 12c/20bps +356 vs +305 as run, removed 40/87 -51; 9c +476, 6c +240 - unchanged verdict.
 - Execution move: v11 deployed on the user's AWS Tokyo server (ap-northeast-1) via learner/aws_setup.sh as a systemd service with HTTPS dashboard (Caddy, basic auth); master OFF until reachable from here; security-group rules for 80/443 being added.
+
+### 22:25 UTC - v11 LIVE on Tokyo, 30 min: 4 orders, 4 filled, 0 failed; 2/4 settled, realized +0.06 at $1
+- Fills: 21:55 UP quoted 0.42 filled 0.42 (won, +1.38); 22:05 lost; 22:15 DOWN 0.43 filled 0.43 (lost); 22:20 UP quoted 0.55 filled 0.57 (2c slip, open). Mean delay 138 ms, all accepted first attempt. Fill quality so far: 3 of 4 at the quote, worst +2c.
+- Wallet 25.58 -> 23.91 with one $1 position open (equity 25.62). Capital truth shows "unexplained -1.73" = the open position's shares; verify it clears at settlement, else a ledger bug.
+- Paper twin (container) 5/10 -8.1: p>=0.62 4/5 +18.6, p<0.62 1/5 -26.7; extras 3/7 -20 vs strict 2/3 +12 this window. Same candles: 21:40 v11 UP won where Polymarket v10 DOWN lost; 22:00 v11 UP lost where Predict.fun v10 DOWN won; 22:15 both DOWN lost.
+- Trend guard on 358 fires: 12c/20bps +335 vs +281 as run, removed 41/89 -54; 9c +445, 6c +216 - unchanged verdict.
