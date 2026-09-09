@@ -113,3 +113,14 @@ Old-version findings keep going to NOTES_v11.md.
 - Root of the mismatch: same model, same candle, nearly the same second, the twin's p_up differs from the runner's by 0.085 on average and picks the opposite side 18 of 69 times. Venue mapping, depth and spot paths are identical; one confirmed difference: the engine fed RAW perp @trade prints into the feature state while the runner and training aggregate them like aggTrade (measured 2.58x more prints; perp_n15 coef 0.0464 per 752 prints -> +0.02 logit typical, more in busy tape). Fixed in build 11.1-perp-agg-fix (aggregation in the engine's on_trade), and every v11 fire now stores its full feature dict so pcmp.py can pin any remaining differing feature against the runner's log.
 - Consequence: the Predict.fun v10 paper engine (build 10) has had the same raw-print input since 17:21 09-08; part of "venue > model" may be this. Not changed mid-run (comparison continuity); v10 notes updated.
 - Tokyo runs the original v11 (raw prints). The fix reaches Tokyo only when the user pulls and restarts; recommended in the morning once pcmp.py confirms the twin now matches the runner.
+
+# LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
+Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
+| id | start (UTC) | variant | hypothesis | verdict so far |
+|---|---|---|---|---|
+| A | 09-09 23:45 | v11.1 baseline: thr 0.75, guard off, perp-print aggregation fixed (port 8794) | control; its p should now match the runner's (pcmp) | pending |
+| B | 09-09 23:50 | A + slow-trend guard 9 candles / 20 bps (port 8795) | fewer against-lean losses; realised-fire retro +459 vs +296, v11 replay -111 -> undecided | pending |
+| C | 09-09 23:50 | A + EV scale 1.0 (port 8796) | v10-like frequency; fewer early cheap fires, higher hit rate, lower PnL per retro | pending |
+| D | 09-09 23:50 | A + auto mode (accuracy lane in low vol) (port 8797) | earns in calm/chop hours where pnl mode bleeds | pending |
+| Tokyo | 09-09 21:55 | original v11 live, $1 | execution quality + live edge | 18 fills, 10/8, +0.82, fills at quote |
+Decision rule: a variant replaces the baseline setting only when, over the same candles, it is ahead on PnL at $10 AND not behind on hit rate after >= 100 graded fires, and the sign holds on both halves of its own run.
