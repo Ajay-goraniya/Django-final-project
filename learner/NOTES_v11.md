@@ -223,3 +223,10 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Overnight summary (01:00-08:00): Predict.fun accuracy mode +75 over the night is the only run with a steady positive slope; pnl modes and Polymarket accuracy have been flat since ~23:30. Frequency: pnl modes ~2-3 fires/h overnight vs ~7/h in the evening.
 - Venue gap -0.078; Polymarket right on disagreement 949:426 over 197 candles.
 - No bugs, no restarts.
+
+## 08:30 UTC check-in (backup 08:30) - five healthy, feeds live, 13 GB free
+- Predict pnl 40/72 +43.8; Predict acc 83/100 +68.7 (83%); Poly pnl 53/96 +122.4; Poly acc 53/72 -29.7. Last hour pooled 6/10 +17. London morning: Predict.fun pnl climbing (high-vol cell now 10/19 +18.5, was negative all night).
+- Retro on 168 fires: none 93/168 +166 | p>=0.56 74/119 +177 | ask>0.45 69/109 +169. Calibration: 0.62-0.70 41/61 +153; 0.70+ 18/25 +48; 0.50-0.62 34/82 -35.
+- 15-hour tally, all venues/modes: Polymarket pnl +122 (96 fires), Predict acc +69 (100), Predict pnl +44 (72), Polymarket acc -30 (72). Same model; venue x mode decides the sign.
+- Venue gap -0.078; Polymarket right on disagreement 990:436 over 204 candles (2.27:1).
+- No bugs, no restarts.
