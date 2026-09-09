@@ -153,3 +153,9 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Retro on 98 fires: none 56/98 +130 | p>=0.56 45/69 +139 | ask>0.45 42/62 +145 (filters back to slightly positive as the market thinned again). Calibration: p 0.62-0.70 28/38 +138; p 0.70+ 9/14 +7; below 0.62 11-8/46 -15.
 - Venue gap -0.079; Polymarket right on disagreement 610:303 over 133 candles.
 - No bugs, no restarts since 02:06, 14 GB free.
+
+## 03:10 UTC check-in (backup 03:10) - five healthy, feeds live, 14 GB free
+- Predict pnl 24/45 -0.4; Predict acc 38/50 -15.0; Poly pnl 37/62 +133.7; Poly acc 24/34 -32.0. Last hour pooled 9/13 +30 (quiet Asia, low vol: 29 of the last fires are low-regime; Predict low-vol 17/29 +12).
+- Retro on 107 fires: none 61/107 +133 | p>=0.56 50/77 +152 | ask>0.45 47/70 +158. Calibration: p<0.56 11/30 -19 (the only losing bin); 0.56-0.62 10/20 +4; 0.62-0.70 30/42 +136; 0.70+ 10/15 +12 (top bin recovered).
+- Venue gap -0.079; Polymarket right on disagreement 642:313 over 140 candles (2.05:1, stable all night).
+- No bugs, no restarts.
