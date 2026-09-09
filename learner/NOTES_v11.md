@@ -237,3 +237,10 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Retro on 170 fires: none 94/170 +171 | p>=0.56 +167 | ask>0.45 +159 (filters neutral to slightly negative in active hours). Calibration: 0.62-0.70 41/62 +143; 0.70+ 18/25 +48; 0.56-0.62 15/33 -24; 0.50-0.56 20/50 +4.
 - Venue gap -0.077; Polymarket right on disagreement 1000:447 over 210 candles.
 - No bugs, no restarts.
+
+## 09:34 UTC check-in (backup 09:35) - five healthy, feeds live, 13 GB free
+- Predict pnl 40/73 +33.8 (no fire this half hour); Predict acc 92/113 +54.2 (81%); Poly pnl 55/98 +147.8 (new high); Poly acc 59/82 -55.3. Last hour pooled 2/3 +15.
+- Poly high-vol cell now 17/28 +79: the London-morning activity is being captured on Polymarket but not fired on Predict.fun (Predict pnl idle: its asks on the model's side sit 3-6c above the EV line).
+- Retro on 171 fires: none 95/171 +182 | p>=0.56 +178 | ask>0.45 +170. Calibration unchanged (0.62-0.70 41/62 +143).
+- Venue gap -0.077; Polymarket right on disagreement 1006:460 over 216 candles.
+- No bugs, no restarts.
