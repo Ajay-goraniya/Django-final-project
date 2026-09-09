@@ -362,3 +362,7 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Retro on 215 fires: none 123/215 +349 | p>=0.56 +314 | ask>0.45 +256: in active tape every constant filter costs (fourth time).
 - Build 11 smoke (scratch, pnl): 11 fires, 7/11, all on Polymarket signal; window 10 candles, leader 80% vs 74% break-even.
 - No bugs, no restarts on the v10 processes.
+
+## 14:39 UTC - second container restart / proxy-port change (43519 -> 38961)
+- All six processes (v10 x4, collector, Build 11 smoke) went to "reconnecting"; detected within ~1 min (harness notice), relaunched via proxy_restart.sh at 14:41 on the SAME databases; feeds live again by 14:42. Histories intact (Predict pnl 94 fires, Poly pnl 124, Predict acc 167, Poly acc 127). ~90 s gap.
+- Confirms the feed-age watchdog in Build 11 (exit 3 -> relaunch) is the right ops fix; the v10 processes lack it and depend on the check-in.
