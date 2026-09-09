@@ -403,3 +403,9 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Retro on 241 fires: none +396 | p>=0.56 +337 | ask>0.45 +250.
 - Build 11 smoke: 24 fires 13/11; signal counts since 15:47: polymarket 999, held 18, one-sided refusals 55, Predict.fun fallback 0 -> the one-sided rule and the 10-s hold cover every gap; no venue switch happened. Polymarket socket reconnects 14 in 30 min (rotation + the 15-s silence rule), each bridged by the hold, no signal loss.
 - No bugs, no restarts on the v10 processes.
+
+## 16:30 UTC - Build 11 (v11) LAUNCHED in the container, port 8794, own database, master OFF
+- File set shipped to the user as v11_launch_20260909_1630.tar.gz (build11 1,437,627 B md5 98edaff9; v10 module 18,307; v11 module 15,661; model 8,803; calibration 611; run_v11.sh 712).
+- Final retro on all recorded data (09-08 17:31 -> 09-09 16:22, 139 fires, 267 candles): v10-as-run replay = live; v11 launch settings (thr 0.75, calibration off) in-sample +422 on 163 trades (65%); calibration still adds only +18 in-sample and loses out of sample -> off.
+- Launch settings: mode pnl, EV scale 0.75, calibration off, min size $10 within 2c of ask, conversion gate accuracy lane, Polymarket signal with 10-s hold and one-sided refusal. All four v10 runs, the collector and the smoke keep running untouched.
+- 16:30:40: feeds live (spot, perp, Predict.fun book websocket), Polymarket signal live, warming up.
