@@ -415,3 +415,9 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Build 11 (8794, 21 min): 3 fires, 0/2 (16:40 UP ask 0.41, 16:45 UP ask 0.37 - cheap-ask entries in the chop, both lost; 16:45 also lost on Predict.fun v10), 16:50 open. Signal since launch: polymarket 969, held 36, one-sided refusals 296 (last 2 min of candles), Predict.fun fallback 0. No relaunch, no errors in b11.log.
 - Binance spot websocket (stream.binance.com) resets by peer intermittently on every engine; the engine drops to REST fallback and comes back on data-stream.binance.vision within minutes (seen on 8794 at 16:50 -> live by 16:52; Predict.fun pnl engine 8789 on rest-fallback at 16:52, watching). Not a v11 issue.
 - Retro on 247 fires: none +394 | p>=0.56 +307 | ask>0.45 +220.
+
+## 17:22 UTC check-in (backup 17:22) - all processes healthy, 13 GB free
+- Predict pnl 61/111 +91.1; Predict acc 155/196 +66.3; Poly pnl 80/142 +277.8; Poly acc 112/152 -50.7. Last hour pooled 3/10 -33: the 16:00-17:20 chop is the worst stretch of the run on every venue.
+- Build 11 (52 min): 9 fires, 2/8, -38.5. It fired on 9 of 10 candles (v10 runs 4-5 of 10): with thr x0.75 the cheap-ask entries at p 0.53-0.63 all went through and 5 of 6 lost in the chop; the two p>=0.68 fires split 1/1. Same-candle view: 16:50 v11 DOWN won where both v10 UP lost; 17:05 v11 DOWN (p 0.73) lost where both v10 UP won (different fire times -> different p). Too early to judge; frequency effect of the 0.75 scale is visible and is what the dial is for.
+- Signal since launch: polymarket 1483, held 36, one-sided 296, Predict.fun fallback 0; 12 socket reconnects, all bridged. Spot feeds back to live on all engines (REST fallback episodes resolved themselves). No errors, no relaunch.
+- Retro on 253 fires: none +369 | p>=0.56 +282 | ask>0.45 +195 (constant filters still lose overall even after this chop hour).
