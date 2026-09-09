@@ -230,3 +230,10 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - 15-hour tally, all venues/modes: Polymarket pnl +122 (96 fires), Predict acc +69 (100), Predict pnl +44 (72), Polymarket acc -30 (72). Same model; venue x mode decides the sign.
 - Venue gap -0.078; Polymarket right on disagreement 990:436 over 204 candles (2.27:1).
 - No bugs, no restarts.
+
+## 09:02 UTC check-in (backup 09:03) - five healthy, feeds live, 13 GB free
+- Predict pnl 40/73 +33.8; Predict acc 86/106 +48.2 (81%); Poly pnl 54/97 +136.9; Poly acc 55/77 -55.9. Last hour pooled 3/5 +16.
+- Accuracy modes diverging by venue again: Polymarket accuracy -56 (4 straight losses at 0.77-0.88 asks); Predict.fun accuracy gave back 20 on the same candles. In active London tape the leader converts under its price on both venues; accuracy mode needs the rolling-conversion switch-off (item already in notes).
+- Retro on 170 fires: none 94/170 +171 | p>=0.56 +167 | ask>0.45 +159 (filters neutral to slightly negative in active hours). Calibration: 0.62-0.70 41/62 +143; 0.70+ 18/25 +48; 0.56-0.62 15/33 -24; 0.50-0.56 20/50 +4.
+- Venue gap -0.077; Polymarket right on disagreement 1000:447 over 210 candles.
+- No bugs, no restarts.
