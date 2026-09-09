@@ -127,3 +127,7 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 ## Correction (01:45 UTC): the 0.62-0.70 band is NOT a gate
 - Every cheap entry (ask<=0.45) tonight has p<0.62 because p_venue/lv dominate the logit; a p band would remove all cheap entries. Cheap entries tonight: 14/35 -5 (break-even); mid-price agree-with-market fires: 28/37 +148. In the 8-day backtest cheap entries carried the edge. Regime, not rule.
 - v11 change is model-side: (a) recalibrate p on cheap entries so BTC evidence is not swamped by the venue feature (separate calibration by ask bucket, or interaction terms venue x BTC features), (b) the regime-dependent floor decides how many cheap entries to take. Do NOT hard-gate on p band or ask level.
+
+## Session split (17:21-01:40 UTC, EF pnl runs)
+- US/EU-overlap (13-21): Poly 13/22 +43, Predict 6/13 -11.  Late US (21-01): Poly 17/27 +82, Predict 13/20 +44.  Asia (01-08): Poly 3/5 +15, Predict 0/5 -50 (early, few fires).
+- Hourly pooled: 21:00 +46 and 23:00 +58 best; 01:00 -35 worst. The model's edge is largest in the late-US hours (moderate vol, active books) and weakest in the Asia drift (thin books, Predict.fun especially). Only one day - do not hard-code hours; use it as a prior and let the regime floor (rv60 + book depth/activity) handle it. Add hour-of-day is already a feature (hod_sin/cos) - but trained on one week; needs more days.
