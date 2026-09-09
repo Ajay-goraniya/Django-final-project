@@ -341,3 +341,10 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - pnl lane (contrarian fires): switch REMOVES 24 wins / 10 losses -> +340 -> +225. Wrong signal for that lane: contrarian fires win exactly when the leader under-converts. NOT gated.
 - accuracy lane (leader fires): 100 tr 85% +150 -> 63 tr 89% +137 (W=12); W=24 67 tr 90% +137. Gated by default (V11_CONV_GATE=accuracy; all/off available).
 - Regime floor / activity-driven frequency for the pnl lane: with Predict.fun execution + 2% fee the low-vol cell is +121 (52 tr 67%) in the retro, so no floor is justified by this data; left as env dials (V11_THR_SCALE) rather than a rule. Needs day 2.
+
+## 13:29 UTC check-in (backup 13:30) - five healthy, feeds live, 13 GB free
+- Predict pnl 50/87 +93.8; Predict acc 123/153 +61.9 (80%); Poly pnl 65/114 +201.8; Poly acc 81/112 -68.1. Last hour pooled 4/7 +14. US open ahead.
+- Retro on 201 fires: none 115/201 +296 | p>=0.56 +291 | ask>0.45 +269. Calibration: 0.62-0.70 53/77 +221; 0.70+ 18/25 +48; 0.50-0.62 44/99 +27.
+- Build 11 smoke (scratch): signal source Polymarket 796 / Predict.fun fallback 339 decisions (30% fallback, up from 11% earlier) - watch: fallback should only happen at rollover; check PolyBook freshness/ladder coverage before launch. 1 fire so far (13:05 UP @0.42 lost). Conversion window filling (3 candles).
+- Venue gap -0.074; Polymarket right on disagreement 1154:585 over 263 candles.
+- No bugs, no restarts on the v10 processes.
