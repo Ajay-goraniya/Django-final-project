@@ -64,3 +64,7 @@ Old-version findings keep going to NOTES_v11.md.
 - Same process/database as the paper run (history kept, paper fires stay SHADOW rows). Credentials in a root-only file next to launch.sh (never in the repo). Auth: JWT obtained, account verified, BUY approvals present, wallet 25.58 USDT at start.
 - Settings: master ON, EF only (MAIN and REVERSAL manually off), stake fixed $1.00 (min 1, max 50), v11 mode pnl, EV scale 0.75, calibration off, min size $10 within 2c of ask, slippage cap 100 bps, 3 retries.
 - Purpose: measure real fill VWAP vs quoted ask, fill rate, rejections; the money is a rounding error.
+
+## 21:02 UTC - v11 database RESET for a clean live run (user decision); paper history kept
+- Paper run 16:30-21:00 saved as learner/live_backup/v11_paper_1630-2100.sqlite3.gz (final 22/49, -67 at $10, vs Predict.fun v10 8/19 and Polymarket v10 6/21 on the same candles).
+- Fresh database, relaunched with credentials; re-applied: fixed $1 stake, EF only, master ON at 21:03; v11 mode pnl, EV scale 0.75, calibration off. Counters for v11 start here. Name: v11 (version 11).
