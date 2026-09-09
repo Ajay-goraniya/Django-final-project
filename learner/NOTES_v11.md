@@ -216,3 +216,10 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Retro on 157 fires: none 87/157 +159 | p>=0.56 69/110 +174 | ask>0.45 65/102 +169. Calibration: 0.62-0.70 39/58 +147; 0.70+ 16/23 +34; 0.50-0.56 18/47 -15; 0.56-0.62 14/29 -6. The below-0.62 bins have been net negative for 10 hours now (32/76 -21).
 - Venue gap -0.079; Polymarket right on disagreement 893:412 over 191 candles (2.17:1).
 - No bugs, no restarts.
+
+## 07:58 UTC check-in (backup 07:59) - five healthy, feeds live, 13 GB free
+- Predict pnl 37/69 +14.9; Predict acc 78/93 +74.7 (84%); Poly pnl 53/95 +132.4; Poly acc 50/67 -18.9. Last hour pooled 6/12 -1.
+- Retro on 164 fires: none 90/164 +147 | p>=0.56 +158 | ask>0.45 +153. Calibration: 0.62-0.70 40/60 +144; 0.70+ 17/24 +40; 0.50-0.56 19/49 -11; 0.56-0.62 14/31 -26.
+- Overnight summary (01:00-08:00): Predict.fun accuracy mode +75 over the night is the only run with a steady positive slope; pnl modes and Polymarket accuracy have been flat since ~23:30. Frequency: pnl modes ~2-3 fires/h overnight vs ~7/h in the evening.
+- Venue gap -0.078; Polymarket right on disagreement 949:426 over 197 candles.
+- No bugs, no restarts.
