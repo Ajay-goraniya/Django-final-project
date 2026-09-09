@@ -115,3 +115,11 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Retro on 81 fires: none 49/81 +169 | p>=0.56 +143 | ask>0.45 +149: constant filters keep losing value as the market stays calm (p<0.56 bin 10/23 +26). Regime-dependent floor confirmed as the right shape.
 - Venue gap -0.082; Polymarket right on disagreement 560:245 over 113 candles.
 - No bugs.
+
+## 01:31 UTC check-in (backup 01:32)
+- Predict pnl 19/36 +3.4; Predict acc 29/38 -12.9; Poly pnl 32/52 +139.9; Poly acc 16/23 -23.9. Five processes healthy, 14 GB free.
+- Bad hour: 2/9 -46 across both venues (00:30-01:30 UTC, Asian-session drift; BTC low activity). Predict pnl gave back +30; Poly pnl flat.
+- Accuracy modes now -13 / -24: 76% / 70% hit rates at ~0.80 asks. The 87% backtest number for accuracy mode was a daytime-regime number; overnight the leader converts ~75%. -> accuracy mode must (a) use a margin rule p_model - ask >= 0.05, (b) shut off (or drop to pnl mode) when the recent realized leader-conversion rate falls under break-even; a rolling 20-trade conversion rate is a cheap live signal for that.
+- Calibration: p 0.62-0.70 27/36 +138 remains the only solidly profitable bin; p 0.70+ is 5/9 -9. High-confidence fires are NOT paying at the asks they get -> the isotonic map over-trusts the top; recalibrate on live data.
+- Venue gap -0.079; Polymarket right on disagreement 592:269 over 120 candles.
+- No bugs, no restarts.
