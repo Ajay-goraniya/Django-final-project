@@ -268,3 +268,9 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Retro on 183 fires: none 103/183 +225 | p>=0.56 +223 | ask>0.45 +215. Calibration: 0.62-0.70 46/68 +178 (core), 0.70+ 18/25 +48, below 0.62 39/90 flat.
 - Venue gap -0.075; Polymarket right on disagreement 1059:497 over 237 candles.
 - No bugs, no restarts.
+
+## 11:50 UTC check-in (backup 11:51) - five healthy, feeds live, 13 GB free
+- Predict pnl 45/80 +60.5; Predict acc 109/135 +57.2 (81%); Poly pnl 60/107 +163.1; Poly acc 71/97 -51.0. Last hour pooled 3/5 +7 (lull before the US open).
+- Retro on 187 fires: none 105/187 +224 | p>=0.56 +232 | ask>0.45 +234. Calibration: 0.62-0.70 48/70 +197; 0.70+ 18/25 +48; 0.50-0.62 39/92 -20.
+- Venue gap -0.075; Polymarket right on disagreement 1075:512 over 243 candles.
+- No bugs, no restarts.
