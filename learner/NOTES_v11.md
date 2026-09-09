@@ -281,3 +281,10 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Retro on 192 fires: none 110/192 +283 | p>=0.56 +276 | ask>0.45 +254 - in active tape the unfiltered model is best; every constant filter costs. Calibration: 0.62-0.70 50/72 +216; 0.70+ 18/25 +48; 0.50-0.62 42/95 +20 (turned positive again).
 - Venue gap -0.074; Polymarket right on disagreement 1090:547 over 251 candles (2:1).
 - No bugs, no restarts.
+
+## 12:57 UTC check-in (backup 12:57) - five healthy, feeds live, 13 GB free
+- Predict pnl 48/85 +69.3; Predict acc 117/146 +55.2 (80%); Poly pnl 64/111 +211.7; Poly acc 78/107 -57.9. Last hour pooled 4/6 +20.
+- Retro on 196 fires: none 112/196 +281 | p>=0.56 +283 | ask>0.45 +261. Calibration: 0.62-0.70 52/75 +224; 0.70+ 18/25 +48; 0.50-0.62 42/96 +10.
+- Build 11 (v11) built and live-smoke-tested on port 8793 (scratch DB): first fire end-to-end with Polymarket signal (89% of decisions), Predict.fun ask 0.34 / 152 shares, 2% fee, current market. Retro through the real decide_v11 on the recorded 19 h: v10-as-run +186 (110 tr) -> v11 pnl +241 (118 tr, 63%) -> v11 pnl + live calibration (refuse if calibrated p<0.5) +332 (97 tr, 69%); accuracy mode 97 tr 85% +140. Calibration table is in-sample; retro uses 15-s/5-s samples.
+- Venue gap -0.074; Polymarket right on disagreement 1108:555 over 257 candles.
+- No bugs, no restarts on the five v10 processes.
