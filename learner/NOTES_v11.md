@@ -453,3 +453,8 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Polymarket resolution resumed ~20:20 (18:55-19:30 markets graded); the runners are catching up.
 - Ask bands, whole run: Polymarket pnl earns in 0.30-0.60 (81/147 +258), Predict.fun pnl in 0.30-0.50 (31/57 +124) and loses in 0.50-0.60 (28/55 -43); no pnl run has bought under 0.30 except 3 Polymarket fires (0/3). Cheap tail is thin and the model rarely disagrees with the book by that much.
 - Retro on 280 fires: none +336 | p>=0.56 +251 | ask>0.45 +171.
+
+## 20:43 UTC - accuracy-mode runs retired (user decision: CPU), databases kept and backed up
+- Final Predict.fun accuracy (21:10 09-08 -> 20:43 09-09, 23.5 h): 184/232 = 79%, +94.5 at $10. Final Polymarket accuracy (22:15 -> 20:43, 22.5 h): 133/177 = 75%, -35.8 at $10 (6 fires ungraded at stop). Both databases in learner/live_backup (predict_acc, poly_acc).
+- Lesson they leave: accuracy mode is regime-complementary to pnl mode (earns calm/chop, loses trends), and on Polymarket the leader's price is too rich for a 75% hit rate to pay. Still the candidate lane for an auto-switch once a detector exists.
+- Build 11 smoke on 8793 (scratch) stopped at the same time; Build 11 on 8794 continues. Running now: Predict.fun pnl 8789, Polymarket pnl 8788, collector, Build 11 8794.
