@@ -12628,6 +12628,13 @@ class LiveExecutor(threading.Thread):
                 current_ms, prior_submit_ms
             )
             allowed, why = self.controls.may_execute(kind, current_ms)
+            if allowed and kind == "REVERSAL":
+                # v11.2 entry cap, enforced on the price this attempt would actually
+                # pay (every attempt re-quotes the book, so the signal-time check
+                # alone let a 0.61 signal fill at 0.81 on its fourth attempt).
+                cap = float(getattr(getattr(self, "engine", None), "v11_rev_max_entry", 0.0) or 0.0)
+                if cap > 0 and quoted > cap:
+                    allowed, why = False, f"REVERSAL entry cap: quote {quoted:.2f} above {cap:.2f}"
             if not allowed:
                 changes: Dict[str, Any] = {
                     "filled": False,
@@ -14641,6 +14648,9 @@ class Engine:
         # Build 34: passive EF candidate episode / latency / quote ledger.
         self.ef_ledger = EFDecisionLedger()
         self.executor.ef_ledger = self.ef_ledger
+        # v11.2: the executor re-quotes every attempt, so it enforces the REVERSAL entry cap
+        # on the attempt's own price; it reads the live dial through this back-reference.
+        self.executor.engine = self
         # R6: no executor PRICE_LIMIT callback/re-arm lifecycle. EF remains the
         # same signal while its hot container waits for VWAP confirmation/retry.
         self.main_streak_dir = ""
@@ -28503,6 +28513,23 @@ class V112ReversalEntryCapTests(unittest.TestCase):
         self.assertEqual(decide("EF", 0.95, 0.60), (True, ""))
         self.assertEqual(decide("REVERSAL", 0.95, 0.60, False, "REVERSAL trading is manually OFF")[1], "REVERSAL trading is manually OFF")
         self.assertNotIn("master trading switch", decide("REVERSAL", 0.64, 0.60)[1].lower())   # records FORBIDDEN, not SHADOW
+
+    def test_cap_is_enforced_on_the_attempt_price(self) -> None:
+        class _Eng: v11_rev_max_entry = 0.60
+        class _Ex: pass
+        ex = _Ex(); ex.engine = _Eng()
+        def submit_gate(kind, quoted, allowed=True, why=""):
+            if allowed and kind == "REVERSAL":
+                cap = float(getattr(getattr(ex, "engine", None), "v11_rev_max_entry", 0.0) or 0.0)
+                if cap > 0 and quoted > cap:
+                    allowed, why = False, f"REVERSAL entry cap: quote {quoted:.2f} above {cap:.2f}"
+            return allowed, why
+        self.assertEqual(submit_gate("REVERSAL", 0.81), (False, "REVERSAL entry cap: quote 0.81 above 0.60"))
+        self.assertEqual(submit_gate("REVERSAL", 0.59), (True, ""))
+        self.assertEqual(submit_gate("EF", 0.81), (True, ""))
+        ex2 = _Ex()                                            # no engine back-reference: cap off, never crashes
+        cap = float(getattr(getattr(ex2, "engine", None), "v11_rev_max_entry", 0.0) or 0.0)
+        self.assertEqual(cap, 0.0)
 
     def test_ef_min_ask_setting_and_decision(self) -> None:
         eng = self._engine(); eng.v11_ef_min_ask = 0.0
