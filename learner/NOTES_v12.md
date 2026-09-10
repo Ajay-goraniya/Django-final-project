@@ -202,13 +202,20 @@ Old-version findings keep going to NOTES_v11.md.
 - Re-armed from here and verified: master ON, EF ACTIVE, MAIN/REVERSAL manually off, stake fixed $1 (max 20), pnl mode, thr 0.75, trend guard 0 (off), no daily limits. Ledger continuity: same DB, W/L and realized carry on; the 11.1 phase is measured from 08:30 for the fair comparison (twin A vs Tokyo on identical inputs from now on).
 - Open item carried over: capital truth "unexplained +0.65" (wallet 65c above the ledger, in the user's favour) - root-cause at the next check-in.
 
+### 08:40 UTC - v11 LIVE Tokyo on 11.1 for 10 min: no order yet on the new build; raw phase closed at 110 fills, 61/49 (55%), +0.69 real, wallet 26.92
+- Fair window since 21:55: v11 live 61/49 +6.9@$10 | Predict.fun v10 20/21 -26.1 | Polymarket v10 22/30 -60.6. The last two raw-phase fills (08:20, 08:25 UTC) both won.
+- Stake check: last 50 fills 25/50, -4.69 -> stake stays $1.
+- Ledger +0.65 root-cause (once): all 110 fills are graded; stakes 109.45 out, pnl +0.69 in, so the ledger expects 26.27 and the wallet reads 26.92. The gap has been exactly +0.65 since 08:05 and does not move with settlements, so it is not an open position or an unredeemed payout. The remaining candidate is one of the 7 retried orders whose first attempt executed (partially) at the venue while the ledger logged it as failed - extra shares that paid out. It is in the user's favour and static; treated as a known constant, re-reported only if it changes. Note: the /api/orders "utc" column is BST (UTC+1), not UTC; ts_ms is the truth.
+- Twins (~76 graded): A 44/76 +43.5 | B guard 37/65 +35.6 | C thr 1.0 41/71 +60.3 | D auto 40/78 -45.2. C ahead of A again (+17) with the same hit rate (58%); B closed to within 8 of A. pcmp A-vs-runner: 76 matches, same side 64/76, mean |dp| 0.067.
+- Routine housekeeping: the 08:37 check-in fired late (08:38) and the prompt's phase boundary constant was wrong (08:20 instead of 08:30); corrected to ts_ms >= 1789029000000.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
 |---|---|---|---|---|
-| A | 09-09 23:45 | v11.1 baseline: thr 0.75, guard off, perp-print aggregation fixed (port 8794) | control; its p should now match the runner's (pcmp) | 08:05: 41/70 +46.8 (70 fires); pcmp |dp| 0.066, same side 59/70 -> input fix confirmed |
-| B | 09-09 23:50 | A + slow-trend guard 9 candles / 20 bps (port 8795) | fewer against-lean losses; realised-fire retro +459 vs +296, v11 replay -111 -> undecided | 08:05: 33/60 +9.8 (60 fires) - behind A by 37, hit rate 55% vs 59% |
-| C | 09-09 23:50 | A + EV scale 1.0 (port 8796) | v10-like frequency; fewer early cheap fires, higher hit rate, lower PnL per retro | 08:05: 36/66 +17.3 (66 fires) - behind A by 30, hit rate 55% vs 59%; undecided, trending behind |
-| D | 09-09 23:50 | A + auto mode (accuracy lane in low vol) (port 8797) | earns in calm/chop hours where pnl mode bleeds | 08:05: 37/73 -56.6 (73 fires) - behind A by 103, hit rate 51% - heading to FAIL |
+| A | 09-09 23:45 | v11.1 baseline: thr 0.75, guard off, perp-print aggregation fixed (port 8794) | control; its p should now match the runner's (pcmp) | 08:40: 44/76 +43.5 (76 fires); pcmp |dp| 0.067, same side 64/76 -> input fix confirmed |
+| B | 09-09 23:50 | A + slow-trend guard 9 candles / 20 bps (port 8795) | fewer against-lean losses; realised-fire retro +459 vs +296, v11 replay -111 -> undecided | 08:40: 37/65 +35.6 (65 fires) - behind A by 8, hit rate 57% vs 58% |
+| C | 09-09 23:50 | A + EV scale 1.0 (port 8796) | v10-like frequency; fewer early cheap fires, higher hit rate, lower PnL per retro | 08:40: 41/71 +60.3 (71 fires) - ahead of A by 17, same hit rate 58%; lead has flipped 3 times - undecided |
+| D | 09-09 23:50 | A + auto mode (accuracy lane in low vol) (port 8797) | earns in calm/chop hours where pnl mode bleeds | 08:40: 40/78 -45.2 (78 fires) - behind A by 89, hit rate 51% - heading to FAIL |
 | Tokyo | 09-09 21:55 | v11 live, $1: raw-input build until 08:30 09-10, then 11.1-perp-agg-fix | execution quality + live edge; from 08:30 the live test of the input fix | raw phase final: 108 fills 0 failed, 59/48 (55%), +0.26 real; 11.1 phase starts 08:30 (measure vs twin A from here) |
 Decision rule: a variant replaces the baseline setting only when, over the same candles, it is ahead on PnL at $10 AND not behind on hit rate after >= 100 graded fires, and the sign holds on both halves of its own run.
