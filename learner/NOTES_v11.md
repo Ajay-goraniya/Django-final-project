@@ -535,3 +535,6 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 
 ## 08:40 UTC check-in (backup 08:39) - container healthy, uptime 3 h 15 min, 13 GB free
 - Predict pnl 91/171 +73.9; Poly pnl 114/219 +208.0. Last hour pooled 2/7 -31. Fair window since 21:55: Predict 20/21 -26.1, Poly 22/30 -60.6.
+
+## 09:12 UTC check-in (backup 09:12) - container healthy, uptime 3 h 49 min, 13 GB free
+- Predict pnl 94/174 +103.4; Poly pnl 115/223 +205.0 (2 open). Last hour pooled 6/9 +26. Fair window since 21:55: Predict 23/21 +3.4 (back above zero), Poly 23/31 -63.6.
