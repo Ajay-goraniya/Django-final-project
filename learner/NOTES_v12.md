@@ -425,6 +425,12 @@ Old-version findings keep going to NOTES_v11.md.
 - Two separate ledger claims from here on: PREMISE CONFIRMED (72k candles, monotone, both halves) and DIAL UNPROVEN in PnL (accuracy rises with the ask and the ask costs; 4 of 5 fire sets improved, the v10 engine set contradicted; Tokyo's last 3 h sub-0.48 fills were +1.20 on 11 vs -9.60 on 51 over 18 h). The post-deploy paired test of Tokyo's fills vs twin C at common asks is the adjudicator.
 - Ship-rule status for H (EF floor 0.48): paired both-halves at >= 100 graded PASS (A, B, C, Tokyo live); full-range sweep PASS (graceful); market premise PASS (this entry). It goes live on Tokyo at 0.48 when build 11.3 is deployed, as already planned; revert rule = behind twin C at common asks on both halves at 100 post-floor graded fires.
 
+## 18:02 UTC 09-10 check-in
+- Tokyo: four EF losses in a row since 17:31 -> EF 108/92 (54%) -1.26, realised -2.51, wallet 21.11, equity 22.85, 205/205 filled. EF since 14:25: 16/14 +2.39; its sub-0.48 fills in that window 12 fills +0.23 (still not negative on this stretch; the 18-h record is the basis for the floor). Build still 11.2 (11.3 with the EF floor and the cap fix awaiting deploy). Settings verified unchanged.
+- Capped REVERSAL tally (signal-time cap): 6 capped = 5 wouldWIN / 1 wouldLOSE (15:46 0.61, 16:33 0.64, 16:36 0.64, 16:43 0.66 L, 17:20 0.64, 17:48 0.63), about +1.8 forgone at $1; 2 leaks (both won). At n=6 the cap is costing money live; the 113-fire shadow sweep said fires at 0.60-0.66 average ~0 per fire. Rule for this dial: re-judge at 20 capped fires; if the capped group is still clearly positive at 20, raise the cap to 0.65 (the sweep's next shelf) rather than drop it. Not acting at 6.
+- Twins since 23:50: A 93/177 53% -3.5; B 91/158 58% +134.7 (control); C 83/160 52% +19.1. Paired A vs C at common asks: decision edge +40.0, halves +21.1/+18.9 (160 graded).
+- Fair states since 21:55: v10 Predict.fun paper 45/44 -8.7@$10; v10 Polymarket paper 64/67 +57.6@$10; v11 live 108/92 -1.26 real (EF). 7 processes. No new H1 commits.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
