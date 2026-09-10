@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-10 23:32 UTC. Update this file at the end of every check.
+Last updated: 2026-09-10 23:57 UTC. Update this file at the end of every check.
 
 ## Standing user rules (binding)
 - **No gates.** No on/off gates, stake modifiers, or threshold sweeps on a score already known to be
@@ -90,6 +90,27 @@ Ran on `venues.sqlite3`: 640 candles, 54.7 h, walk-forward, 8 decision seconds, 
 - Report: `2026-09-10_2310_task12a_direction_model.md` (retraction box at the top, original left
   intact as the record). Repro: `venue_regrade.py` (both gradings side by side).
 
+## Task 14 DONE 23:55 — why the two venues resolve differently (V's task, description only)
+641 common candles, 54.7 h, engine grading, buckets fixed in advance (|close-open| bps).
+- **66/641 disagree (10.3%), and it is a NEAR-ZERO-CANDLE phenomenon.** Disputed rate 32.9% (<1bps)
+  / 21.5% / 13.6% / 0.5% / 2.2% / 0% — monotone, holds in BOTH halves in every row. 94% of all
+  disputes sit under 5 bps. Median |close-open| 1.41 bps disputed vs 5.44 overall.
+- **Not uncertainty:** on disputed candles Polymarket prices ITS OWN winner at median 0.990 and
+  >=0.90 on 94% of them. Two confident answers from two different oracles.
+- **Tokyo EF losses concentrate there:** <1bps 39% hit −0.290/fire, 2.5–5 48% hit −0.085. Those are
+  the ONLY negative cells; candles inside 5 bps are 50% of fills and **59% of gross losses**. Every
+  bucket >=5 bps is profitable.
+- **EF accuracy tracks the bucket (43/54/46/60/58 on 458 twin fires); REVERSAL's does not**
+  (82/74/77, n=114, 80% overall). Near-zero looks like an EF problem, not a REVERSAL one — but
+  REVERSAL's <1bps cell is n=15, too thin, so that is a GAP not a clearance.
+- **The late ask is NOT fair in the near-zero bucket** (V's question 3): at t>=237 the favoured side
+  costs 0.729 and wins 49.4%, gap **−0.236** on n=77. Fair-to-cheap in every other bucket
+  (+0.008/+0.040/+0.056/+0.036/+0.015). Late fills in near-zero candles are systematically overpriced.
+- **No rule proposed, per the brief.** An unprofitable bucket is a venue fact, not a gate.
+- Limits: one regime, 54.7 h; 25+bps and both REVERSAL tails under the 60-fire bar; Tokyo REVERSAL
+  n=18 cannot carry PnL (twin numbers are accuracy only).
+- Deliverable: `task14_venue_disagreement.md`. Repro: `task14_disagreement.py`.
+
 ## OPEN, in priority order
 1. **The 00:00 UTC kline job (below)** — everything else of substance is gated on it.
 2. **Task 11.2** — retrain the forecaster on the ENGINE's own candles, walk-forward, versus the
@@ -97,6 +118,9 @@ Ran on `venues.sqlite3`: 640 candles, 54.7 h, walk-forward, 8 decision seconds, 
 3. **Task 12b/c/d** — ONLY as a timing model for the later entry and REVERSAL. **Not over the
    venue's own quote path** (12a killed that). Base rates as a live dashboard number still stands.
 4. **Tasks 9 (MAIN cap) and 10 (regime scaling)** — LAST, both price/threshold studies.
+- Task 14 DONE 23:55. Open gap it leaves: REVERSAL's <1bps cell (n=15) — revisit when the twins have
+  more REVERSAL fires, since that is the one cell that could change the "EF problem, not REVERSAL"
+  reading.
 - **Do NOT** start a third-entry or continuous "add while the market disagrees" rule without a steer.
 
 ## Pending on the clock
