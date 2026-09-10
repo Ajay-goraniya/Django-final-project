@@ -124,13 +124,17 @@ Old-version findings keep going to NOTES_v11.md.
 - INPUT FIX CONFIRMED on the twin (build 11.1-perp-agg-fix): twin-vs-runner mean |dp_up| 0.085 -> 0.043 over 6 matched fires (same side 5/6); the residual sits in the fast features (move_bps, imb20, lv) at 3-7 s offsets, and the one fire matched within 3.7 s agreed to 0.004. Recommend the Tokyo update in the morning.
 - Twins after ~40 min: A 2/4 +3.0 (median fire 24 s) | B guard 1/5 -26.7 (27 s) | C thr 1.0 2/4 +3.4 (56 s, 1 open) | D auto 2/7 -25.3 (50 s). Far too early; C fires later as designed.
 
+### 01:02 UTC - v11 LIVE Tokyo, 3.1 h: 33 orders, 33 filled, 0 failed; 19/13 (59%), realized +2.48 at $1, wallet 27.06, 1 open
+- Fair window since 21:55: v11 live 19/13 +24.8@$10 | Predict.fun v10 11/8 +36.1 | Polymarket v10 10/9 +14.6 (3 ungraded). 00:30-01:00 was a burst hour (v10 pooled 8/10 +83); Tokyo 4/1 in it. Fills 30 of 33 at the quote, worst +3c, mean delay 312 ms, zero rejections.
+- Twins (restarted 00:33 on the stable spot host, DBs kept; ~70 min of data): A 4/7 +3.8 (median fire 18 s) | B guard 2/7 -33.0 | C thr 1.0 5/8 +18.0 (median 56 s) | D auto 4/10 -23.3. pcmp A-vs-runner: 10 matches, same side 9/10, mean |dp| 0.038 (was 0.085 before the input fix); residual in lv/imb20/move at 3-8 s offsets.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
 |---|---|---|---|---|
-| A | 09-09 23:45 | v11.1 baseline: thr 0.75, guard off, perp-print aggregation fixed (port 8794) | control; its p should now match the runner's (pcmp) | 00:30: 2/4 +3.0; pcmp |dp| 0.085 -> 0.043, same side 5/6 -> input fix confirmed |
-| B | 09-09 23:50 | A + slow-trend guard 9 candles / 20 bps (port 8795) | fewer against-lean losses; realised-fire retro +459 vs +296, v11 replay -111 -> undecided | 00:30: 1/5 -26.7 (5 fires) |
-| C | 09-09 23:50 | A + EV scale 1.0 (port 8796) | v10-like frequency; fewer early cheap fires, higher hit rate, lower PnL per retro | 00:30: 2/4 +3.4 (5 fires, median 56 s) |
-| D | 09-09 23:50 | A + auto mode (accuracy lane in low vol) (port 8797) | earns in calm/chop hours where pnl mode bleeds | 00:30: 2/7 -25.3 (7 fires) |
-| Tokyo | 09-09 21:55 | original v11 live, $1 | execution quality + live edge | 00:30: 27 fills 0 failed, 15/12 (56%), +1.04 real (+10.4@$10) vs v10 paper +19.5 / -22.9 same window |
+| A | 09-09 23:45 | v11.1 baseline: thr 0.75, guard off, perp-print aggregation fixed (port 8794) | control; its p should now match the runner's (pcmp) | 01:02: 4/7 +3.8 (8 fires); pcmp |dp| 0.038, same side 9/10 -> input fix confirmed |
+| B | 09-09 23:50 | A + slow-trend guard 9 candles / 20 bps (port 8795) | fewer against-lean losses; realised-fire retro +459 vs +296, v11 replay -111 -> undecided | 01:02: 2/7 -33.0 (8 fires) - behind A |
+| C | 09-09 23:50 | A + EV scale 1.0 (port 8796) | v10-like frequency; fewer early cheap fires, higher hit rate, lower PnL per retro | 01:02: 5/8 +18.0 (9 fires, median 56 s) - ahead of A, early |
+| D | 09-09 23:50 | A + auto mode (accuracy lane in low vol) (port 8797) | earns in calm/chop hours where pnl mode bleeds | 01:02: 4/10 -23.3 (11 fires) - behind A |
+| Tokyo | 09-09 21:55 | original v11 live, $1 | execution quality + live edge | 01:02: 33 fills 0 failed, 19/13 (59%), +2.48 real (+24.8@$10) vs v10 paper +36.1 / +14.6 same window |
 Decision rule: a variant replaces the baseline setting only when, over the same candles, it is ahead on PnL at $10 AND not behind on hit rate after >= 100 graded fires, and the sign holds on both halves of its own run.
