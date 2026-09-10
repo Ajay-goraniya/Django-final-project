@@ -489,6 +489,10 @@ Old-version findings keep going to NOTES_v11.md.
 - Correction to the day's reading: "the model does not beat the price" holds at t=20 s (the ask already carries what the model knows), not at t=120 s in the branch where the market has moved against EF - there the ask implies ~36% and EF's call delivers 48%. That is also why every gate failed: gates act at the first fire, where the price is fair; the money is in the second decision. This is the closest thing today to the user's "brain that knows the move is wrong and will reverse": the brain is EF's first call; what was missing was acting on it again when the market disagrees.
 - Unchanged risks: quote staleness (the forward shadow on the live book, running since 20:24, is the test); and the construction doubles down on EF's conviction - the losing branch is -0.274/fire - so the second entry must be sized off the same conviction as the first and both killed together if EF's hit rate falls (autopilot ef_rolling covers the kill in 11.4). Not starting a third entry / "add while the market disagrees" variant: that would be fitting the one thing that worked.
 
+## 20:30 UTC 09-10 check-in (the 20:05 one was lost in the VM reboot)
+- Tokyo: EF 122/100 (55%) +2.15 after 222 settled; REVERSAL 2/6 -3.12 (a third live loss under the cap; the first-6 rule needs <= 1/6 to kill, so it stays on; the 20-fill PnL rule is the next test); realised -0.97, wallet 23.49, equity 24.12, 229/229 filled. Build 11.2, no deploy per the user.
+- Fair states since 21:55: v10 Predict.fun paper 46/49 -51.1@$10; v10 Polymarket paper 67/74 +20.1@$10; v11 live 122/100 +2.15 real (EF). 8 local processes (7 + EF2 shadow), feeds live after the 20:18 reboot. EF2 shadow has no graded entry yet.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
