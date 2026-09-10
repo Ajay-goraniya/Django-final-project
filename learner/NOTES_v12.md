@@ -234,13 +234,21 @@ Old-version findings keep going to NOTES_v11.md.
 - Standing authority from the user (10:20 UTC): stake ladder and lane on/off are managed from here without asking, "as long as pnl stays up without losing winning trades and losing much". Kill rules for REVERSAL written into the check-in routine: first 6 live fills 1/5 or worse, fills > 3c worse than quote on average, two consecutive order failures, or after 20 fills real PnL negative and > 3.00 under shadow -> lane off, report.
 - Scored separately from 10:20 (ts_ms >= 1789035600000) at every check-in; first live REVERSAL fill to be reported when it lands.
 
+### 10:48 UTC - v11 LIVE Tokyo: 134 orders, 134 filled, 0 failed; 72/61 (54%), realized -5.28, wallet 19.95, equity 20.6 (1 open), stake $1
+- Fair window since 21:55: v11 live 72/61 -52.8@$10-equiv | Predict.fun v10 27/25 -0.1 | Polymarket v10 29/38 -61.5. EF 11.1 phase since 08:30: 11/12, real -5.97 (2/13 since 09:45). Twin A same window 11/14 -50.1@$10 paper. Every v11 setting lost the same hour (A, B, C all -40 to -50 at $10); the tape, not the build.
+- REVERSAL live since 10:21: no fire yet in 27 min (its rate is ~2.7 per hour). Tokyo shadow 27/6 unchanged.
+- Ladder: equity 20.6 < 30 -> $1, no change. CAPITAL FLOOR set (my guardrail under the user's authority): equity < 18.00 -> pause the EF lane (REVERSAL and master stay on), resume when twin A's last 10 graded fires are >= 6 wins.
+- Execution: mean slip +0.41c over 134, worst +5c, zero failures, unexplained +0.65 unchanged.
+- VERDICT D (auto mode): FAIL at 102 graded - 54/102 -33.2 vs A 55/100 +3.4, lower hit rate, and it lost in the chop it was meant to earn in. Stopped 10:50 (relaunch loop 879 + engine 885 killed by PID; removed from restart_all.sh; DB kept). Process count is now 6.
+- A at 100 graded: 55/100 +3.4 (58% -> 55% and +100 -> +3 in one hour). B 48/87 +19.6, C 49/91 +28.8 - both ahead of A on PnL; C's hit rate 54% vs A's 55%. Their verdicts at 100 graded. pcmp A-vs-runner: 99 matches, same side 80/99, mean |dp| 0.068.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
 |---|---|---|---|---|
-| A | 09-09 23:45 | v11.1 baseline: thr 0.75, guard off, perp-print aggregation fixed (port 8794) | control; its p should now match the runner's (pcmp) | 10:15: 54/93 +57.8 (93 fires); pcmp |dp| 0.068, same side 74/92 -> input fix confirmed |
-| B | 09-09 23:50 | A + slow-trend guard 9 candles / 20 bps (port 8795) | fewer against-lean losses; realised-fire retro +459 vs +296, v11 replay -111 -> undecided | 10:15: 47/80 +74.0 (80 fires) - AHEAD of A by 16 with hit rate 59% vs 58% on 13 fewer fires; leads for the 2nd check-in |
-| C | 09-09 23:50 | A + EV scale 1.0 (port 8796) | v10-like frequency; fewer early cheap fires, higher hit rate, lower PnL per retro | 10:15: 49/87 +68.8 (87 fires) - ahead of A by 11, hit rate 56% vs 58%; undecided |
-| D | 09-09 23:50 | A + auto mode (accuracy lane in low vol) (port 8797) | earns in calm/chop hours where pnl mode bleeds | 10:15: 51/96 -25.1 (96 fires) - behind A by 83, hit rate 53% - FAIL at 100 |
-| Tokyo | 09-09 21:55 | v11 live: raw-input build until 08:30 09-10, then 11.1-perp-agg-fix; $1, $2 09:20-10:10, $1 since (equity ladder from 10:15) | execution quality + live edge; from 08:30 the live test of the input fix | raw phase final: 110 fills 0 failed, 61/49 (55%), +0.69 real; 11.1 phase 10:15: 9/8 -3.06 real vs twin A 10/9 -5.7@$10 same window |
+| A | 09-09 23:45 | v11.1 baseline: thr 0.75, guard off, perp-print aggregation fixed (port 8794) | control; its p should now match the runner's (pcmp) | 10:48: 55/100 +3.4 (100 fires); pcmp |dp| 0.068, same side 80/99 -> input fix confirmed; control stays |
+| B | 09-09 23:50 | A + slow-trend guard 9 candles / 20 bps (port 8795) | fewer against-lean losses; realised-fire retro +459 vs +296, v11 replay -111 -> undecided | 10:48: 48/87 +19.6 (87 fires) - ahead of A by 16, same hit rate 55%, 13 fewer fires; verdict at 100 |
+| C | 09-09 23:50 | A + EV scale 1.0 (port 8796) | v10-like frequency; fewer early cheap fires, higher hit rate, lower PnL per retro | 10:48: 49/91 +28.8 (91 fires) - ahead of A by 25, hit rate 54% vs 55%; verdict at 100 |
+| D | 09-09 23:50 | A + auto mode (accuracy lane in low vol) (port 8797) | earns in calm/chop hours where pnl mode bleeds | VERDICT 10:50: FAIL at 102 graded - 54/102 -33.2 vs A +3.4, hit rate 53%; STOPPED (DB kept) |
+| Tokyo | 09-09 21:55 | v11 live: raw-input build until 08:30 09-10, then 11.1-perp-agg-fix; EF + REVERSAL (since 10:21); equity ladder, $1 | execution quality + live edge; from 08:30 the live test of the input fix | raw phase final: 110 fills 0 failed, 61/49 (55%), +0.69 real; 11.1 EF phase 10:48: 11/12 -5.97 real vs twin A 11/14 -50.1@$10 same window; REVERSAL live: no fire yet |
 Decision rule: a variant replaces the baseline setting only when, over the same candles, it is ahead on PnL at $10 AND not behind on hit rate after >= 100 graded fires, and the sign holds on both halves of its own run.

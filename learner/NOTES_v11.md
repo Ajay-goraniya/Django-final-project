@@ -545,3 +545,6 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 ## 10:15 UTC check-in (backup 10:15) - container healthy, uptime 4 h 51 min, 13 GB free
 - Predict pnl 97/179 +111.0; Poly pnl 121/232 +193.2 (1 open). Last hour pooled 6/13 -6 (09:45-10:15 was a losing patch for everything). Fair window since 21:55: Predict 26/23 +11.0, Poly 27/37 -75.4.
 - SHADOW LANES retro (41 h, b10.sqlite3 trades table, kinds MAIN/REVERSAL scored but never sent): MAIN 345 fires, directional 72% but mean buy 0.75 at median 94 s -> shadow PnL -20.8 at $1 (both halves negative). REVERSAL 110 fires, directional 69%, mean buy 0.55 at median 192 s -> +43.6 at $1 (halves +12.6 / +31.1; positive in 17 of 22 UTC hours). Twins agree (A 26/5 +22.3, C 20/5 +19.6); Tokyo's own shadow since 21:55: 27/6 +22.7. Overlap with EF: of 50 shared candles, 23 opposite-side, REVERSAL right 15 vs EF 8. Recommendation sent to the user: REVERSAL live at the ladder stake, MAIN stays off; awaiting the user's OK.
+
+## 10:48 UTC check-in (backup 10:48) - container healthy, uptime 5 h 25 min, 13 GB free; variant D retired 10:50
+- Predict pnl 98/183 +99.9 (1 open); Poly pnl 125/236 +207.0 (2 open). Last hour pooled 5/13 -29: the 09:45-10:45 tape lost for every run on both venues.
