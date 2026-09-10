@@ -498,3 +498,6 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 
 ## 02:40 UTC check-in (backup 02:40) - container healthy (7 processes), 13 GB free
 - Predict pnl 84/154 +120.9; Poly pnl 105/194 +268.7 (2 ungraded). Last hour pooled 3/7 -4 (02:00-02:40 chop: Predict.fun v10 0/2, Tokyo 3/4).
+
+## 03:13 UTC check-in (backup 03:13) - container healthy (7 processes), 13 GB free
+- Predict pnl 84/154 +120.9 (no fires since 02:10); Poly pnl 106/200 +225.7. Last hour pooled 2/9 -47: Polymarket v10 1/5 in the 02:40-03:10 chop, its worst hour of the night.
