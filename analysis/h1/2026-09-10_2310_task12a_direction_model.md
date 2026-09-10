@@ -1,4 +1,52 @@
 # Task 12a — the DIRECTION model (the "trained brain"), on the venue quote table
+
+> ## RETRACTED 23:30 UTC — the positive result below is an artifact. Read this box first.
+>
+> **V was right (commit `afcdf4f`).** The `outcome` table in `venues.sqlite3` is **Polymarket's**
+> resolution. Predict.fun does not settle on it — it settles on the engine's source
+> (Binance close ≥ open). I graded Predict.fun trades with Polymarket's answer.
+>
+> **Independently confirmed here:** 66 of 627 common candles disagree — **10.5%** (V measured
+> 66/637). V's primary evidence is decisive and I do not have it: Tokyo's real venue settlements
+> (`financial_result` on 264 fills) agree with the engine's `actual` on **all 29** disputed candles
+> it traded. Predict.fun settles on the engine's source.
+>
+> **Re-graded on the engine's actual** (`analysis/h1/venue_regrade.py`), the cross-venue edge
+> collapses at every decision second:
+>
+> | sec | cross, Polymarket grading | cross, ENGINE grading | engine, +5c |
+> |---|---|---|---|
+> | 60 | +0.274 | +0.050 | −0.027 |
+> | 90 | +0.292 | +0.093 | +0.008 |
+> | 120 | +0.296 | +0.102 | −0.018 |
+> | 180 | +0.246 | −0.094 | −0.187 |
+> | 210 | **+0.441** | **−0.008** | −0.120 |
+> | 240 | +0.382 | −0.130 | −0.249 |
+>
+> Nothing survives a 5-cent haircut. The single least-dead cell (t=90, +0.093, halves +0.141/+0.045)
+> is noise at n=219 and is **not** to be chased — that would be exactly the threshold-hunting on a
+> weak score the user banned.
+>
+> **My negative result also has to be restated.** "The venue's own quote path is dead, 16 of 16"
+> was computed on the same wrong labels, so that wording is withdrawn too. Re-graded correctly it
+> is not 16/16 negative, it is **flat**: −0.02 to +0.06 across the eight seconds, negative in both
+> halves at most of them, negative everywhere at +5c. The practical conclusion is unchanged and
+> now rests on correct labels: **no direction model over the venue quote table works, on either
+> channel.** Task 12a is a negative result end to end.
+>
+> **Standing rule adopted from this (V's):** never grade a Predict.fun trade with the venues
+> `outcome` table. Grade with `candles.actual` from the engine DBs or Tokyo's `financial_result`.
+> Only this study used it; J, the EF floor, the REVERSAL cap and the kline studies grade on the
+> engine/klines and are unaffected.
+>
+> **Structural fact worth keeping** (V's): on ~10% of candles the Polymarket-favoured side at 240 s
+> loses on Predict.fun (27 UP→DOWN, 27 DOWN→UP, symmetric). That caps late-candle accuracy for any
+> Polymarket-led rule at roughly 90% on this venue, and is part of why late EF/REVERSAL fills lose
+> "sure things".
+>
+> Everything below this box is the original 23:10 writeup, left intact as the record of what I
+> claimed and how it was wrong.
+
 H1, 2026-09-10 23:10 UTC. Data: `learner/live_backup/venues.sqlite3` (22:43 snapshot).
 640 graded candles, 60 quote samples each (every 5 s), 54.7 h of coverage.
 

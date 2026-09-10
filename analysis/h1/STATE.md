@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-10 23:12 UTC. Update this file at the end of every check.
+Last updated: 2026-09-10 23:32 UTC. Update this file at the end of every check.
 
 ## Standing user rules (binding)
 - **No gates.** No on/off gates, stake modifiers, or threshold sweeps on a score already known to be
@@ -17,8 +17,11 @@ Full parameter sweep AND largest available sample before calling anything a find
 own. Non-monotone sweep peaking at the chosen value = fitting to noise; smoothly monotone = real.
 **Accuracy is not PnL.** Always test the obvious null against my own result. Real data only. Sample
 sizes on every claim; under 60 graded fires in a bucket is "insufficient". Walk-forward only.
-**Retract my own claims when data reverses them — four times on 09-10, the most useful thing I did.**
-Never touch Tokyo, V's containers or the DBs. Never handle secret values.
+**Retract my own claims when data reverses them — five times on 09-10, the most useful thing I did.**
+**GRADING (V, 23:15, after my 12a error): never grade a Predict.fun trade with the venues `outcome`
+table — that is POLYMARKET's resolution and the two venues disagree on 10.5% of candles. Grade with
+`candles.actual` from the engine DBs or Tokyo's `financial_result`.** Check what a label MEANS before
+using it. Never touch Tokyo, V's containers or the DBs. Never handle secret values.
 
 ## CLOSED — do not resurrect
 | item | verdict |
@@ -28,7 +31,7 @@ Never touch Tokyo, V's containers or the DBs. Never handle secret values.
 | Task 11.1 confidence score | **OOS AUC 0.4746, below random.** Frequency dial runs backwards. **Retracts my "+33% per unit" claim** (real only for the v10 runner, 0.5644; does not transfer to v11 twins, 0.479/0.539). Never cite it again |
 | trend guard | premise refuted on 20,308 candles; reverted on Tokyo 14:25 |
 | hour-of-day / weekend decay | refuted on 252 days; my weekend claim withdrawn |
-| **venue's OWN quote path as a direction model (Task 12a)** | **negative in 16 of 16 cells** (8 decision seconds x liquidity floor on/off), both halves. Dead. Do not queue 12b/c on it |
+| **Task 12a — ANY direction model over the venue quote table** | **CLOSED, both channels, on correct labels.** Own quote path: flat (−0.02..+0.06), negative at +5c everywhere. Cross-venue spread: my positive claim was a GRADING ARTIFACT, retracted — see below. Do not queue 12b/c on either |
 
 ## LIVE CANDIDATE J — the one thing that works
 Second EF entry at t≈120 s, **same side as the first fire**, only if that side's ask is still ≤0.60.
@@ -65,27 +68,27 @@ Second EF entry at t≈120 s, **same side as the first fire**, only if that side
 - **EF2 (J) shadow on the live book:** 8 graded, 62% hit, +0.074/fire (cap 0.60: 5 graded, 60%,
   +0.105). Far too small to read; verdict at ≥100.
 
-## Task 12a — the direction model, done 23:10 (the user's "trained brain")
-Ran on `venues.sqlite3`: 640 graded candles, 60 quote samples each, 54.7 h. Walk-forward, full
-grid over 8 decision seconds, raw asks, liquidity floor tested, both halves.
-- **The venue's own quote path is DEAD** — negative at every decision second, both halves, floor on
-  or off. Avenue closed (see CLOSED table).
-- **All of the edge is the cross-venue Predict/Polymarket spread.** `level + cross` positive in
-  BOTH halves at all 8 seconds; dropping `cross` kills it; `level+cross` ~= `everything`.
-- **The edge is ~6 cents wide** (median |poly-predict| traded = 0.062), so it is an EXECUTION
-  problem, not a modelling problem. At a +10c haircut only **t=210 and t=240** survive
-  (+0.164, +0.191). Everything earlier goes to ~zero.
-- Notable: t=210/240 is exactly where **candidate J failed**. Different rule, so no conflict —
-  the late window may be live for the spread rule though dead for J.
-- **Process note:** my first pass printed +0.2..+0.6/fire and I did not report it. The market is
-  well calibrated (gaps +/-0.03), so that had to be an artifact. My first control was ALSO wrong —
-  shuffling labels destroys the market's calibration too, so longshots "win" at the base rate and
-  it printed +4.34/fire. Correct control = permute the model's predictions, keep outcome<->price
-  paired: permuted draws lose money, real model beat 30/30 draws at every second.
-- **Limits:** 640 candles / one regime, vs 20k-72k in my other studies. No Task 13 grid yet.
-  Apply J's 2.5x recorded->live haircut to every number.
-- Report: `2026-09-10_2310_task12a_direction_model.md`. Repro: `venue_path_model.py`,
-  `venue_path_ablate.py`.
+## Task 12a — RETRACTED and closed, 23:30 (my fifth retraction of 09-10)
+Ran on `venues.sqlite3`: 640 candles, 54.7 h, walk-forward, 8 decision seconds, both halves.
+- **I graded Predict.fun trades with POLYMARKET's outcome.** The `outcome` table is Polymarket's
+  resolution; Predict.fun settles on the engine's source (Binance close >= open). **V caught it
+  (afcdf4f).** I confirmed it independently: **66 of 627 common candles disagree, 10.5%.** V's
+  decisive evidence, which I do not have: Tokyo's `financial_result` on 264 real fills agrees with
+  the engine's `actual` on all 29 disputed candles traded.
+- **Re-graded on the engine's actual, everything collapses.** Cross-venue spread by second:
+  +0.050 / +0.093 / +0.102 / -0.020 / -0.094 / -0.008 / -0.130 (60/90/120/150/180/210/240) against
+  +0.27..+0.44 on the bad labels. **Nothing survives a 5c haircut.** The least-dead cell (t=90,
+  +0.093, n=219) is noise — **do not chase it**, that is banned threshold-hunting on a weak score.
+- **My negative claim is restated too**: "own quote path dead 16/16" used the same bad labels.
+  Correctly graded it is FLAT (-0.02..+0.06), negative in both halves at most seconds, negative
+  everywhere at +5c. Same practical conclusion, now on correct labels.
+- **Net: Task 12a is a negative result end to end. No direction model over the venue quote table
+  works, on either channel.** That still closes the avenue, which was the useful part.
+- **Structural fact kept (V's):** on ~10% of candles the Polymarket-favoured side at 240 s loses on
+  Predict.fun (27 UP->DOWN, 27 DOWN->UP). Caps late-candle accuracy for any Polymarket-led rule at
+  ~90% on this venue; part of why late EF/REVERSAL fills lose "sure things".
+- Report: `2026-09-10_2310_task12a_direction_model.md` (retraction box at the top, original left
+  intact as the record). Repro: `venue_regrade.py` (both gradings side by side).
 
 ## OPEN, in priority order
 1. **The 00:00 UTC kline job (below)** — everything else of substance is gated on it.
