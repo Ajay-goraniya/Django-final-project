@@ -482,3 +482,7 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 
 ## 23:58 UTC check-in (backup 23:58) - container healthy (7 processes incl. 4 v11 test twins), 13 GB free
 - Predict pnl 79/143 +100.4; Poly pnl 96/178 +258.4 (3 ungraded). Last hour pooled 5/11 -20. Retro on 321 fires: none +359 | p>=0.56 +279 | ask>0.45 +207.
+
+## 00:30 UTC check-in (backup 00:30) - container healthy (7 processes), 13 GB free
+- Predict pnl 80/146 +119.5; Poly pnl 97/179 +248.4 (6 ungraded). Last hour pooled 3/10 -34 (00:00 dead tape again, as on 09-09 01:00).
+- Container spot feed: the Build36 core prefers stream.binance.com:9443, which resets from this network; each reset means a REST-fallback stretch of sparse spot trades before it lands on data-stream.binance.vision. That is a container-network artefact (Tokyo sits on stream.binance.com:443, stable) and degrades the v10-lane features on the container engines during fallbacks.
