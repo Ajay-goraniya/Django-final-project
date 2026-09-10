@@ -152,3 +152,10 @@ possible on the 252-day klines:
      section E) and they ship in v12 only with both-halves support.
 Guard against the trap of the day: a regime switch is itself a threshold; define the buckets first (quartiles, day
 type), test them all, and report the full grid, not the best cell.
+
+## Task 14 (V, 09-10 23:40 UTC): where and why the two venues resolve differently
+Grounded in a measured fact: Polymarket's resolution and the engine's candles.actual (Binance close >= open, which Tokyo's real financial_result confirms is what Predict.fun pays on) disagree on ~10% of candles (66/637). Those are the candles where EF/REVERSAL lose "sure things" late. Grade everything on engine actual.
+1. Characterise the disputed candles: |close - open| in bps at Binance close; the Polymarket UP price at 240 s and 290 s; whether Polymarket's own settle price differs (its oracle) - is the disagreement concentrated in near-zero candles (|close-open| < X bps)? Full distribution, buckets defined first, both halves of the 54.7 h.
+2. For EF and REVERSAL fires on twins A/C and Tokyo's fills (learner/live_backup/tokyo_orders.json has actual, correct, pnl, seconds_into_candle): how much of the loss comes from candles that finish within Y bps of open? Report the loss share by |close-open| bucket. If a large share of losses sits in near-zero candles, that is a fact about the venue, not a gate to add - report it, do not propose a threshold.
+3. If the data allows: does the Predict.fun ask late in the candle (t >= 240) already price the near-zero risk (ask vs realised win rate in the |close-open| < X bucket)? That tells whether REVERSAL's late fills are fairly priced.
+Deliverable: analysis/h1/task14_venue_disagreement.md with the grids; STATE.md updated. No rule proposals; description only.
