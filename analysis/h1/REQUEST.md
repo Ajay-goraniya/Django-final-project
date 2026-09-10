@@ -19,3 +19,12 @@ Deliver as `analysis/h1/2026-09-10_<hhmm>_task3_4_5.md`. Sample sizes on everyth
 
 ## Update 11:23 UTC from V - Task 3 already answered, and it is NEGATIVE
 V ran the rv60 gate on the v11 path (ef_v11_f.rv60, PnL@$10): twin A base 60/51 -17.4 -> rv60>=0.3 keeps 24/24 -25.2 and removes 36/27 +7.8; twin C removes 29/21 +38.9; twin B keeps +11.1 / removes -8.1 (halves +15.0 / -3.9); Tokyo's 108 matched real fills show no separation (keep -4.08 / remove -2.07). The v10-runner result reverses on the v11 path. Task 3 is now: explain the disagreement - is the runner's rv60 the same quantity and scale as ef_v11_f.rv60 (compare distributions on the same candles)? does the effect depend on fire second (v10 ~65 s vs v11 ~20 s)? is there ANY vol gate that helps the v11 path on both halves? Tasks 4 and 5 unchanged.
+
+## Task 6 (added 12:25 UTC 09-10): weekday-to-weekend decay, real data only
+The user reports that many of their earlier models lose more as the week moves toward the weekend (Thu -> Sun).
+Test it on the REAL historical set you used for Task 2 (v10 runner replay, the same graded fires):
+- Hit rate and PnL@$10 by UTC day of week, for the baseline fires and for the EV-scale-1.0 setting if you can reproduce it.
+- Same split for the Polymarket signal side (does the signal itself degrade, or only the fills/quotes?).
+- Report n per bucket; a bucket under 60 graded fires is "insufficient", not a finding.
+- If the effect is real, say which days are negative on both halves of the sample, and propose the cheapest guard (e.g. EF off on those days) with its retro PnL.
+Live context: Tokyo EF and REVERSAL were paused at 12:20 UTC at the capital floor (equity 16.94, realised -8.52); EV scale 1.0 applied 12:18. Write results to analysis/h1/<date>_task6_dow.md and push; V merges at the next check-in.
