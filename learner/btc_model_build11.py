@@ -1395,6 +1395,12 @@ WS_ENDPOINTS = (
     "wss://stream.binance.com:9443/ws",
     "wss://data-stream.binance.vision/ws",
 )
+# v11.1: BTC_SPOT_WS_PREFER=<substring> moves the matching endpoint to the front (e.g. "binance.vision"
+# on networks where stream.binance.com resets by peer and every reset costs a REST-fallback stretch of
+# sparse spot trades that degrades the v10-lane features). Unset = the order above.
+if os.environ.get("BTC_SPOT_WS_PREFER"):
+    _pref = os.environ["BTC_SPOT_WS_PREFER"].strip()
+    WS_ENDPOINTS = tuple([u for u in WS_ENDPOINTS if _pref in u] + [u for u in WS_ENDPOINTS if _pref not in u])
 WS_CONNECT_TIMEOUT_SEC = 8.0
 WS_FIRST_EVENT_TIMEOUT_SEC = 25.0
 WS_STALE_TIMEOUT_SEC = 15.0
