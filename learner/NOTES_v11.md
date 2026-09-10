@@ -508,3 +508,7 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 
 ## 04:18 UTC check-in (backup 04:18) - container healthy (7 processes, relaunched 03:46), 13 GB free
 - Predict pnl 85/160 +79.5; Poly pnl 107/205 +185.8. Last hour pooled 1/9 -71. In the fair window since 21:55 both v10 paper runs are now negative (Predict 14/16 -20.5, Poly 14/24 -92.8); the 03:00-04:00 stretch was against both.
+
+## 04:51 UTC check-in - container MACHINE REBOOTED ~04:42-04:50 (uptime 1 min at 04:52), all seven processes relaunched 04:52 on the same DBs; 13 GB free
+- Predict pnl 85/162 +69.5 (1 ungraded); Poly pnl 108/207 +192.8. Last hour pooled 2/8 -43. Fair window since 21:55: Predict 14/17 -30.5, Poly 16/24 -75.7.
+- Second outage of the night: this time the VM itself rebooted (not just the harness); processes were gone, disk intact, proxy port changed again. restart_all.sh brought all seven back within 20 s, feeds live at once, masters OFF. Roughly 9 min of paper data lost (one to two candles). Tokyo untouched (73/73 fills).

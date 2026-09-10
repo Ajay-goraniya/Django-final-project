@@ -157,13 +157,19 @@ Old-version findings keep going to NOTES_v11.md.
 - Twins (~40 graded each, after the 03:46 relaunch): A 25/40 +53.6 | B guard 18/35 -10.5 | C thr 1.0 22/38 +35.4 | D auto 23/43 +5.7. A leads for the second check-in; B and D still negative or flat on hit rate. pcmp A-vs-runner: 40 matches, same side 34/40, mean |dp| 0.065.
 - EV-scale review point (60 settled live fires) reached: Tokyo 39/27 at thr 0.75; the paper C twin at thr 1.0 is behind A on the same tape (+35 vs +54) so there is no number supporting a Tokyo change. No change.
 
+### 04:52 UTC - v11 LIVE Tokyo, 6.95 h: 73 orders, 73 filled, 0 failed; 41/31 (57%), realized +2.43 at $1, wallet 27.01 (+1 open), equity 27.6
+- Fair window since 21:55: v11 live 41/31 +24.3@$10 | Predict.fun v10 14/17 -30.5 | Polymarket v10 16/24 -75.7. Tokyo 2/4 in the last half hour and 3/7 over the last hour: the 04:00 hour is the worst of the night for it (gave back 4.16 from the +6.59 high at 03:47). Still the only positive run in the window. Fills: last at the quote, mean delay 220 ms, 6 of 73 retried (8%), zero failures, unexplained 0.0, nothing unredeemed.
+- Container VM rebooted ~04:42-04:50; all seven paper processes relaunched 04:52 on the same DBs (second outage tonight; the first at 03:38 was a proxy-port change). Twins lose another ~2 candles of comparability.
+- Twins (~44 graded each): A 26/44 +30.5 | B guard 19/39 -33.6 | C thr 1.0 23/42 +12.3 | D auto 25/48 -21.2. Everyone lost in the 04:00 hour (A -23, C -23, B -23, D -27); ranking A > C > D > B unchanged. pcmp A-vs-runner: 44 matches, same side 38/44, mean |dp| 0.062.
+- Stake policy check: 73 fills, hit 57% >= 54%, slippage fine, but the step to $2 needs >= 100 fills - not yet.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
 |---|---|---|---|---|
-| A | 09-09 23:45 | v11.1 baseline: thr 0.75, guard off, perp-print aggregation fixed (port 8794) | control; its p should now match the runner's (pcmp) | 04:18: 25/40 +53.6 (40 fires); pcmp |dp| 0.065, same side 34/40 -> input fix confirmed |
-| B | 09-09 23:50 | A + slow-trend guard 9 candles / 20 bps (port 8795) | fewer against-lean losses; realised-fire retro +459 vs +296, v11 replay -111 -> undecided | 04:18: 18/35 -10.5 (35 fires) - behind A by 64, hit rate 51% vs 62% - heading to FAIL |
-| C | 09-09 23:50 | A + EV scale 1.0 (port 8796) | v10-like frequency; fewer early cheap fires, higher hit rate, lower PnL per retro | 04:18: 22/38 +35.4 (38 fires) - led A until 03:47, now behind by 18 with lower hit rate; undecided |
-| D | 09-09 23:50 | A + auto mode (accuracy lane in low vol) (port 8797) | earns in calm/chop hours where pnl mode bleeds | 04:18: 23/43 +5.7 (43 fires) - behind A by 48; more fires, lower hit rate - heading to FAIL |
-| Tokyo | 09-09 21:55 | original v11 live, $1 | execution quality + live edge | 04:18: 67 fills 0 failed (6 retries), 39/27 (59%), +5.00 real (+50.0@$10) vs v10 paper -20.5 / -92.8 same window |
+| A | 09-09 23:45 | v11.1 baseline: thr 0.75, guard off, perp-print aggregation fixed (port 8794) | control; its p should now match the runner's (pcmp) | 04:52: 26/44 +30.5 (44 fires); pcmp |dp| 0.062, same side 38/44 -> input fix confirmed |
+| B | 09-09 23:50 | A + slow-trend guard 9 candles / 20 bps (port 8795) | fewer against-lean losses; realised-fire retro +459 vs +296, v11 replay -111 -> undecided | 04:52: 19/39 -33.6 (39 fires) - behind A by 64, hit rate 49% vs 59% - heading to FAIL |
+| C | 09-09 23:50 | A + EV scale 1.0 (port 8796) | v10-like frequency; fewer early cheap fires, higher hit rate, lower PnL per retro | 04:52: 23/42 +12.3 (42 fires) - behind A by 18, hit rate 55% vs 59%; undecided, trending behind |
+| D | 09-09 23:50 | A + auto mode (accuracy lane in low vol) (port 8797) | earns in calm/chop hours where pnl mode bleeds | 04:52: 25/48 -21.2 (48 fires) - behind A by 52, more fires and lower hit rate - heading to FAIL |
+| Tokyo | 09-09 21:55 | original v11 live, $1 | execution quality + live edge | 04:52: 73 fills 0 failed (6 retries), 41/31 (57%), +2.43 real (+24.3@$10) vs v10 paper -30.5 / -75.7 same window |
 Decision rule: a variant replaces the baseline setting only when, over the same candles, it is ahead on PnL at $10 AND not behind on hit rate after >= 100 graded fires, and the sign holds on both halves of its own run.
