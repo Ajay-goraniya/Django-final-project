@@ -51,3 +51,11 @@ No human, no agent required for it to keep working. Everything below is engine-s
 - V: A, B, C, D, F and the tests, in that order, as builds 11.4.x.
 - H1: Task 9 (MAIN cap from the shadow record), Task 10 (E: regime scaling premise on the 252-day klines and the fire
   data), and review of every rule's thresholds against the fire record before V ships them.
+
+## E2. Regime switches ("rain or sun", user 20:35 UTC 09-10)
+Every rule carries an optional regime condition evaluated at the fire second from live-observable state only
+(trailing 12-candle realised range quartile, crossings of the open in the last 6 candles, Polymarket book width /
+one-sidedness, weekday/weekend, 8-h block). A rule is ON only in the regimes where H1's Task 13 grid shows it positive on
+both halves; elsewhere the engine falls back to the plain setting. The regime table is data in the engine (persisted,
+editable via /api/controls/autopilot), every switch is logged, and the autopilot's dial self-verdict runs per regime cell
+so a rule that stops working in a regime is turned off there automatically.

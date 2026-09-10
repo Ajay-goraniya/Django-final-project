@@ -133,3 +133,22 @@ value on the engine's features all failed. What stays open and must be researche
      through the recorded ask paths (venues.sqlite3.gz), not on accuracy;
   d. the base rates (P(another crossing) by t) as a live dashboard number so the user sees the candle brain working.
 Report each part under the ship rule; if a part fails, say so and move to the next; never drop the line entirely.
+
+## Task 13 (added 20:40 UTC 09-10, from the user, standing): "rain or sun" - when does each finding work, and can the engine tell in advance?
+The user's rule: a finding must work every day; if it does not, identify WHEN it works and switch it on only then
+(car in the rain, bike in the sun - we have both, we need to recognise the weather).
+For EVERY finding that has passed or is close (EV scale 1.0; EF ask floor 0.48; REVERSAL cap 0.60; the t=120 second
+entry J; REVERSAL itself; later the retrained model), on the real fire data (twins, Tokyo fills, v10 runner) and where
+possible on the 252-day klines:
+  1. PnL per fire and hit rate by UTC day, by 8-h block, by weekday/weekend, and by regime bucket defined IN ADVANCE from
+     observable state at the fire second: trailing 12-candle realised range (quartiles from the 252-day set), crossings
+     of the open in the last 6 candles, Polymarket book width/one-sidedness at fire time, time since the last state-X
+     trigger. Both halves, n per cell. No regime that is defined after looking at the outcomes.
+  2. For each finding: does it hold in ALL buckets (then it is unconditional), or only in some? If only some, the switch
+     must be a regime the engine can read live (all of the above are), and the premise must hold on the 252-day set
+     (accuracy by |distance| band within the regime, monotone) before it becomes a rule.
+  3. Deliver a table "finding x regime -> ON/OFF" with the evidence, and a one-line rule per finding that the engine can
+     evaluate at the fire second. V implements the switches in the autopilot as automatic rules (AUTOPILOT_11.4.md
+     section E) and they ship in v12 only with both-halves support.
+Guard against the trap of the day: a regime switch is itself a threshold; define the buckets first (quartiles, day
+type), test them all, and report the full grid, not the best cell.

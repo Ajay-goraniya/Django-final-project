@@ -493,6 +493,9 @@ Old-version findings keep going to NOTES_v11.md.
 - Tokyo: EF 122/100 (55%) +2.15 after 222 settled; REVERSAL 2/6 -3.12 (a third live loss under the cap; the first-6 rule needs <= 1/6 to kill, so it stays on; the 20-fill PnL rule is the next test); realised -0.97, wallet 23.49, equity 24.12, 229/229 filled. Build 11.2, no deploy per the user.
 - Fair states since 21:55: v10 Predict.fun paper 46/49 -51.1@$10; v10 Polymarket paper 67/74 +20.1@$10; v11 live 122/100 +2.15 real (EF). 8 local processes (7 + EF2 shadow), feeds live after the 20:18 reboot. EF2 shadow has no graded entry yet.
 
+## 20:40 UTC 09-10 - user's standing rule: findings must work every day, or be switched on only in the regimes where they work
+- "Car in the rain, bike in the sun": recognise the weather, use the right vehicle. Turned into H1 Task 13 (finding x regime grid on the real fire data with buckets defined in advance: UTC day, 8-h block, weekday/weekend, trailing-range quartile, recent crossings, book width; both halves; premise on the 252-day set) and AUTOPILOT_11.4.md section E2 (regime switches as engine data, logged, self-verdicted per cell). What is already known: the EF floor's premise is monotone in every quintile on 252 days (candidate for "unconditional"); the guard failed everywhere; weekends have half the range but the same accuracy (a sizing/threshold regime, not a direction regime). V keeps the per-day and per-block buckets at every check-in for Tokyo and the twins.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
