@@ -557,6 +557,13 @@ Old-version findings keep going to NOTES_v11.md.
 - H1 retracted Task 12a (913fa89) after my 23:15 refutation; merged. No open user asks relayed.
 - Day at 23:26: -11.46 low (12:38) -> +12.13 realised. Twin books live, 8 processes.
 
+## 23:53 UTC: H1 Task 14 verified - near-zero candles are where EF loses (fact for v12, no gate)
+- H1 (762f1cd, merged): the Polymarket/Predict.fun resolution disagreement is a near-zero-candle effect: 94% of disputes finish within 5 bps of open (<1 bps: 33% disputed; >=5 bps: <2%), monotone, both halves; on disputed candles Polymarket prices its own winner at 0.99 - two confident oracles, not uncertainty. At t>=237 the favoured side's Predict.fun ask is fair-to-cheap in every bucket >=1 bps but in the <1 bps bucket it is 0.729 for a 49% win (gap -0.236).
+- Verified on Tokyo's 250 graded EF fills by FINAL |close-open|: <1 bps 33 fills 39% -0.267/$1; 2.5-5 bps 60 fills 48% -0.080; every bucket >=5 bps positive (+0.12 to +0.16). Candles finishing inside 5 bps = 50% of fills, 59% of gross losses. Exact match with H1's table.
+- Fire-time version (known at fire time; signal_price vs candle open): EF fires with |fire-open| <1 bps = 115 of 250 (46%), hit 51%, ask 0.519, -0.028/$1 (49% of gross losses); 1-2.5 bps: 96 fills 61% +0.182/$1; 2.5-5: 31 fills 48% -0.190 (n small). NOT monotone (2.5-5 negative), one regime, 250 fills - so it is a description, not a rule, and the user has banned gates on the existing score anyway. What it says for v12: the direction model must get the "how far has it moved by now" information right (the current model already has move_bps and still fires 46% of the time on sub-1-bps moves at even odds); this is a feature-weighting problem for the retrained model (Task 11.2), not a filter.
+- REVERSAL: 14 of 18 live fires occur with the price back within 1 bps of open (79% hit there, +0.204/$1); n tiny, logged only. H1's twin pooling shows REVERSAL accuracy does not track the final-distance bucket (82/74/77%) while EF's does (43/54/46/60/58%).
+- v12 note: a late-second fair-odds correction (the book overprices the favourite when |price-open| < 1 bps near the close) is an EV fact the engine's _fair_odds could carry automatically; parked until the premise is checked on the 252-day kline set (H1 Task 15).
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
