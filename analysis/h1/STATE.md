@@ -89,8 +89,8 @@ grid over 8 decision seconds, raw asks, liquidity floor tested, both halves.
 
 ## OPEN, in priority order
 1. **The 00:00 UTC kline job (below)** — everything else of substance is gated on it.
-2. **Task 11.2 / 12a** — retrain the forecaster / learned tree as the DIRECTION model (not a gate on
-   it), walk-forward, versus the current model's own calls on the same candles.
+2. **Task 11.2** — retrain the forecaster on the ENGINE's own candles, walk-forward, versus the
+   twins' own calls. (12a is DONE — see above. Gated on the kline job.)
 3. **Task 12b/c/d** — ONLY as a timing model for the later entry and REVERSAL. **Not over the
    venue's own quote path** (12a killed that). Base rates as a live dashboard number still stands.
 4. **Tasks 9 (MAIN cap) and 10 (regime scaling)** — LAST, both price/threshold studies.
