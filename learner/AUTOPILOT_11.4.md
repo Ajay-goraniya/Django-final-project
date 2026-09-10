@@ -64,3 +64,6 @@ so a rule that stops working in a regime is turned off there automatically.
 | rule | regime switch | evidence | status |
 |---|---|---|---|
 | EF2 (second entry t~120, ask <= 0.60) | none - ON unconditionally; log the trailing-12-candle-range Q4 (> 76.4 bps) cell separately; arm "EF2 OFF in Q4" only if that cell is still negative at >= 60 fires | 215 fires: positive both halves in 9/9 buckets with >= 30 fires; Q4 -0.233 on 24 (under-sampled); chop (4+ flips in 6) is the BEST bucket (+0.695) | watch cell Q4 |
+| EF ask floor 0.48 | ON except when trailing-12-candle range > 76.4 bps OR flips in the last 6 candles >= 4 | skipped group profitable both halves in Q4 (n=42, +0.250) and 4+ flips (n=56, +0.296); negative elsewhere | v12 rule |
+| REVERSAL cap | none (cap removed 21:25; capital not binding at $1) | skipped group 77% +0.134/fire both halves on 108 | closed |
+| REVERSAL lane | none; watch the 08-16 UTC block | +0.429/fire both halves on 255; 08-16 block -0.002 mixed | unconditional |
