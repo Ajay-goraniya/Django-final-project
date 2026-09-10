@@ -556,3 +556,4 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 - Predict pnl 99/188 +56.9; Poly pnl 128/244 +217.7. Last hour pooled 6/11 +18 (tape steadier from 11:00). Fair window since 21:55: Predict 28/30 -43.1, Poly 34/43 -50.9.
 - 12:20 UTC check-in: fair states since 21:55 - v10 Predict.fun paper 28/34 -83.1@$10; v10 Polymarket paper 34/47 -90.9@$10; v11 live 80/70 -7.50 real. Tokyo EF+REVERSAL paused at capital floor (see NOTES_v12 12:20). 6 local processes up.
 - 12:58 UTC check-in: fair states since 21:55 - v10 Predict.fun paper 31/36 -75.0@$10; v10 Polymarket paper 37/51 -99.0@$10; v11 live 83/72 -7.03 real. 6 local processes up. H1 Task 6/7 merged (see NOTES_v12 12:58).
+- 13:28 UTC check-in: fair states since 21:55 - v10 Predict.fun paper 36/36 -27.4@$10; v10 Polymarket paper 41/52 -62.1@$10; v11 live 86/74 -6.26 real (EF), realised -9.26. Trend guard live on Tokyo since 13:14. 6 local processes up.
