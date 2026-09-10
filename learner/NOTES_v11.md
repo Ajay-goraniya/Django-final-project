@@ -489,3 +489,6 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 
 ## 01:02 UTC check-in (backup 01:02) - container healthy (7 processes), 13 GB free
 - Predict pnl 82/149 +136.1; Poly pnl 103/186 +283.2 (3 ungraded). Last hour pooled 8/10 +83 (00:30-01:00 trend burst after the dead 00:00 hour).
+
+## 01:35 UTC check-in (backup 01:35) - container healthy (7 processes), 13 GB free
+- Predict pnl 84/151 +150.9 (day high); Poly pnl 103/190 +243.2. Last hour pooled 4/10 -19.
