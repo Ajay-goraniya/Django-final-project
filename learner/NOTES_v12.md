@@ -504,6 +504,10 @@ Old-version findings keep going to NOTES_v11.md.
 - Twins since 23:50: A 103/199 52% -66.4; B 101/179 56% +99.4 (control); C 92/180 51% -20.0. Paired A vs C +46.6, halves +3.3/+43.3.
 - Fair states since 21:55: v10 Predict.fun paper 46/50 -61.1@$10; v10 Polymarket paper 67/76 +0.1@$10; v11 live 123/105 -1.89 real (EF). 8 processes; snapshots refreshed.
 
+## 20:58 UTC 09-10 - H1 Task 13 grid for the second entry (J): unconditional; one cell to watch
+- 215 fires, buckets fixed in advance (range quartile cuts from the 252-day set: 31.4/48.9/76.4 bps). By day: 09-09 +0.288, 09-10 +0.431 (both ON both halves). By 8-h block: 00-08 +0.473, 08-16 +0.409, 16-24 +0.347 (h2 -4.9, mixed). By trailing range: Q1 +0.537, Q2 +0.579, Q3 +0.367 ON; Q4 (busiest) -0.233 on 24 fires - under-sampled, the one cell to watch (fast tape is where a printed 0.36 is least takeable; the staleness worry). By flips in the last 6 candles: choppier is BETTER (4+ flips +0.695) - consistent with a mispricing, not a trend bet. Book width: tight +0.377 ON; wide n=26 insufficient. Weekend: unanswerable until 09-12/13.
+- Autopilot E2 row: EF2 ON unconditionally, Q4 cell logged separately at every check-in; the switch "EF2 OFF when trailing range > 76.4 bps" is armed only if Q4 is still negative at >= 60 fires. H1 reads the Tokyo-fill replay (+0.153) vs the recorded-quote number (+0.408) as a ~2.5x staleness haircut; the live number is the one to plan on. Next from H1: the same grid for EV 1.0, the EF floor, the REVERSAL cap and REVERSAL itself, then Task 11.2/12a.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |

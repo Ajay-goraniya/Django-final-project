@@ -59,3 +59,8 @@ one-sidedness, weekday/weekend, 8-h block). A rule is ON only in the regimes whe
 both halves; elsewhere the engine falls back to the plain setting. The regime table is data in the engine (persisted,
 editable via /api/controls/autopilot), every switch is logged, and the autopilot's dial self-verdict runs per regime cell
 so a rule that stops working in a regime is turned off there automatically.
+
+### E2 rows so far (from H1 Task 13 grids)
+| rule | regime switch | evidence | status |
+|---|---|---|---|
+| EF2 (second entry t~120, ask <= 0.60) | none - ON unconditionally; log the trailing-12-candle-range Q4 (> 76.4 bps) cell separately; arm "EF2 OFF in Q4" only if that cell is still negative at >= 60 fires | 215 fires: positive both halves in 9/9 buckets with >= 30 fires; Q4 -0.233 on 24 (under-sampled); chop (4+ flips in 6) is the BEST bucket (+0.695) | watch cell Q4 |
