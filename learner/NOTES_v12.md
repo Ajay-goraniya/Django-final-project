@@ -132,13 +132,18 @@ Old-version findings keep going to NOTES_v11.md.
 - Fair window since 21:55: v11 live 24/15 +40.9@$10 | Predict.fun v10 13/8 +50.9 | Polymarket v10 10/13 -25.4. Tokyo 5/2 in the last half hour. Fills 36 of 39 at the quote, worst +3c, mean delay 315 ms, zero rejections. Capital truth "unexplained -1.89" = the open position again (clears at settlement each time).
 - Twins after 62 min on the stable spot host: A 9/14 +23.5 (median fire 16 s) | B guard 7/14 -12.6 | C thr 1.0 9/14 +31.8 (median 19 s now - the 1.0 threshold did not delay fires this hour) | D auto 9/17 +6.1. pcmp A-vs-runner: 16 matches, same side 14/16, mean |dp| 0.047 (residual in lv/imb20/move at 3-8 s offsets).
 
+### 02:07 UTC - v11 LIVE Tokyo, 4.2 h: 44 orders, 44 filled, 0 failed; 27/16 (63%), realized +5.69 at $1, wallet 30.27 (+1 open), equity 30.6
+- Fair window since 21:55: v11 live 27/16 +56.9@$10 | Predict.fun v10 13/9 +40.9 | Polymarket v10 11/13 -15.3. Tokyo 3/1 in the last half hour; v11 now leads both v10 paper runs on the same candles in real money. Fills: mean delay 289 ms, last fill at the quote; 6 of 44 orders needed a retry (13.6% first-attempt failure, all filled inside the slippage band, none lost); capital truth unexplained 0.0, no unredeemed positions.
+- Twins (95 min on the stable spot host): A 12/18 +39.3 (median fire 16 s) | B guard 10/18 +3.7 | C thr 1.0 12/18 +49.4 (median 19 s) | D auto 12/21 +21.9 (37 s). Ranking unchanged: C > A > D > B. pcmp A-vs-runner: 21 matches, same side 18/21, mean |dp| 0.057 (residual in lv/imb20/move_bps at 3-8 s offsets - a timing residual, not an input bug; the 0.4 s match agreed to 0.09 on lv only).
+- Verdicts still pending: 18 graded per variant, rule needs >= 100 (~6 more hours at this fire rate).
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
 |---|---|---|---|---|
-| A | 09-09 23:45 | v11.1 baseline: thr 0.75, guard off, perp-print aggregation fixed (port 8794) | control; its p should now match the runner's (pcmp) | 01:35: 9/14 +23.5 (14 fires); pcmp |dp| 0.047, same side 14/16 -> input fix confirmed |
-| B | 09-09 23:50 | A + slow-trend guard 9 candles / 20 bps (port 8795) | fewer against-lean losses; realised-fire retro +459 vs +296, v11 replay -111 -> undecided | 01:35: 7/14 -12.6 (14 fires) - behind A by 36 |
-| C | 09-09 23:50 | A + EV scale 1.0 (port 8796) | v10-like frequency; fewer early cheap fires, higher hit rate, lower PnL per retro | 01:35: 9/14 +31.8 (14 fires) - ahead of A by 8, same hit rate |
-| D | 09-09 23:50 | A + auto mode (accuracy lane in low vol) (port 8797) | earns in calm/chop hours where pnl mode bleeds | 01:35: 9/17 +6.1 (17 fires) - behind A by 17 |
-| Tokyo | 09-09 21:55 | original v11 live, $1 | execution quality + live edge | 01:35: 39 fills 0 failed, 24/15 (62%), +4.09 real (+40.9@$10) vs v10 paper +50.9 / -25.4 same window |
+| A | 09-09 23:45 | v11.1 baseline: thr 0.75, guard off, perp-print aggregation fixed (port 8794) | control; its p should now match the runner's (pcmp) | 02:07: 12/18 +39.3 (18 fires); pcmp |dp| 0.057, same side 18/21 -> input fix confirmed |
+| B | 09-09 23:50 | A + slow-trend guard 9 candles / 20 bps (port 8795) | fewer against-lean losses; realised-fire retro +459 vs +296, v11 replay -111 -> undecided | 02:07: 10/18 +3.7 (18 fires) - behind A by 36 |
+| C | 09-09 23:50 | A + EV scale 1.0 (port 8796) | v10-like frequency; fewer early cheap fires, higher hit rate, lower PnL per retro | 02:07: 12/18 +49.4 (18 fires) - ahead of A by 10, same hit rate |
+| D | 09-09 23:50 | A + auto mode (accuracy lane in low vol) (port 8797) | earns in calm/chop hours where pnl mode bleeds | 02:07: 12/21 +21.9 (21 fires) - behind A by 17 |
+| Tokyo | 09-09 21:55 | original v11 live, $1 | execution quality + live edge | 02:07: 44 fills 0 failed (6 retries), 27/16 (63%), +5.69 real (+56.9@$10) vs v10 paper +40.9 / -15.3 same window |
 Decision rule: a variant replaces the baseline setting only when, over the same candles, it is ahead on PnL at $10 AND not behind on hit rate after >= 100 graded fires, and the sign holds on both halves of its own run.
