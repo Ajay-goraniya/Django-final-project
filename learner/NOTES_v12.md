@@ -287,6 +287,11 @@ Old-version findings keep going to NOTES_v11.md.
 - User instruction 12:24: "keep ef only on and observe". EF -> ACTIVE at 12:24 (stake $1, EV scale 1.0, equity 16.74). REVERSAL and MAIN stay OFF, master ON.
 - The 18 capital floor (10:48) is suspended by this instruction: EF stays on through drawdown unless the user says otherwise. V observes and reports every check-in; the equity ladder still applies upward.
 
+## 12:28 UTC 09-10 - standing item: weekend / night decay (user report)
+- User: earlier models lost more toward weekends and at night. V's own real data (b10 09-08 18:05 -> 09-10 12:20, b11 09-09 21:10 -> now) covers Tue-Thu only, so the weekend claim cannot be tested here yet.
+- Night on this data is not negative: b10 night 00-08 33/64 +7.8@$10 vs eve 16-24 35/70 -24.1; b11 night 41/71 +36.8 vs day 08-16 22/50 -94.5. Thursday is the bad bucket so far (b10 22/50 -68.8; b11 63/121 -57.7), which matches the user's "toward the weekend" direction but is one day and one tape.
+- Plan: H1 Task 6 tests day-of-week on the longer real historical set; V accumulates live/paper buckets by UTC day and 8-h block at every check-in. A day/hour gate ships only if it is negative on both halves of the sample at >= 60 graded fires per bucket. Fri-Sun this week is the live test of the claim.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
