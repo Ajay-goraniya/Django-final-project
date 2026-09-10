@@ -59,3 +59,12 @@ Build (the tree):
 Deliver: analysis/h1/<date>_task7_candle_tree.md (+ code under analysis/h1/), updated every time you have a new result.
 State clearly what is a finding vs insufficient data. V merges at every check-in and can apply an engine-side gate on
 Tokyo once you and V agree it holds. Tasks 3-6 stay open; Task 7 is the priority after Task 6.
+
+### Task 7 correction (12:47 UTC, from the user): NO fixed time gate
+Reversals happen at any second. The 60 s / 190 s offsets above were only the typical fire times of the lanes
+(Tokyo real fires: EF 101/145 within the first 30 s, the rest spread to 240 s; REVERSAL fires 60-281 s, median 188 s).
+So: evaluate the tree CONTINUOUSLY - at every second (or at every crossing of the open plus every 5 s), for every
+t in 0..300: P(at least one more crossing before close | path up to t) and P(close > open | path up to t).
+The gate is then read at the ACTUAL fire second of each real fire, whatever it was, and the replay over real fires
+uses that value. Also report the time profile: at which t the tree becomes reliable (e.g. AUC by t), since a gate
+that only works late in the candle is useless for EF, which fires early. Do not build anything keyed to a fixed offset.
