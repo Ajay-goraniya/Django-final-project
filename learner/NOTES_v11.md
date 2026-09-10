@@ -520,3 +520,6 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 ## 05:55 UTC check-in (backup 05:55) - container healthy, uptime 32 min: the keepalive held through the idle gap (no reclaim); 13 GB free
 - Predict pnl 85/162 +59.5 (no fires 05:25-05:55); Poly pnl 108/208 +192.8 (1 open). Last hour pooled 0/0: dead tape for both v10 runs from 05:00.
 - Reclaim theory confirmed: with the background keepalive bash task running, the container survived a full 30-min idle gap for the first time since 03:38. Keep the keepalive alive across every check-in (it exits only on a crash, which is the wake we want).
+
+## 06:27 UTC check-in (backup 06:27) - container healthy, uptime 64 min (keepalive holding), 13 GB free
+- Predict pnl 88/165 +81.8; Poly pnl 110/210 +208.5 (1 open). Last hour pooled 5/5 +38: the 06:00 hour woke up (Predict 3/0, Poly 2/0). Fair window since 21:55: Predict 17/18 -18.3, Poly 18/24 -60.0.
