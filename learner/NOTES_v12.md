@@ -438,6 +438,12 @@ Old-version findings keep going to NOTES_v11.md.
 - Twins since 23:50 (pre-gap): A 95/181 52% -10.2; B 93/162 57% +134.5 (control); C 85/164 52% +17.1. Paired A vs C: +36.0, halves +3.3/+32.7.
 - Fair states since 21:55: v10 Predict.fun paper 45/45 -18.7@$10; v10 Polymarket paper 64/69 +37.6@$10; v11 live 112/94 +0.50 real (EF). No new H1 commits.
 
+## 19:04 UTC 09-10 check-in - quiet half hour
+- Tokyo: EF 113/96 (54%) -0.44 after 209 settled, REVERSAL -1.25, realised -1.69, wallet 22.76, equity 22.88, 214/214 filled. One EF fill in the last 30 min (settling). Build 11.2; 11.3 still awaiting deploy. Settings verified unchanged. Capped tally unchanged at 7 (6 wouldWIN / 1 wouldLOSE).
+- User's "buy the dip" claim tested at 18:58 on Tokyo's 198 fills vs the recorded Predict.fun ask path (before 240 s): our side dipped to <= 0.40 after the fire on 70% of fires and those won only 37%; <= 0.20 on 44% and won 21%; winners' median post-fire low 0.415 vs losers' 0.08. Non-dipping fires +27 at $1, dipping fires -26. A limit-buy at the dip loses less (0.40: -13.0 vs -39.4 actual on that subset; 0.20: +1.2) but does not create the 2-3x winners; a post-fire dip is mostly a losing candle. The late-cheap-entry bet is REVERSAL's, not EF's. Recorded so the question is not re-opened without new data.
+- Twins since 23:50 (all seven relaunched 18:35, feeds live): A 95/182 52% -20.2; B 93/163 57% +124.5 (control); C 86/166 52% +16.3. Paired A vs C: +45.2, halves +3.3/+41.9.
+- Fair states since 21:55: v10 Predict.fun paper 45/45 -18.7@$10; v10 Polymarket paper 64/71 +17.6@$10; v11 live 113/96 -0.44 real (EF). No new H1 commits.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
