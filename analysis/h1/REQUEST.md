@@ -68,3 +68,14 @@ t in 0..300: P(at least one more crossing before close | path up to t) and P(clo
 The gate is then read at the ACTUAL fire second of each real fire, whatever it was, and the replay over real fires
 uses that value. Also report the time profile: at which t the tree becomes reliable (e.g. AUC by t), since a gate
 that only works late in the candle is useless for EF, which fires early. Do not build anything keyed to a fixed offset.
+
+## Task 8 (added 15:55 UTC 09-10): does the path add anything CONDITIONAL on the engine's own features?
+Same fires as Task 7 (v10-runner 182 matched; add the v11 twins and Tokyo's fills once 09-10 klines exist).
+For each fire the engine stored its feature dict (twin DBs: ef_predictions.features.ef_v11_f - imb5/imb20, ofi15/ofi60,
+ret5/ret30/ret60, rv60, range_bps, lv, lv_x_sec, mv_x_sec, move_bps, basis_bps, _ask_up/_ask_dn ...; tokyo_orders.json
+has fewer fields). Fit, walk-forward / out-of-sample, both halves:
+  (a) engine features only -> P(correct) and P(flip before close);
+  (b) engine features + path features (side, distance from open, crossings, seconds since last crossing, range so far).
+Report AUC and log-loss for (a) vs (b), n per fit, and the same PnL-per-unit test as the stake modifier for (b) - (a).
+If (b) does not beat (a) out of sample on both halves, say so and Task 7 is closed as descriptive; the effort then goes
+to price/execution (ask deciles for EF: the 14:56 request), which is where every positive finding today has been.
