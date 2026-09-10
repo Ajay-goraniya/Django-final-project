@@ -505,3 +505,6 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 ## 03:45 UTC check-in (backup 03:45) - container feed outage 03:38-03:47, fixed; 13 GB free
 - Predict pnl 85/157 +109.5; Poly pnl 106/203 +195.8. Last hour pooled 1/9 -71 (03:00 hour was a loser for both v10 runs; Polymarket v10 is 14/22 in the fair window).
 - The session harness restarted at 03:38 and the container's outbound proxy moved to a new port; every container process kept the old one -> spot/perp/depth "Connection refused" for ~9 min (about two candles of paper data lost on the v10 runs and the twins). proxy_restart.sh relaunched all seven on the same databases at 03:46; feeds live within 60 s, masters OFF. Tokyo has its own network and was untouched (63/63 filled through the window).
+
+## 04:18 UTC check-in (backup 04:18) - container healthy (7 processes, relaunched 03:46), 13 GB free
+- Predict pnl 85/160 +79.5; Poly pnl 107/205 +185.8. Last hour pooled 1/9 -71. In the fair window since 21:55 both v10 paper runs are now negative (Predict 14/16 -20.5, Poly 14/24 -92.8); the 03:00-04:00 stretch was against both.
