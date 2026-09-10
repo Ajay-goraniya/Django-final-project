@@ -431,6 +431,13 @@ Old-version findings keep going to NOTES_v11.md.
 - Twins since 23:50: A 93/177 53% -3.5; B 91/158 58% +134.7 (control); C 83/160 52% +19.1. Paired A vs C at common asks: decision edge +40.0, halves +21.1/+18.9 (160 graded).
 - Fair states since 21:55: v10 Predict.fun paper 45/44 -8.7@$10; v10 Polymarket paper 64/67 +57.6@$10; v11 live 108/92 -1.26 real (EF). 7 processes. No new H1 commits.
 
+## 18:33 UTC 09-10 check-in - local twins lost their feeds for 14 min (harness restart), relaunched
+- Tokyo: EF 112/94 (54%) +0.50 after 206 settled, REVERSAL -1.25, realised -0.75, wallet 22.87, equity 23.57, 211/211 filled. EF since 14:25: 20/16 +4.15; sub-0.48 fills in that window 13 fills -0.77. Build still 11.2 (11.3 awaiting deploy). Settings verified unchanged.
+- Capped REVERSAL tally (signal-time cap): 7 capped = 6 wouldWIN / 1 wouldLOSE (~+2.4 forgone at $1); 2 leaks (both won). Rule unchanged: re-judge at 20 capped; if still clearly positive, raise the cap to 0.65 rather than drop it.
+- Container/harness restart at ~18:21: the VM did not reboot (uptime 13 h) and the b10 engine, v10 runner and collector kept running, but the four build11 twins were killed and relaunched by their run loops with the OLD proxy port -> "Connection refused" on the book and Polymarket feeds; no twin fires 18:15-18:35. Fixed 18:35 with proxy_restart.sh (all seven relaunched on the same DBs on the current proxy); verified: all four twins + b10 report book and Polymarket "live websocket". Keepalive loop re-created (threshold 7). The gap is small (~4 candles) and identical across the twins, so paired comparisons are unaffected.
+- Twins since 23:50 (pre-gap): A 95/181 52% -10.2; B 93/162 57% +134.5 (control); C 85/164 52% +17.1. Paired A vs C: +36.0, halves +3.3/+32.7.
+- Fair states since 21:55: v10 Predict.fun paper 45/45 -18.7@$10; v10 Polymarket paper 64/69 +37.6@$10; v11 live 112/94 +0.50 real (EF). No new H1 commits.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
