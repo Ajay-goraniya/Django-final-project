@@ -444,6 +444,16 @@ Old-version findings keep going to NOTES_v11.md.
 - Twins since 23:50 (all seven relaunched 18:35, feeds live): A 95/182 52% -20.2; B 93/163 57% +124.5 (control); C 86/166 52% +16.3. Paired A vs C: +45.2, halves +3.3/+41.9.
 - Fair states since 21:55: v10 Predict.fun paper 45/45 -18.7@$10; v10 Polymarket paper 64/71 +17.6@$10; v11 live 113/96 -0.44 real (EF). No new H1 commits.
 
+## 19:50 UTC 09-10 - build 11.4-autopilot: the engine manages itself (sections A-D of AUTOPILOT_11.4.md)
+- New module learner/btc_model_autopilot.py (must be deployed next to the engine). Rules, all persisted in the engine DB, all default OFF, switched via POST /api/controls/autopilot and read via GET /api/autopilot; every automatic change is logged to the autopilot_log table with its numbers:
+  - auto_arm: after a restart, once the execution preflight is ready (same read-only checks the dashboard's ON button runs) and 30 s have passed, master goes back ON; per-lane switches already persist.
+  - ladder: after every settlement, stake = $1 below $30 wallet, $2 at 30, +$1 per +10, hard cap 20 (engine never exceeds it); applied as a fixed stake so the existing "parked until positions settle" logic holds. Also a "ladder" stake mode in Trade Controls.
+  - rev_guard: REVERSAL OFF on first-6 <= 1/6, or avg fill > 3c worse than quote over 20, or PnL per $1 < -3.0 over 20 fills; automatic ON again when >= 30 graded shadow REVERSAL rows at quotes <= the cap since the kill are >= 60% right.
+  - ef_rolling: EF to shadow (lane OFF) when the last 20 settled EF are <= 8 wins; back ON after 30 min. No stop-loss: shadow-and-resume only.
+  - dial_verdict: every 100 graded refusals, the REVERSAL cap loosens +0.05 (max 0.70) or the EF floor -0.02 (min 0.40) only if the refused group made money on both halves at $1; otherwise kept. Same rule V used by hand today.
+- Tests: 5 pure-rule unit tests in the module; a fake-engine end-to-end run (arm once when ready, ladder 35 -> $2 and 29 -> $1, kill on 1/6, resume on 20/30, EF shadow on 8/20 and resume, cap verdict 0.60 -> 0.65 once) all pass; V112 tests pass; smoke instance on 8799: build string, default settings, POST validation, persistence, ladder stake mode accepted. auto_arm was NOT exercised on the smoke instance (it would have armed a real wallet); it is covered by the fake-engine test.
+- Deploy (3 files now): git pull && sudo cp learner/btc_model_build11.py learner/btc_model_v11.py learner/btc_model_autopilot.py /opt/v11/ && sudo systemctl restart v11. On deploy V applies: thr 1.0, cap 0.60, floor 0.48, trend 0; master ON; EF + REVERSAL ON, MAIN OFF; autopilot auto_arm/ladder/rev_guard/ef_rolling/dial_verdict ON. Not yet built: E (regime scaling, pending H1 Task 10) and the EV-scale notch rule; MAIN stays OFF pending H1 Task 9.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |

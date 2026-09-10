@@ -293,11 +293,12 @@ from typing import Any, Deque, Dict, Iterable, List, Optional, Tuple
 try:
     from btc_model_v10 import Model as _V10Model, FeatureState as _V10State
     from btc_model_v11 import PolyBook as _PolyBook, Calibration as _V11Calibration, decide_v11 as _decide_v11, ConversionWindow as _V11ConvWindow
+    from btc_model_autopilot import Autopilot as _Autopilot, ladder_stake as _ladder_stake
 except Exception as _exc:  # pragma: no cover
-    raise SystemExit("btc_model_v10.py, btc_model_v11.py, model_v10.json and v11_calibration.json must sit next to this file: %r" % (_exc,))
+    raise SystemExit("btc_model_v10.py, btc_model_v11.py, btc_model_autopilot.py, model_v10.json and v11_calibration.json must sit next to this file: %r" % (_exc,))
 
 VERSION = "11"
-BUILD_REVISION = "11.3-ef-ask-floor"
+BUILD_REVISION = "11.4-autopilot"
 BUILD_NUMBER = 11
 DATABASE_NAMESPACE_KEY = "model_storage_namespace"
 DATABASE_NAMESPACE = "btc-model-v9.1.1-r6.6-selective-adaptive-ef"
@@ -923,7 +924,8 @@ DEFAULT_BAN_RULES = (
 STAKE_MODE_FIXED = "fixed"
 STAKE_MODE_PERCENT = "percent"
 STAKE_MODE_STREAK = "streak"
-STAKE_MODES = (STAKE_MODE_FIXED, STAKE_MODE_PERCENT, STAKE_MODE_STREAK)
+STAKE_MODE_LADDER = "ladder"   # v11.4: $1 below $30 wallet, $2 at 30, +$1 per +10, hard cap 20
+STAKE_MODES = (STAKE_MODE_FIXED, STAKE_MODE_PERCENT, STAKE_MODE_STREAK, STAKE_MODE_LADDER)
 
 # Planned default: $10 flat, held between resets, recalculated to 10% of free
 # capital after 3 consecutive wins or 2 consecutive losses, capped at $50.
@@ -3714,6 +3716,8 @@ def configured_stake(config: Dict[str, Any], balance: float) -> float:
         stake = float(config.get("fixed_stake", MIN_STAKE_USD))
     elif mode == STAKE_MODE_PERCENT:
         stake = float(balance) * float(config.get("percent", 10.0)) / 100.0
+    elif mode == STAKE_MODE_LADDER:
+        stake = _ladder_stake(balance, minimum, maximum)
     else:
         stake = float(config.get("current_stake", MIN_STAKE_USD))
     return round(max(minimum, min(maximum, stake)), 2)
@@ -14651,6 +14655,13 @@ class Engine:
         # v11.2: the executor re-quotes every attempt, so it enforces the REVERSAL entry cap
         # on the attempt's own price; it reads the live dial through this back-reference.
         self.executor.engine = self
+        # v11.4 autopilot: arms after restarts, sizes by the equity ladder, kills/resumes lanes,
+        # shadows EF on a bad rolling window and re-judges the price dials. All rules default OFF.
+        try:
+            self.autopilot = _Autopilot(self)
+        except Exception as problem:  # pragma: no cover
+            self.autopilot = None
+            self.record_error(f"autopilot init: {problem}")
         # R6: no executor PRICE_LIMIT callback/re-arm lifecycle. EF remains the
         # same signal while its hot container waits for VWAP confirmation/retry.
         self.main_streak_dir = ""
@@ -14801,6 +14812,9 @@ class Engine:
                     self.controls.state_x.note_settled_result(bool(won))
                 except Exception as problem:
                     self.record_error(f"recovered stake streak: {problem}")
+                ap = getattr(self, "autopilot", None)
+                if ap is not None:
+                    ap.on_settled(kind, bool(won))
             pending.discard(candle_id)
             recovered = True
         if recovered:
@@ -15388,6 +15402,9 @@ class Engine:
                 self.controls.state_x.note_settled_result(bool(won))
             except Exception as problem:
                 self.record_error(f"stake streak: {problem}")
+            ap = getattr(self, "autopilot", None)
+            if ap is not None:
+                ap.on_settled(kind, bool(won))
         progress = self.ef_post_progress
         if progress and int(progress.get("candle_id", -1)) == candle_id:
             crossed = bool(progress.get("crossed_open"))
@@ -17937,6 +17954,9 @@ class Engine:
                     self.apply_v11_settings(saved, persist=False)
             except Exception as problem:
                 self.record_error(f"v11 settings load: {problem}")
+        ap = getattr(self, "autopilot", None)
+        if ap is not None:
+            ap.tick()
         evidence = dict(self.ef_metrics or {})
         # --- Predict.fun quote (execution venue): must be THIS candle's market
         try:
@@ -19059,7 +19079,7 @@ CONTROLS_HTML = r"""<!doctype html>
 
 <section class="card"><div class="label">Shared staking · all three signals</div><div class="row"><div><div id="nextStake" class="big">--</div><div class="small">one current stake and one combined streak</div></div><div id="streak" class="small"></div></div>
 <div class="formGrid">
-<div><label>Mode</label><select id="mode"><option value="fixed">fixed</option><option value="percent">percent</option><option value="streak">streak</option></select></div>
+<div><label>Mode</label><select id="mode"><option value="fixed">fixed</option><option value="percent">percent</option><option value="streak">streak</option><option value="ladder">ladder</option></select></div>
 <div><label>Fixed stake $</label><input id="fixed_stake" type="number" min="1" step="0.01"></div>
 <div><label>% free capital</label><input id="percent" type="number" min="0.01" step="0.01"></div>
 <div><label>Current stake $</label><input id="current_stake" type="number" min="1" step="0.01"></div>
@@ -19902,6 +19922,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._send_bytes(200, "text/html; charset=utf-8", page.encode("utf-8"))
         elif path == "/api/state":
             self._send_json(self.server.engine.live_snapshot())
+        elif path == "/api/autopilot":
+            ap = getattr(self.server.engine, "autopilot", None)
+            self._send_json(ap.snapshot() if ap is not None else {"error": "autopilot unavailable"})
         elif path == "/api/ef-telemetry":
             # Build 34: shadow-only EF decision telemetry (episodes, latency, quotes).
             query = self.path.split("?", 1)[1] if "?" in self.path else ""
@@ -20080,6 +20103,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 if not outcome.get("ok"):
                     self._send_json(outcome)
                     return
+                ap = getattr(self.server.engine, "autopilot", None)
+                if ap is not None:
+                    try:
+                        ap.on_lane_toggle(str(kind).upper(), bool(manual_value))
+                    except Exception:
+                        pass
                 self._send_json({
                     "ok": True,
                     "result": outcome,
@@ -20105,6 +20134,19 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     self._send_json(outcome)
                     return
                 self._send_json({"ok": True, "result": outcome, "state": controls.snapshot()})
+            elif path == "/api/controls/autopilot":
+                if payload.get("confirmed") is not True:
+                    self._send_json({"ok": False, "error": "Changes must be confirmed before applying."})
+                    return
+                ap = getattr(self.server.engine, "autopilot", None)
+                if ap is None:
+                    self._send_json({"ok": False, "error": "autopilot unavailable"})
+                    return
+                outcome = ap.apply_settings(payload.get("autopilot") or {})
+                if not outcome.get("ok"):
+                    self._send_json(outcome)
+                    return
+                self._send_json({"ok": True, "result": outcome, "autopilot": ap.snapshot()})
             elif path == "/api/controls/state-x":
                 if payload.get("confirmed") is not True:
                     self._send_json({
