@@ -551,3 +551,6 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 
 ## 11:19 UTC check-in (backup 11:19) - container healthy (6 processes), uptime 5 h 56 min, 13 GB free
 - Predict pnl 98/186 +59.9; Poly pnl 126/240 +193.5 (1 open). Last hour pooled 2/12 -60: the 10:15-11:15 hour is the worst of the whole record for both v10 paper runs. Fair window since 21:55: Predict 27/29 -40.1, Poly 30/42 -75.1.
+
+## 11:53 UTC check-in (backup 11:53) - container healthy (6 processes), uptime 6 h 30 min, 13 GB free
+- Predict pnl 99/188 +56.9; Poly pnl 128/244 +217.7. Last hour pooled 6/11 +18 (tape steadier from 11:00). Fair window since 21:55: Predict 28/30 -43.1, Poly 34/43 -50.9.
