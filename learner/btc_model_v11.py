@@ -268,7 +268,7 @@ def decide_v11(model, f: Dict[str, Any], pred_quote: Dict[str, Any], *, mode: st
                thr_scale: float = 1.0, min_notional: float = 10.0, calib: Optional[Calibration] = None,
                acc_conf: float = 0.75, acc_margin: float = 0.05, conv_ok: bool = True,
                conv_gate: str = "accuracy", trend_bps: Optional[float] = None,
-               trend_guard_bps: float = 0.0) -> Dict[str, Any]:
+               trend_guard_bps: float = 0.0, ef_min_ask: float = 0.0) -> Dict[str, Any]:
     """f: v10 feature dict (venue features already injected from the signal book).
     pred_quote: {'ask_up','size_up','ask_dn','size_dn','fee_rate'} from PREDICT.FUN.
     Every price used here is Predict.fun's; Polymarket only shaped f."""
@@ -297,6 +297,11 @@ def decide_v11(model, f: Dict[str, Any], pred_quote: Dict[str, Any], *, mode: st
     fee = 0.02 if fee is None else float(fee)
     if not (isinstance(ask, (int, float)) and math.isfinite(ask) and 0.0 < ask < 1.0):
         return dict(base, p=ps_c, fire=False, reason="no Predict.fun ask for that side")
+    # EF ask floor (v11.3, OFF by default): EF earns on the fires the book already prices up and
+    # loses on the cheap ones (09-10: fills below 0.48 were 37% right, -0.19 per $1 on Tokyo, and
+    # negative in both halves on twins A, B, C and the v10 runner). Opposite of REVERSAL's cap.
+    if ef_min_ask > 0 and float(ask) < float(ef_min_ask):
+        return dict(base, p=ps_c, fire=False, reason=f"ask {float(ask):.2f} below EF floor {float(ef_min_ask):.2f}")
     if size * ask < min_notional:
         return dict(base, p=ps_c, ask=ask, size=size, fire=False,
                     reason=f"Predict.fun size within 2c of ask ${size * ask:.0f} < ${min_notional:.0f}")
