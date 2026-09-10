@@ -79,3 +79,17 @@ has fewer fields). Fit, walk-forward / out-of-sample, both halves:
 Report AUC and log-loss for (a) vs (b), n per fit, and the same PnL-per-unit test as the stake modifier for (b) - (a).
 If (b) does not beat (a) out of sample on both halves, say so and Task 7 is closed as descriptive; the effort then goes
 to price/execution (ask deciles for EF: the 14:56 request), which is where every positive finding today has been.
+
+## Task 9 (added 19:22 UTC 09-10, PRIORITY): MAIN lane - is there a price at which it pays?
+MAIN is 72-74% right on its shadow record but buys at ~0.75 and loses (break-even ask at 74% with the 2% fee = 0.725).
+Data: Tokyo /api/orders?kind=MAIN rows are in learner/live_backup/tokyo_orders.json (status F "manually OFF" with
+quoted_price, candle_id, direction; grade them with the candles table in build11.sqlite3.gz or your klines); the b10
+snapshots (learner/live_backup/predict_pnl.sqlite3.gz etc.) carry the older MAIN record. Full sweep of a MAIN max-entry
+cap (0.50..0.80 by 0.05): kept n, hit, PnL at $1, both halves; plus by fire second. Answer: the cap value (if any) at
+which MAIN is positive on both halves with >= 100 kept, or "no such price".
+
+## Task 10: regime scaling premise (for AUTOPILOT_11.4.md section E)
+On the 252-day klines: does scaling the EV threshold by realised range (last 12 candles vs trailing 24-h median) change
+early-direction accuracy conditional on the ask proxy (|distance|)? I.e. at the same |distance| band, are low-range
+regimes more or less accurate than high-range ones, both halves. Then on the fire data: PnL per fire by regime bucket.
+Read learner/AUTOPILOT_11.4.md first; review sections C and D thresholds against the fire record and push comments.

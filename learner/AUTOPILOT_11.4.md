@@ -1,0 +1,53 @@
+# Build 11.4 "autopilot" - the engine manages itself (spec, 19:20 UTC 09-10)
+
+Goal (user, 19:15): the model must run 24/7 with MAIN + REVERSAL + EF together and handle, on its own, what V has been
+handling by hand today: arming after restarts, stake sizing, lane kill/resume, dial verdicts, loss streaks, regime shifts.
+No human, no agent required for it to keep working. Everything below is engine-side, persisted, and testable.
+
+## A. Startup
+- `auto_arm` (Trade Controls, default OFF for safety; ON on Tokyo): after the preflight (auth + approvals + book live)
+  passes, restore master and the per-lane switches to their last persisted state instead of "OFF - safe startup".
+  Persisted v11 settings already reload; this closes the last manual step after a crash/reboot.
+
+## B. Stake ladder (engine)
+- New stake mode `ladder`: stake = f(equity): $1 below 30, $2 at >= 30, $3 at >= 40, +$1 per +10 above, capped by
+  max_stake (20 hard cap, never raised by the engine); steps down when equity falls below a rung. Re-evaluated at every
+  settlement; changes apply at the next fire (existing "parked until open positions settle" logic stays).
+
+## C. Lane autopilot (engine evaluates after every settlement of that lane; all thresholds are settings)
+- REVERSAL: OFF if first 6 live fills <= 1/5, or avg fill worse than quote by > 3c over 20 fills, or after >= 20 fills
+  real PnL < 0 and > 3.0 (at $1) under the shadow record over the same fires. RESUME automatically when the shadow
+  record for the lane over the next 30 candles is >= 60% right at asks <= rev_max_entry.
+- MAIN: stays OFF until its own entry cap exists (H1 Task 9 decides the cap from the shadow record: 72-74% right but
+  bought at ~0.75 = negative EV; the break-even ask at 74% with a 2% fee is 0.725). Same kill/resume rules as REVERSAL.
+- EF: `ef_min_ask` floor (11.3) stays; loss handling = the existing State X (2 consecutive losses -> 15 min shadow)
+  extended with a rolling rule: if the last 20 settled EF fires are <= 8 wins, shadow EF for 30 min, resume on 5 shadow
+  wins of the next 8. No hard stop-loss (user rule), only shadow-and-resume.
+
+## D. Dial self-verdicts (the ledger logic moves into the engine)
+- For every price dial (EF floor, REVERSAL cap, MAIN cap) the engine already records the refused fires with their quote;
+  outcomes are known at candle close. Every 100 refusals it computes the refused group's PnL at $1 on both halves:
+  if positive on both halves the dial is loosened one notch (floor -0.02 / cap +0.05); if negative on both halves it is
+  kept; otherwise unchanged. Bounded to [0.40, 0.55] for the floor and [0.50, 0.70] for the caps. Logged to notes table.
+- EV scale: every 150 graded EF fires compare realised PnL per unit at the current scale with the paper decision at the
+  neighbouring scales (0.75 / 1.0 / 1.25 are all computable from the stored decision log) and move one notch only if the
+  neighbour is ahead on both halves. Bounded [0.75, 1.5].
+
+## E. Regime handling
+- Weekend/low-range regime (H1 252-day result: half the range, a third fewer crossings, same accuracy): scale
+  `min_notional` and the EV threshold by realised range of the last 12 candles vs the trailing 24-h median so a 7 bps tape
+  is not traded with 14 bps thresholds. Setting `regime_scale` default ON on Tokyo, OFF elsewhere until the twins confirm.
+
+## F. Reporting
+- `/api/autopilot` returns every rule's state, last decision, counters; every automatic change is written to the
+  engine's notes table with reason and numbers so a human can audit it later without V.
+
+## Tests
+- Unit tests for each rule on synthetic control-row histories (no market data needed), plus the existing 5 in
+  V112ReversalEntryCapTests. Paper twin "AP" runs the autopilot beside C for 24 h before Tokyo takes it (except A + B,
+  which are pure safety/ops and go live at deploy).
+
+## Split
+- V: A, B, C, D, F and the tests, in that order, as builds 11.4.x.
+- H1: Task 9 (MAIN cap from the shadow record), Task 10 (E: regime scaling premise on the 252-day klines and the fire
+  data), and review of every rule's thresholds against the fire record before V ships them.
