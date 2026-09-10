@@ -67,3 +67,7 @@ so a rule that stops working in a regime is turned off there automatically.
 | EF ask floor 0.48 | ON except when trailing-12-candle range > 76.4 bps OR flips in the last 6 candles >= 4 | skipped group profitable both halves in Q4 (n=42, +0.250) and 4+ flips (n=56, +0.296); negative elsewhere | v12 rule |
 | REVERSAL cap | none (cap removed 21:25; capital not binding at $1) | skipped group 77% +0.134/fire both halves on 108 | closed |
 | REVERSAL lane | none; watch the 08-16 UTC block | +0.429/fire both halves on 255; 08-16 block -0.002 mixed | unconditional |
+
+Regime logging rule (H1, 21:26): the trailing-12-candle range Q4 (> 76.4 bps) cell is logged separately for EVERY rule at
+every check-in and by the engine's per-cell self-verdict - fast tape is the one regime signal that has appeared twice today
+from independent directions (J weakens there; the EF floor's skipped fires turn profitable there).
