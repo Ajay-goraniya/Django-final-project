@@ -516,3 +516,7 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 ## 05:24 UTC check-in - container VM rebooted AGAIN (uptime 0 min at 05:23), all seven relaunched 05:24; 13 GB free
 - Predict pnl 85/162 +59.5; Poly pnl 108/207 +192.8 (no new fires while down). Fair window since 21:55: Predict 14/18 -40.5, Poly 16/24 -75.7.
 - Root cause of the reboots: the session container is reclaimed when the session is idle ~30 min and re-provisioned on the next wake (disk persists, processes do not). It did not happen before 03:38 because a background crash-detector task was running the whole night and counted as activity; the harness restart at 03:38 killed it, and the replacements I armed timed out after 30 min -> reboots at 04:50 and 05:23 exactly at the next wake. Fix: a background bash keepalive (60-s process check, exits only on a crash) started 05:25; if the container still reboots at 05:55 the keepalive theory is wrong and the paper runs need another home.
+
+## 05:55 UTC check-in (backup 05:55) - container healthy, uptime 32 min: the keepalive held through the idle gap (no reclaim); 13 GB free
+- Predict pnl 85/162 +59.5 (no fires 05:25-05:55); Poly pnl 108/208 +192.8 (1 open). Last hour pooled 0/0: dead tape for both v10 runs from 05:00.
+- Reclaim theory confirmed: with the background keepalive bash task running, the container survived a full 30-min idle gap for the first time since 03:38. Keep the keepalive alive across every check-in (it exits only on a crash, which is the wake we want).
