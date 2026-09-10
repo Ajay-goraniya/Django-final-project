@@ -242,12 +242,20 @@ Old-version findings keep going to NOTES_v11.md.
 - VERDICT D (auto mode): FAIL at 102 graded - 54/102 -33.2 vs A 55/100 +3.4, lower hit rate, and it lost in the chop it was meant to earn in. Stopped 10:50 (relaunch loop 879 + engine 885 killed by PID; removed from restart_all.sh; DB kept). Process count is now 6.
 - A at 100 graded: 55/100 +3.4 (58% -> 55% and +100 -> +3 in one hour). B 48/87 +19.6, C 49/91 +28.8 - both ahead of A on PnL; C's hit rate 54% vs A's 55%. Their verdicts at 100 graded. pcmp A-vs-runner: 99 matches, same side 80/99, mean |dp| 0.068.
 
+### 11:19 UTC - v11 LIVE Tokyo: 140 orders, 140 filled, 0 failed; 74/65 (53%), realized -7.74, wallet 17.50, equity 18.9 (1 open), stake $1
+- Fair window since 21:55: v11 live 74/65 -77.4@$10-equiv | Predict.fun v10 27/29 -40.1 | Polymarket v10 30/42 -75.1. EF 11.1 phase since 08:30: 14/16, real -7.99; twin A same window 14/18 -69.5@$10 paper (identical shape). Tokyo 2/4 in the last half hour; 4/17 since 09:45.
+- Capital floor: equity 18.92, 92c above the 18.00 floor. One more $1 loss trips the EF pause; twin A's last 10 graded are 4 wins (resume needs 6), so a pause would hold until the tape turns. Rule kept as written, not pre-empted.
+- REVERSAL: 58 min live, no order and no shadow signal either (0 rows of any kind since 10:20) - the lane has simply not triggered; not an execution issue.
+- Execution: mean slip +0.43c over 140, worst +5c, zero failures, unexplained +0.65 unchanged.
+- Twins (~106 graded): A 57/106 -20.2 | B guard 50/93 -0.1 | C thr 1.0 (see ledger). pcmp A-vs-runner: 105 matches, same side 86/105, mean |dp| 0.066.
+- H1 (helper session) briefed via learner/H1_BRIEF.md and a routine-delivered message at 11:14: tasks = independent REVERSAL re-derivation and a both-halves time-of-day / volatility gate study for EF. Nothing merged yet.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
 |---|---|---|---|---|
-| A | 09-09 23:45 | v11.1 baseline: thr 0.75, guard off, perp-print aggregation fixed (port 8794) | control; its p should now match the runner's (pcmp) | 10:48: 55/100 +3.4 (100 fires); pcmp |dp| 0.068, same side 80/99 -> input fix confirmed; control stays |
-| B | 09-09 23:50 | A + slow-trend guard 9 candles / 20 bps (port 8795) | fewer against-lean losses; realised-fire retro +459 vs +296, v11 replay -111 -> undecided | 10:48: 48/87 +19.6 (87 fires) - ahead of A by 16, same hit rate 55%, 13 fewer fires; verdict at 100 |
+| A | 09-09 23:45 | v11.1 baseline: thr 0.75, guard off, perp-print aggregation fixed (port 8794) | control; its p should now match the runner's (pcmp) | 11:19: 57/106 -20.2 (106 fires); pcmp |dp| 0.066, same side 86/105 -> input fix confirmed; control stays |
+| B | 09-09 23:50 | A + slow-trend guard 9 candles / 20 bps (port 8795) | fewer against-lean losses; realised-fire retro +459 vs +296, v11 replay -111 -> undecided | 11:19: 50/93 -0.1 (93 fires) - ahead of A by 20, same hit rate 54%, 13 fewer fires; verdict at 100 |
 | C | 09-09 23:50 | A + EV scale 1.0 (port 8796) | v10-like frequency; fewer early cheap fires, higher hit rate, lower PnL per retro | 10:48: 49/91 +28.8 (91 fires) - ahead of A by 25, hit rate 54% vs 55%; verdict at 100 |
 | D | 09-09 23:50 | A + auto mode (accuracy lane in low vol) (port 8797) | earns in calm/chop hours where pnl mode bleeds | VERDICT 10:50: FAIL at 102 graded - 54/102 -33.2 vs A +3.4, hit rate 53%; STOPPED (DB kept) |
 | Tokyo | 09-09 21:55 | v11 live: raw-input build until 08:30 09-10, then 11.1-perp-agg-fix; EF + REVERSAL (since 10:21); equity ladder, $1 | execution quality + live edge; from 08:30 the live test of the input fix | raw phase final: 110 fills 0 failed, 61/49 (55%), +0.69 real; 11.1 EF phase 10:48: 11/12 -5.97 real vs twin A 11/14 -50.1@$10 same window; REVERSAL live: no fire yet |
