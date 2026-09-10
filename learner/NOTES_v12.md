@@ -444,7 +444,7 @@ Old-version findings keep going to NOTES_v11.md.
 - Twins since 23:50 (all seven relaunched 18:35, feeds live): A 95/182 52% -20.2; B 93/163 57% +124.5 (control); C 86/166 52% +16.3. Paired A vs C: +45.2, halves +3.3/+41.9.
 - Fair states since 21:55: v10 Predict.fun paper 45/45 -18.7@$10; v10 Polymarket paper 64/71 +17.6@$10; v11 live 113/96 -0.44 real (EF). No new H1 commits.
 
-## 19:50 UTC 09-10 - build 11.4-autopilot: the engine manages itself (sections A-D of AUTOPILOT_11.4.md)
+## 19:19 UTC 09-10 - build 11.4-autopilot: the engine manages itself (sections A-D of AUTOPILOT_11.4.md)
 - New module learner/btc_model_autopilot.py (must be deployed next to the engine). Rules, all persisted in the engine DB, all default OFF, switched via POST /api/controls/autopilot and read via GET /api/autopilot; every automatic change is logged to the autopilot_log table with its numbers:
   - auto_arm: after a restart, once the execution preflight is ready (same read-only checks the dashboard's ON button runs) and 30 s have passed, master goes back ON; per-lane switches already persist.
   - ladder: after every settlement, stake = $1 below $30 wallet, $2 at 30, +$1 per +10, hard cap 20 (engine never exceeds it); applied as a fixed stake so the existing "parked until positions settle" logic holds. Also a "ladder" stake mode in Trade Controls.
