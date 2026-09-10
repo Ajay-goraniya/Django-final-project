@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-10 22:25 UTC. Update this file at the end of every check.
+Last updated: 2026-09-10 23:12 UTC. Update this file at the end of every check.
 
 ## Standing user rules (binding)
 - **No gates.** No on/off gates, stake modifiers, or threshold sweeps on a score already known to be
@@ -28,6 +28,7 @@ Never touch Tokyo, V's containers or the DBs. Never handle secret values.
 | Task 11.1 confidence score | **OOS AUC 0.4746, below random.** Frequency dial runs backwards. **Retracts my "+33% per unit" claim** (real only for the v10 runner, 0.5644; does not transfer to v11 twins, 0.479/0.539). Never cite it again |
 | trend guard | premise refuted on 20,308 candles; reverted on Tokyo 14:25 |
 | hour-of-day / weekend decay | refuted on 252 days; my weekend claim withdrawn |
+| **venue's OWN quote path as a direction model (Task 12a)** | **negative in 16 of 16 cells** (8 decision seconds x liquidity floor on/off), both halves. Dead. Do not queue 12b/c on it |
 
 ## LIVE CANDIDATE J — the one thing that works
 Second EF entry at t≈120 s, **same side as the first fire**, only if that side's ask is still ≤0.60.
@@ -64,12 +65,34 @@ Second EF entry at t≈120 s, **same side as the first fire**, only if that side
 - **EF2 (J) shadow on the live book:** 8 graded, 62% hit, +0.074/fire (cap 0.60: 5 graded, 60%,
   +0.105). Far too small to read; verdict at ≥100.
 
+## Task 12a — the direction model, done 23:10 (the user's "trained brain")
+Ran on `venues.sqlite3`: 640 graded candles, 60 quote samples each, 54.7 h. Walk-forward, full
+grid over 8 decision seconds, raw asks, liquidity floor tested, both halves.
+- **The venue's own quote path is DEAD** — negative at every decision second, both halves, floor on
+  or off. Avenue closed (see CLOSED table).
+- **All of the edge is the cross-venue Predict/Polymarket spread.** `level + cross` positive in
+  BOTH halves at all 8 seconds; dropping `cross` kills it; `level+cross` ~= `everything`.
+- **The edge is ~6 cents wide** (median |poly-predict| traded = 0.062), so it is an EXECUTION
+  problem, not a modelling problem. At a +10c haircut only **t=210 and t=240** survive
+  (+0.164, +0.191). Everything earlier goes to ~zero.
+- Notable: t=210/240 is exactly where **candidate J failed**. Different rule, so no conflict —
+  the late window may be live for the spread rule though dead for J.
+- **Process note:** my first pass printed +0.2..+0.6/fire and I did not report it. The market is
+  well calibrated (gaps +/-0.03), so that had to be an artifact. My first control was ALSO wrong —
+  shuffling labels destroys the market's calibration too, so longshots "win" at the base rate and
+  it printed +4.34/fire. Correct control = permute the model's predictions, keep outcome<->price
+  paired: permuted draws lose money, real model beat 30/30 draws at every second.
+- **Limits:** 640 candles / one regime, vs 20k-72k in my other studies. No Task 13 grid yet.
+  Apply J's 2.5x recorded->live haircut to every number.
+- Report: `2026-09-10_2310_task12a_direction_model.md`. Repro: `venue_path_model.py`,
+  `venue_path_ablate.py`.
+
 ## OPEN, in priority order
 1. **The 00:00 UTC kline job (below)** — everything else of substance is gated on it.
 2. **Task 11.2 / 12a** — retrain the forecaster / learned tree as the DIRECTION model (not a gate on
    it), walk-forward, versus the current model's own calls on the same candles.
-3. **Task 12b/c/d** — tree as timing model for the later entry and REVERSAL; per-second state machine
-   scored on PnL through recorded ask paths; base rates as a live dashboard number.
+3. **Task 12b/c/d** — ONLY as a timing model for the later entry and REVERSAL. **Not over the
+   venue's own quote path** (12a killed that). Base rates as a live dashboard number still stands.
 4. **Tasks 9 (MAIN cap) and 10 (regime scaling)** — LAST, both price/threshold studies.
 - **Do NOT** start a third-entry or continuous "add while the market disagrees" rule without a steer.
 
@@ -84,9 +107,10 @@ rather than looping.
 ## The constraint any new direction model must beat
 Measured three ways on 09-10: the path does not beat the ask; path features added to engine features
 make prediction worse; engine features alone carry no usable ranking on the v11 path. **A better
-model over the same inputs will not work.** New information only — the venue's per-second quote path
-(which is what made J work), deeper book state than imb5/imb20, trade-flow aggression, cross-venue
-lead/lag.
+model over the same inputs will not work.** New information only. Of the four channels listed here,
+**Task 12a has now tested two**: the venue's per-second quote path as a DIRECTION model is dead
+(it is what made J work as a TIMING rule, but it does not call direction); cross-venue lead/lag is
+the one that works, at ~6 cents. Untested: deeper book state than imb5/imb20, trade-flow aggression.
 
 ## Scratch assets
 `scratchpad/build/paths.npz` — 252 days of Binance spot 1s klines, 72,576 five-minute candles
