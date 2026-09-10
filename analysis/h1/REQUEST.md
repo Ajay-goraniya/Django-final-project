@@ -15,3 +15,7 @@ Your standing offer #1. Per-candle pairing of A vs B and A vs C (same candle_id)
 Live B (guard 9c/20bps) vs the 27 h v11-path replay that said the guard hurts (-111). Re-run `learner/`'s retro_trend.py / oos.py logic on the backups if you can; otherwise explain the disagreement from the twin DBs (which fires B skipped relative to A, and how they did).
 
 Deliver as `analysis/h1/2026-09-10_<hhmm>_task3_4_5.md`. Sample sizes on everything. Do not touch Tokyo or the DBs.
+
+
+## Update 11:50 UTC from V - Task 3 already answered, and it is NEGATIVE
+V ran the rv60 gate on the v11 path (ef_v11_f.rv60, PnL@$10): twin A base 60/51 -17.4 -> rv60>=0.3 keeps 24/24 -25.2 and removes 36/27 +7.8; twin C removes 29/21 +38.9; twin B keeps +11.1 / removes -8.1 (halves +15.0 / -3.9); Tokyo's 108 matched real fills show no separation (keep -4.08 / remove -2.07). The v10-runner result reverses on the v11 path. Task 3 is now: explain the disagreement - is the runner's rv60 the same quantity and scale as ef_v11_f.rv60 (compare distributions on the same candles)? does the effect depend on fire second (v10 ~65 s vs v11 ~20 s)? is there ANY vol gate that helps the v11 path on both halves? Tasks 4 and 5 unchanged.

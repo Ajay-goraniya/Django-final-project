@@ -260,6 +260,12 @@ Old-version findings keep going to NOTES_v11.md.
 - Book depth at REVERSAL fire (twin A, 31 fires): median 30 units, p25 15.6, spread 1c. Fine at $1-2; at higher rungs the REVERSAL stake should be capped separately (engine has one shared stake; noted for when the ladder passes $3).
 - Housekeeping from H1: build11.sqlite3.gz is the container twin (shadow), not Tokyo's record; Tokyo's real orders are now exported at each check-in to learner/live_backup/tokyo_orders.json (ids stripped). Twin B/C/D DBs now backed up too.
 
+### 11:50 UTC - rv60 gate tested on the v11 path: DOES NOT HOLD (own check, features key ef_v11_f.rv60, PnL@$10)
+- twin A (111 fires, base 60/51 -17.4): rv60 >= 0.3 keeps 48 fires 24/24 -25.2 and REMOVES 36/27 +7.8 - the low-vol fires are the winners here; >= 0.2 removes +12.1; >= 0.4 keeps +3.5 but the second half is -20.9.
+- twin C (97): >= 0.3 removes 29/21 +38.9 (keeps -29.8). twin B (94): >= 0.3 keeps +11.1 / removes -8.1, halves +15.0 / -3.9 - mildly positive, alone.
+- Tokyo's 108 matched real fills: >= 0.3 keeps -4.08, removes -2.07; no separation at any threshold.
+- Verdict: H1's rv60 >= 0.3 result is real on the v10 runner (fires at ~65 s) and reverses on the v11 path (fires at ~20 s): early cheap entries in low-vol tape are where v11 earns, exactly the fires the gate would cut. Candidate E is REFUTED for v11; H1's Task 3 is redirected to explaining the disagreement (is the runner's rv60 the same quantity and scale as ef_v11_f.rv60?).
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
@@ -269,6 +275,6 @@ Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is 
 | C | 09-09 23:50 | A + EV scale 1.0 (port 8796) | v10-like frequency; fewer early cheap fires, higher hit rate, lower PnL per retro | 11:19: 51/97 +9.0 (97 fires) - ahead of A by 29, hit rate 53% vs 54%; verdict at 100 |
 | D | 09-09 23:50 | A + auto mode (accuracy lane in low vol) (port 8797) | earns in calm/chop hours where pnl mode bleeds | VERDICT 10:50: FAIL at 102 graded - 54/102 -33.2 vs A +3.4, hit rate 53%; STOPPED (DB kept) |
 | Tokyo | 09-09 21:55 | v11 live: raw-input build until 08:30 09-10, then 11.1-perp-agg-fix; EF + REVERSAL (since 10:21); equity ladder, $1 | execution quality + live edge; from 08:30 the live test of the input fix | raw phase final: 110 fills 0 failed, 61/49 (55%), +0.69 real; 11.1 EF phase 10:48: 11/12 -5.97 real vs twin A 11/14 -50.1@$10 same window; REVERSAL live: no fire yet |
-| E (candidate) | - | A + realised-vol gate on EF (skip when rv60-equivalent < 0.3) | H1 Task 2b: on the v10 runner 57% +28.4 vs 51% +19.7, both halves up; must hold on the v11 path first (H1 Task 3) | not started - awaiting the v11-path test |
+| E (candidate) | - | A + realised-vol gate on EF (skip when rv60 < 0.3) | H1 Task 2b: on the v10 runner 57% +28.4 vs 51% +19.7, both halves up | REFUTED on the v11 path 11:50: twin A removes +7.8 of winners, twin C removes +38.9, Tokyo no separation; not started, not shipping |
 | F (candidate) | - | REVERSAL entry cap 0.60 | H1 Task 1: keeps 68/110 fires, 72% +46.2 vs 69% +43.6, both halves up | needs a per-lane max-entry setting in the engine; not started |
 Decision rule: a variant replaces the baseline setting only when, over the same candles, it is ahead on PnL at $10 AND not behind on hit rate after >= 100 graded fires, and the sign holds on both halves of its own run.
