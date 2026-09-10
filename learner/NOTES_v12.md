@@ -386,6 +386,12 @@ Old-version findings keep going to NOTES_v11.md.
 - Descriptive half stands on 72,331 candles: P(another crossing) 45.5% at t=5, 41.7% at 20, 35.6% at 60, 20.9% at 190; AUC 0.62/0.70/0.86 at t=20/60/180; logistic beats tree beats prefix table.
 - Next (assigned to H1 as Task 8, under the user's "up to you"): does the path add anything CONDITIONAL on the engine's own features? Fit the engine's stored fire features (ef_v11_f: imbalance, order flow, depth, rv60, range_bps, lv, mv_x_sec, ...) with and without the path features on the same fires, out-of-sample, both halves; and the same for P(flip). If no, Task 7's value is descriptive only and the effort moves to price/execution (where every positive finding today has been).
 
+## 15:57 UTC 09-10 check-in - first capped REVERSAL fire
+- Tokyo: equity 20.79, realised -3.82 (EF -1.82 after 183 settled, REVERSAL -2.00 pre-cap), 185/185 filled. EF since 14:25: 8/5 +1.82 (gave back 1.8 in the last 30 min: 1/3). Settings verified (build 11.2, master ON, EF + REVERSAL ACTIVE, cap 0.60, thr 1.0, trend 0, MAIN off).
+- Cap in action: 15:46 REVERSAL signal DOWN at 84 s quoted 0.61 -> FORBIDDEN "REVERSAL entry cap: quote 0.61 above 0.60". That candle settled DOWN, so the capped fire would have WON (+0.61 at $1). One data point; the sweep says fires above 0.60 average about zero per fire, and this is the first entry in the running tally of capped fires (1 capped: 1 would-have-won, 0 lost). No live REVERSAL fill yet under the cap.
+- Twins since 23:50: A 83/157 53% -17.0; B 79/138 57% +96.2 (control); C 73/141 52% -1.3. Paired A vs C decision edge +16.8, halves -16.0/+32.8 (undecided). Paired C vs TE (guard on C) +23.1 on only 17 common fires - too early.
+- Fair states since 21:55: v10 Predict.fun paper 43/41 -1.2@$10; v10 Polymarket paper 55/58 +32.4@$10; v11 live 100/83 -1.82 real (EF). 7 processes; snapshots refreshed.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
