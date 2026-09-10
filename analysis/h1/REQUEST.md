@@ -28,3 +28,34 @@ Test it on the REAL historical set you used for Task 2 (v10 runner replay, the s
 - Report n per bucket; a bucket under 60 graded fires is "insufficient", not a finding.
 - If the effect is real, say which days are negative on both halves of the sample, and propose the cheapest guard (e.g. EF off on those days) with its retro PnL.
 Live context: Tokyo EF and REVERSAL were paused at 12:20 UTC at the capital floor (equity 16.94, realised -8.52); EV scale 1.0 applied 12:18. Write results to analysis/h1/<date>_task6_dow.md and push; V merges at the next check-in.
+
+## Task 7 (added 12:35 UTC 09-10, from the user, LONG-RUNNING): the intra-candle reversal "binary tree"
+Why: EF fires in the first minute of the 5-min candle on the first reversal. It cannot see a second or third reversal
+(up -> down -> up -> down -> close up) at minute 4 or 1 minute before close. Those multi-reversal candles are where the
+fires die. The user wants a "candle brain": given the path so far inside the candle, the probability that the close
+direction flips again before settlement. If that is accurate, it gates EF (do not fire / fire later / fire the other way).
+This is not a one-shot task: gather data, build, test, iterate, keep going as data accumulates.
+
+Data (REAL only, no synthetic, no resampling tricks):
+- Historical BTCUSDT 1-second klines / aggTrades from Binance public data (data.binance.vision, monthly/daily zips) or
+  Bybit equivalents, as many weeks as you can pull; the perp is what the engine watches. Store under scratch, not git.
+- Live per-fire feature dicts: learner/live_backup/tokyo_orders.json (EF/REVERSAL/MAIN rows, ts_ms, quoted/fill, actual,
+  correct) and the paper twins learner/live_backup/*.sqlite3.gz (ef_predictions: candle_id, features JSON with
+  ef_v11_f = full feature dict incl. rv60, range_bps, lv, lv_x_sec, _ask_up/_ask_dn, actual, correct).
+- The 5-min candle is settled on the open-to-close sign (Predict.fun BTC Up/Down 5-min, candle_id = open ms).
+
+Build (the tree):
+- For each historical candle, encode the path as the sequence of sign(price - open) sampled at fixed offsets
+  (every 15 s or 30 s; also the "event" encoding: each crossing of the open). Node = the prefix at time t; leaf value =
+  P(close > open | prefix) and P(at least one more crossing before close | prefix).
+- Report, at t = 60 s (EF fire time) and t = 190 s (REVERSAL fire time): how well the prefix predicts the close, and how
+  well it predicts "another reversal follows". Add features the engine already has (rv60, range_bps, lv, distance from
+  open in bps, seconds since last crossing, number of crossings so far) and test whether a small model (logistic or a
+  shallow tree, walk-forward only, never fit on the test half) beats the raw prefix table.
+- Then the only thing that matters: replay the gate over the REAL EF fires (twins + Tokyo). Which fires would it block,
+  which would it keep, PnL@$10 and hit rate with and without, on both halves of the sample and by UTC day/8-h block.
+  A gate ships only if it is ahead on PnL and not behind on hit rate at >= 100 kept fires, sign holding on both halves.
+
+Deliver: analysis/h1/<date>_task7_candle_tree.md (+ code under analysis/h1/), updated every time you have a new result.
+State clearly what is a finding vs insufficient data. V merges at every check-in and can apply an engine-side gate on
+Tokyo once you and V agree it holds. Tasks 3-6 stay open; Task 7 is the priority after Task 6.

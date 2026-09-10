@@ -292,6 +292,9 @@ Old-version findings keep going to NOTES_v11.md.
 - Night on this data is not negative: b10 night 00-08 33/64 +7.8@$10 vs eve 16-24 35/70 -24.1; b11 night 41/71 +36.8 vs day 08-16 22/50 -94.5. Thursday is the bad bucket so far (b10 22/50 -68.8; b11 63/121 -57.7), which matches the user's "toward the weekend" direction but is one day and one tape.
 - Plan: H1 Task 6 tests day-of-week on the longer real historical set; V accumulates live/paper buckets by UTC day and 8-h block at every check-in. A day/hour gate ships only if it is negative on both halves of the sample at >= 60 graded fires per bucket. Fri-Sun this week is the live test of the claim.
 
+## 12:35 UTC 09-10 - Task 7 assigned to H1: intra-candle reversal tree (user request, long-running)
+- Problem: EF fires at ~60 s on the first reversal; multi-reversal candles (up-down-up-down-close) flip after the fire and settle against it. Goal: P(another crossing before close | path prefix) at 60 s and 190 s, from real 1-s perp data, replayed as a gate over the real EF fires, both halves, >= 100 kept fires. Spec in analysis/h1/REQUEST.md Task 7.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
