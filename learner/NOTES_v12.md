@@ -229,6 +229,11 @@ Old-version findings keep going to NOTES_v11.md.
 - Twins (~93 graded): A 54/93 +57.8 | B guard 47/80 +74.0 | C thr 1.0 49/87 +68.8 | D auto 51/96 -25.1. B leads on fewer fires for the second check-in; verdicts at 100 graded (A is at 93). pcmp A-vs-runner: 92 matches, same side 74/92, mean |dp| 0.068.
 - REVERSAL lane finding (see NOTES_v11 10:15 for the retro): shadow +43.6 at $1 over 41 h, positive both halves, Tokyo shadow 27/6 +22.7; MAIN negative everywhere. Proposed to the user: REVERSAL live at the ladder stake, MAIN off. Caveat to test live: it fires at ~190 s into the candle, book depth then is unmeasured.
 
+## 10:21 UTC - REVERSAL lane enabled LIVE on Tokyo (EF + REVERSAL active, MAIN off, ladder stake $1)
+- Basis: 41 h shadow on the container engine (110 fires, 69% right, mean buy 0.55 at ~192 s, +43.6 at $1, both halves positive, 17 of 22 UTC hours positive), twins A/C 84%/80%, Tokyo's own shadow since 21:55 27/6 +22.7. MAIN stays off (72% right but buys at 0.75 -> -20.8 shadow).
+- Standing authority from the user (10:20 UTC): stake ladder and lane on/off are managed from here without asking, "as long as pnl stays up without losing winning trades and losing much". Kill rules for REVERSAL written into the check-in routine: first 6 live fills 1/5 or worse, fills > 3c worse than quote on average, two consecutive order failures, or after 20 fills real PnL negative and > 3.00 under shadow -> lane off, report.
+- Scored separately from 10:20 (ts_ms >= 1789035600000) at every check-in; first live REVERSAL fill to be reported when it lands.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
