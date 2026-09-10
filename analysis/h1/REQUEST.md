@@ -93,3 +93,25 @@ On the 252-day klines: does scaling the EV threshold by realised range (last 12 
 early-direction accuracy conditional on the ask proxy (|distance|)? I.e. at the same |distance| band, are low-range
 regimes more or less accurate than high-range ones, both halves. Then on the fire data: PnL per fire by regime bucket.
 Read learner/AUTOPILOT_11.4.md first; review sections C and D thresholds against the fire record and push comments.
+
+## Task 11 (added 19:40 UTC 09-10, from the user, LONG-RUNNING, above Tasks 9/10): the SIGNAL itself
+Today's gains were price/execution. The direction call is still 53-55% at ~0.5 asks at t=20 s and that is the ceiling of
+the current forecaster. The user wants accuracy + PnL + adjustable frequency from the signal, and it must learn on its own.
+Three lines of work, all REAL data, walk-forward, ship rule applies (paired both halves >= 100, full sweep, premise):
+1. CONFIDENCE SCORE from the engine's own features (your Task 8 side finding: engine features beat flat staking +33%
+   per unit out of sample). Build it as a model that outputs P(win) per fire from the stored feature dict, train on the
+   twins' fires (learner/live_backup/twin_*.sqlite3.gz, ef_predictions.features.ef_v11_f + ask), walk-forward by time.
+   Then: (a) FREQUENCY DIAL = fire only when P(win) is in the top X% (X = 100, 75, 50, 33): per-fire PnL, total PnL,
+   hit rate, fires/hour, both halves - this is the adjustable-frequency knob the user asked for, if accuracy rises as X
+   falls; (b) SIZING = stake proportional to P(win) - ask (edge), normalised to the same capital, vs flat.
+2. RETRAIN THE FORECASTER on the 252-day 1-s kline set with the features that carried signal today (signed distance
+   from open, crossings, seconds since last crossing, range so far, plus the v10 feature set where you can reconstruct
+   it), target = close direction, read at t=20/40/60 s; report AUC/accuracy vs the current model's raw calls on the same
+   candles (the twins' fires give you the current model's output to compare). If it beats it out of sample on both
+   halves, that is v12's model.
+3. SECOND, LATER EF ENTRY: at t=60-190 s accuracy is 65-80% (your Task 7 base rates). Test a second fire per candle when
+   the model is confident AND the ask for that side is still <= 0.60 (the REVERSAL-style entry, but for EF's own side):
+   per-fire PnL both halves on the recorded ask paths (venues.sqlite3.gz in learner/live_backup has the per-second
+   Predict.fun asks per candle).
+Deliver as analysis/h1/<date>_task11_*.md as results land; V verifies on the twins and puts winners into v12 as automatic
+rules (nothing manual from here: see AUTOPILOT_11.4.md).
