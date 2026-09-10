@@ -250,7 +250,7 @@ Old-version findings keep going to NOTES_v11.md.
 - Twins (~106 graded): A 57/106 -20.2 | B guard 50/93 -0.1 | C thr 1.0 (see ledger). pcmp A-vs-runner: 105 matches, same side 86/105, mean |dp| 0.066.
 - H1 (helper session) briefed via learner/H1_BRIEF.md and a routine-delivered message at 11:14: tasks = independent REVERSAL re-derivation and a both-halves time-of-day / volatility gate study for EF. Nothing merged yet.
 
-### 11:45 UTC - H1 results merged (analysis/h1/2026-09-10_1130_task1_task2_results.md; reproduce with analysis/h1/*.py)
+### 11:21 UTC - H1 results merged (analysis/h1/2026-09-10_1130_task1_task2_results.md; reproduce with analysis/h1/*.py)
 - REVERSAL finding CONFIRMED independently to the decimal (110 fires, 69%, +43.62 at $1, halves +12.57/+31.05; MAIN 74% right, buys 0.75, -19.2). Breakdown: quote < 0.45 = 17/3 +36.7 (84% of the PnL from 18% of fires); 0.45-0.60 = 32/16 +9.5; > 0.60 = 27/15 -2.6 (right 64% of the time but priced wrong - the MAIN disease inside REVERSAL). Late fires are the good ones: >= 180 s 48/17 +36.5 vs 120-180 s 11/10 -2.3. Entry cap 0.60 keeps 68 fires 72% +46.2, both halves up -> ledger candidate (needs a per-lane max-entry setting; not in the engine today).
 - REVERSAL vs EF on the same candle: opposing pairs are net -3.79 over 23 candles, but REVERSAL wins its side (+4.50) and the loss is EF's (-8.29); agreeing pairs +18.0 over 27; 67% of REVERSAL's PnL is on the 60 candles EF never fired on. No suppression of REVERSAL is warranted; it is additive coverage.
 - H1's first note flagged REVERSAL as weak in 08-11 UTC; RETRACTED on the full sample (11/16 +2.03 in that window). Kill rule unchanged.
@@ -260,7 +260,7 @@ Old-version findings keep going to NOTES_v11.md.
 - Book depth at REVERSAL fire (twin A, 31 fires): median 30 units, p25 15.6, spread 1c. Fine at $1-2; at higher rungs the REVERSAL stake should be capped separately (engine has one shared stake; noted for when the ladder passes $3).
 - Housekeeping from H1: build11.sqlite3.gz is the container twin (shadow), not Tokyo's record; Tokyo's real orders are now exported at each check-in to learner/live_backup/tokyo_orders.json (ids stripped). Twin B/C/D DBs now backed up too.
 
-### 11:50 UTC - rv60 gate tested on the v11 path: DOES NOT HOLD (own check, features key ef_v11_f.rv60, PnL@$10)
+### 11:23 UTC - rv60 gate tested on the v11 path: DOES NOT HOLD (own check, features key ef_v11_f.rv60, PnL@$10)
 - twin A (111 fires, base 60/51 -17.4): rv60 >= 0.3 keeps 48 fires 24/24 -25.2 and REMOVES 36/27 +7.8 - the low-vol fires are the winners here; >= 0.2 removes +12.1; >= 0.4 keeps +3.5 but the second half is -20.9.
 - twin C (97): >= 0.3 removes 29/21 +38.9 (keeps -29.8). twin B (94): >= 0.3 keeps +11.1 / removes -8.1, halves +15.0 / -3.9 - mildly positive, alone.
 - Tokyo's 108 matched real fills: >= 0.3 keeps -4.08, removes -2.07; no separation at any threshold.
