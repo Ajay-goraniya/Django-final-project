@@ -332,6 +332,11 @@ Old-version findings keep going to NOTES_v11.md.
 - Decisive test requested from H1: the same sweep on the 71-day 1-s kline set at t=20 s (early direction against a 9-candle lean of >= X bps, X in 5..40, both halves, n per cell). If the against-lean penalty at 20 bps is not there on 20k candles, the guard is reverted at once.
 - Method note (H1): every dial chosen by scanning a parameter gets a threshold sweep before it ships, not only a halves check.
 
+## 13:57 UTC 09-10 check-in
+- Tokyo: equity 17.54, realised -8.69 (from -9.26 at 13:25), EF 89/78 (53%) -6.69, 169/169 filled. Guard+EV1.0 phase since 13:14: 8 graded 4/4 +0.45 real; one flip vs twin A (13:16, won). Settings unchanged: EF on $1, EV 1.0, guard 9/20, REVERSAL/MAIN off.
+- Twins since 23:50: A 71/137 52% -52.7; B 69/123 56% +57.5; C 63/123 51% -9.2. Paired B vs C (common asks): decision edge +91.5, halves +7.5/+84.0 (unchanged). TE (Tokyo's setting) started 13:58, no graded fires yet.
+- Snapshots refreshed in learner/live_backup (build11, twin_b_guard, twin_c_thr1, new twin_e_combo) so H1's windows match the live DBs. 7 processes up. No new H1 commits; the 71-day kline sweep of the guard premise is pending.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
