@@ -496,6 +496,14 @@ Old-version findings keep going to NOTES_v11.md.
 ## 20:40 UTC 09-10 - user's standing rule: findings must work every day, or be switched on only in the regimes where they work
 - "Car in the rain, bike in the sun": recognise the weather, use the right vehicle. Turned into H1 Task 13 (finding x regime grid on the real fire data with buckets defined in advance: UTC day, 8-h block, weekday/weekend, trailing-range quartile, recent crossings, book width; both halves; premise on the 252-day set) and AUTOPILOT_11.4.md section E2 (regime switches as engine data, logged, self-verdicted per cell). What is already known: the EF floor's premise is monotone in every quintile on 252 days (candidate for "unconditional"); the guard failed everywhere; weekends have half the range but the same accuracy (a sizing/threshold regime, not a direction regime). V keeps the per-day and per-block buckets at every check-in for Tokyo and the twins.
 
+## 20:51 UTC 09-10 check-in
+- Tokyo: five EF losses in a row since 20:23 -> EF 123/105 (54%) -1.89 after 228 settled; REVERSAL 2/6 -3.12 (19:52 was a THIRD cap leak on 11.2: filled 0.63 after re-quoting above the cap; live fills since the cap 2/4, 2 leaks won, the 2 genuine under-cap fills lost); realised -5.01, wallet 19.45, equity 20.49, 235/235 filled. EF since 14:25: 31/27 +1.76; sub-0.48 fills 16 for +0.50 on this stretch. Settings verified unchanged; build 11.2, no deploy per the user. Kill rules not reached (4 fills since the lane was re-enabled; first-6 rule needs 6).
+- Capped tally: 9 (8 wouldWIN / 1 wouldLOSE). The 0.60 cap is now clearly costing money on 9 refusals (about +2.9 forgone at $1) while the 4 fills under it are 2/4. Rule stands: re-judge at 20; H1's Task 13 grid for the second entry (below) is the more important price question.
+- EF2 forward shadow: first 4 candles graded, 0/4 (asks 0.67, 0.50, 0.38 and one more); n=4 says nothing yet; verdict at 100.
+- H1 Task 13 grid for candidate J (commit 4c4d03b): looks UNCONDITIONAL across the pre-defined regimes; no switch justified; one cell to watch (see the file).
+- Twins since 23:50: A 103/199 52% -66.4; B 101/179 56% +99.4 (control); C 92/180 51% -20.0. Paired A vs C +46.6, halves +3.3/+43.3.
+- Fair states since 21:55: v10 Predict.fun paper 46/50 -61.1@$10; v10 Polymarket paper 67/76 +0.1@$10; v11 live 123/105 -1.89 real (EF). 8 processes; snapshots refreshed.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
