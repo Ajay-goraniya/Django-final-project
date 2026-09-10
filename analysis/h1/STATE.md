@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-10 21:45 UTC. Update this file at the end of every check.
+Last updated: 2026-09-10 22:25 UTC. Update this file at the end of every check.
 
 ## Standing user rules (binding)
 - **No gates.** No on/off gates, stake modifiers, or threshold sweeps on a score already known to be
@@ -53,20 +53,32 @@ Second EF entry at t≈120 s, **same side as the first fire**, only if that side
 - **REVERSAL lane:** +0.429/fire, n=255, positive everywhere except a flat 08-16 block.
 - **Fast tape is the one regime signal that has appeared twice, from opposite directions.**
 
+## Task 13 table COMPLETE (22:25)
+- **EV scale 1.0: RECONCILED — it was units.** V's "+59.2" was at $10; my +2.62 at $1 is the same
+  quantity. V's own longer-window figure is +3.7 at $1. **Ledger row C corrected to UNDECIDED**, ~30
+  decisions, ~+0.02/fire either way. Stays live: no harm, little gain. My flag was worth raising and
+  the answer was mundane — check units before alleging a discrepancy next time.
+- **Live confirmation of the EF-floor finding:** Tokyo's sub-0.48 fills since 14:25 ran **17 for
+  +1.78**, i.e. the group the floor throws away made money on live fills, exactly as the Task 13 grid
+  predicted for the current regime. V logged this independently.
+- **EF2 (J) shadow on the live book:** 8 graded, 62% hit, +0.074/fire (cap 0.60: 5 graded, 60%,
+  +0.105). Far too small to read; verdict at ≥100.
+
 ## OPEN, in priority order
-1. **EV scale 1.0 regime grid** — the remaining gap in the Task 13 table. Needs the paired common-ask
-   treatment, not the affected-group grid.
-2. **V's J shadow results** as they land (4 candles graded at 21:15, 0/4, n says nothing yet).
-3. **Task 11.2 / 12a** — retrain the forecaster / learned tree as the DIRECTION model (not a gate on
+1. **The 00:00 UTC kline job (below)** — everything else of substance is gated on it.
+2. **Task 11.2 / 12a** — retrain the forecaster / learned tree as the DIRECTION model (not a gate on
    it), walk-forward, versus the current model's own calls on the same candles.
-4. **Task 12b/c/d** — tree as timing model for the later entry and REVERSAL; per-second state machine
+3. **Task 12b/c/d** — tree as timing model for the later entry and REVERSAL; per-second state machine
    scored on PnL through recorded ask paths; base rates as a live dashboard number.
-5. **Tasks 9 (MAIN cap) and 10 (regime scaling)** — LAST, both price/threshold studies.
+4. **Tasks 9 (MAIN cap) and 10 (regime scaling)** — LAST, both price/threshold studies.
 - **Do NOT** start a third-entry or continuous "add while the market disagrees" rule without a steer.
 
 ## Pending on the clock
-**~00:00 UTC:** data.binance.vision publishes 2026-09-10. Pull it, rebuild `paths.npz`, replay with
-**Tokyo's live fills** for the first time. Check the 404 first; if not up, wait for the next leg
+**~00:00 UTC:** data.binance.vision publishes 2026-09-10. Pull it, rebuild `paths.npz`, then:
+(a) replay J with **Tokyo's live fills** for the first time on full coverage;
+(b) run **Task 11.2** — the retrained direction model — which needs 09-10 coverage to compare against
+the twins' own calls on the same candles. Doing 11.2 before this only covers the 09-08/09-09 slice
+and would have to be redone, so it waits. Check the 404 first; if not up, wait for the next leg
 rather than looping.
 
 ## The constraint any new direction model must beat
