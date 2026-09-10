@@ -460,6 +460,12 @@ Old-version findings keep going to NOTES_v11.md.
 - The binary candle tree stays a research line (H1 Task 12): learned tree on path + engine features as the direction model, as the timing model for the later entry and REVERSAL, as a per-second fire-now state machine scored on PnL, and the base rates on the dashboard.
 - The user will talk to H1; H1 relays plan/live changes to V and logs the user's asks in analysis/h1/USER_ASKS.md. V keeps the check-ins, ledger and deploys.
 
+## 19:35 UTC 09-10 check-in
+- Tokyo: a losing half hour - EF 116/100 (54%) -3.21 after 216 settled; REVERSAL 2/5 -2.13 (19:09 fill at 0.46 lost, the first live fill under the cap that was actually below it); realised -5.34, wallet 18.75, equity 20.11 (1 open), 221/221 filled. EF since 14:25: 24/22 +0.44, sub-0.48 fills 14 for -1.77. Settings verified unchanged (build 11.2; no deploy per the user).
+- Capped tally: 8 (7 wouldWIN / 1 wouldLOSE), newest 19:24 quoted 0.82 (would have won). Live REVERSAL fills under the cap: 1/1 below the cap (lost), 2 leaks (won). Rule unchanged: re-judge at 20.
+- Twins since 23:50: A 98/189 52% -44.9; B 95/169 56% +96.9 (control); C 88/172 51% -13.2 (spot feed "rest-fallback" on C at read time - watch). Paired A vs C +45.2, halves +3.3/+41.9.
+- Fair states since 21:55: v10 Predict.fun paper 45/47 -38.7@$10; v10 Polymarket paper 66/71 +40.0@$10; v11 live 116/100 -3.21 real (EF). 7 processes; snapshots refreshed. No new H1 commits (Tasks 9-12 open).
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
