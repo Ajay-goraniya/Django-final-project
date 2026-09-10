@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-10 23:57 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 00:08 UTC. Update this file at the end of every check.
 
 ## Standing user rules (binding)
 - **No gates.** No on/off gates, stake modifiers, or threshold sweeps on a score already known to be
@@ -111,10 +111,35 @@ Ran on `venues.sqlite3`: 640 candles, 54.7 h, walk-forward, 8 decision seconds, 
   n=18 cannot carry PnL (twin numbers are accuracy only).
 - Deliverable: `task14_venue_disagreement.md`. Repro: `task14_disagreement.py`.
 
+## Task 15 (V, 23:55) — part 2 DONE 00:05, part 1 UNBLOCKED, part 3 next
+- **THE KLINE BLOCKER IS GONE.** `data.binance.vision` never published 2026-09-10 (404 all night).
+  `api.binance.com` is **geo-blocked from this container**, but **`data-api.binance.vision` serves
+  the same `/api/v3/klines` and is not blocked.** Fetched 09-10 00:00-23:55 = **86,101 rows of 1s
+  closes** -> `scratchpad/klines/rest_2026-09-10.json`. Fetcher: `analysis/h1/fetch_rest_klines.py`
+  (1000-row pages, retry with backoff). **Use this route whenever the daily zip lags.**
+- **Part 2 DONE — the distance premise is REAL, and it is the market, not a regime.**
+  P(close on the side price is already on) rises monotonically with |price(S)-open| in EVERY row, at
+  every second, in BOTH halves, in ALL FOUR regime quartiles. At S=30: 0.526 / 0.593 / 0.639 / 0.698
+  / 0.748 / 0.817 across the buckets. **Tokyo's 33 fills reproduce on 72,576 candles** (<1bps 51% vs
+  0.53; 1-2.5 61% vs 0.58-0.63). One of the cleanest regularities in any H1 study.
+- **Correction to the brief's premise:** V asked whether the <1bps bucket is really ~50% late. **No —
+  0.614 at t=237**, 0.670 at 270, 0.772 at 290, both halves agreeing.
+- **I could NOT explain away Task 14's 0.494 and did not pretend to.** My candidate explanation (that
+  14 buckets on final |close-open| and 15 on observable |price(S)-open|) was TESTED and is WRONG:
+  both conditionings give ~0.60 on the same 72k candles (0.614 vs 0.595). Two live candidates remain:
+  (a) Task 14 measured the VENUE's implied favourite, not the Binance price leader — if those diverge
+  in near-zero candles that ties straight to 14's two-oracle result; (b) noise, n=77, SE ~5.7pp, so
+  0.494 vs 0.595 is ~1.8 SE. **Separable now that 09-10 klines are in** — compare the venue's implied
+  favourite against the Binance leader at t=237 on the same candles. QUEUED.
+- Deliverable: `task15_distance_premise.md`. Repro: `task15_distance_premise.py`.
+
 ## OPEN, in priority order
-1. **The 00:00 UTC kline job (below)** — everything else of substance is gated on it.
-2. **Task 11.2** — retrain the forecaster on the ENGINE's own candles, walk-forward, versus the
-   twins' own calls. (12a is DONE — see above. Gated on the kline job.)
+1. **Task 15 part 1/3 — Task 11.2 on the now-complete kline set** (the blocker is gone, see above:
+   use `data-api.binance.vision`). Then part 3: does the retrained model's fire set avoid the
+   sub-1-bps coin flips on its own, or inherit the current 46%?
+2. **The venue-favourite vs Binance-leader check** at t=237 in the <1bps bucket — settles the one
+   thing Task 15 could not (see above).
+
 3. **Task 12b/c/d** — ONLY as a timing model for the later entry and REVERSAL. **Not over the
    venue's own quote path** (12a killed that). Base rates as a live dashboard number still stands.
 4. **Tasks 9 (MAIN cap) and 10 (regime scaling)** — LAST, both price/threshold studies.
@@ -123,13 +148,10 @@ Ran on `venues.sqlite3`: 640 candles, 54.7 h, walk-forward, 8 decision seconds, 
   reading.
 - **Do NOT** start a third-entry or continuous "add while the market disagrees" rule without a steer.
 
-## Pending on the clock
-**~00:00 UTC:** data.binance.vision publishes 2026-09-10. Pull it, rebuild `paths.npz`, then:
-(a) replay J with **Tokyo's live fills** for the first time on full coverage;
-(b) run **Task 11.2** — the retrained direction model — which needs 09-10 coverage to compare against
-the twins' own calls on the same candles. Doing 11.2 before this only covers the 09-08/09-09 slice
-and would have to be redone, so it waits. Check the 404 first; if not up, wait for the next leg
-rather than looping.
+## Pending on the clock — RESOLVED 00:05
+The daily zip never published; the REST mirror `data-api.binance.vision` supplied 09-10 instead
+(86,101 rows). Still to do on it: rebuild `paths.npz` with 09-10 appended, replay J against Tokyo's
+live fills on full coverage, and run Task 11.2.
 
 ## The constraint any new direction model must beat
 Measured three ways on 09-10: the path does not beat the ask; path features added to engine features
