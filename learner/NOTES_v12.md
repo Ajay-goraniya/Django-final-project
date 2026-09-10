@@ -374,6 +374,12 @@ Old-version findings keep going to NOTES_v11.md.
 - Method (ledger): third finding today to shrink or reverse on a bigger sample or a full sweep (guard, entry cap, weekend). A single day of fires or ten weeks of candles is not yet an effect; every ledger entry gets re-run as samples grow.
 - Live state unchanged: EF on $1 EV 1.0, REVERSAL on cap 0.60, guard off, MAIN off.
 
+## 15:26 UTC 09-10 check-in - EF lane back to break-even; REVERSAL quiet under the cap
+- Tokyo: equity 22.57 (day high; live low 15.21 at 13:07), realised -2.05 (EF -0.05 after 179 settled, REVERSAL -2.00 from the two pre-cap fills), 181/181 filled 0 failed. EF since the guard revert at 14:25 (EV 1.0, no guard): 7/2 +3.60 real. REVERSAL: no fire and no capped refusal since 14:47 (39 min; the lane fires ~2.7/h in shadow, so not yet informative). Settings verified: build 11.2, master ON, EF ACTIVE $1, REVERSAL ACTIVE cap 0.60, MAIN off, thr 1.0, trend 0.
+- Twins since 23:50: A 82/152 54% +12.2; B 78/133 59% +132.4 (control only); C 73/137 53% +38.7. Paired A vs C at common asks: decision edge +36.9, halves -9.4/+46.3, fill noise +8.9 - still undecided.
+- Fair states since 21:55: v10 Predict.fun paper 42/41 -16.4@$10; v10 Polymarket paper 53/58 +10.7@$10; v11 live 99/80 (55%) -0.05 real (EF). The afternoon tape (13:00-15:30) has been kind to every run; nothing here is attributed to a dial.
+- H1 pushed a Task 7 model-choice note (logistic beats a tree and the raw prefix table on 72k candles); no live consequence until the fire replay with Tokyo's fills after 00:00 UTC.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
