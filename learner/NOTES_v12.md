@@ -454,6 +454,12 @@ Old-version findings keep going to NOTES_v11.md.
 - Tests: 5 pure-rule unit tests in the module; a fake-engine end-to-end run (arm once when ready, ladder 35 -> $2 and 29 -> $1, kill on 1/6, resume on 20/30, EF shadow on 8/20 and resume, cap verdict 0.60 -> 0.65 once) all pass; V112 tests pass; smoke instance on 8799: build string, default settings, POST validation, persistence, ladder stake mode accepted. auto_arm was NOT exercised on the smoke instance (it would have armed a real wallet); it is covered by the fake-engine test.
 - Deploy (3 files now): git pull && sudo cp learner/btc_model_build11.py learner/btc_model_v11.py learner/btc_model_autopilot.py /opt/v11/ && sudo systemctl restart v11. On deploy V applies: thr 1.0, cap 0.60, floor 0.48, trend 0; master ON; EF + REVERSAL ON, MAIN OFF; autopilot auto_arm/ladder/rev_guard/ef_rolling/dial_verdict ON. Not yet built: E (regime scaling, pending H1 Task 10) and the EV-scale notch rule; MAIN stays OFF pending H1 Task 9.
 
+## 19:48 UTC 09-10 - user's standing instructions (they are going quiet; H1 is their contact)
+- No new deploys now; every future improvement ships only as an automatic rule (autopilot principle). The ladder is a Trade Controls staking option like fixed/percent/streak (done in 11.4, on the branch).
+- v12 timeline given to the user: 00:00 UTC Tokyo fills enter the replays; Fri 09-11 confidence score + frequency dial + MAIN sweep, then the retrained forecaster; Sat-Sun first live weekend; Mon 09-14 v12 assembled + 24 h twin; Tue 09-15 deploy if it passes. The 100-graded bar is not compressed.
+- The binary candle tree stays a research line (H1 Task 12): learned tree on path + engine features as the direction model, as the timing model for the later entry and REVERSAL, as a per-second fire-now state machine scored on PnL, and the base rates on the dashboard.
+- The user will talk to H1; H1 relays plan/live changes to V and logs the user's asks in analysis/h1/USER_ASKS.md. V keeps the check-ins, ledger and deploys.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |

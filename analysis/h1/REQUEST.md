@@ -115,3 +115,21 @@ Three lines of work, all REAL data, walk-forward, ship rule applies (paired both
    Predict.fun asks per candle).
 Deliver as analysis/h1/<date>_task11_*.md as results land; V verifies on the twins and puts winners into v12 as automatic
 rules (nothing manual from here: see AUTOPILOT_11.4.md).
+
+## Standing note (19:48 UTC 09-10): the user now talks to H1, not V
+The user is low on usage and will put questions and instructions to H1 directly. H1: relay anything that changes the
+plan or the live state to V through your routine message (as you do for results) and record the user's words in
+analysis/h1/USER_ASKS.md (date, ask, what was done). V keeps the 30-min live check-ins, the ledger and the deploys; H1
+answers the user from the ledger and the files, and asks V for any live number it does not have.
+
+## Task 12 (standing, from the user): the binary candle tree stays a research line
+The user's proposed architecture - a tree over the candle's intra-candle path - is NOT closed. What is settled: the
+prefix TABLE has no information early (side only, no distance) and the on/off gate, stake modifier and conditional
+value on the engine's features all failed. What stays open and must be researched, with results as they land:
+  a. a real learned tree (gradient-boosted or shallow tree ensemble) on path features + engine features, walk-forward,
+     as the direction model at t=20/40/60 (compare with the logistic and with the current forecaster: Task 11.2);
+  b. the tree as the TIMING model for the later EF entry (Task 11.3) and for REVERSAL, where its AUC is 0.86;
+  c. the tree as a "do not fire yet / fire now" state machine evaluated every second through the candle, scored on PnL
+     through the recorded ask paths (venues.sqlite3.gz), not on accuracy;
+  d. the base rates (P(another crossing) by t) as a live dashboard number so the user sees the candle brain working.
+Report each part under the ship rule; if a part fails, say so and move to the next; never drop the line entirely.
