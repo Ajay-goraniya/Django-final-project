@@ -71,3 +71,6 @@ so a rule that stops working in a regime is turned off there automatically.
 Regime logging rule (H1, 21:26): the trailing-12-candle range Q4 (> 76.4 bps) cell is logged separately for EVERY rule at
 every check-in and by the engine's per-cell self-verdict - fast tape is the one regime signal that has appeared twice today
 from independent directions (J weakens there; the EF floor's skipped fires turn profitable there).
+
+## Ladder hysteresis (added 09-11 08:55 from live evidence)
+Live 09-10/11: every ladder step-up (to $3 at 02:00, $3 at 06:16, $4 at 08:22) landed at the top of a winning streak and was followed by losses at the larger stake (higher-stake phases about -12 vs +20 at $2). Default for the ladder stake mode: step DOWN immediately when equity is below the current rung; step UP only when equity has been at or above the higher rung on at least N consecutive settlements or for >= 30 min (parameter `ladder_up_confirm`, default 30 min). Same rungs, same hard cap; never a stop-loss.
