@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 02:47 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 03:07 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -302,13 +302,29 @@ diverges from the Binance leader in near-zero candles" vs (b) "noise at n=77".
   resolution is that the claim is positive under BOTH gradings, so it does not change the conclusion.
 - Deliverables: `task18_polymarket_transfer.md`, `models/README.md`. Repro: `task18_polymarket_transfer.py`.
 
+## Task 17.3 DONE 03:05 — the 11.2 SIGNAL is rain-or-sun stable; its PnL grid is unreadable
+- **A (the literal ask): CANNOT BE ANSWERED at 91 fires. 1 of 9 cells reaches the 60-fire bar.**
+  Per-hour cells are n=1..11 and swing −1.000..+0.980 — textbook noise. Reported in full, marked,
+  NOT read. Needs the Task 17.2 forward test. Any regime switch drawn from this would be fitting
+  noise, i.e. the banned thing.
+- **B (the answerable version): THE DIRECTION SIGNAL IS REGIME-STABLE.** Diagnostic model (trained
+  on the first 80% of pre-cutoff candles — **NOT the frozen artifact, which is never retrained**),
+  evaluated on **14,442 held-out candles**, every cell far above the bar:
+  S=20 accuracy 0.572-0.588 across all nine cells · S=60 0.634-0.649 · S=120 0.712-0.729.
+  **Spread 1.5-1.7pp. Flat. No regime switch warranted.**
+- **The user's weekend concern, answered: NO weekend decay.** Weekend BEATS weekday at S=20
+  (0.588 vs 0.576), equal at S=60 (0.645 vs 0.643), marginally under at S=120 (0.714 vs 0.719), on
+  4,032 weekend candles. Reassuring for the Sat-Sun live window.
+- **ACCURACY, NOT PnL** — stated throughout. A stable signal can still be unprofitable where the
+  venue prices it correctly; Task 16's null (59.2% accurate, loses money) is the standing reminder.
+  PnL-by-regime remains unanswered and only the forward test can settle it.
+- Deliverable: `task17_3_regime_grid.md`. Repro: `task17_3_regime_grid.py`.
+
 ## OPEN, in priority order
-1. **Task 17.3** — the rain-or-sun regime grid for the 11.2 fire set on the 648 candles, plus the
-   per-hour-of-day fire/PnL profile (weekend matters; Sat-Sun is the live test window).
-2. **Task 17.2** — the daily forward ledger for the FROZEN model; verdict at >=100 forward fires.
-3. **Task 19 (standing)** — `analysis/h1/POLYMARKET.md`: CLOB API, fees, TWAP resolution, history
+1. **Task 17.2** — the daily forward ledger for the FROZEN model; verdict at >=100 forward fires.
+2. **Task 19 (standing)** — `analysis/h1/POLYMARKET.md`: CLOB API, fees, TWAP resolution, history
    endpoints, eligibility, v10 poly run by hour/weekday.
-4. **The 2.5-5 bps EF cell** (EF 45.0% vs a 70.0% null, n=40) — revisit once fills pass 60. The one
+3. **The 2.5-5 bps EF cell** (EF 45.0% vs a 70.0% null, n=40) — revisit once fills pass 60. The one
    remaining queued check; the venue-favourite check is DONE (above).
 2. If nothing else is open: extend the venue window as V's snapshots grow, and re-run 11.2's replay
    on the larger set — the 15pp window-vs-long-run gap above is the main uncertainty in that result.
