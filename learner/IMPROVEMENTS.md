@@ -65,3 +65,13 @@ Running list. Not explanations for the user - working notes. Newest first. Statu
     the Tokyo host clock is fast or the utc field is mislabelled. Relative comparisons on ts_ms still hold, but
     anything that aligns engine time to exchange candles or to the collector must be checked. Root-cause
     before the v12 deploy.
+
+17. OPEN - **The EV-at-cap recheck is charged against the SAME threshold that triggered the fire, so any
+    signal with less than one tick of EV headroom is skipped.** First live signal, 21:21:16: FIRE UP p=0.623
+    ask=0.52 ev=0.1579, then at cap 0.53 (pad 1 tick) ev fell to 0.1368 and failed the threshold -> state
+    SKIPPED, zero attempts, no order sent. The guard is correct in spirit (do not pay a pad that destroys the
+    edge) but as written it rejects a large fraction of fires: on a 0.52 ask one tick costs ~2.1pp of EV, so
+    only signals clearing the threshold by more than that can ever reach the book. Options to consider
+    (design first, pre-commit, then test): (a) pad 0 and accept lower fill probability; (b) compare the capped
+    EV against a separate, lower execution floor rather than the signal threshold; (c) size the pad from the
+    EV headroom actually available. Do NOT just lower the threshold.
