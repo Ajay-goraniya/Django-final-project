@@ -800,6 +800,8 @@ Old-version findings keep going to NOTES_v11.md.
 - Twins (68 min up): raw A +72.1, B +221.1, C +130.0@$10; paired A vs C +74.4, halves +59.2/+15.2.
 - Shadows: EF2/J (refuted) 119 graded, second half negative at every cap; 11.2 live shadow 8 graded, 2 W 6 L, -0.486/fire. H1 33772df (merged): honest forward ledger 23 fires 8 hits (34.8%) -0.271/fire, both halves negative; p=0.081 vs the 51.5% honest rate - context only, n far below 60.
 - 11 processes, snapshots refreshed.
+- 10:41 states (whole run, not the fair window): Predict.fun paper since 09-08 18:05 152/130 +192.1@$10; Polymarket paper since 09-08 17:35 214/190 +522.9@$10 (per day +139.9/+105.8/+202.7/+74.5); Tokyo since 12:24 09-09 realised +13.26 (EF 197/163 +4.73, REVERSAL 32/8 +8.53), wallet 36.33, equity 43.15, 0 open; twins A +95.8, B +239.2 (guard refuted live), C +158.3@$10, 84 min up; EF2/J 121 graded +0.013/fire halves +5.77/-4.17 (refuted); 11.2 live shadow 8 graded 2/6.
+- Ladder hysteresis, first sighting: 10:41 UTC equity 43.15 >= 40 with stake $2 (10:26 check-in was 30.56). Step to $3 only if still >= 40 at a check-in >= 30 min later (11:26 earliest); step down to $1 immediately if < 30.
 
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
