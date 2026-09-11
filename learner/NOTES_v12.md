@@ -571,6 +571,13 @@ Old-version findings keep going to NOTES_v11.md.
 - EF2 shadow (J): 27 graded; cap 0.60: 18, 61%, +0.616/fire, halves -1.25/+12.33; cap 0.50: 14, +0.697, halves +0.69/+9.07; no cap: 27, +0.332. First half slightly negative at cap 0.60 now; n tiny.
 - No new H1 commits since Task 14 (Task 15 assigned 23:55). 8 processes, books live, snapshots refreshed.
 
+## 00:15 UTC Fri 09-11: H1 Task 15 part 2 - the distance premise holds on 72,576 candles; kline route unblocked
+- Route: data.binance.vision never published 09-10; api.binance.com is geo-blocked from the containers; data-api.binance.vision serves the same /api/v3/klines (interval=1s) and is open. H1's fetcher: analysis/h1/fetch_rest_klines.py. Removes the wait-for-the-daily-zip dependency for both pipelines.
+- Premise (P(close on the side price is on at second S) by |price(S)-open| bps buckets <1 / 1-2.5 / 2.5-5 / 5-10 / 10-25 / 25+): S=15: .526/.582/.630/.656/.704/.723; S=30: .526/.593/.639/.698/.748/.817; S=60: .544/.595/.666/.740/.806/.885; S=120: .555/.631/.711/.792/.876/.945. Monotone in every row, both halves, all four Task 13 range quartiles (regime shifts the level, never the order). Tokyo's 250 fills (<1 bps 51%, 1-2.5 bps 61%) match the market, so it was not a regime or a small sample.
+- Correction: the late-second <1 bps cell is NOT a coin flip on Binance (t=237 .614, t=270 .670, t=290 .772, both halves). Task 14's 0.494 (n=77, ~1.8 SE) is either the venue's implied favourite drifting off the Binance leader in near-zero candles (a venue fact) or noise; H1 will separate the two on the 09-10 klines after 11.2.
+- What this is for v12 (no gate): the current EF model puts 46% of its fires in the <1 bps bucket where the market says 0.53 and it pays ~0.52 - zero edge by construction. The fix is a direction model / live calibration that carries the distance information (Task 11.2 part 3 measures whether the retrained model does this by itself). Any engine-side use must be a learned calibration feeding the existing EV rule, not a threshold.
+- H1's queue: rebuild paths with 09-10, replay J on full coverage vs Tokyo's fills, 11.2, part 3, then the venue-favourite check.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
