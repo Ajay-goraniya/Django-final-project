@@ -52,19 +52,21 @@ class Store:
         self.con.executescript("""
         CREATE TABLE IF NOT EXISTS trades(candle_epoch INTEGER PRIMARY KEY, ts_ms INTEGER, mode TEXT,
             side TEXT, p REAL, ask REAL, ev REAL, sec INTEGER, rv60 REAL, stake REAL,
-            actual TEXT, win INTEGER, pnl REAL, graded_ms INTEGER, feat TEXT);
+            actual TEXT, win INTEGER, pnl REAL, graded_ms INTEGER, feat TEXT, book_age_ms INTEGER);
         CREATE TABLE IF NOT EXISTS decisions(ts_ms INTEGER, candle_epoch INTEGER, sec INTEGER, side TEXT,
             p REAL, ask REAL, ev REAL, fire INTEGER, feat TEXT);
         CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT);""")
+        if "book_age_ms" not in {r[1] for r in self.con.execute("PRAGMA table_info(trades)")}:
+            self.con.execute("ALTER TABLE trades ADD COLUMN book_age_ms INTEGER")
         self.con.execute("INSERT OR REPLACE INTO meta VALUES('build','learner-v10-paper')")
         self.con.commit()
         self.lock = threading.Lock()
 
     def trade(self, **r):
         with self.lock:
-            self.con.execute("INSERT OR IGNORE INTO trades(candle_epoch,ts_ms,mode,side,p,ask,ev,sec,rv60,stake,feat) "
-                             "VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-                             (r["epoch"], r["ts_ms"], r["mode"], r["side"], r["p"], r["ask"], r["ev"], r["sec"], r["rv60"], r["stake"], r.get("feat")))
+            self.con.execute("INSERT OR IGNORE INTO trades(candle_epoch,ts_ms,mode,side,p,ask,ev,sec,rv60,stake,feat,book_age_ms) "
+                             "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                             (r["epoch"], r["ts_ms"], r["mode"], r["side"], r["p"], r["ask"], r["ev"], r["sec"], r["rv60"], r["stake"], r.get("feat"), r.get("book_age_ms")))
             self.con.commit()
 
     def decision(self, ts_ms, epoch, d):
@@ -292,7 +294,8 @@ class Runner:
                 if d.get("fire"):
                     self.fired.add(ep)
                     self.db.trade(epoch=ep, ts_ms=int(now * 1000), mode=self.a.mode, side=d["side"], p=d["p"],
-                                  ask=d["ask"], ev=d["ev"], sec=d["sec"], rv60=d["rv60"], stake=self.a.stake, feat=d["feat"])
+                                  ask=d["ask"], ev=d["ev"], sec=d["sec"], rv60=d["rv60"], stake=self.a.stake, feat=d["feat"],
+                                  book_age_ms=int(max(0.0, now - self.age.get("venue", 0.0)) * 1000))
                     print(f"[{time.strftime('%H:%M:%S')}] FIRE {d['side']} p={d['p']} ask={d['ask']} ev={d['ev']} sec={d['sec']} | {d['top']}", flush=True)
                 elif now - getattr(self, "_last_dec_log", 0) >= 15:
                     self._last_dec_log = now

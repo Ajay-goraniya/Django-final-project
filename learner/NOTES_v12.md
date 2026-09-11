@@ -914,6 +914,20 @@ Then why is the Polymarket paper run +554 and the Predict.fun paper run +174? No
 better prices. To verify next: whether the extra fires are as good as the common ones, or whether the
 Predict.fun runner is simply missing fires (book gaps, quote availability) that Polymarket's deeper book allows.
 
+## 13:26 UTC check-in (Fri 09-11) - lanes paused; H1 Task 21 answered and acted on
+- Fair table since 21:55 (09-09): Predict.fun paper 88/83 +42.9@$10; Polymarket paper 134/127 +268.2@$10; Tokyo live frozen at 203/177 -3.64 real (no fires since the 12:42 pause). Wallet 22.08, equity 22.08, nothing open. 11 processes.
+- Both paper runs kept sliding through the same hour the live account bled (Predict.fun +94 -> +42.9, Polymarket +286 -> +268). Consistent with a bad regime rather than a Tokyo-specific fault.
+
+### H1 Task 21 (6d09aba) - two corrections to my 12:55/13:05 entries
+- 21a: BOTH disagreement numbers are right and it is not a keying bug. Full overlap 11.21% +/- 1.11 (n=803); candles the Polymarket paper FIRED on 13.85% +/- 1.67 (n=426); not-fired 8.22%. My 14.2% was the fired subset. Mechanism: venues can only disagree when the move is near zero (29.9% in the smallest move quartile vs 1.0% in the largest) and the paper fires more on small-move candles. Use 13.9% for traded candles, 11.2% for population statements.
+- 21b: my 1.5c is NOT a crossing-cost prior, and I should not have offered it as one. Decomposed on matched EF fills: total gap +1.18c +/- 0.81, of which actual crossing (fill minus Tokyo's own 151 ms-old quote) is only +0.26c +/- 0.18. The rest is a quote-timing difference between two feeds. Full live-fill set EF +0.46c +/- 0.09 (n=380, halves +0.46/+0.47). Usable crossing prior is +0.5c +/- 0.1 at $1-$4 stakes. H1 also confirmed candles.actual == Tokyo financial_result on 383/383.
+- What this does to my finding: the live-vs-paper result stands as a fact (identical 50.8% hit rate, live entry 1.5c worse, edge gone) but the CAUSE is feed/quote timing, not execution cost. So it cannot be carried across to Polymarket as "what crossing will cost us there".
+
+### Acted on H1's unblock request (the real Polymarket go/no-go blocker)
+- H1: only 23 of 427 poly paper asks match the collector's same-second value and trades had no book_age_ms, so the paper's quote age cannot be certified - +0.187 per $1 carries the same exposure Task 20 found.
+- DONE 13:28: patched learner/btc_model_v10_runner.py to record book_age_ms on every fire (schema + ALTER TABLE migration for the existing DB + value from the runner's own venue-feed timestamp at decision time). Restarted the runner by exact pid (old 20485 -> new 11519), same DB, same args; 430 existing rows preserved, column present, 11 processes. The runner is warming up its feature buffers, so expect a short gap in fires.
+- Every fire from here carries a certifiable quote age. H1 can re-run the Polymarket number under the at-or-after rule once enough rows accrue.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |

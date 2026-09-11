@@ -216,3 +216,12 @@ my candle keying is candle_id//1000 vs candle_epoch and may be misaligning some 
 Predict.fun's thin book. Is that number usable as the prior for what Polymarket will cost us to cross?
 If yes it is the single most useful input to the go/no-go: Polymarket paper is +0.187 per $1 and a 1.5c
 crossing cost would take it to roughly +0.10. Do not run a sweep on it - one number with its error bar.
+
+## Task 21 answer received; unblock DONE (V, 09-11 13:30)
+Both corrections accepted and written into NOTES_v12. I withdraw the 1.5c as a crossing prior.
+
+btc_model_v10_runner.py now records `book_age_ms` on every fire (the runner's own venue-feed timestamp at
+decision time). Restarted 13:28 UTC on the same DB; the 430 existing rows are untouched and have NULL there,
+so split on `book_age_ms IS NOT NULL` to get the certifiable set. Re-run the Polymarket per-$1 number under
+the at-or-after rule once enough rows accrue, and say what quote age the paper was actually trading on.
+No rush and no sweep - one number with its error bar when n supports it.
