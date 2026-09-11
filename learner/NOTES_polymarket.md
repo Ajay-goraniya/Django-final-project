@@ -53,6 +53,15 @@ H1's working file: analysis/h1/POLYMARKET.md (Task 19). This file is V's summary
   (+0.014 per $1, n=115), 08-16 +0.193, 16-24 +0.181. Observation, not a rule. Headline reconciliation: my +0.148 recomputed 351
   fires with the 7% formula; the runner's own stored pnl (its own fee model, 371 fires) gives +0.133 - same picture.
 - Still to gather: CLOB auth flow, order types, tick/min size, rate limits, websocket channels, fills/redemption - the executor spec.
+- PLAN-CHANGING (H1 09-11 05:58): Polymarket's only historical endpoint (GET /v2/prices-history) returns MIDPOINTS only; no historical
+  order book, bid/ask or trades. An honest replay needs the ask at or after the decision (Task 20), so every Polymarket evaluation must
+  come from OUR forward collection (1 Hz logger or live paper run) started BEFORE the window we want to judge. Nothing can be
+  reconstructed later. => start a Polymarket book logger now (V, 09-11 06:00).
+- Executor delta vs Predict.fun (H1): EIP-712 typed-data signing on Polygon (chainId 137; deposit wallets need ERC-7739 wrapped
+  signatures); order types GTC/GTD/FAK/FOK, GTD expires one minute BEFORE its stated expiry; min_order_size and tick_size are per token
+  (read from the book endpoint per market); websocket wss://ws-subscriptions-clob.polymarket.com/ws/market with book / price_change /
+  last_trade_price / tick_size_change events, subscribe {"assets_ids":[...],"type":"market"}, PING text frame every 10 s; rate and
+  connection limits undocumented (treat as unknown). Still open: eligibility policy, rate limits.
 
 ## Plan
 - Next week (user): decide after the weekend. If go: build the executor in v12, run $1 live beside Tokyo for a day, ladder decides.
