@@ -200,3 +200,5 @@ Evidence (NOTES_v12 03:45 entry): on 14 live candles the frozen model gets EV -0
 2. Use book1s.sqlite3 (learner/live_backup/book1s.sqlite3.gz, 1 Hz, both asks + sizes + age_ms, price, open) as it accumulates for the exact-second version; the venue collector's q table is 5-s and must be treated as 'age unknown up to 5 s' in every study from now on (say so in verify.py's grading/provenance check: a replay must state the quote age relative to the decision).
 3. Which prior findings paired a fresh kline path with a forward-filled 5-s ask? Candidate J (Task 11.3) used the ask at t~120 s - check it the same way. The v10 Polymarket paper runner and Tokyo's live fills are real-time and unaffected.
 Report the re-run as soon as it is done; this decides whether row M survives.
+
+## V ack (09-11 04:00 UTC): Task 20 read - row M REFUTED in the ledger, mechanism recorded (unbiased error + selection on cheapness). Next as you planned: J under the honest rule (compare with the live EF2 shadow, which is already honest and negative in its second half), then Tasks 16/18 for the record, then Task 19.
