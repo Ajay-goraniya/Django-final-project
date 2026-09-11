@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 12:46 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 13:40 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -11,7 +11,26 @@ the reason the checks run as a set and grading runs first.
 Its `permutation()` permutes the model's PREDICTIONS, never the labels: shuffling labels destroys
 the market's calibration too, so longshots "win" at the base rate and it prints a fake profit.
 
-## Task 21 IN PROGRESS from 13:20 (V, REQUEST.md 12:55) — two numbers, no sweep
+## Task 21 DONE 13:40 — `analysis/h1/task21_venue_disagreement_and_crossing.md` (V asked 12:55)
+- **21a: both numbers are right.** Full overlap **11.21% ± 1.11 (n=803)**; the candles the Polymarket
+  paper FIRED on **13.85% ± 1.67 (n=426)**; not-fired 8.22% ± 1.41. V's 14.2% is the fired subset.
+  **Not a keying bug** — a one-candle shift reads 45–50%, and the three engine DBs give 0 conflicting
+  labels. Mechanism: the venues can only disagree when the move is near zero (29.9% in the smallest
+  move quartile vs 1.0% in the largest), and the paper fires more on small-move candles. Ordering
+  holds in both halves; ~2.6 se. **Quote 13.9% for traded candles, 11.2% for population statements.**
+- **21b: NO — the 1.5c is not a crossing prior.** Matched EF fills: total gap +1.18c ± 0.81c, of
+  which crossing (fill − Tokyo's own 151 ms-old quote) is only **+0.26c ± 0.18c**; the rest is a
+  quote-timing difference between two feeds. Full live-fill set: **EF +0.46c ± 0.09c (n=380, halves
+  +0.46/+0.47)**, all kinds +0.28c ± 0.10c. Proof the quantity is not execution cost: the same
+  decomposition on REVERSAL gives +15.4c. **Usable prior = +0.5c ± 0.1c**, at $1–$4 stakes only.
+- **The real blocker for the Polymarket go/no-go:** only **23 of 427** poly paper asks equal the
+  collector's same-second value, and `poly_pnl.trades` has no `book_age_ms`, so the paper's quote age
+  cannot be certified. +0.187 carries the same exposure Task 20 found. Unblock = V logs `book_age_ms`
+  on each poly paper trade; then I re-run it under the at-or-after rule.
+- `verify.py` run on the crossing number: grading / quote age / sample / halves all PASS. Also
+  confirms `candles.actual` == Tokyo `financial_result` on 383/383.
+
+## Task 21 was IN PROGRESS from 13:20 (V, REQUEST.md 12:55) — two numbers, no sweep
 21a: re-measure venue settlement disagreement on the full overlap; V gets 31/218 = 14.2%, the record
 says 10.4%; V suspects its own candle keying. 21b: is the 1.5c live-vs-paper entry gap on Predict.fun
 usable as the prior for what crossing will cost on Polymarket? One number with an error bar.
@@ -350,21 +369,21 @@ diverges from the Binance leader in near-zero candles" vs (b) "noise at n=77".
   PnL-by-regime remains unanswered and only the forward test can settle it.
 - Deliverable: `task17_3_regime_grid.md`. Repro: `task17_3_regime_grid.py`.
 
-## Task 17.2 LIVE — forward ledger at 31 of 100 fires (12:46). STILL NOT READABLE.
+## Task 17.2 LIVE — forward ledger at 33 of 100 fires (13:41). STILL NOT READABLE.
 `task17_forward.py` + `task17_forward_11_2.md` + `task17_forward_state.json` (append-only; each run
 processes only candles newer than the last recorded, so reruns are idempotent and history cannot be
 silently restated). Frozen artifact only, never refitted. Forward = strictly after epoch 1789078800.
-- **31 forward fires: 11 hits (35.5%), −0.278/fire, −8.62 total.** First half −0.124, second half
-  −0.422. Baseline is the honest-rule replay (+0.018/fire ~ 0.00), NOT the retracted +0.266.
-- Against the honest-rule 51.5%, 11-or-fewer hits in 31 has probability **0.0539**. It has read
-  0.0054 (n=8), 0.0393, 0.0630, 0.0492, 0.0347 and now 0.0539 — crossing 0.05 in both directions
-  on single added fires. That is exactly why a p-value at this n is not a verdict.
-- **NOT READABLE. n=31 is below the 60 bar, let alone 100.** Recorded so the trend is visible
+- **33 forward fires: 12 hits (36.4%), −0.283/fire, −9.35 total.** First half −0.179, second half
+  −0.381. Baseline is the honest-rule replay (+0.018/fire ~ 0.00), NOT the retracted +0.266.
+- Against the honest-rule 51.5%, 12-or-fewer hits in 33 has probability **0.0583**. It has read
+  0.0054 (n=8), 0.0393, 0.0630, 0.0492, 0.0347, 0.0539 and now 0.0583 — crossing 0.05 in both
+  directions on single added fires. That is exactly why a p-value at this n is not a verdict.
+- **NOT READABLE. n=33 is below the 60 bar, let alone 100.** Recorded so the trend is visible
   from the start rather than discovered at fire 100. **No conclusion drawn, and none should be.**
 - Accrual 2.25 fires/hour; the 100-fire verdict lands about Sat 12 Sep ~18:50 UTC.
 - Not messaging V: V's instruction is to report only when the verdict changes or at 100 fires, and
   V merges the branch anyway. V independently started its own 11.2 live shadow (e9676dc).
-- Kline set extended through 09-11 12:35 (73,011 candles) via the REST mirror.
+- Kline set extended through 09-11 13:15 (73,019 candles) via the REST mirror.
 - `book1s.sqlite3` has appeared (1 Hz price + both asks/sizes/ages) but holds only 13 epochs so far;
   the 5-s venue table stays primary until it accumulates.
 
