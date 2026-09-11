@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 12:20 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 12:46 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -10,6 +10,16 @@ the distance premise. In that rejection **every other check passes and only `gra
 the reason the checks run as a set and grading runs first.
 Its `permutation()` permutes the model's PREDICTIONS, never the labels: shuffling labels destroys
 the market's calibration too, so longshots "win" at the base rate and it prints a fake profit.
+
+## 12:42 — BOTH LIVE LANES PAUSED BY THE USER. My work is unaffected; do not re-arm.
+V's commit 62d64bb: after the drawdown (EF −21.20 of the −28 giveback since the 08:21 high, equity
+22.27 at the $1 floor) the user's call was to PAUSE BOTH LANES. EF, REVERSAL and MAIN all read
+MANUALLY OFF; **master stays ON**, so the engine keeps quoting, grading and logging but takes no
+positions. The standing "if master is OFF, re-arm" rule does NOT apply — only the user reverses this.
+**What it means for H1:** nothing stops. The forward ledger replays the frozen model against the
+venue *collector*, not against live fills, and the collector, both 1 Hz book loggers, the four twins
+and both shadows all keep running. The ledger keeps accruing at the same rate through the pause;
+the only thing that stops is live PnL. No reason to change the 100-fire bar or the ETA.
 
 ## NEW 11:46 — a third session ("Astra") exists, with `analysis/astra/` as its channel
 V created it (commits e49c93e, ac3e922). `analysis/astra/BRIEF.md` points it at this file first and
@@ -334,21 +344,21 @@ diverges from the Binance leader in near-zero candles" vs (b) "noise at n=77".
   PnL-by-regime remains unanswered and only the forward test can settle it.
 - Deliverable: `task17_3_regime_grid.md`. Repro: `task17_3_regime_grid.py`.
 
-## Task 17.2 LIVE — forward ledger at 30 of 100 fires (12:20). STILL NOT READABLE.
+## Task 17.2 LIVE — forward ledger at 31 of 100 fires (12:46). STILL NOT READABLE.
 `task17_forward.py` + `task17_forward_11_2.md` + `task17_forward_state.json` (append-only; each run
 processes only candles newer than the last recorded, so reruns are idempotent and history cannot be
 silently restated). Frozen artifact only, never refitted. Forward = strictly after epoch 1789078800.
-- **30 forward fires: 10 hits (33.3%), −0.307/fire, −9.20 total.** First half −0.124, second half
-  −0.489. Baseline is the honest-rule replay (+0.018/fire ~ 0.00), NOT the retracted +0.266.
-- Against the honest-rule 51.5%, 10-or-fewer hits in 30 has probability **0.0347**. It has read
-  0.0054 (n=8), 0.0393 (n=25), 0.0630 (n=26), 0.0492 (n=29) and now 0.0347 — crossing 0.05 in both
-  directions on single added fires. That is exactly why a p-value at this n is not a verdict.
-- **NOT READABLE. n=30 is below the 60 bar, let alone 100.** Recorded so the trend is visible
+- **31 forward fires: 11 hits (35.5%), −0.278/fire, −8.62 total.** First half −0.124, second half
+  −0.422. Baseline is the honest-rule replay (+0.018/fire ~ 0.00), NOT the retracted +0.266.
+- Against the honest-rule 51.5%, 11-or-fewer hits in 31 has probability **0.0539**. It has read
+  0.0054 (n=8), 0.0393, 0.0630, 0.0492, 0.0347 and now 0.0539 — crossing 0.05 in both directions
+  on single added fires. That is exactly why a p-value at this n is not a verdict.
+- **NOT READABLE. n=31 is below the 60 bar, let alone 100.** Recorded so the trend is visible
   from the start rather than discovered at fire 100. **No conclusion drawn, and none should be.**
-- Accrual 2.26 fires/hour; the 100-fire verdict lands about Sat 12 Sep ~18:40 UTC.
+- Accrual 2.25 fires/hour; the 100-fire verdict lands about Sat 12 Sep ~18:50 UTC.
 - Not messaging V: V's instruction is to report only when the verdict changes or at 100 fires, and
   V merges the branch anyway. V independently started its own 11.2 live shadow (e9676dc).
-- Kline set extended through 09-11 12:05 (73,005 candles) via the REST mirror.
+- Kline set extended through 09-11 12:35 (73,011 candles) via the REST mirror.
 - `book1s.sqlite3` has appeared (1 Hz price + both asks/sizes/ages) but holds only 13 epochs so far;
   the 5-s venue table stays primary until it accumulates.
 
