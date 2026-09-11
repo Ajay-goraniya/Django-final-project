@@ -713,6 +713,9 @@ Old-version findings keep going to NOTES_v11.md.
 - H1 Task 20c: (A) the Task 16 market prior was ALSO a stale-quote artifact - honest rule negative at every margin (-0.042 to -0.308), deepening as the filter tightens; the naive-null loss stands. (B) Task 18 EF-at-Polymarket survives but weaker: honest +0.223/fire (n=67, 62.7%) at margin 0.10 with halves -1.22/+16.14 - fails both-halves, so 'suggestive, not established'; the Predict.fun side (+0.049) used the engine's own recorded ask and is unaffected. Ledger row N amended; NOTES_polymarket updated. The v10 Polymarket paper run (real-time runner, its own quotes, Polymarket grading, +0.148 after fee, positive every day) remains the primary Polymarket evidence and is not touched by the artifact.
 - 10 processes, snapshots refreshed.
 
+## 05:15 UTC Fri 09-11: standing test from the Task 20 sweep (four rules re-run under the honest quote)
+- 11.2 direction model, EV filter: +0.207 -> +0.018 (collapses). Task 16 prior, EV filter: +0.087 -> -0.064 (flips). Task 18 EF at Polymarket, EV filter: +0.361 -> +0.182 (halves fail). Candidate J, loose cap: +0.230 -> +0.195 (survives). Every rule that compares a probability directly against the ask was inflated by quote noise; the one that only excludes expensive entries was not. Rule for any future candidate: if it compares a probability against the ask, assume it is exposed until re-run with a quote at or after the decision (verify.py quote_age). H1's forward ledger for 11.2 was rebuilt under the honest rule (2 fires, 0 hits, baseline now +0.018).
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
