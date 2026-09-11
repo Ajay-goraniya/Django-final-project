@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 11:20 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 11:46 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -10,6 +10,15 @@ the distance premise. In that rejection **every other check passes and only `gra
 the reason the checks run as a set and grading runs first.
 Its `permutation()` permutes the model's PREDICTIONS, never the labels: shuffling labels destroys
 the market's calibration too, so longshots "win" at the base rate and it prints a fake profit.
+
+## NEW 11:46 — a third session ("Astra") exists, with `analysis/astra/` as its channel
+V created it (commits e49c93e, ac3e922). `analysis/astra/BRIEF.md` points it at this file first and
+makes `analysis/h1/verify.py` its gate; `analysis/astra/REQUEST.md` is where V and H1 write tasks to
+it and it writes answers/blockers back. Nothing addressed to H1 there yet. **H1 still writes only
+under `analysis/h1/`** — if I need something from Astra it goes in `analysis/astra/REQUEST.md`, and
+that is the one file outside `analysis/h1/` I may append to, never NOTES_v11/v12.
+The BRIEF carries my evidence ladder as its standing prior, so a fresh session starts from the
+honest baseline instead of re-deriving the retracted +0.266.
 
 ## FIXED 00:22 — the protocol now lives in repo-root `CLAUDE.md` (commit cfa8e77)
 Every Claude session in this repo loads it automatically, so the three failures below cannot repeat
@@ -325,21 +334,21 @@ diverges from the Binance leader in near-zero candles" vs (b) "noise at n=77".
   PnL-by-regime remains unanswered and only the forward test can settle it.
 - Deliverable: `task17_3_regime_grid.md`. Repro: `task17_3_regime_grid.py`.
 
-## Task 17.2 LIVE — forward ledger at 26 of 100 fires (11:20). STILL NOT READABLE.
+## Task 17.2 LIVE — forward ledger at 29 of 100 fires (11:46). STILL NOT READABLE.
 `task17_forward.py` + `task17_forward_11_2.md` + `task17_forward_state.json` (append-only; each run
 processes only candles newer than the last recorded, so reruns are idempotent and history cannot be
 silently restated). Frozen artifact only, never refitted. Forward = strictly after epoch 1789078800.
-- **26 forward fires: 9 hits (34.6%), −0.299/fire, −7.78 total.** First half +0.010, second half
-  −0.609. Baseline is the honest-rule replay (+0.018/fire ~ 0.00), NOT the retracted +0.266.
-- Against the honest-rule 51.5%, 9-or-fewer hits in 26 has probability **0.0630** — it was 0.0393
-  at 25 fires and one added fire pushed it back over 0.05. That movement is exactly why a p-value
-  at this n is not a verdict: at 8 fires it read 0.0054 and swung back too.
-- **NOT READABLE. n=26 is below the 60 bar, let alone 100.** Recorded so the trend is visible
+- **29 forward fires: 10 hits (34.5%), −0.283/fire, −8.20 total.** First half −0.062, second half
+  −0.489. Baseline is the honest-rule replay (+0.018/fire ~ 0.00), NOT the retracted +0.266.
+- Against the honest-rule 51.5%, 10-or-fewer hits in 29 has probability **0.0492**. It has read
+  0.0054 (n=8), 0.0393 (n=25), 0.0630 (n=26) and now 0.0492 — crossing 0.05 in both directions on
+  single added fires. That is exactly why a p-value at this n is not a verdict.
+- **NOT READABLE. n=29 is below the 60 bar, let alone 100.** Recorded so the trend is visible
   from the start rather than discovered at fire 100. **No conclusion drawn, and none should be.**
-- Accrual 2.11 fires/hour; the 100-fire verdict lands about Sat 12 Sep ~22:00 UTC.
+- Accrual 2.27 fires/hour; the 100-fire verdict lands about Sat 12 Sep ~18:30 UTC.
 - Not messaging V: V's instruction is to report only when the verdict changes or at 100 fires, and
   V merges the branch anyway. V independently started its own 11.2 live shadow (e9676dc).
-- Kline set extended through 09-11 11:15 (72,995 candles) via the REST mirror.
+- Kline set extended through 09-11 11:35 (72,999 candles) via the REST mirror.
 - `book1s.sqlite3` has appeared (1 Hz price + both asks/sizes/ages) but holds only 13 epochs so far;
   the 5-s venue table stays primary until it accumulates.
 
