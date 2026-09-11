@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 08:20 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 08:57 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -494,6 +494,31 @@ quote, so Task 20 does not touch it. Venue-graded (settling source).
 - **ENCODED IN THE HARNESS 08:00: `verify.py` now has `paired(mine_right, theirs_right)`** — exact
   McNemar on the discordant pairs, failing above p=0.05. Self-test 3 replays the real 07:25 numbers
   and rejects them. Also referenced from repo-root `CLAUDE.md`, so every session gets it.
+
+## 08:55 — CANDIDATE J REFUTED BY V. THE PATTERN ACROSS ALL FIVE CANDIDATES IS NOW THE FINDING.
+V refuted J at its pre-set 100-fire live verdict: 102 graded, positive overall (+0.07..+0.12/fire by
+cap) but **second half NEGATIVE at every cap** (cap 0.60: +9.03/−1.25). It fails the both-halves
+ship rule. That is the fifth candidate to die, and the fifth to die the same way.
+**THE LADDER — every candidate, at every evidence level it reached:**
+| candidate | wrong grading | stale quote | honest quote | real fills | live forward |
+| 12a cross-venue | +0.44 | — | ~0.00 | — | — |
+| 11.2 model | — | +0.207 | +0.018 | — | −0.179 (16, early) |
+| 16 prior | — | +0.087 | −0.064 | — | — |
+| 18 EF@poly | — | +0.361 | +0.182 (h1 neg) | — | — |
+| **J** | — | **+0.408** | **+0.195** | **+0.153** | **+0.07..+0.12, h2 neg -> REFUTED** |
+**NOT ONE CANDIDATE IMPROVED AT ANY STEP.** J climbed the whole ladder and halved at each rung.
+**WORKING RULE: divide a recorded-quote per-fire number by at least 3 before treating it as an
+expectation, and assume the BOTH-HALVES test is the binding constraint, not the level. A replay
+number is a screening device for what to shadow, not an estimate of what you will earn.**
+**The J case is the important one: honest quote, real fills, correct grading — nothing wrong with
+the replay at all — and it STILL did not carry forward. Retrospective rigour does not substitute for
+a forward test at a pre-committed n.**
+**UNAFFECTED, because they never touch a venue quote:** the distance premise (72,863 candles) and
+its regime stability (14,442 held-out). They are statements about the TAPE, not about tradeable
+edge, and remain the only things here not walked back.
+**Honest project summary: we understand the market better than we did, and we have not yet found
+anything that makes money at prices we can prove existed.**
+- Note: `2026-09-11_0855_evidence_ladder.md`.
 
 ## OPEN, in priority order
 1. **Task 19 (standing)** — the daily forward ledger for the FROZEN model; verdict at >=100 forward fires.
