@@ -24,6 +24,10 @@ H1's working file: analysis/h1/POLYMARKET.md (Task 19). This file is V's summary
   model fires exactly where it disagrees with the Polymarket ask. The CURRENT EF signal (Polymarket-derived) transfers: +0.281 per $1 fire
   at margin 0.15 (n=69, both halves, both gradings) vs +0.049 for the same fires on Predict.fun. => Test the existing EF signal on
   Polymarket; any Polymarket direction model must be trained on Polymarket's resolution.
+- CORRECTION 09-11 05:10 (H1 Task 20c): the +0.281 used collector quotes up to 5 s older than the decision (the stale-quote artifact that
+  killed the 11.2 replay). With the quote taken at or after the decision: +0.223 per $1 fire (n=67, 62.7%) at margin 0.10, but halves
+  -1.22/+16.14 - suggestive, not established. The Predict.fun comparison (+0.049, engine-recorded asks) is unaffected. The v10 Polymarket
+  paper run (real-time runner, its own live quotes, +0.148 after fee, positive every day, 352 fires) is the primary evidence for the venue.
 
 ## What changes in the engine (to scope for v12, not built)
 - Executor: Polymarket CLOB API (signed orders, API credentials derived from the wallet, USDC.e on Polygon, relayer/gasless).
