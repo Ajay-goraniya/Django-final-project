@@ -651,6 +651,11 @@ Old-version findings keep going to NOTES_v11.md.
 - EF2 shadow (J): 46 graded; cap 0.60: 32, 50%, +0.319/fire, halves +9.29/+0.92; cap 0.50: 25, +0.399, halves +9.72/+0.25; none: 46, +0.206, halves +9.16/+0.31. Second half ~flat at every cap.
 - H1 245c291 (Task 17.1: 11.2 frozen and exported) merged. 9 processes, books live, book1s logging, snapshots refreshed.
 
+## 02:50 UTC Fri 09-11: 11.2 live shadow started on twin C's book (ledger row M forward test, live-quote leg)
+- H1 froze and exported the model (245c291: analysis/h1/models/ef11_2_gbm_seed0.joblib, ef11_2_predict.py with feats_at/trailing12/decide, training cutoff 1788887700000, sklearn 1.9.0 = this container's; reproduces the replay n=91 +0.263).
+- learner/tools/dm_shadow.py (running in the scratchpad): every second reads the current candle's 1-s price path from book1s.sqlite3 (index 0 = candle open), trailing12 from twin C's candles (kline high-low, slightly wider than the 1-s close range used in training - noted as a small feature-parity gap), and at each decision second S in [15,20,30,45,60,90,120] applies the frozen model + the engine's EV rule (margin 0.15, fee 0.02, notional >= $10) to the LIVE ask/size at that second; first clearing second wins; skips a second if the loop missed it by > 4 s (never looks ahead); graded from twin C candles. Table dm(candle_id, side, sec, ask, size, ev, trail12, fired_ts, actual, correct, pnl) in dm_shadow.sqlite3, snapshot pushed by ci.sh. Two forward legs now: H1's daily replay (Task 17) and this live-quote shadow; verdict at >= 100 graded, sign on both halves, verify.py True.
+- book1s.py now commits every row (it committed every 10 s before). 10 local processes.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
