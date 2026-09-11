@@ -73,14 +73,50 @@ threshold the user banned.
 stored `pnl` gives **+0.133** over 371 trades. Close but not identical — different window or a
 different fee treatment. Flagging rather than reconciling by assumption; V has the runner.
 
-## 4. Still to gather (needs the API docs, not yet done)
+## 4. Historical data — **we cannot build an ask history. This is a hard constraint.**
 
-- CLOB auth flow (wallet-derived API credentials), order types, tick size, min size, rate limits,
-  websocket channels, how fills and redemption surface — i.e. **what the executor must do that the
-  Predict.fun one does not**.
-- Historical data endpoints (`prices-history`, `trades`) and how far back they reach — can we build a
-  Polymarket-ask history for replay beyond our own collector?
+There is exactly one historical endpoint,
+[`GET /v2/prices-history`](https://docs.polymarket.com/market-data/prices-order-books):
+
+- Parameters: `token_id`, then exactly one of `interval` (`"1d"`, `"1w"`, `"max"`),
+  `start`/`end` (epoch seconds, **max 15-day span**), or `as_of`; optional `bucket_seconds` (60–86400).
+- Retention: *"One-minute data lasts at least 7 days, five-minute at least 60 days, and thirty-minute
+  at least 90 days… Three-hour and twelve-hour data is permanent."*
+- **It returns midpoint/observed prices only.** Each point is `timestamp`, `price`,
+  `resolution_seconds`.
+
+**There is no historical order-book, bid or ask endpoint, and no trades endpoint.** So the answer to
+V's question is **no**: we cannot extend a Polymarket-ask history beyond what our own collector
+recorded, and the finest history we could ever backfill is 1-minute **midpoints**, only ~7 days deep.
+
+That matters twice over. Every lesson from Task 20 says a replay must price at an **ask** taken at or
+after the decision — and on Polymarket that ask is simply not retrievable historically. **Any
+Polymarket evidence must therefore come from forward collection**, either our own 1 Hz logger or a
+live paper run. There is no shortcut through their API.
+
+## 5. Execution — what the Polymarket executor must do that the Predict.fun one does not
+
+From [place-orders](https://docs.polymarket.com/trading/place-orders) and
+[realtime-data](https://docs.polymarket.com/market-data/realtime-data):
+
+- **Signing:** EIP-712 typed-data signatures on **Polygon (chainId 137)**. Deposit wallets need
+  wrapped signatures for ERC-7739 validation; proxy/Safe/EOA wallets sign standard Exchange Order
+  typed data. This is a real new component — the Predict.fun executor does not sign on-chain orders.
+- **Order types:** limit **GTC** and **GTD** (GTD expires *one minute before* its stated expiry, a
+  security threshold — relevant for 5-minute markets), market **FAK** and **FOK**.
+- **Sizing:** `min_order_size` and `tick_size` are **per-token, not global** — they must be read from
+  the order-book endpoint per market, and price/amount decimal precision follows the tick size.
+- **Websocket:** `wss://ws-subscriptions-clob.polymarket.com/ws/market`, events `book`,
+  `price_change`, `last_trade_price`, `tick_size_change` (plus `best_bid_ask`, `new_market`,
+  `market_resolved` with `customFeatureEnabled`). Subscribe with
+  `{"assets_ids": ["<token_id>"], "type": "market"}`. **Must send a `PING` text frame every 10 s.**
+- **Rate limits:** not documented on these pages. Unknown — do not assume they are generous.
+
+## 6. Still to gather
+
 - Published geo/eligibility policy (documentation and ToS as written; no legal interpretation).
+- Rate/connection limits, which are not in the public pages I could reach.
+- Reconciling the fee rate against a real fill (see §2).
 
 ---
 

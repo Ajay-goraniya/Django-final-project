@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 05:32 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 05:55 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -421,8 +421,21 @@ J selects on cheapness (ask <= cap) so it had to be re-run. It survives.
   / 625 on a 1e-4 scale); not guessing its units. Resolve against a real fill before migrating.
 - Also confirmed: formula `shares x feeRate x p x (1-p)`, makers free, symmetric about 0.50, so per
   $1 staked the fee is `feeRate x (1 - ask)`.
-- Still to gather (needs API docs): CLOB auth/order types/tick/min size/rate limits/websocket and
-  what the executor must do differently; history endpoints and depth; published eligibility policy.
+- **(4) HARD CONSTRAINT FOUND: WE CANNOT BUILD A POLYMARKET ASK HISTORY.** The only historical
+  endpoint is `/v2/prices-history`, which returns **midpoints only** — no historical book, bid, ask
+  or trades endpoint exists. Retention: 1-min ~7 days, 5-min ~60 days, 30-min ~90 days. Combined
+  with Task 20 (a replay must price at an ask taken at or AFTER the decision), **all Polymarket
+  evidence must come from FORWARD collection** — our own 1 Hz logger or a live paper run. No
+  shortcut through their API.
+- **(5) Executor delta vs Predict.fun:** EIP-712 signing on Polygon chainId 137 (new component;
+  deposit wallets need ERC-7739 wrapped signatures); order types GTC/GTD/FAK/FOK, and **GTD expires
+  one minute BEFORE its stated expiry** — relevant for 5-min markets; `min_order_size` and
+  `tick_size` are PER-TOKEN and must be read per market; websocket
+  `wss://ws-subscriptions-clob.polymarket.com/ws/market` with `book`/`price_change`/
+  `last_trade_price`/`tick_size_change`, **PING every 10 s**. Rate limits NOT documented — unknown.
+- Still to gather: published eligibility policy; rate/connection limits; fee rate against a real fill.
+- Forward ledger at 05:45: **9 fires, 2 hits, −0.487/fire** (p=0.076 vs the honest-rule 51.5%).
+  Still NOT READABLE and the verdict is unchanged, so V was not messaged.
 - Deliverable: `POLYMARKET.md`. Repro: `task19_poly_research.py`.
 
 ## OPEN, in priority order
