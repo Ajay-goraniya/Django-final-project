@@ -1383,6 +1383,32 @@ against 22.08 at the 12:42 pause. Both of today's live windows - REVERSAL alone 
 The EF arming was the user's override at 19:40 against condition 2 of the rule; its 6 fills cost -2.71. That
 is the visible cost of the override, reported as promised rather than buried.
 
+## 20:41 UTC - live Polymarket smoke test: SDK verified, waiting on credentials
+User asked for 2 live minimum-size orders through the v12 lane and offered credentials.
+
+**IMPROVEMENTS item 11 is now CLOSED, and it closed in the build's favour.** I had flagged that
+requirements_polymarket_v12.txt pins `polymarket-client` while the code does `from polymarket import
+SecureClient`, and that a mismatch would only surface at the first live order. Checked against the real
+package: polymarket-client 0.10.0 exists on PyPI, its top-level package IS `polymarket`, and it exports
+`SecureClient`. Signatures match the code's calls exactly:
+- `SecureClient.create(private_key=..., wallet=...)` - present, keyword-only, same names.
+- `get_closed_only_mode()` - present (the code refuses to arm if the account is in closed-only mode).
+- `place_market_order(token_id=, side="BUY", amount=, max_spend=, max_price=, order_type="FAK")` - present,
+  all six arguments match.
+So the live path is structurally sound. Not installed yet - paper does not need it.
+
+**What is still needed, and none of it is mine to supply:** the wallet private key and deposit wallet address
+(user is writing them to scratchpad/live/poly.env, mode 600, directory created 0700 - to be sourced into the
+process environment only, never printed, logged or committed), the user's own eligibility confirmation, USDC
+funded on Polygon with allowances approved, and the account not in closed-only mode.
+
+Sizing: minimum 5 shares at a 1c tick, so roughly $2.50-$3.00 per order; 2 orders is about $6 at risk. Far
+under any rate limit, which also means this test says nothing about the 100/day relayer question.
+
+Consistency note: the user's 14:15 decision (v12 file is OBSERVATION ONLY, its code must not enter the real
+v12 build) still stands. A smoke test THROUGH the file is not a merge OF the file. The build11 venue-backend
+plan is unchanged.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |

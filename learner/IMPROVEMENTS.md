@@ -43,7 +43,7 @@ Running list. Not explanations for the user - working notes. Newest first. Statu
     file (trade schema with quote_age_ms/fill/slippage/fee; paper-default live guards; ambiguous-submit
     disables the lane) - do not lift the file. See v12_polymarket/DO_NOT_MERGE.md.
 
-11. OPEN - **Verify `polymarket-client` / `from polymarket import SecureClient`** before any live arming. The
+11. DONE 09-11 20:41 (verified against PyPI 0.10.0: package `polymarket`, SecureClient.create/get_closed_only_mode/place_market_order all match) - **Verify `polymarket-client` / `from polymarket import SecureClient`** before any live arming. The
     requirements pin and the import do not obviously match; a wrong guess surfaces at the first live order.
 
 12. OPEN - **Quote-age certification is the Polymarket go/no-go**, not crossing cost. Only 23 of 427 v10 paper
