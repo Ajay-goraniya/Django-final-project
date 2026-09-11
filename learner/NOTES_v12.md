@@ -1027,6 +1027,30 @@ fee reconciliation against a first real fill.
 - v10 runner quote-age logging is accruing: 5 certified fires so far. Ages so far are small - the freshness question looks like it will resolve well, but 5 is not a distribution.
 - 12 processes (11 + the v12 lane), snapshots refreshed. H1 moved its own cadence to 2 hours until Sunday night to save usage (2de5b25).
 
+## 14:05 UTC - USER INSTRUCTION (relayed by H1): 2-hour cadence, cut processes until Sunday
+"stop as much process as you can till sundays limit reset, I'm running low now every checks in every 2 hours till sundays night". Applied:
+- Check-in trigger re-armed **120 min** out (next 16:00 UTC), and it must be re-armed at 120 min every time from now - the tool will not let H1 edit a routine that fires into this session, so if I forget, the 30-minute cadence silently returns.
+- STOPPED 3 processes, all of them refuted experiments with nothing left to learn: twin B 8795 (trend guard - refuted, control only), twin TE 8798 (guard + EV 1.0, contains the refuted guard), ef2_shadow.py (rule J - refuted at its pre-set 100-fire verdict on 08-21). 12 -> 9 processes.
+- KEPT and protected: book1s.py and poly1s.py (1 Hz; Polymarket has no historical order book, anything not captured now is gone forever), venue_collect.py, the v10 paper runner (continuity + the new book_age_ms), the v12 Polymarket lane, build10, twin A 8794 (baseline) and twin C 8796 (Tokyo's comparator), dm_shadow.
+- Check-ins are now health + notes + push + one line. No exploratory analysis until Sunday night. Astra stays idle. Lanes stay PAUSED.
+
+## H1 Task 24 - my "venue is the finding" conclusion went through the gate. Two corrections I have to take.
+Write-up: analysis/h1/task24_poly_venue_check.md. It mostly survives: grading PASS (poly labels match the venues outcome table 429/429), sample PASS (429 fires), both halves PASS (+0.099/+0.147), cost sensitivity PASS (+0.5c -> +0.110, +1c -> +0.097, +2c -> +0.072), beats-the-null PASS. **quote_age FAILS** - only 23 of 427 asks match the collector at the same second.
+
+1. **RETRACT "204 candles Predict.fun's book never offered at all."** Not supported: the collector has a Predict.fun quote on 429 of 429 poly-fired candles, including 100% of the only-poly ones. The book WAS there; the filter declined the price. So it is a PRICING difference, not an availability one - which also means it is not independent of the open quote-age question. My "frequency, not price" framing was wrong in the same way my "price, not frequency" framing was wrong an hour earlier. The honest position: I do not yet know, and the at-or-after re-run is what decides.
+2. **Reconcile the headline: H1 gets +0.123 per fire over all 429 trades, not my +0.187.** Use +0.123 until I can show where mine came from.
+3. Do not let the cost-sensitivity pass stand in for the quote-age fail. Task 20's lesson is that the honest rule REMOVES fires (55 of 97, worth +0.290 each) rather than repricing them. A haircut prices the survivors; it cannot price trades that were never available.
+4. My broad 225-candle cell over the strict n=80 match was the wrong call: n=80 clears the 60 bar, so the strict read (venues level, +0.3078 vs +0.3027) is the defensible one and the broad split needs paired() before it counts.
+
+## H1 Task 24 - the NEW finding, and it is the one to build against
+H1 expected Polymarket's cheaper UP to be fair value for a different settlement rule. It is not: **both venues settle UP at the same rate, 48.6% vs 48.5% on 808 candles.**
+**The edge is a SIDE SKEW, not a flat venue edge.** Matched at 1 Hz, n=43,552, both halves stable:
+- Polymarket's UP ask is **3.33c +- 0.12 CHEAPER** than Predict.fun's.
+- Polymarket's DOWN ask is **2.62c +- 0.12 DEARER**.
+The paper run's 44/56 UP/DOWN mix earns **+0.162 on UP against +0.092 on DOWN**, consistent with the skew.
+Implication for the executor: it is harvesting a ONE-SIDED price difference, so its advantage moves with the model's side mix. A day the model leans DOWN is a day the venue advantage shrinks or inverts. That belongs in the lane design, not discovered later.
+Recommendation (H1, and I agree): build the executor and close the quote-age check in parallel; do NOT switch real money on the current number.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
