@@ -78,3 +78,23 @@ accepts the distance premise. **In that rejection every other check passes and o
 fires** — which is exactly why the checks must run as a set, and why grading runs first.
 H1 did NOT send V a separate message about it, per the user's own "don't just talk talk talk" rule —
 it goes in the next batched message with the 11.2 results.
+
+## 2026-09-11 00:40 UTC — user sends the third session's URL (session_01QjyEzWSzgKK6xvbK99ndym)
+**ROOT CAUSE FOUND, and it was not a permissions mistake by anyone.**
+That session's title is **"⚡ V -> H1 message channel"**, `origin: force_run_trigger`, created
+00:12:04, tagged `routine:agent-minted`, model sonnet-5, and its `session_context` has **NO git
+sources**. So when V poked H1 through trigger `trig_01PX7ZvtkKWUnZ9SzxGuPzn9`, the platform **minted
+a brand-new session instead of waking H1** — and a minted session inherits no repository, which is
+exactly why `git push` was denied. It then spent 82k tokens on analysis it could never deliver.
+This is a recurring hazard, not a one-off: every future V poke could mint another orphan.
+**Done:**
+1. **Archived** session_01QjyEzWSzgKK6xvbK99ndym. Nothing lost — its one non-duplicate claim was
+   already re-derived and pushed by H1 at 00:10; the rest duplicated CLOSED work.
+2. **Rewrote the poke trigger** (`trig_01PX7ZvtkKWUnZ9SzxGuPzn9`, now "V -> H1 poke (safe if it
+   mints a fresh session)"). It is NOT deleted, because V legitimately uses it to reach H1. Instead
+   it now opens with an identity test — `git push --dry-run` against the branch. If that fails the
+   session knows it is an orphan and must reply in ONE message (quoting V's content verbatim so it
+   is not lost) and STOP: no clone, no analysis, no asking the user for access. If it succeeds it is
+   H1 and proceeds with the normal protocol, including running `verify.py` before reporting.
+So a future mis-mint costs one short message instead of hours of undeliverable work, and V's content
+survives either way.

@@ -16,6 +16,11 @@ branch and were lost. If the dry run fails, **stop and say so immediately** — 
 analysis, and do not ask the user to change permissions. Hand the work to a session that can push
 (H1 can), or say up front that you can only deliver in chat.
 
+**Why this happens.** Firing a Routine that targets another session can **mint a brand-new session**
+instead of waking the intended one, and a minted session inherits **no git sources at all** — so it
+can read nothing and push nothing. If your session context has no repository and you were started by
+a routine, you are almost certainly an orphan: say so in one message and stop.
+
 ## 2. Read `analysis/h1/STATE.md` before proposing anything
 
 It is the single source of truth: what is done, what is open, what is **CLOSED**, and what has been

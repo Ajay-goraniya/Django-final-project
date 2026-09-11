@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 00:35 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 00:42 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -22,6 +22,17 @@ retraction, a blocker or anything touching live trading, or a direct question in
 batched into one message. No status pings, ever.
 **Task lifecycle:** every REQUEST.md item is marked IN PROGRESS (with time) / DONE (with deliverable
 path) / BLOCKED (with what would unblock it). Never silently unworked, never re-run when DONE.
+
+## ROOT CAUSE OF THE STRANDED SESSION — found 00:40, fixed
+The user sent the session URL. It was titled **"V -> H1 message channel"**, `origin:
+force_run_trigger`, `routine:agent-minted`, **no git sources in its context**. V's poke through
+`trig_01PX7ZvtkKWUnZ9SzxGuPzn9` **minted a new session instead of waking H1**, and a minted session
+inherits no repo — hence the push denial. It burned 82k tokens on undeliverable work.
+**Fixed:** that session is ARCHIVED (nothing lost; its one new claim was already re-derived and
+pushed at 00:10). The poke trigger is KEPT — V needs it — but rewritten to open with an identity
+test (`git push --dry-run` on the branch). Orphan -> reply once quoting V's content verbatim, then
+STOP: no clone, no analysis, no asking the user for access. H1 -> proceed normally.
+A future mis-mint now costs one message instead of hours, and V's content is not lost either way.
 
 ## OPERATIONAL ISSUES — known failure modes for any session on this task (user, 00:05)
 A THIRD session was given the same `H1_BRIEF.md` retro tasks and hit all three of these. The user
