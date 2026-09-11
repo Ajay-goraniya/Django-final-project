@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 00:42 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 00:55 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -194,10 +194,37 @@ where both fire.
   fires after EF, so at EF's fire second the disagreement does not exist yet.
 - Note: `2026-09-11_0010_ef_rev_conflict.md`. Repro: `ef_rev_conflict.py`.
 
+## Task 15 part 1 + part 3 DONE 00:52 (part 2 done 00:05) — Task 15 COMPLETE except 11.2
+- **Part 1 DONE.** Kline set extended through 09-10 via the REST mirror: **72,863 candles**
+  (`append_day.py` + `fetch_rest_klines.py`). The daily zip never published; blocker permanently
+  removed.
+- **Part 3 DONE — and the answer is the opposite of the question's premise. The current model does
+  NOT avoid the sub-1bps coin flips; it PREFERS them.** 82% of EF fires land under 2.5 bps:
+  `<1` 47% of fires vs 41% of candles (**1.15x over**), `1-2.5` 35% vs 27% (**1.27x over**),
+  `5-10` 2% vs 10% (**0.20x**, one fifth the base rate) — and 5-10 bps is where part 2 showed
+  direction is MOST predictable (~0.70 vs ~0.53). Counting fact, label-independent, holds both
+  halves (88% / 75% under 2.5 bps). **There is no avoidance to inherit.**
+- **NOT ESTABLISHED, and I am not claiming it:** whether EF has skill inside the flat bucket. First
+  pass said +5.0pp over "follow the move" (n=120, both halves). **verify.py failed it on grading
+  provenance and the failure was REAL** — see the caveat below. On the SETTLING labels it is
+  **+3.3pp with halves +5.0/+1.7**, inside noise at n=120. Needs ~400+ flat-bucket fires.
+- **NEW CAVEAT THAT TRAVELS TO MY OTHER WORK: Tokyo's venue-reported `actual` disagrees with my
+  Binance-spot close on 2.18% of orders (7/321), and EVERY disagreement is in a candle under ~1 bps**
+  (2.5% inside the `<1` EF bucket vs 1.5% outside). My Binance feed is not a perfect proxy for the
+  venue's settlement, and the error sits exactly in the flattest bucket. It does NOT overturn part
+  2's distance premise (0.53 -> 0.82 across buckets dwarfs 2.5%, ordering untouched) but **the `<1`
+  cell is the least trustworthy number in all of my work** and must be read that way.
+- **Marked, NOT read (n=40, under the bar):** the `2.5-5` cell has EF at 45.0% vs a 70.0% null,
+  −25pp. If real it would mean the engine actively fights genuine moves. **Highest-value cell to
+  revisit as fills accumulate.** REVERSAL n=20 throughout: insufficient.
+- Deliverable: `task15_part3_fire_profile.md`. Repro: `task15_part3_fire_profile.py`.
+- **STILL OPEN from Task 15: 11.2 itself** (train the direction model and compare its fire set to
+  the above baseline). Now unblocked — full kline coverage exists.
+
 ## OPEN, in priority order
-1. **Task 15 part 1/3 — Task 11.2 on the now-complete kline set** (the blocker is gone, see above:
-   use `data-api.binance.vision`). Then part 3: does the retrained model's fire set avoid the
-   sub-1-bps coin flips on its own, or inherit the current 46%?
+1. **Task 11.2** — train the direction model and compare its fire set against the part-3 baseline
+   above (82% of fires under 2.5 bps, 0.20x in the informative 5-10 band). The distance feature is
+   the one input verified to work on 72,863 candles; the engine can compute it at the fire second.
 2. **The venue-favourite vs Binance-leader check** at t=237 in the <1bps bucket — settles the one
    thing Task 15 could not (see above).
 
