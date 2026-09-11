@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 14:47 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 16:46 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -22,6 +22,7 @@ the market's calibration too, so longshots "win" at the base rate and it prints 
   holds **3 trades** (23 decisions). **Far below the 60 bar; not read.**
 - V's v10 runner `book_age_ms` (live from 13:28) is the other route to the same answer; check the
   certifiable row count each time and run Task 21b only at n >= 60, UP and DOWN separately.
+  **Count at 16:46: 26** (was 7 at 14:47) — accruing ~10/hour, so n=60 lands around 20:00 UTC.
 
 ## 13:55 — USAGE SAVER IN FORCE UNTIL SUNDAY NIGHT (user: "I'm running low")
 User, 13:55: *"stop as much process as you can till sundays limit reset, I'm running low now every
@@ -445,21 +446,21 @@ diverges from the Binance leader in near-zero candles" vs (b) "noise at n=77".
   PnL-by-regime remains unanswered and only the forward test can settle it.
 - Deliverable: `task17_3_regime_grid.md`. Repro: `task17_3_regime_grid.py`.
 
-## Task 17.2 LIVE — forward ledger at 37 of 100 fires (14:47). STILL NOT READABLE.
+## Task 17.2 LIVE — forward ledger at 41 of 100 fires (16:46). STILL NOT READABLE.
 `task17_forward.py` + `task17_forward_11_2.md` + `task17_forward_state.json` (append-only; each run
 processes only candles newer than the last recorded, so reruns are idempotent and history cannot be
 silently restated). Frozen artifact only, never refitted. Forward = strictly after epoch 1789078800.
-- **37 forward fires: 14 hits (37.8%), −0.276/fire, −10.22 total.** First half −0.270, second half
-  −0.282 — the halves have converged. Baseline is the honest-rule replay (+0.018/fire ~ 0.00).
-- Against the honest-rule 51.5%, 14-or-fewer hits in 37 has probability **0.0668**. It has read
-  0.0054 (n=8), 0.0393, 0.0630, 0.0492, 0.0347, 0.0539, 0.0583 and now 0.0668 — crossing 0.05 in
-  both directions on single added fires. That is why a p-value at this n is not a verdict.
-- **NOT READABLE. n=37 is below the 60 bar, let alone 100.** Recorded so the trend is visible
+- **41 forward fires: 16 hits (39.0%), −0.273/fire, −11.18 total.** First half −0.245, second half
+  −0.299 — the halves stay close. Baseline is the honest-rule replay (+0.018/fire ~ 0.00).
+- Against the honest-rule 51.5%, 16-or-fewer hits in 41 has probability **0.0744**, drifting up as
+  the hit rate creeps toward the baseline (0.0054 at n=8, then 0.0393 / 0.0630 / 0.0492 / 0.0347 /
+  0.0539 / 0.0583 / 0.0668 / 0.0744). The per-fire number has been stable at about −0.28 since n=29.
+- **NOT READABLE. n=41 is below the 60 bar, let alone 100.** Recorded so the trend is visible
   from the start rather than discovered at fire 100. **No conclusion drawn, and none should be.**
 - Accrual 2.25 fires/hour; the 100-fire verdict lands about Sat 12 Sep ~18:50 UTC.
 - Not messaging V: V's instruction is to report only when the verdict changes or at 100 fires, and
   V merges the branch anyway. V independently started its own 11.2 live shadow (e9676dc).
-- Kline set extended through 09-11 14:35 (73,031 candles) via the REST mirror.
+- Kline set extended through 09-11 16:35 (73,055 candles) via the REST mirror.
 - `book1s.sqlite3` has appeared (1 Hz price + both asks/sizes/ages) but holds only 13 epochs so far;
   the 5-s venue table stays primary until it accumulates.
 
