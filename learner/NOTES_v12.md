@@ -849,6 +849,39 @@ Old-version findings keep going to NOTES_v11.md.
 - Everything else keeps running: the v10 paper runs on both venues, all four twins, both 1 Hz book loggers, the EF2 and 11.2 shadows. Data collection into the weekend is unaffected.
 - IMPORTANT for the next check-in and for the safety net: do NOT re-arm the lanes. The standing "if master is OFF, re-arm" rule does not apply here - master is ON by design and the lanes are off by the user's instruction. Only the user reverses this.
 
+## 12:55 UTC - WHY POLYMARKET WINS AND LIVE PREDICT.FUN DOES NOT (user question, measured)
+Two separate gaps. Both decompose to ENTRY PRICE, not to signal quality.
+
+### Gap 1: live Predict.fun vs Predict.fun paper - SAME model quality, worse price
+Matched on candle AND side, live fills vs the paper run's recorded ask, using the LIVE outcome for both
+so grading cannot contribute (n=120):
+| | live | paper |
+|---|---|---|
+| hit rate | 50.8% | 50.8% (identical) |
+| avg entry | 0.5008 | 0.4862 |
+| per $1 | -0.0021 | +0.0399 |
+The model is not worse live. It is 1.5 cents more expensive live, and 1.5 cents is worth +0.042 per $1 -
+more than the entire edge. Across all 380 live EF fills: actual +0.0164 per $1; the same fires at an entry
+1.5c cheaper would be +0.0470. Live slippage (fill minus quote) is only +0.46c mean, 0.00c median, so most
+of the 1.5c is not slippage at the fill - it is that the paper run books a quote the live engine never gets
+to trade at. This is the stale-quote artifact showing up as the live/paper gap itself.
+
+### Gap 2: Polymarket vs Predict.fun, both paper, same v10 model
+Matched on candle AND side (n=151):
+- avg ask Polymarket 0.454 vs Predict.fun 0.493 - Polymarket is 3.9 cents cheaper, and cheaper on 66% of them.
+- Holding the grading fixed and swapping ONLY the price: +0.298 -> +0.394 per $1.
+- Settlement disagreement between the venues, measured on the actual label (not the side): 31/218 = 14.2%.
+  Higher than the 10.4% on record; worth H1 re-measuring on the full overlap.
+Polymarket's book is simply cheaper for the same bet. That is the whole venue edge, and it is ~2.6x the
+1.5c that kills Predict.fun live.
+
+### The honest caveat
+The Polymarket paper number is exposed to exactly the flaw that Gap 1 just exposed on Predict.fun: it assumed
+it could buy at the quoted ask. The Predict.fun live/paper gap is the measured size of that assumption on a
+thin book (1.5c). If Polymarket's book costs the same 1.5c to cross, +0.187 per $1 becomes roughly +0.10;
+if it costs what its wider depth suggests it should not, most of the edge survives. Only live fills answer it,
+which is what poly1s.py at 1 Hz since 06:03 and the executor work are for.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
