@@ -1607,6 +1607,30 @@ The live smoke lane on 8791 is stopped. Its DB (results/v12_poly_live_smoke.sqli
 SKIPPED on the EV-at-cap guard, 1 AMBIGUOUS on the geoblock rejection - plus 1 attempt row with the 986 ms
 latency. That is the complete record of the only real orders this project has ever sent to Polymarket.
 
+## 22:12 UTC check-in (Fri 09-11) - trigger negative, lanes stay off; worker restarted mid-check
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 9W/11L **-0.051** | 18W/22L -0.014 |
+Negative -> lanes stay OFF. Flip count so far today: armed 16:12, paused 17:12, armed 19:12, killed 20:12 =
+4 flips. Cumulative real PnL across the armed windows: +0.07 (16:12-17:12) then -1.42 (19:12-20:12 REVERSAL
++0.54 / EF -1.96) => about -1.35. That MEETS the review condition pre-committed at 19:12 (4+ flips, cumulative
+below +1.00). **The criterion as written is refuted.** Per the commitment it gets redesigned with a dead zone
+and a minimum dwell - designed and written down BEFORE being applied, and not tonight while the user is
+limit-constrained. Until then: no automatic re-arm. Lanes stay off unless the user says otherwise.
+
+Tokyo: master ON, all three kinds MANUALLY OFF, equity 15.02, nothing open, uptime 15.7 h. Dashboard threw 502
+on 6 consecutive calls then answered on the 7th - the worst bout yet (IMPROVEMENTS 6).
+
+Session worker restarted at ~22:12 mid-check (exit 137 on ci.sh). All 12 model processes survived (setsid),
+twins answer, scratchpad intact, fair_start_ms intact. Recreated the keepalive. The 2-fill watcher and the
+old proxy-recovery task were dropped - neither is needed (live lane is stopped).
+
+Fair table (window from 15:04:25): PF paper 18/21 +4.3; Poly paper 29/30 +11.3; v12 lane 30/27 +87.0;
+Tokyo 5/10 -7.06 real. Both paper runs have given back most of the afternoon.
+
+Polymarket live: CLOSED (22:00 entry). The user has since said they hold Indian citizenship and are only
+travelling in the UK, with accounts logged in on a device in India. Recorded; not acted on - see the reply.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
