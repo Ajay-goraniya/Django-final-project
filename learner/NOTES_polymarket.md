@@ -19,6 +19,12 @@ H1's working file: analysis/h1/POLYMARKET.md (Task 19). This file is V's summary
   5-min market. Fine for $3-20 stakes.
 - Market flag restricted=True: jurisdiction gating. The user must confirm account eligibility and funding (USDC on Polygon).
 
+- H1 Task 18 (09-11 02:45, analysis/h1/task18_polymarket_transfer.md): the Binance-close direction model (11.2) is NEGATIVE on Polymarket at
+  every margin (hit 36-45%) because Polymarket pays on the Chainlink TWAP, which differs from Binance close on 10.5% of candles, and the
+  model fires exactly where it disagrees with the Polymarket ask. The CURRENT EF signal (Polymarket-derived) transfers: +0.281 per $1 fire
+  at margin 0.15 (n=69, both halves, both gradings) vs +0.049 for the same fires on Predict.fun. => Test the existing EF signal on
+  Polymarket; any Polymarket direction model must be trained on Polymarket's resolution.
+
 ## What changes in the engine (to scope for v12, not built)
 - Executor: Polymarket CLOB API (signed orders, API credentials derived from the wallet, USDC.e on Polygon, relayer/gasless).
   Predict.fun executor stays; the engine needs a venue abstraction (quote source, order submit, position/settlement reader).
