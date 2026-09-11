@@ -1160,6 +1160,35 @@ tightening, also pre-committed now: the last-20 must be positive **at two consec
 REVERSAL goes on - the same hysteresis the stake ladder already uses, and for the same reason. Today proved
 that acting on one good reading and reversing an hour later just donates the spread.
 
+## 16:12 UTC check-in - THE RE-ARM RULE FIRED. REVERSAL is LIVE again at $1.
+Second consecutive positive reading on the pre-committed criterion, so it fired exactly as written at 15:10.
+No judgement was applied on top of it and no part of the rule was changed after seeing the numbers.
+
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (the trigger) | 11W/9L **+0.129 per $1** | 19W/21L +0.005 |
+| Polymarket paper (reported, not a condition) | 9W/11L -0.059 | 19W/21L -0.023 |
+| EF live (its own extra condition) | 14 fills **-0.443 per $1** | - |
+
+Sightings: 15:10 +0.010 (first), 16:12 +0.129 (second) -> REVERSAL re-armed.
+
+Applied and VERIFIED at Tokyo: dials re-posted (thr_scale 1.0, trend_bps 0, rev_max_entry 0), stake fixed
+$1.0 (equity 22.08 is under the $1 rung), REVERSAL manual_enabled TRUE, EF FALSE, MAIN FALSE, master ON.
+Read back: master ON; REVERSAL **ACTIVE, effective True**; EF "MANUALLY OFF"; MAIN "MANUALLY OFF"; stake 1.0,
+next 1.0. So exactly one lane is live, at the smallest stake, with the two dead lanes double-locked.
+
+**EF stays OFF and is nowhere near its condition** - its own live last-14 fills are -0.443 per $1. That is the
+second condition doing its job: the paper trigger turned positive, but EF's own record did not, so EF does not
+come back. Had I re-armed on the paper number alone I would have restarted the lane that lost 21.20 today.
+
+Kill rules are live from this moment: REVERSAL off if average slippage exceeds 3c over 20 fills, or PnL per $1
+falls below -3.0 over 20 fills. Symmetric re-pause also live: if the Predict.fun paper last-20 goes negative at
+a later hourly check, REVERSAL pauses again immediately - the same number that turned it on turns it off.
+
+Fair table at 16:12 (window from the 15:04:25 joint restart): Predict.fun paper 4/3 +19.5; Polymarket paper
+6/3 +35.8; Polymarket v12 lane 6/3 +38.8; Tokyo 0/0 (was paused for all of it). Both Polymarket runs are
+agreeing again post-restart. 12 processes, snapshots refreshed.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
