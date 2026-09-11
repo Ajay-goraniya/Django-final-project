@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 10:17 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 10:47 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -460,9 +460,13 @@ J selects on cheapness (ask <= cap) so it had to be re-run. It survives.
   (2) quantified per-second API limits — described only as "Standard"/"Highest", not published.
   (3) the fee rate (docs 0.07 vs help-centre-implied 0.0625) — only a REAL FILL settles it, which is
   V's side. All three are recorded in POLYMARKET.md as open with what would unblock each.
-- **Forward ledger at 10:17: 23 fires, 8 hits (34.8%), −0.271/fire, both halves negative**
-  (−0.166 / −0.368). Accrual 2.04/h, ETA **Sat 12 Sep 23:24 UTC**. NOT readable (n=23), verdict
-  unchanged, V not messaged. Tracking below the honest +0.018, as the ladder predicts.
+- **Forward ledger at 10:47: 25 fires, 8 hits (32.0%), −0.330/fire, both halves negative**
+  (−0.054 / −0.584). Accrual 2.07/h, ETA **Sat 12 Sep 22:50 UTC**.
+  **p has now crossed 0.05 (0.0393 against the honest-rule 51.5%). THAT IS NOT THE VERDICT and I am
+  not treating it as one.** n=25 is far below the 60 bar, let alone the pre-committed 100 with both
+  halves. At 8 fires I called a p=0.005 start "not a verdict" and it swung back; the same discipline
+  applies now that the direction happens to suit the prior. V not messaged; the rule is 100 fires or
+  a verdict change, and neither has happened.
 - **Nothing else is open.** Task 19's three gaps are BLOCKED with named unblockers; the 2.5-5 bps
   cell needs ~14 more fills; everything else is DONE or retracted. Per the user's "don't do
   unnecessary or unuseful work", checks with no new task and no new venue data should advance the
