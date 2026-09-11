@@ -803,6 +803,12 @@ Old-version findings keep going to NOTES_v11.md.
 - 10:41 states (whole run, not the fair window): Predict.fun paper since 09-08 18:05 152/130 +192.1@$10; Polymarket paper since 09-08 17:35 214/190 +522.9@$10 (per day +139.9/+105.8/+202.7/+74.5); Tokyo since 12:24 09-09 realised +13.26 (EF 197/163 +4.73, REVERSAL 32/8 +8.53), wallet 36.33, equity 43.15, 0 open; twins A +95.8, B +239.2 (guard refuted live), C +158.3@$10, 84 min up; EF2/J 121 graded +0.013/fire halves +5.77/-4.17 (refuted); 11.2 live shadow 8 graded 2/6.
 - Ladder hysteresis, first sighting: 10:41 UTC equity 43.15 >= 40 with stake $2 (10:26 check-in was 30.56). Step to $3 only if still >= 40 at a check-in >= 30 min later (11:26 earliest); step down to $1 immediately if < 30.
 
+## 10:56 UTC check-in (Fri 09-11)
+- Fair table since 21:55 (09-09): Predict.fun paper 82/72 +90.6@$10; Polymarket paper 122/116 +244.4@$10; v11 live EF 197/165 +0.73 real.
+- Tokyo: realised +9.26, wallet 30.33, equity 32.33 (1 open), 402 settled. REVERSAL 32/6 +10.53 (+0.149 per $1); $2 EF 61/53 -3.16 (-0.012 per $1). EF is still the losing lane today.
+- Ladder: the 10:41 sighting at 43.15 is VOID - equity is back to 32.33, below the $3 rung, so no step-up. $2 stays; $1 if it goes below 30.
+- Twins (99 min): A +85.0, B +219.2, C +138.3@$10. Shadows: EF2/J 123 graded (refuted); 11.2 live shadow 8 graded, 2 W 6 L, -0.486/fire, both halves negative. 11 processes, snapshots refreshed.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
