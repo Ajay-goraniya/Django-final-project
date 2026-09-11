@@ -809,6 +809,11 @@ Old-version findings keep going to NOTES_v11.md.
 - Ladder: the 10:41 sighting at 43.15 is VOID - equity is back to 32.33, below the $3 rung, so no step-up. $2 stays; $1 if it goes below 30.
 - Twins (99 min): A +85.0, B +219.2, C +138.3@$10. Shadows: EF2/J 123 graded (refuted); 11.2 live shadow 8 graded, 2 W 6 L, -0.486/fire, both halves negative. 11 processes, snapshots refreshed.
 
+## 11:21 UTC (stake step-down, between check-ins)
+- Equity 28.23 (wallet 26.68, 1 open), realised down to +5.62 from the +28.28 high at 08:21. Ladder rule fired: below the $1 rung, so POST stake fixed 1.0 - accepted 200 and parked as `pending` until the open position settles (shared_next_stake still 2.0 at the time of the POST).
+- Whole-run states at 11:21: Predict.fun paper since 09-08 18:05 153/133 +170.7@$10; Polymarket paper since 09-08 17:35 216/193 +517.9@$10 (by day +139.9/+105.8/+202.7/+69.6); Tokyo since 12:24 09-09 realised +5.62 (EF 199/168 +0.56, REVERSAL 33/10 +5.06).
+- REVERSAL per $1 has slipped from +0.149 to +0.092 (33/8 +7.06 since 14:47). Not near the kill rules (avg slip > 3c over 20, or per $1 < -3.0 over 20), so no action; watching it.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
