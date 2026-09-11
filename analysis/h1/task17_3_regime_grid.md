@@ -9,12 +9,29 @@ plainly is the deliverable.
 
 | bucket | n | per-fire | |
 |---|---|---|---|
-| Q1 calm / Q2 / Q3 / Q4 busy | ~23 each | — | all **insufficient** |
-| 00–08 / 08–16 / 16–24 | ~30 each | — | all **insufficient** |
-| weekday / weekend | — | — | **insufficient** |
-| per UTC hour | 1–11 | — | all **insufficient** |
+| Q1 calm | 13 | −0.059 | insufficient |
+| Q2 | 38 | +0.296 | insufficient |
+| Q3 | 24 | +0.420 | insufficient |
+| Q4 busy | 16 | +0.211 | insufficient |
+| 00–08 | 20 | +0.358 | insufficient |
+| 08–16 | 32 | +0.123 | insufficient |
+| 16–24 | 39 | +0.329 | insufficient |
+| weekday | **91** | +0.263 | the whole sample |
+| **weekend** | **0** | — | **see below** |
+| per UTC hour | 1–11 | −1.000 … +0.980 | all insufficient |
 
-**1 of 9 cells reaches the 60-fire bar.** Per-hour cells run n=1 to n=11 and swing from −1.000 to
+### The weekend cell is empty, and that matters
+
+**Every one of the 91 fires is on a weekday.** The venue window (09-08 → 09-10) is Tuesday to
+Thursday, so **the 11.2 replay contains no weekend candles at all.** The +0.266/fire headline is a
+weekday-only number.
+
+This is worth V's attention because **Sat–Sun is the planned live test window.** The forward test
+will be the first weekend evidence for the fire set that has ever existed. Part B below is the only
+weekend evidence available today, and it is about the signal, not the fires.
+
+**1 of 9 cells reaches the 60-fire bar — and that one cell is "weekday", which is simply the entire
+sample.** Per-hour cells run n=1 to n=11 and swing from −1.000 to
 +0.980, which is exactly what noise looks like at that size. The full grid is in
 `task17_3_regime_grid.py` output; I am not reproducing the numbers here as a table because doing so
 invites reading them.

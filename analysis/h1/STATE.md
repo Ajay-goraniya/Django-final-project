@@ -303,7 +303,11 @@ diverges from the Binance leader in near-zero candles" vs (b) "noise at n=77".
 - Deliverables: `task18_polymarket_transfer.md`, `models/README.md`. Repro: `task18_polymarket_transfer.py`.
 
 ## Task 17.3 DONE 03:05 — the 11.2 SIGNAL is rain-or-sun stable; its PnL grid is unreadable
-- **A (the literal ask): CANNOT BE ANSWERED at 91 fires. 1 of 9 cells reaches the 60-fire bar.**
+- **A (the literal ask): CANNOT BE ANSWERED at 91 fires. 1 of 9 cells reaches the 60-fire bar — and
+  that cell is "weekday", i.e. the whole sample. THE WEEKEND CELL IS EMPTY: all 91 fires are
+  weekday, because the venue window 09-08..09-10 is Tue-Thu. The +0.266 headline is a WEEKDAY-ONLY
+  number, and Sat-Sun is the planned live test window — the forward test will be the first weekend
+  evidence for the fire set that has ever existed.**
   Per-hour cells are n=1..11 and swing −1.000..+0.980 — textbook noise. Reported in full, marked,
   NOT read. Needs the Task 17.2 forward test. Any regime switch drawn from this would be fitting
   noise, i.e. the banned thing.
