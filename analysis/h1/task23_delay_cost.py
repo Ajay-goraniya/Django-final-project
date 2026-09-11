@@ -1,4 +1,4 @@
-"""Task 22 - what does an order delay actually cost, and does the quote-age damage scale with it?
+"""Task 23 - what does an order delay actually cost, and does the quote-age damage scale with it?
 
 The user's question (13:55 UTC 09-11): "check the pollymarket book few milliseconds after the signal
 fired? i mean if predict has 300ms delay in order then you check pollymarket book 300ms later?"
@@ -74,7 +74,7 @@ if __name__ == '__main__':
 
     for nm, (row, x1) in curves.items():
         h = len(x1) // 2
-        F = Finding('Task 22 - %s cheap-print reversion (cost of an order delay)' % nm,
+        F = Finding('Task 23 - %s cheap-print reversion (cost of an order delay)' % nm,
                     per_fire=x1.mean(), n=len(x1))
         F.sample({'cheap prints at lag 1s': len(x1)})
         F.halves(x1[:h].mean(), x1[h:].mean())
