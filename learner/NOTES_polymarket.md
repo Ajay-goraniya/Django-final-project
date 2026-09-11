@@ -42,5 +42,17 @@ H1's working file: analysis/h1/POLYMARKET.md (Task 19). This file is V's summary
   settlement timing and redemption, API auth flow, geo policy, historical data endpoints (prices-history, trades), websocket streams.
 - 11.2 transfer at Polymarket asks (Task 18). Weekend behaviour of the Polymarket paper run (Sat-Sun live test window).
 
+
+## H1 Task 19 findings (09-11 05:30, analysis/h1/POLYMARKET.md)
+- Grading: a kline-built 60-s TWAP does NOT reproduce Polymarket's resolution (best proxy 91.4% agreement vs 89.5% for the engine's
+  close>=open; ~9% of candles mislabelled, concentrated in flat candles). Every Polymarket study grades on Polymarket's own outcome
+  table; no kline substitute. For live trading nothing changes (the outcome is public after the close).
+- Fees: docs table says crypto feeRate 0.07; the help centre says fees "peak at 1.56% at 50%", which implies 0.0625. Our replays used
+  0.07 (conservative). gamma's takerBaseFee 1000 matches neither; units unknown. Resolve against a real fill before any migration decision.
+- v10 Polymarket paper run by time: weekday only (371 fires, zero weekend coverage - same gap as everything else); 00-08 UTC ~flat
+  (+0.014 per $1, n=115), 08-16 +0.193, 16-24 +0.181. Observation, not a rule. Headline reconciliation: my +0.148 recomputed 351
+  fires with the 7% formula; the runner's own stored pnl (its own fee model, 371 fires) gives +0.133 - same picture.
+- Still to gather: CLOB auth flow, order types, tick/min size, rate limits, websocket channels, fills/redemption - the executor spec.
+
 ## Plan
 - Next week (user): decide after the weekend. If go: build the executor in v12, run $1 live beside Tokyo for a day, ladder decides.
