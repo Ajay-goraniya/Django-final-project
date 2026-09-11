@@ -122,6 +122,36 @@ class Finding:
                          'real %+.3f vs permuted mean %+.3f (p95 %+.3f), p=%.3f over %d draws'
                          % (real, sims.mean(), np.percentile(sims, 95), pval, len(sims)))
 
+    # ---- 4b. the one that bit us at 07:25 ----
+    def paired(self, mine_right, theirs_right):
+        """For a rule-vs-rule comparison on the SAME candles, test the DISCORDANT pairs only.
+
+        `mine_right` / `theirs_right`: equal-length boolean sequences, one entry per shared candle.
+
+        Why this exists: on 2026-09-11 the claim "EF beats follow-the-move in the flat bucket" read
+        +5.3pp on n=150 with both halves identical to three decimals. It looked like a finding. But
+        the two rules AGREED on 96 of those 150 candles, so only 54 carried any information, and the
+        whole edge was 31 vs 23 - eight trades. Exact McNemar: p=0.341.
+
+        The trades where both rules agree inflate n without adding power, so the raw edge and the
+        halves check BOTH overstate the evidence. A 150-trade sample was really a 54-trade sample,
+        and the matching halves were symmetric noise (~27 discordant pairs each), not corroboration.
+        """
+        from math import comb
+        a = list(mine_right); b_ = list(theirs_right)
+        if len(a) != len(b_):
+            return self._add('paired test', False, 'sequences differ in length')
+        b = sum(1 for x, y in zip(a, b_) if x and not y)     # only mine right
+        c = sum(1 for x, y in zip(a, b_) if y and not x)     # only theirs right
+        m = b + c
+        if m == 0:
+            return self._add('paired test', False, 'the two rules never disagree - no information')
+        lo = min(b, c)
+        p = min(1.0, 2 * sum(comb(m, k) * 0.5 ** m for k in range(0, lo + 1)))
+        return self._add('paired test', p <= 0.05,
+                         'n=%d, agree on %d, discordant %d (%d vs %d), edge %+.3f, exact McNemar p=%.3f'
+                         % (len(a), len(a) - m, m, b, c, (b - c) / len(a), p))
+
     # ---- 5. monotonicity ----
     def sweep(self, values):
         """A smoothly monotone sweep is a real regularity; one peaking at your chosen value is noise."""
@@ -184,6 +214,16 @@ if __name__ == '__main__':
     bad.verdict()
     print('(Correctly rejected on grading provenance alone - every other check passed,')
     print(' which is exactly why the checks have to be run together and this one has to be first.)\n')
+
+    print('SELF-TEST 3 - the paired check on the real 07:25 numbers (should REJECT)\n')
+    # 150 shared candles: agree on 96, discordant 54 split 31/23
+    mine = [True] * 31 + [False] * 23 + [True] * 48 + [False] * 48
+    theirs = [False] * 31 + [True] * 23 + [True] * 48 + [False] * 48
+    pc = Finding('EF beats follow-the-move in the <1bps bucket', per_fire=0.014, n=150)
+    pc.paired(mine, theirs)
+    pc.verdict()
+    print('(The raw edge was +5.3pp with both halves identical to three decimals. The paired test')
+    print(' sees 8 trades of difference across 54 informative candles and says no.)\n')
 
     print('SELF-TEST 2 - the distance premise (should PASS)\n')
     good = Finding('P(close same side) rises with |price(S)-open|', per_fire=None)

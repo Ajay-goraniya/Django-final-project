@@ -59,11 +59,19 @@ checks that have actually caught errors here, and fails loudly rather than passi
 | `sweep()` | a non-monotone sweep peaking at your chosen value |
 | `costs()` | it dies once you pay realistic slippage |
 | `null()` | the obvious dumb strategy does just as well |
+| `quote_age()` | the quote you paid could predate the price you decided on |
+| `paired()` | a rule-vs-rule comparison counted the candles where both rules agree |
 
 `verdict()` returns True only if nothing FAILED. Run `python3 analysis/h1/verify.py` to see it
 reject a real false finding from 09-10 and accept a real true one. **In that rejection every other
 check passes and only the grading check fires** — which is why they are run as a set, and why
 grading is first.
+
+**On `paired()`:** when comparing two rules on the *same* candles, only the candles where they
+disagree carry information. On 09-11 a "+5.3pp edge, both halves identical to three decimals" on
+n=150 turned out to be 31-vs-23 across 54 discordant pairs — eight trades, exact McNemar p=0.341.
+The agreeing candles inflate `n` without adding power, so the raw edge **and** the halves check both
+overstate the evidence. Run `paired()`; a 150-trade sample can really be a 54-trade sample.
 
 **On `permutation()`:** permute the model's *predictions*, never the labels. Shuffling labels also
 destroys the market's calibration, so cheap longshots "win" at the base rate and the control prints

@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 07:27 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 08:00 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -455,7 +455,9 @@ J selects on cheapness (ask <= cap) so it had to be re-run. It survives.
   not on my kline fetches. At 06:43 the klines advanced but the venue book had not, so 0 new fires.
   Don't spend a check fetching klines when `venues.sqlite3.gz` has not changed.
 - Still to gather: quantified API rate limits; fee rate vs a real fill; the enumerated ToS list.
-- **Forward ledger at 07:20: 15 fires, 6 hits (40.0%), −0.124/fire** (p=0.264 vs 51.5%), halves
+- **Forward ledger at 07:50: 16 fires, 6 hits (37.5%), −0.179/fire** (p=0.192 vs 51.5%), halves
+  −0.423/+0.065. Not readable, verdict unchanged, V not messaged.
+- (earlier) **Forward ledger at 07:20: 15 fires, 6 hits (40.0%), −0.124/fire** (p=0.264 vs 51.5%), halves
   −0.340/+0.065. Not readable, verdict unchanged, V not messaged.
 - (earlier) **Forward ledger at 06:18: 13 fires, 6 hits (46.2%), +0.010/fire** — it swung UP from −0.487 at 9
   fires and now sits essentially ON the honest replay's +0.018, not the retracted +0.266. Still NOT
@@ -485,6 +487,9 @@ quote, so Task 20 does not touch it. Venue-graded (settling source).
 - `2.5-5 bps` cell: n=46 (was 40), EF 47.8% vs a 71.7% null, holds its shape. Still under the bar,
   still not read.
 - Note: `2026-09-11_0725_ef_flat_bucket_mcnemar.md`.
+- **ENCODED IN THE HARNESS 08:00: `verify.py` now has `paired(mine_right, theirs_right)`** — exact
+  McNemar on the discordant pairs, failing above p=0.05. Self-test 3 replays the real 07:25 numbers
+  and rejects them. Also referenced from repo-root `CLAUDE.md`, so every session gets it.
 
 ## OPEN, in priority order
 1. **Task 19 (standing)** — the daily forward ledger for the FROZEN model; verdict at >=100 forward fires.
