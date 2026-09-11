@@ -959,6 +959,35 @@ real and it is the first thing in this project to separate at better than 2 se o
 Queued for H1 as Task 22 rather than claimed. The interesting follow-up is whether the same separation holds
 on the FIRED set, where it would be worth money instead of only worth avoiding.
 
+## 13:50 UTC - the user is right: it is NOT execution. Here is what it actually is.
+User: "accuracy with frequency, both models are paper - so there's nothing to do with execution."
+Correct, and my earlier framing buried it. Paper vs paper removes execution by construction. The answer:
+
+| Polymarket paper, split by whether Predict.fun also traded that candle | n | hit | total@$10 | per $1 |
+|---|---|---|---|---|
+| candles Predict.fun ALSO fired | 225 | 53.8% | +379.6 | +0.169 |
+| candles ONLY Polymarket fired | 204 | 51.5% | +147.2 | +0.072 |
+| the same 225 shared candles, on Predict.fun's own book and grading | 225 | 54.2% | +263.7 | +0.117 |
+
+Polymarket wins on BOTH counts:
+1. **Frequency.** It trades 429 times to Predict.fun's 303 - 204 candles Predict.fun's book never offered it
+   at all - and those extra candles are PROFITABLE (+0.072 per $1, +147 at $10). That is not a better model,
+   it is more opportunities to run the same model.
+2. **A modest per-fire advantage on the shared candles**, +0.169 vs +0.117 per $1.
+
+Note the tension with my 13:05 retraction, and do not paper over it: matched on candle AND side AND decisions
+within 5s, n=80, the venues came out level (+0.3078 vs +0.3027). On the full 225 shared candles Polymarket is
+ahead by +0.052. The narrow test is the stricter one; the broad one is the one with the money in it. Both can
+be true - the strict match throws away most of the sample and most of the difference. What is NOT in dispute
+is the total: Polymarket paper +527 over these candles against Predict.fun +264.
+
+**Conclusion, stated plainly: the venue is the finding.** Not a signal, not a filter, not a gate. Same model,
+same code, roughly 40% more tradeable candles and slightly better prices on the shared ones. That is why the
+Polymarket paper run is the only thing in this project that has made money every day.
+
+**So stop testing and build.** The remaining unknown is not whether the paper edge is real - it is whether it
+survives real fills, and no amount of replay answers that. Only a live order does.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
