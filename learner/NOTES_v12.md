@@ -1675,6 +1675,23 @@ The generalisable lesson, and the reason this matters beyond tonight: a liveness
 OUTPUT, not the existence of the producer. The identical flaw would hide a wedged LIVE lane - the version that
 costs money rather than paper fires.
 
+## 23:15 UTC check-in (Fri 09-11) - recovered, trigger negative, lanes stay off
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 9W/11L -0.051 | 18W/22L -0.014 |
+Negative. Lanes stay OFF - and the criterion is refuted anyway (22:12 entry), so no automatic re-arm until a
+dead-zone redesign is written down first.
+
+Post-recovery verification, which is the point of this check-in: both Polymarket runners' worst feed age is
+now 0.2 s (was 3450 s an hour ago). 12 processes. Both paper runs fired again during this hour - Polymarket
+30/30 +19.2 (was 29/30 +11.3 while dead), v12 lane 31/27 +95.0. Snapshots refreshed.
+
+Tokyo: master ON, all three kinds manual_enabled False, equity 15.02, nothing open. Dashboard answered first
+try for once.
+
+Fair table (window from 15:04:25): PF paper 18/21 +4.3; Poly paper 30/30 +19.2; v12 lane 31/27 +95.0;
+Tokyo 5/10 -7.06 real.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
