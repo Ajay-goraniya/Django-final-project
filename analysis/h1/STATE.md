@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 16:46 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 18:46 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -10,6 +10,21 @@ the distance premise. In that rejection **every other check passes and only `gra
 the reason the checks run as a set and grading runs first.
 Its `permutation()` permutes the model's PREDICTIONS, never the labels: shuffling labels destroys
 the market's calibration too, so longshots "win" at the base rate and it prints a fake profit.
+
+## Task 25 QUEUED 18:46, NOT started (V, REQUEST.md 18:20) — deliberately deferred
+V asks me to **independently reproduce a v12 lane decision**: take logged fires, rebuild the feature
+vector from raw inputs (1 Hz polybook + Binance klines), run the frozen v10 model, and check p, side
+and EV against the lane's `feat` column. If they reproduce, the decision path is verified end to end
+for the first time; if not, that is bigger than anything in the PnL tables.
+**Not started on purpose.** V marked it "NOT urgent, Sunday+ is fine" and the user is low on limit
+until the Sunday reset. It is the right next task once the limit allows — start here.
+V's own process audit (18:20): the lane's `quote_ask` vs poly1s.py, 22 of 40 within a tick, 18 differ
+by up to 9c but the book moves >=2c in 20.1% of seconds, so that is two honest observers ~0.4 s apart,
+not fabrication. Signed lean −1.25c at −1.36 se — not significant, same direction as the stale-quote
+artifact, re-run at n>=100.
+**Noted for my own numbers:** that lane fills at the quoted ask with slippage exactly 0.0 on all 40
+trades **by construction**, so its PnL is an upper bound and must never be compared like-for-like
+against a live fill. This does not affect Tasks 21/23/24, none of which used that lane.
 
 ## 14:47 — REQUEST.md 249 lines: a standing constraint, not a task. Task 21b still short of n.
 - V/user (14:15): `btc_model_v12_polymarket.py` is **OBSERVATION ONLY** — it keeps running in paper
@@ -22,7 +37,7 @@ the market's calibration too, so longshots "win" at the base rate and it prints 
   holds **3 trades** (23 decisions). **Far below the 60 bar; not read.**
 - V's v10 runner `book_age_ms` (live from 13:28) is the other route to the same answer; check the
   certifiable row count each time and run Task 21b only at n >= 60, UP and DOWN separately.
-  **Count at 16:46: 26** (was 7 at 14:47) — accruing ~10/hour, so n=60 lands around 20:00 UTC.
+  **Count at 18:46: 46** (7 at 14:47, 26 at 16:46) — n=60 lands around 20:00-20:45 UTC.
 
 ## 13:55 — USAGE SAVER IN FORCE UNTIL SUNDAY NIGHT (user: "I'm running low")
 User, 13:55: *"stop as much process as you can till sundays limit reset, I'm running low now every
@@ -446,21 +461,22 @@ diverges from the Binance leader in near-zero candles" vs (b) "noise at n=77".
   PnL-by-regime remains unanswered and only the forward test can settle it.
 - Deliverable: `task17_3_regime_grid.md`. Repro: `task17_3_regime_grid.py`.
 
-## Task 17.2 LIVE — forward ledger at 41 of 100 fires (16:46). STILL NOT READABLE.
+## Task 17.2 LIVE — forward ledger at 43 of 100 fires (18:46). STILL NOT READABLE.
 `task17_forward.py` + `task17_forward_11_2.md` + `task17_forward_state.json` (append-only; each run
 processes only candles newer than the last recorded, so reruns are idempotent and history cannot be
 silently restated). Frozen artifact only, never refitted. Forward = strictly after epoch 1789078800.
-- **41 forward fires: 16 hits (39.0%), −0.273/fire, −11.18 total.** First half −0.245, second half
-  −0.299 — the halves stay close. Baseline is the honest-rule replay (+0.018/fire ~ 0.00).
-- Against the honest-rule 51.5%, 16-or-fewer hits in 41 has probability **0.0744**, drifting up as
-  the hit rate creeps toward the baseline (0.0054 at n=8, then 0.0393 / 0.0630 / 0.0492 / 0.0347 /
-  0.0539 / 0.0583 / 0.0668 / 0.0744). The per-fire number has been stable at about −0.28 since n=29.
-- **NOT READABLE. n=41 is below the 60 bar, let alone 100.** Recorded so the trend is visible
+- **43 forward fires: 18 hits (41.9%), −0.218/fire, −9.37 total.** First half −0.202, second half
+  −0.233. Baseline is the honest-rule replay (+0.018/fire ~ 0.00).
+- Against the honest-rule 51.5%, 18-or-fewer hits in 43 has probability **0.1330** — it has now
+  walked 0.0054 → 0.0393 → 0.0630 → 0.0492 → 0.0347 → 0.0539 → 0.0583 → 0.0668 → 0.0744 → 0.1330
+  as the hit rate climbs back toward the baseline. **This is the clearest demonstration yet that the
+  early p-values were noise**, and the discipline of not reading them was right in both directions.
+- **NOT READABLE. n=43 is below the 60 bar, let alone 100.** Recorded so the trend is visible
   from the start rather than discovered at fire 100. **No conclusion drawn, and none should be.**
 - Accrual 2.25 fires/hour; the 100-fire verdict lands about Sat 12 Sep ~18:50 UTC.
 - Not messaging V: V's instruction is to report only when the verdict changes or at 100 fires, and
   V merges the branch anyway. V independently started its own 11.2 live shadow (e9676dc).
-- Kline set extended through 09-11 16:35 (73,055 candles) via the REST mirror.
+- Kline set extended through 09-11 18:35 (73,079 candles) via the REST mirror.
 - `book1s.sqlite3` has appeared (1 Hz price + both asks/sizes/ages) but holds only 13 epochs so far;
   the 5-s venue table stays primary until it accumulates.
 
