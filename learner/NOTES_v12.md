@@ -693,6 +693,12 @@ Old-version findings keep going to NOTES_v11.md.
 - Twins raw: A +97.5, B +202.4, C +165.0@$10; paired A vs C +88.5, halves +36.9/+51.6.
 - Shadows: EF2/J 62 graded; cap 0.60: 41, 46%, +0.161/fire, halves +11.31/-4.71; cap 0.50: 30, 40%, +0.166, halves +10.99/-6.02; none: 62, +0.107, halves +9.31/-2.70 - second half increasingly negative; J is heading for refutation on live quotes. 11.2 live shadow (honest, 1-Hz book): first fire at 03:41 UTC (UP at S=90, ask 0.55, EV +0.29) won +0.78; 1 of 1. 10 processes, snapshots refreshed. No new H1 commits.
 
+## 04:32 UTC Fri 09-11: candidate J survives the stale-quote re-run (H1 Task 20b, merged 5f6409e)
+- J (second EF entry at t~120 s on EF's side when ask <= cap) re-run with the honest NEXT-sample quote: cap 0.50 +0.207 (n=115), 0.55 +0.209, 0.60 +0.195 (halves +0.184/+0.205), 0.65 +0.160, 0.70 +0.142, none +0.109 - every cap clearly positive; only 11-17 fires of 118-255 vanish and they are mostly losers. Contrast with 11.2, where 55 of 97 vanished and carried all the profit.
+- General rule (keep): exposure to quote noise scales with how tightly the rule optimises against the quote. An EV filter comparing a model probability to the ask feeds every cent of quote error into the decision (11.2); a cap that only excludes expensive entries and takes its direction elsewhere (J) is barely exposed. Use this to judge which studies are at risk.
+- J's three numbers: recorded-quote +0.230, honest-quote +0.195, Tokyo real fills +0.153 (128 fills, contains true slippage). Consistent. verify.py: 5 PASS, sweep FAIL on a +0.002 blip (overridden with reason), cost FAIL on synthetic haircuts answered by the real-fill number.
+- BUT the live EF2 shadow - already the honest version, 1-Hz live asks - is the decider and is drifting: 62 graded, cap 0.60 n=41 46% +0.161 with halves +11.31/-4.71; the replay window and the live forward window disagree on the second half. Ledger row J stays 'candidate with forward shadow'; verdict unchanged at >= 100 graded with the sign on both halves. No change to the plan.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
