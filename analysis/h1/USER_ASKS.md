@@ -135,3 +135,28 @@ re-arms itself from a prompt I am not permitted to edit across sessions, so V wa
 120 min out — if the 30-min cadence returns, that is the reason. Only two sessions exist (H1, V);
 "Astra" is a directory, not a running session. **Deliberately not cut:** the 1 Hz book loggers —
 Polymarket publishes no historical order book, so anything not captured live is lost permanently.
+
+## 2026-09-11 23:00 UTC — user: "stopp the pollymarket libe trading, I'm asking states for those
+## papers process"
+**Nothing is live on Polymarket.** Checked in the snapshots: all 70 v12 lane trades are
+`mode=pnl / execution=paper / PAPER_FILLED` with slippage exactly 0.0; the v10 poly runner is
+`mode=pnl`; the Predict.fun runner is `execution_mode=SHADOW` with 0 fills; Tokyo's last orders are
+all rejected with "manually OFF". The only account that has ever taken real money is Predict.fun, and
+its lanes have been paused since 12:42.
+Relayed the stop to V anyway (trig_01A6s6AHJnqn1NooiaLQezCg) because I cannot see Tokyo and the
+snapshot lags ~15 min, and because the v12 lane's meta reads `lane_enabled=1`,
+`build=v12-polymarket-live-guarded` — V to confirm on the host and put it in writing.
+**Paper states given** (per $1, with halves):
+
+| run | n | per $1 | halves | hit |
+|---|---|---|---|---|
+| v12 poly lane (paper) | 69 | +0.039 | +0.053 / +0.026 | 47.8% |
+| v10 poly paper, all | 505 | +0.092 | +0.062 / +0.121 | 51.5% |
+| **v10 poly, certifiable quote age** | **75** | **−0.070** | −0.042 / −0.097 | 45.3% |
+| Predict.fun EF shadow | 360 | +0.049 | +0.072 / +0.026 | 52.2% |
+| Predict.fun REVERSAL shadow | 186 | +0.307 | +0.324 / +0.290 | 68.8% |
+| Predict.fun MAIN shadow | 591 | −0.063 | −0.077 / −0.049 | 72.1% |
+
+The v12 lane fills at the quoted ask with slippage 0.0 **by construction**, so its +0.039 is an upper
+bound and is not comparable to a live fill. MAIN's 72.1% hit rate with a negative per-$1 is the
+standing reminder that accuracy is not PnL.
