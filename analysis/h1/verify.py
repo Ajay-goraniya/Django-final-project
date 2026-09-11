@@ -58,6 +58,30 @@ class Finding:
                          % (names[0], names[1], dis, len(common), 100 * rate,
                             '' if rate == 0 else ' - results are only valid on the settling source'))
 
+    # ---- 1b. the one that bit us on 2026-09-11 ----
+    def quote_age(self, rule, max_age_s=0.0, source=''):
+        """Could the quote you paid predate the price you decided on?
+
+        Task 20: the 11.2 replay read a fresh path at second S but paid an ask forward-filled from a
+        collector sample up to 5 s earlier. The stale quote was UNBIASED (median difference 0.000)
+        but differed by >5c on 17% of samples, and the EV filter selects the randomly-low ones. An
+        unbiased measurement error becomes one-directional profit the moment you condition on it.
+        That turned a true edge of ~0.00 into a reported +0.27/fire and passed every other check.
+
+        Pass `rule` describing when the quote is taken relative to the decision:
+          'same-instant'  observation and quote at the same second        -> PASS
+          'at-or-after'   quote at or after the observation               -> PASS
+          'stale'/'ffill' quote may predate the observation               -> FAIL
+        """
+        ok = rule in ('same-instant', 'at-or-after') and max_age_s <= 0.0
+        return self._add('quote age', ok,
+                         'rule=%s, max age %.1fs%s%s' % (rule, max_age_s,
+                                                         (' from ' + source) if source else '',
+                                                         '' if ok else
+                                                         '  <- the quote can PREDATE the decision; '
+                                                         'the fire rule will select the randomly '
+                                                         'cheap ones'))
+
     # ---- 2. sample size ----
     def sample(self, cells):
         thin = {k: v for k, v in cells.items() if v < MIN_CELL}

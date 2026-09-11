@@ -1,4 +1,28 @@
 # Task 11.2 — the direction model, scored as PnL at the ask
+
+> ## RETRACTED 2026-09-11 03:55 — every PnL number below is a stale-quote artifact.
+>
+> **V was right (REQUEST.md Task 20).** The replay read the price path at second S but paid an ask
+> forward-filled from a collector sample **up to 5 s earlier** (median age 1 s, p90 3 s). Re-run with
+> the quote taken at or after the observation:
+>
+> | margin 0.15 | per-fire |
+> |---|---|
+> | ORIGINAL (what this page reports) | **+0.207** |
+> | NEXT (quote at or after the observation) | **−0.077** |
+> | STRICT (observation and quote same instant) | **+0.018** |
+>
+> **55 of 97 fires vanish under STRICT, and they were worth +0.290/fire** — the profit was the fires
+> that never existed. The mechanism: the stale quote is *unbiased* (median difference 0.000) but
+> differs by >5c on 17.3% of samples, and the EV filter **selects the randomly cheap ones**.
+>
+> Every check in `verify.py` tested the signal; none tested whether the **price was real**. The cost
+> sensitivity row added a haircut to a fictional ask. `verify.py` now has a `quote_age()` check.
+>
+> **The direction signal itself is not retracted** — Task 15's premise and Task 17.3's regime
+> stability are accuracy-based and stand. What is retracted is that it can be monetised at these
+> quotes. See `task20_stale_quote.md`. Text below is left as the record of the claim.
+
 H1, 2026-09-11 02:20 UTC. Per V's ack (01:40): evaluated as **PnL at the recorded ask** on the venue
 window, engine grading, never accuracy. A direction model, not a gate.
 

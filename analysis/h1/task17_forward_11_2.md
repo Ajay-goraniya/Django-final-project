@@ -2,7 +2,7 @@
 
 Cumulative, append-only. Frozen artifact `models/ef11_2_gbm_seed0.joblib`, never refitted. Forward = candles strictly after epoch 1789078800, the last candle of the replay that produced the +0.266 headline. Engine grading. EV margin 0.15.
 
-_Last updated 2026-09-11 03:19 UTC._
+_Last updated 2026-09-11 03:44 UTC._
 
 ## ACCUMULATING — 8 of 100 forward fires. NOT READABLE YET.
 

@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 03:22 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 03:57 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -78,6 +78,7 @@ using it. Never touch Tokyo, V's containers or the DBs. Never handle secret valu
 | Task 11.1 confidence score | **OOS AUC 0.4746, below random.** Frequency dial runs backwards. **Retracts my "+33% per unit" claim** (real only for the v10 runner, 0.5644; does not transfer to v11 twins, 0.479/0.539). Never cite it again |
 | trend guard | premise refuted on 20,308 candles; reverted on Tokyo 14:25 |
 | hour-of-day / weekend decay | refuted on 252 days; my weekend claim withdrawn |
+| **Task 11.2's +0.266/fire (Task 20)** | **STALE-QUOTE ARTIFACT, RETRACTED 03:55.** Replay read a fresh path at S but paid an ask up to 5 s old. Honest rules: NEXT −0.077, STRICT +0.018 at margin 0.15. 55 of 97 fires vanish and were worth +0.290/fire. The SIGNAL stands (accuracy-based work unaffected); monetising it at these quotes does not |
 | **Task 12a — ANY direction model over the venue quote table** | **CLOSED, both channels, on correct labels.** Own quote path: flat (−0.02..+0.06), negative at +5c everywhere. Cross-venue spread: my positive claim was a GRADING ARTIFACT, retracted — see below. Do not queue 12b/c on either |
 
 ## LIVE CANDIDATE J — the one thing that works
@@ -337,6 +338,29 @@ silently restated). Frozen artifact only, never refitted. Forward = strictly aft
 - Kline set extended through 09-11 03:10 (72,902 candles) via the REST mirror.
 - `book1s.sqlite3` has appeared (1 Hz price + both asks/sizes/ages) but holds only 13 epochs so far;
   the 5-s venue table stays primary until it accumulates.
+
+## Task 20 DONE 03:55 — MY BIGGEST RETRACTION. The 11.2 PnL was a stale-quote artifact.
+V's charge was right. The replay read the price path at second S but paid an ask forward-filled from
+a collector sample **up to 5 s earlier** (median age 1 s, p90 3 s).
+- **margin 0.15: ORIGINAL +0.207 · NEXT −0.077 · STRICT +0.018.** ORIGINAL positive at every margin,
+  NEXT negative at every margin, STRICT ~zero drifting negative.
+- **55 of 97 fires VANISH under STRICT and they were worth +0.290/fire** — the profit WAS the fires
+  that never existed.
+- **MECHANISM, and it is not the obvious one: the stale quote is UNBIASED** (NEXT−ORIGINAL mean
+  −0.0005, median 0.000) **but differs >5c on 17.3% of samples, and the EV filter SELECTS the
+  randomly cheap ones.** An unbiased measurement error becomes one-directional profit the moment you
+  condition on it. **This is why it passed permutation, seeds, halves, sweep and cost: all of those
+  test the SIGNAL; none test whether the PRICE WAS REAL.** The cost row added a haircut to a
+  fictional ask.
+- **Task 17.2's 1-of-8 forward start is no longer a surprise — it was the first honest measurement**
+  and it agrees with STRICT/NEXT, not with the replay.
+- **SURVIVES:** Task 15's distance premise (no quotes involved), Task 17.3's regime stability
+  (accuracy-based), Task 16's naive null (a negative, flattered if anything), Task 18's negative.
+- **STANDING RULE: the collector `q` table is 5-s data — "quote age unknown, up to 5 s" in every
+  study. Never pair a fresh observation with an earlier quote. `verify.py` now has `quote_age()`,
+  which FAILS a finding whose quote can predate the decision.** `book1s.sqlite3` (1 Hz + age_ms) is
+  the right source as it accumulates.
+- Deliverable: `task20_stale_quote.md`. Repro: `task20_stale_quote.py`.
 
 ## OPEN, in priority order
 1. **Task 19 (standing)** — the daily forward ledger for the FROZEN model; verdict at >=100 forward fires.
