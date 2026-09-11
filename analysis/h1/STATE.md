@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 08:57 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 09:20 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -454,8 +454,16 @@ J selects on cheapness (ask <= cap) so it had to be re-run. It survives.
 - **Forward-ledger efficiency note:** the ledger is gated on V's SNAPSHOT pushes (venues.sqlite3),
   not on my kline fetches. At 06:43 the klines advanced but the venue book had not, so 0 new fires.
   Don't spend a check fetching klines when `venues.sqlite3.gz` has not changed.
-- Still to gather: quantified API rate limits; fee rate vs a real fill; the enumerated ToS list.
-- **VERDICT ETA, now computed automatically in the ledger: accrual is 1.75 fires/hour (16 over
+- **BLOCKED, not just pending — the three Task 19 gaps cannot be closed from here:**
+  (1) the enumerated restricted-jurisdiction list — `polymarket.com/tos` serves a JS app shell to a
+  fetcher, so the ToS text is unreachable; someone must read it in a browser.
+  (2) quantified per-second API limits — described only as "Standard"/"Highest", not published.
+  (3) the fee rate (docs 0.07 vs help-centre-implied 0.0625) — only a REAL FILL settles it, which is
+  V's side. All three are recorded in POLYMARKET.md as open with what would unblock each.
+- **Forward ledger at 09:18: 21 fires, 8 hits (38.1%), −0.202/fire, BOTH halves now negative**
+  (−0.310 / −0.104). Accrual 2.05/h, ETA **Sat 12 Sep 23:18 UTC**. Still NOT readable (n=21) and the
+  verdict is unchanged, so V was not messaged. Consistent with the ladder: below the honest +0.018.
+- (earlier) **VERDICT ETA, computed automatically in the ledger: accrual is 1.75 fires/hour (16 over
   9.2 h), so the 100-fire verdict lands about Sun 13 Sep 07:47 UTC.** Useful for planning: that is
   AFTER the Sat-Sun window, so **the verdict will arrive with weekend fires included** — which
   matters because neither the 11.2 replay nor the v10 poly run has a single weekend candle.
