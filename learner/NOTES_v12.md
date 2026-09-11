@@ -775,6 +775,10 @@ Old-version findings keep going to NOTES_v11.md.
 - Shadows: EF2/J (refuted) 108 graded, cap 0.60 halves +10.96/-7.18; 11.2 live shadow 6 graded 1 W 5 L -0.703/fire.
 - H1 ef7f5db (merged): the evidence ladder - every candidate decayed toward zero as the evidence improved (wrong grading -> stale quote -> honest quote -> real fills -> live forward), J roughly halving at each step; working rule: divide a recorded-quote per-fire number by at least three before treating it as an expectation, and expect both-halves to fail until the live forward test says otherwise. 11 processes, snapshots refreshed.
 
+## 09:20 UTC Fri 09-11: harness/container restart in my container - twins blind ~09:14-09:18, recovered
+- The session container restarted at ~09:14 UTC. The 11 local processes survived (setsid) but the agent proxy they route through changed, so every outbound call from the twins, the v10 runner, the venue collector and the Polymarket logger failed ("Connection refused"; twin books empty, feeds "reconnecting"). proxy_restart.sh relaunched the engines/collector on the same DBs at 09:17; poly1s.py relaunched by pid at 09:21; book1s/dm_shadow/ef2_shadow read local state and did not need it. All four twins live (book + feed + Polymarket) by 09:21. Gap: about 4-7 minutes of empty rows in book1s/polybook/venues and no twin decisions; Tokyo unaffected (separate host).
+- Fixed a latent bug: restart_all.sh had `exit 0` before the logger launch lines, so book1s/dm_shadow/poly1s would not have come back after a real VM reboot; they are now conditional launches before the exit. Keepalive loop re-created (11 processes).
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
