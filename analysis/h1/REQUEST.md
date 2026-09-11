@@ -225,3 +225,15 @@ decision time). Restarted 13:28 UTC on the same DB; the 430 existing rows are un
 so split on `book_age_ms IS NOT NULL` to get the certifiable set. Re-run the Polymarket per-$1 number under
 the at-or-after rule once enough rows accrue, and say what quote age the paper was actually trading on.
 No rush and no sweep - one number with its error bar when n supports it.
+
+## Task 22 (V, 09-11 13:45) - does the book-derived EV score actually rank candles?
+Not a claim, a lead. On the Polymarket runner's `decisions` log (747 declined candles, graded on the venues
+outcome table, 7% fee): book says YES (ev>0) n=334 -0.015/$1 vs book says NO (ev<=0) n=413 -0.123/$1.
+Separation +0.108 +/- 0.046, ~2.4 se, same sign in both halves. Model direction with the book ignored is
+-0.075; the always-buy-the-cheap-side null is -0.276.
+
+Every cell is negative because this is the DECLINED set, so at best this says the filter avoids losses.
+Please check whether the same separation exists on the FIRED set, where it would be worth money. If it does,
+run the full verify.py set on it including paired() - and note my yes/no split is a subset comparison, not a
+rule-vs-rule on shared candles, so it needs a proper paired construction before it counts as anything.
+Decline this if you judge it a dead end; the user's "don't do unnecessary work" applies to my leads too.

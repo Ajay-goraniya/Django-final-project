@@ -928,6 +928,37 @@ Predict.fun runner is simply missing fires (book gaps, quote availability) that 
 - DONE 13:28: patched learner/btc_model_v10_runner.py to record book_age_ms on every fire (schema + ALTER TABLE migration for the existing DB + value from the runner's own venue-feed timestamp at decision time). Restarted the runner by exact pid (old 20485 -> new 11519), same DB, same args; 430 existing rows preserved, column present, 11 processes. The runner is warming up its feature buffers, so expect a short gap in fires.
 - Every fire from here carries a certifiable quote age. H1 can re-run the Polymarket number under the at-or-after rule once enough rows accrue.
 
+## 13:45 UTC - is the BOOK DATA earning its keep? (user claim, tested)
+The user read today's Polymarket-vs-Predict.fun gap as confirmation that the venue book data the model uses
+is valuable. That is a different claim from anything measured so far, so I tested it directly on the one
+sample that can answer it: the runner's `decisions` log - 747 candles the model looked at, scored with the
+book, and DECLINED, graded on Polymarket's own outcome.
+
+| rule on those 747 candles | n | hit | per $1 | halves |
+|---|---|---|---|---|
+| book says YES (ev>0) | 334 | 76.0% | -0.015 +/- 0.035 | -0.026 / -0.004 |
+| book says NO (ev<=0) | 413 | 70.0% | -0.123 +/- 0.030 | -0.087 / -0.159 |
+| model direction, book ignored | 747 | 72.7% | -0.075 +/- 0.023 | -0.059 / -0.091 |
+| null: always buy the cheap side | 43 | 34.9% | -0.276 +/- 0.153 | -0.203 / -0.346 |
+
+Separation between the book saying yes and no: **+0.108 +/- 0.046, about 2.4 standard errors, same sign in
+both halves.** Ignoring the book costs -0.060 against using it. The dumb null (buy whatever is cheap) is far
+worse than either, so the separation is not just "cheap things lose".
+
+**So: qualified yes.** The book-derived EV score does rank candles - the ones it likes lose less than the ones
+it does not, consistently across halves, and it beats both the no-book variant and the obvious null. That is
+real and it is the first thing in this project to separate at better than 2 se on a pre-existing sample.
+
+**But it does not say what the user thinks it says**, and three limits are binding:
+1. **Every cell is NEGATIVE.** This is the DECLINED set - candles the model refused. The book is good at
+   saying "not this one"; that is avoided losses, not profit. It is evidence for the filter, not for the edge.
+2. It cannot explain today's venue gap. Both venues use book data; Predict.fun has it too and lost today.
+3. 2.4 se on n=747 is suggestive, not the ship rule. Not run through verify.py, no paired McNemar (the
+   yes/no split is a subset comparison, not a rule-vs-rule on shared candles), not swept.
+
+Queued for H1 as Task 22 rather than claimed. The interesting follow-up is whether the same separation holds
+on the FIRED set, where it would be worth money instead of only worth avoiding.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
