@@ -59,3 +59,9 @@ Running list. Not explanations for the user - working notes. Newest first. Statu
 
 15. OPEN - **Stop hook keeps firing on `learner/live_backup/tokyo_orders.json`** every health check. Either
     commit it on a schedule or move it out of the working tree; it generates a commit per check for no signal.
+
+16. OPEN - **Tokyo order timestamps read ~37 min ahead of true UTC.** At 21:15:02 UTC (container clock, agrees
+    with the routine scheduler) the engine's /api/orders showed fills stamped 21:45, 21:50, 21:52 "utc". Either
+    the Tokyo host clock is fast or the utc field is mislabelled. Relative comparisons on ts_ms still hold, but
+    anything that aligns engine time to exchange candles or to the collector must be checked. Root-cause
+    before the v12 deploy.
