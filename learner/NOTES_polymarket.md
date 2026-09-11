@@ -63,6 +63,15 @@ H1's working file: analysis/h1/POLYMARKET.md (Task 19). This file is V's summary
   (read from the book endpoint per market); websocket wss://ws-subscriptions-clob.polymarket.com/ws/market with book / price_change /
   last_trade_price / tick_size_change events, subscribe {"assets_ids":[...],"type":"market"}, PING text frame every 10 s; rate and
   connection limits undocumented (treat as unknown). Still open: eligibility policy, rate limits.
+- THROUGHPUT PREREQUISITE (H1 09-11 06:40): Polymarket relayer transaction limits are 100/day for unverified accounts, 10,000/day
+  verified, unlimited for partners. The engine fires ~150 times a day, so an unverified account cannot run it. Deposit/proxy/safe
+  wallets all route through the relayer; an EOA submits on-chain directly (pays its own gas) but EOAs are limited to allowlisted traders.
+  => account verification (or EOA allowlisting) must happen BEFORE any live test; both involve Polymarket, not us. Per-second API limits
+  are only described as "Standard"/"Highest", never quantified.
+- Eligibility (published policy only, no interpretation): tiered geoblock - "block completely" (no new orders AND open positions cannot be
+  closed) vs "close-only"; examples in the docs: Italy view-only, Germany prohibited, Singapore close-only; US persons excluded by the
+  ToS; the full restricted list is in the ToS (not enumerated). A block-completely state would trap open positions - a settlement risk on
+  5-min markets, not only an access one. The user must check their jurisdiction against the ToS list before any migration.
 
 ## Plan
 - Next week (user): decide after the weekend. If go: build the executor in v12, run $1 live beside Tokyo for a day, ladder decides.
