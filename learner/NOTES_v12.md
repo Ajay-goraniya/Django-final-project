@@ -814,6 +814,12 @@ Old-version findings keep going to NOTES_v11.md.
 - Whole-run states at 11:21: Predict.fun paper since 09-08 18:05 153/133 +170.7@$10; Polymarket paper since 09-08 17:35 216/193 +517.9@$10 (by day +139.9/+105.8/+202.7/+69.6); Tokyo since 12:24 09-09 realised +5.62 (EF 199/168 +0.56, REVERSAL 33/10 +5.06).
 - REVERSAL per $1 has slipped from +0.149 to +0.092 (33/8 +7.06 since 14:47). Not near the kill rules (avg slip > 3c over 20, or per $1 < -3.0 over 20), so no action; watching it.
 
+## 11:26 UTC check-in (Fri 09-11)
+- Fair table since 21:55 (09-09): Predict.fun paper 82/74 +70.6@$10; Polymarket paper 124/119 +239.4@$10; v11 live EF 200/168 +2.33 real.
+- Tokyo: realised +7.39, wallet 30.45, equity 30.45, 0 open, 411 settled. The $1 step-down landed (current_stake 1.0 confirmed). REVERSAL 33/8 +7.06 (+0.092 per $1); $2 phase EF 64/56 -1.56 (-0.006 per $1).
+- Ladder: equity 30.45 is back at/above the $2 rung - FIRST sighting at 11:26. Step up to $2 only if still >= 30 at the 11:56 check-in. Down to $1 stays immediate.
+- Twins (129 min): A +89.1, B +213.9, C +149.3@$10. Shadows: EF2/J 128 graded (refuted); 11.2 live shadow 9 graded, 2 W 7 L, -0.543/fire, both halves negative - the live shadow keeps agreeing with H1's honest forward ledger (23 fires -0.271). 11 processes, snapshots refreshed.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
