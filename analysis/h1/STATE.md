@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 13:40 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 14:05 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -10,6 +10,26 @@ the distance premise. In that rejection **every other check passes and only `gra
 the reason the checks run as a set and grading runs first.
 Its `permutation()` permutes the model's PREDICTIONS, never the labels: shuffling labels destroys
 the market's calibration too, so longshots "win" at the base rate and it prints a fake profit.
+
+## Task 22 DONE 14:05 — the user's delay question, answered: the delay is nearly free
+`analysis/h1/task22_delay_cost.md` + `task22_delay_cost.py`. User asked (13:55) whether to read the
+Polymarket book ~300 ms after the signal, matching Predict.fun's order delay. Right correction; done.
+- Measured on both 1 Hz loggers: a **cheap print** (≥2c below that candle's median) moves back by
+  **+0.16c ± 0.02 (Polymarket, n=19,492)** and **+0.22c ± 0.02 (Predict.fun, n=30,995)** one second
+  later. Monotone in lag (1/2/3/5/10 s), both halves agree at every lag, and the **rich**-print
+  mirror is symmetric negative — mean-reverting quote noise, not drift. Unconditional move +0.00c.
+- **Tokyo's real lag is 236 ms** (delay_ms median 85 + book age median 151, 427 real fills), so the
+  delay costs **~0.04c**. Essentially free. Not where the money went.
+- **Where it went: the 5-s collector.** Same measurement at 5 s = **0.88c (poly) / 1.25c (pred)**,
+  20–25× the real-latency figure. Task 20's artifact, re-derived independently on a huge sample.
+  The fix is the at-or-after rule, not a 300 ms offset.
+- Coherence: real Predict.fun crossing is +0.46c (Task 21); delay explains ~0.05c, so ~0.4c is
+  genuine spread/queue. Shaving milliseconds off the order path buys almost nothing.
+- **One point for Polymarket:** its book is ~30% quieter at every lag. **LIMIT: `polybook` spans 7
+  hours of one weekday (from 06:03 today) — NOT rain-or-sun.** Do not promote past "one window".
+- Still unverified: +0.187. Only 48 of 427 poly paper trades fall in the book window — under the 60
+  bar, not read. Needs the `book_age_ms` column asked of V in Task 21.
+- verify.py: sample / halves / sweep PASS on both venues; grading N/A (no outcome label involved).
 
 ## Task 21 DONE 13:40 — `analysis/h1/task21_venue_disagreement_and_crossing.md` (V asked 12:55)
 - **21a: both numbers are right.** Full overlap **11.21% ± 1.11 (n=803)**; the candles the Polymarket
