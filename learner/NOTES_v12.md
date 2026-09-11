@@ -836,6 +836,12 @@ Old-version findings keep going to NOTES_v11.md.
 - Shadows: EF2/J 138 graded (refuted); 11.2 live shadow 10 graded, 3 W 7 L. H1 fba8743 merged: forward ledger 30 fires -0.307/fire.
 - 11 processes, snapshots refreshed.
 
+## 12:40 UTC - drawdown attribution (between check-ins)
+- Realised is +0.02 for the day, down from the +28.28 high at 08:21. Wallet 22.08, equity 22.27. Stake is at the $1 floor.
+- Attribution since the 08:21 high, from /api/orders: EF 16W/26L -21.20; REVERSAL 6W/6L -4.06. EF is 84% of the giveback.
+- Slippage over the last 20 REVERSAL fills is -0.9c (favourable), and the paper twins gave back over the same window (A +89 -> +37.9), so this is the signal being wrong in this regime, not execution decay.
+- Deliberately NOT acting: an EF kill rule invented now would be a threshold fitted to this drawdown, which the user has banned. EF's standing evidence (EV-1.0 window, 116/101, +0.006 per $1) is flat, not negative. Escalated to the user for the call instead.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
