@@ -98,3 +98,22 @@ This is a recurring hazard, not a one-off: every future V poke could mint anothe
    H1 and proceeds with the normal protocol, including running `verify.py` before reporting.
 So a future mis-mint costs one short message instead of hours of undeliverable work, and V's content
 survives either way.
+
+---
+
+## 2026-09-11 13:50 UTC — user: "so pollymarket better?"
+**Answer given: not established, and the comparison as it stands is unfair.** The two numbers being
+compared are not the same kind of number: Polymarket's +0.187/$1 is **paper** and Predict.fun's is
+**live money**. Paper has beaten live on Predict.fun too, and Task 21 showed why — the paper prices
+its entry from a quote it cannot prove is fresh.
+- Polymarket paper +0.187/$1 — **unverified**. Only 23 of 427 of its asks match the collector's
+  same-second value and the table has no `book_age_ms`, so its quote age cannot be certified. This
+  is the same exposure that turned my own 11.2 replay from +0.27/fire into ~0.00 (Task 20).
+- Predict.fun live — negative today; the user paused both lanes at 12:42.
+- What IS measured: crossing on Predict.fun costs +0.46c ± 0.09c on 380 real fills. Small. So the
+  gap between paper and live is **not** execution — it is the paper's price being optimistic.
+- One real difference, measured: the venues settle on different oracles and disagree on **13.9%** of
+  traded candles (11.2% of all candles), concentrated entirely in near-zero moves.
+**What would answer it honestly:** V logs `book_age_ms` on each Polymarket paper trade; then H1
+re-runs +0.187 under the at-or-after rule. Until then "Polymarket is better" is the same claim shape
+as the four that have already fallen on this branch.
