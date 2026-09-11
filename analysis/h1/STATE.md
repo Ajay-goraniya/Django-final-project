@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 03:07 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 03:22 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -324,10 +324,24 @@ diverges from the Binance leader in near-zero candles" vs (b) "noise at n=77".
   PnL-by-regime remains unanswered and only the forward test can settle it.
 - Deliverable: `task17_3_regime_grid.md`. Repro: `task17_3_regime_grid.py`.
 
+## Task 17.2 LIVE 03:20 — forward ledger running. FIRST 8 FORWARD FIRES ARE BAD.
+`task17_forward.py` + `task17_forward_11_2.md` + `task17_forward_state.json` (append-only; each run
+processes only candles newer than the last recorded, so reruns are idempotent and history cannot be
+silently restated). Frozen artifact only, never refitted. Forward = strictly after epoch 1789078800.
+- **8 forward fires: 1 hit (12.5%), −0.734/fire, −5.87 total.** Against the replay's +0.266 and
+  62.7% hit. If 62.7% were the true rate, **1-or-fewer hits in 8 has probability 0.0054**.
+- **NOT READABLE. n=8 is far below the 60 bar, let alone 100.** Recorded so the trend is visible
+  from the start rather than discovered at fire 100. **No conclusion drawn, and none should be.**
+- Not messaging V: V's instruction is to report only when the verdict changes or at 100 fires, and
+  V merges the branch anyway. V independently started its own 11.2 live shadow (e9676dc).
+- Kline set extended through 09-11 03:10 (72,902 candles) via the REST mirror.
+- `book1s.sqlite3` has appeared (1 Hz price + both asks/sizes/ages) but holds only 13 epochs so far;
+  the 5-s venue table stays primary until it accumulates.
+
 ## OPEN, in priority order
-1. **Task 17.2** — the daily forward ledger for the FROZEN model; verdict at >=100 forward fires.
-2. **Task 19 (standing)** — `analysis/h1/POLYMARKET.md`: CLOB API, fees, TWAP resolution, history
-   endpoints, eligibility, v10 poly run by hour/weekday.
+1. **Task 19 (standing)** — the daily forward ledger for the FROZEN model; verdict at >=100 forward fires.
+2. **Task 17.2 continues automatically** — re-run `task17_forward.py` each check; report only when
+   the verdict changes or at 100 forward fires.
 3. **The 2.5-5 bps EF cell** (EF 45.0% vs a 70.0% null, n=40) — revisit once fills pass 60. The one
    remaining queued check; the venue-favourite check is DONE (above).
 2. If nothing else is open: extend the venue window as V's snapshots grow, and re-run 11.2's replay
