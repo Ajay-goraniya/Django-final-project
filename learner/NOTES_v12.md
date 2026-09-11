@@ -1578,6 +1578,35 @@ Polymarket's terms and put the account and funds at risk.
 Also: the key the user pasted into chat remains compromised and should be rotated before that wallet ever
 holds funds, independently of all of the above.
 
+## 22:00 UTC - LIVE POLYMARKET EXECUTION: CLOSED. Do not reopen without a genuine change of residence.
+Settled after checking the published policy against the user's actual situation. Recorded so no future session
+re-litigates it.
+
+- Polymarket's geoblock has three tiers. **United Kingdom is in the close-only tier on BOTH frontend and API**
+  (full tier list on docs.polymarket.com/developers/CLOB/geoblock: Australia, Belarus, Belgium, Burundi,
+  Brazil, Canada BC/ON/AB/QC, CAR, Congo, Ethiopia, France, Germany, Iraq, Italy, Lebanon, Libya, Myanmar,
+  New Zealand, Nicaragua, North Korea, Poland, Russia, Singapore, Somalia, Slovakia, South Sudan, Sudan,
+  Taiwan, Thailand, UK, US, US Minor Outlying Islands, Venezuela, Yemen, Zimbabwe). Japan is a softer tier
+  (frontend close-only, API not restricted). India is not named anywhere on the page.
+- **The user is an Indian national RESIDENT IN THE UK.** Residence is what these rules attach to, not
+  nationality. So the UK tier applies: no new positions, on the API as well as the site.
+- The user asked four times whether a Tokyo server, an Indian account, Indian nationality, or a future move to
+  India would change this. Declined each time. Running a UK-resident account's orders through a Japanese host
+  is circumvention of a deliberate access control; it would breach Polymarket's terms and risks the account
+  being frozen WITH open positions on a 5-minute market. The one case that would legitimately work - actually
+  becoming resident in a permitted jurisdiction - makes the Tokyo server unnecessary, since they could simply
+  trade from there.
+- **Therefore: no live Polymarket lane. Not a technical blocker and not something to engineer around.**
+  If the user's residence genuinely changes, this reopens on its own terms and nothing here needs undoing.
+
+What continues unaffected: Polymarket as a RESEARCH venue - poly1s.py at 1 Hz, both paper runs, the side-skew
+work, the quote-age certification (H1 21b). None of it requires trading there. Predict.fun remains the live
+venue, and the build11 venue-backend refactor is still the right next piece of executor work.
+
+The live smoke lane on 8791 is stopped. Its DB (results/v12_poly_live_smoke.sqlite3) is kept: 3 rows - 2
+SKIPPED on the EV-at-cap guard, 1 AMBIGUOUS on the geoblock rejection - plus 1 attempt row with the 986 ms
+latency. That is the complete record of the only real orders this project has ever sent to Polymarket.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
