@@ -1071,6 +1071,24 @@ but don't include it's code into our new model v12 pollymarket one".
   trade_ids, filled_shares, avg_fill_price, slippage, fee_rate_bps, pnl_per_dollar) and its live-guard
   pattern (paper default; live needs CLI flag + wallet env + eligibility; ambiguous submit disables the lane).
 
+## 14:40 UTC - the lane pause had silently reverted; re-asserted. Double-lock now in place.
+Found at the 14:38 safety-net check: master reads "OFF - safe startup" WITHOUT a restart (uptime 29,326 s,
+8.1 h, build still 11.2-rev-entry-cap), and all three kinds had flipped back to manual_enabled=TRUE. My
+12:42 pause set them to False and verified it; something reverted that flag without restarting the engine.
+
+Why it mattered: with master OFF nothing could trade, so no money was at risk - but the lanes were armed
+underneath. Anyone or anything turning master back ON would have instantly armed EF, REVERSAL **and MAIN**,
+and MAIN has been deliberately off for the whole project. A single master toggle would have started three
+lanes at once during a drawdown the user paused for.
+
+Action: re-posted manual_enabled=false for EF, REVERSAL and MAIN (all 200). Verified: all three now read
+"MASTER OFF - SIGNAL OFF", manual False, effective False. So the pause is now double-locked - both the
+master switch and each lane's own flag - and a master toggle alone can no longer start anything.
+
+Cause unknown and NOT explained by a restart. Do not assume the 12:42 state persists: **check
+manual_enabled on every check-in, not just master_status**, and re-assert if any kind reads True. Leaving
+master OFF as found; per the user's instruction nothing gets re-armed without them.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
