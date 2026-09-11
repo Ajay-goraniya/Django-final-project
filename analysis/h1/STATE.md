@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 04:27 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 05:02 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -379,6 +379,30 @@ J selects on cheapness (ask <= cap) so it had to be re-run. It survives.
   true slippage and sits between my +0c and +5c rows.
 - **J's case does not depend on the 5-s table at all.** Its live forward shadow still decides it.
 - Deliverable: `task20b_candidate_j.md`. Repro: `task20b_candidate_j.py`.
+
+## Task 20 continued 05:00 — Task 16 prior ALSO an artifact; Task 18's EF-at-poly WEAKENS (correction)
+- **Task 16's prior: positive at every margin under the stale quote, NEGATIVE at every margin under
+  the honest one** (+0.111/+0.087/+0.094/+0.169/+0.243 -> −0.042/−0.064/−0.166/−0.245/−0.308).
+  My "insufficient both ways" was TOO GENEROUS to the prior; honestly priced it LOSES at every
+  margin. Task 16's naive-null headline is untouched and reinforced.
+- **Task 18's EF-at-Polymarket: CORRECTION TO WHAT I REPORTED.** I said +0.281/fire and "passes both
+  halves". Honest rule: **+0.223 at margin 0.10 (n=67, 62.7% hit) — the only margin clearing the
+  bar — and its halves are −1.22/+16.14, so it FAILS both-halves.** Still positive, but suggestive
+  rather than established, and it should NOT carry a platform decision on its own.
+  The Predict.fun side of that comparison (+0.049) is UNAFFECTED — it used `ef_v11_ask`, the ask the
+  engine itself recorded at fire time, not a collector sample.
+- **Task 18's two structural conclusions stand:** 11.2 does not transfer (a negative, only flattered
+  by the artifact), and a Binance-close model is a Predict.fun model (a resolution-source argument).
+- **THE PATTERN ACROSS ALL FOUR RE-RUNS — the cleanest statement of the lesson:**
+  11.2 (EV filter) +0.207 -> +0.018 · Task 16 prior (EV filter) +0.087 -> −0.064 ·
+  Task 18 EF@poly (EV filter) +0.361 -> +0.182 halves fail · **J (loose cap) +0.230 -> +0.195
+  SURVIVES.** Every EV-filter rule was inflated; the one rule that only excludes expensive entries
+  was not.
+- **Forward ledger CORRECTED and REBUILT** at 04:50: it was using the stale rule too. The 8 fires
+  recorded under it were DISCARDED, not carried forward — a mixed history is worse than none. Under
+  the honest rule it now has 2 fires, 0 hits (p=0.235 under the honest-rule 51.5%, i.e. nothing).
+  Its stated baseline is now +0.018, not the retracted +0.266.
+- Deliverable: `task20c_rerun_16_18.md`. Repro: `task20c_rerun_16_18.py`.
 
 ## OPEN, in priority order
 1. **Task 19 (standing)** — the daily forward ledger for the FROZEN model; verdict at >=100 forward fires.

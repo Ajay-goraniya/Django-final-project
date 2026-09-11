@@ -1,5 +1,12 @@
 """Task 17.2 - cumulative forward ledger for the FROZEN 11.2 model.
 
+QUOTE RULE CORRECTED 2026-09-11 04:50 (Task 20). The first version of this ledger paid the last
+collector sample at or before S - a quote up to 5 s OLDER than the price it decided on. That is the
+artifact that inflated the 11.2 replay, so the ledger was measuring the wrong thing too. It now uses
+the NEXT rule: the first sample at or AFTER the decision second. The eight fires recorded under the
+old rule were DISCARDED rather than carried forward, and the ledger rebuilt from scratch - a mixed
+history would be worse than none.
+
 Forward means: candles AFTER the replay that produced the +0.266 headline. Nothing here is
 re-fitted and the frozen artifact is never reloaded from anything but models/. Each run processes
 only candles newer than the last one recorded, so the ledger accumulates instead of being rewritten.
@@ -14,6 +21,7 @@ sys.path.insert(0, '/home/user/Django-final-project/analysis/h1')
 sys.path.insert(0, '/home/user/Django-final-project/analysis/h1/models')
 import task16_market_prior_ef as T, task11_2_direction_model as M
 from ef11_2_predict import feats_at, SECS, EV_MARGIN
+from task20_stale_quote import q_next
 
 H1 = '/home/user/Django-final-project/analysis/h1'
 STATE = f'{H1}/task17_forward_state.json'
@@ -50,7 +58,9 @@ def main():
             pu = float(m.predict_proba(feats_at(p_arr, S, t12[i]).reshape(1, -1))[0, 1])
             side = 'UP' if pu >= 0.5 else 'DOWN'
             p = pu if side == 'UP' else 1 - pu
-            au, ad, su, sd = T.book_at(books[ep], S)
+            au, ad, su, sd, age, Sq = q_next(books[ep], S)
+            if au is None or Sq is None or Sq >= 300:
+                continue
             ask = au if side == 'UP' else ad
             size = su if side == 'UP' else sd
             if ask is None or not (0.02 < ask < 0.98) or size is None or size * ask < T.MIN_NOTIONAL:
@@ -81,15 +91,19 @@ def main():
     # context only - it is NOT a verdict, and n is far below the bar.
     from math import comb
     k = int(sum(x['hit'] for x in f))
-    p0 = 0.627
+    p0 = 0.515   # STRICT-rule hit rate from Task 20, not the retracted 62.7%
     tail = sum(comb(n, j) * p0 ** j * (1 - p0) ** (n - j) for j in range(0, k + 1))
     days = sorted({x['day'] for x in f})
     lines = []
     lines.append('# Task 17.2 — forward ledger, frozen 11.2 model\n')
     lines.append('Cumulative, append-only. Frozen artifact `models/ef11_2_gbm_seed0.joblib`, never '
-                 'refitted. Forward = candles strictly after epoch %d, the last candle of the replay '
-                 'that produced the +0.266 headline. Engine grading. EV margin %.2f.\n'
-                 % (REPLAY_LAST_EPOCH, EV_MARGIN))
+                 'refitted. Forward = candles strictly after epoch %d. Engine grading. EV margin '
+                 '%.2f.\n' % (REPLAY_LAST_EPOCH, EV_MARGIN))
+    lines.append('**Quote rule: NEXT — the first collector sample at or AFTER the decision second.** '
+                 'The original ledger used the last sample at or *before* it, i.e. a quote up to 5 s '
+                 'older than the price it decided on. That is the Task 20 artifact; those eight fires '
+                 'were discarded and this ledger rebuilt, because a mixed history would be worse '
+                 'than none.\n')
     lines.append('_Last updated %s UTC._\n' % dt.datetime.utcnow().strftime('%Y-%m-%d %H:%M'))
     lines.append('## %s\n' % verdict)
     lines.append('| | n | hit | per-fire | total |')
@@ -99,8 +113,10 @@ def main():
     if n >= 2:
         lines.append('| first half | %d | — | %+.3f | %+.2f |' % (h, pn[:h].mean(), pn[:h].sum()))
         lines.append('| second half | %d | — | %+.3f | %+.2f |' % (n - h, pn[h:].mean(), pn[h:].sum()))
-    lines.append('\n**Replay baseline to beat: +0.266/fire, 62.7% hit (weekday-only, n=91).**\n')
-    lines.append('Forward hit rate is %d of %d. If the replay\'s 62.7%% were the true rate, seeing '
+    lines.append('\n**Baseline: the replay\'s +0.266 is RETRACTED (Task 20 — stale quote). Under the '
+                 'honest rule the same replay gives +0.018/fire at this margin. That ~0.00 is what '
+                 'this ledger is testing against, not +0.266.**\n')
+    lines.append('Forward hit rate is %d of %d. If the honest-rule 51.5%% were the true rate, seeing '
                  '%d or fewer hits in %d fires has probability **%.4f**. That is context, **not a '
                  'verdict** — n is far below the 60-fire bar, let alone 100, and a run this short '
                  'can do this by chance. It is recorded so the trend is visible from the start '
