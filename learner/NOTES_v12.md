@@ -1020,6 +1020,13 @@ No live order, no fill rate, no live slippage. Live still needs: account verific
 accounts at 100 tx/day against our ~150 fires/day), jurisdiction confirmation, funding and allowances, and the
 fee reconciliation against a first real fill.
 
+## 13:56 UTC check-in (Fri 09-11) - lanes paused, v12 lane live in paper
+- Fair table since 21:55 (09-09): Predict.fun paper 91/86 +54.4@$10; Polymarket paper 134/130 +238.2@$10; Tokyo frozen at 203/177 -3.64 real since the 12:42 pause. Wallet/equity 22.08, nothing open.
+- v12 Polymarket lane: first paper fire 13:55:56 after its 10-minute warm-up gate (needs 600 s of spot and 60 s of perp history - far longer than the old runner, worth knowing after any restart). UP at ask 0.65, p 0.8491, EV 0.2742 vs threshold 0.25, 56 s into the candle, $10 -> 15.01 shares, quote age 60 ms, state PAPER_FILLED.
+- The v12 trade schema is a genuine upgrade on the old runner: quote_ask, quote_age_ms, attempts, order_ids, trade_ids, filled_shares, avg_fill_price, slippage, fee_rate_bps, pnl_per_dollar. A live fill can be reconciled against what the model actually saw; none of that existed before.
+- v10 runner quote-age logging is accruing: 5 certified fires so far. Ages so far are small - the freshness question looks like it will resolve well, but 5 is not a distribution.
+- 12 processes (11 + the v12 lane), snapshots refreshed. H1 moved its own cadence to 2 hours until Sunday night to save usage (2de5b25).
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
