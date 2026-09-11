@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 02:22 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 02:05 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -263,9 +263,29 @@ at the recorded ask on 648 venue candles, engine grading.
   halves. Do NOT deploy on a 648-candle replay.**
 - Deliverable: `task11_2_direction_model.md`. Repro: `task11_2_direction_model.py`.
 
+## Task 14/15 DISCREPANCY RESOLVED 02:00 — it was the window, not the venue
+The queued check, run on 648 candles with full kline coverage. Candidate (a) "the venue favourite
+diverges from the Binance leader in near-zero candles" vs (b) "noise at n=77".
+- **(a) is REAL as a phenomenon but explains NOTHING.** At t=237 the two disagree on 40% of <1bps
+  candles (agreement 60%) against 96-100% in every other bucket — the venue stops tracking the tape
+  when the candle is flat, and re-converges as it closes (60% -> 79% -> 90% at 237/270/290).
+  **BUT they perform IDENTICALLY there: 0.467 vs 0.467, gap +0.000.** Overall gap +0.000 at t=237,
+  +0.012 at t=270 — the venue is if anything marginally better.
+- **(b) IS the explanation.** On THIS window the <1bps bucket is a coin flip for BOTH measures
+  (leader 0.467) against **0.614 on the 72,863-candle set**. Task 14's 49.4% needs no venue-specific
+  story and none should go in the ledger.
+- **The caveat that matters going forward:** this 648-candle venue window differs from the 252-day
+  set by **15 percentage points** in that bucket. Every per-fire number measured on these candles,
+  **including Task 11.2's +0.266**, inherits that uncertainty. It is precisely why 11.2 was proposed
+  as a forward shadow rather than a ship.
+- <1bps cells are n=58-60, right at the bar: "consistent with noise", not a measurement.
+- Note: `2026-09-11_0200_venue_favourite_check.md`. Repro: `venue_favourite_check.py`.
+
 ## OPEN, in priority order
-1. **Task 11.2 DONE** (above). Next: the two queued checks — venue favourite vs Binance leader at
-   t=237, and the 2.5-5 bps EF cell as fills accumulate.
+1. **The 2.5-5 bps EF cell** (EF 45.0% vs a 70.0% null, n=40) — revisit once fills pass 60. The one
+   remaining queued check; the venue-favourite check is DONE (above).
+2. If nothing else is open: extend the venue window as V's snapshots grow, and re-run 11.2's replay
+   on the larger set — the 15pp window-vs-long-run gap above is the main uncertainty in that result.
 2. **The venue-favourite vs Binance-leader check** at t=237 in the <1bps bucket — settles the one
    thing Task 15 could not (see above).
 
