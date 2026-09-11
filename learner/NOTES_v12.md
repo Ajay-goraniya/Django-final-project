@@ -827,6 +827,15 @@ Old-version findings keep going to NOTES_v11.md.
 - H1 fef1c5e merged: honest forward ledger 29 fires, 10 hits (34.5%), p=0.049 vs the 51.5% honest rate - context only, still under the 60-fire bar. The live shadow (3/10) and the ledger (10/29) now agree in sign and rough level. H1 also noted the new analysis/astra/ channel.
 - 11 processes, snapshots refreshed.
 
+## 12:27 UTC check-in (Fri 09-11) - DRAWDOWN
+- Fair table since 21:55 (09-09): Predict.fun paper 87/76 +94.0@$10; Polymarket paper 131/122 +286.6@$10; v11 live EF 203/175 -1.64 real.
+- Tokyo: realised +2.02 (down from the +28.28 high at 08:21 and +6.28 at 11:56), wallet 24.08, equity 24.27 (1 open), 424 settled, 272/274 filled. Stake is already at the $1 floor - the ladder has no lower rung, so there is no staking action left to take.
+- Lanes: EF since 14:25 ex-guard 116/101 +2.36 (+0.006 per $1) - essentially zero over the whole EV-1.0 window, and -5.53 in the $2 phase. REVERSAL 34/10 +5.66, per $1 down from +0.149 to +0.071; last-20 avg slip -0.9c (favourable), so neither kill rule is near (slip > 3c, or per $1 < -3.0 over 20).
+- NO new rule invented mid-drawdown. Turning EF off on today's run would be exactly the banned move: a gate on a score already known to be weak, fitted to the drawdown in front of me. EF's pre-existing evidence is the EV-1.0 window, which is flat, not negative. Recording it and leaving the lanes as they are.
+- Twins (190 min): A +37.9, B +215.1, C +138.6@$10 - twin A has given back 50 points in half an hour, so this is the market, not a Tokyo-only execution problem.
+- Shadows: EF2/J 138 graded (refuted); 11.2 live shadow 10 graded, 3 W 7 L. H1 fba8743 merged: forward ledger 30 fires -0.307/fire.
+- 11 processes, snapshots refreshed.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
