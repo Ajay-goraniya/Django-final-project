@@ -1631,6 +1631,27 @@ Tokyo 5/10 -7.06 real. Both paper runs have given back most of the afternoon.
 Polymarket live: CLOSED (22:00 entry). The user has since said they hold Indian citizenship and are only
 travelling in the UK, with accounts logged in on a device in India. Recorded; not acted on - see the reply.
 
+## 22:30 UTC - Polymarket live: PARKED, not closed. Reopens when the user is in a permitted jurisdiction.
+Revising the 22:00 "CLOSED" entry after two things the user relayed:
+1. Polymarket support (per the user; text not yet forwarded): the API may be used from a VPS in a
+   non-restricted area, provided the VPS is in a non-restricted area AND the account holder is too.
+2. The user holds Indian citizenship and is in the UK temporarily. They will retry when they are in a
+   non-restricted area.
+
+So the standing position is: BOTH conditions must hold at order time - a permitted VPS (Tokyo qualifies: API
+not restricted) and the user physically in a permitted jurisdiction (India is not on the list). Tonight
+neither held: this container is in Ohio (US, restricted) and the user was in the UK (restricted). That is why
+the 21:46 order was refused, and it would have been refused from either side alone.
+
+Standing rule for every session: do NOT attempt live Polymarket execution until the user states they are in a
+permitted jurisdiction, and then ONLY from the Tokyo host (never from this container). When support's reply
+text is forwarded, file it in analysis/h1/POLYMARKET.md as the authority.
+
+Preparation that is legitimate now and does not depend on location: scoping the Polymarket venue backend
+inside build11 for the Tokyo host (dashboard, /api/controls, lane semantics, ladder, kill rules), carrying
+over what tonight verified - auth flow, SDK calls, pad-0 EV handling, the ambiguous-submit guard - and the
+trade schema with quote_age_ms / fill / slippage / fee per trade.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
