@@ -67,3 +67,14 @@ Four asks, and what H1 did for each:
    and the tag filter that would reveal Cowork sessions is unavailable from inside a session, so H1
    CANNOT close it from here — the user must close it from the app where it was started. Nothing was
    archived: there was nothing unwanted that H1 could reach.
+
+## 2026-09-11 00:30 UTC — "verification is the most important part so this kind of issues should never be happening"
+Agreed, and turned into a tool rather than a promise: **`analysis/h1/verify.py`**. A `Finding` must
+pass grading provenance, sample size (>=60/cell), both halves, a permutation control, sweep
+monotonicity, cost sensitivity and beats-the-null; `verdict()` returns True only if nothing FAILED.
+Wired into repo-root `CLAUDE.md`, so every session in this repo is told to run it before reporting.
+Self-tested on the two real cases from 09-10: it rejects the cross-venue claim H1 got wrong and
+accepts the distance premise. **In that rejection every other check passes and only `grading()`
+fires** — which is exactly why the checks must run as a set, and why grading runs first.
+H1 did NOT send V a separate message about it, per the user's own "don't just talk talk talk" rule —
+it goes in the next batched message with the 11.2 results.

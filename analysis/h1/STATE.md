@@ -1,5 +1,15 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 00:22 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 00:35 UTC. Update this file at the end of every check.
+
+## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
+`analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
+permutation control / sweep monotonicity / cost sensitivity / beats-the-null, and `verdict()` is
+True only if nothing FAILED. **Run it before reporting anything, including to V.**
+Self-tested on the two real 09-10 cases: it REJECTS the cross-venue claim I got wrong and ACCEPTS
+the distance premise. In that rejection **every other check passes and only `grading()` fires** —
+the reason the checks run as a set and grading runs first.
+Its `permutation()` permutes the model's PREDICTIONS, never the labels: shuffling labels destroys
+the market's calibration too, so longshots "win" at the base rate and it prints a fake profit.
 
 ## FIXED 00:22 — the protocol now lives in repo-root `CLAUDE.md` (commit cfa8e77)
 Every Claude session in this repo loads it automatically, so the three failures below cannot repeat

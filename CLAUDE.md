@@ -40,6 +40,30 @@ The two channels that work:
   grid, **never the best cell**.
 - Answers to the user are **short and plain**: *"summarise it, I'm not reading all."*
 
+## Before you report a finding, run `analysis/h1/verify.py`
+
+Verification is not a habit to remember — it is a gate to pass. `Finding` in that module runs the
+checks that have actually caught errors here, and fails loudly rather than passing quietly:
+
+| check | what it catches |
+|---|---|
+| `grading()` | the labels are a **different venue's** oracle (this invented a +0.44/fire edge) |
+| `sample()` | any cell under 60 graded fires |
+| `halves()` | the sign flips between the first and second half |
+| `permutation()` | the "edge" is plumbing, not signal |
+| `sweep()` | a non-monotone sweep peaking at your chosen value |
+| `costs()` | it dies once you pay realistic slippage |
+| `null()` | the obvious dumb strategy does just as well |
+
+`verdict()` returns True only if nothing FAILED. Run `python3 analysis/h1/verify.py` to see it
+reject a real false finding from 09-10 and accept a real true one. **In that rejection every other
+check passes and only the grading check fires** — which is why they are run as a set, and why
+grading is first.
+
+**On `permutation()`:** permute the model's *predictions*, never the labels. Shuffling labels also
+destroys the market's calibration, so cheap longshots "win" at the base rate and the control prints
+a fake profit. That mistake cost an hour on 09-10.
+
 ## Method (these were expensive lessons, not preferences)
 
 Sweep the full parameter range **and** use the largest available sample before calling anything a
