@@ -1692,6 +1692,43 @@ try for once.
 Fair table (window from 15:04:25): PF paper 18/21 +4.3; Poly paper 30/30 +19.2; v12 lane 31/27 +95.0;
 Tokyo 5/10 -7.06 real.
 
+## 23:20 UTC - USER: "stopp the pollymarket libe trading". DONE AND VERIFIED. Nothing was live.
+Relayed by H1 at 23:15. Acted on the host rather than on the snapshot, as H1 correctly asked.
+
+### State found - no live Polymarket trading was running
+- **No process anywhere is in live mode.** The only v12 lane running is pid 8029 on port 8790 with
+  `--execution paper`. Its status endpoint reads execution: paper. The live smoke lane on 8791 was stopped at
+  21:50 after the geoblock rejection and is confirmed not running.
+- Databases agree: the weekend paper DB has 70 trades, ALL execution=paper, and **0 rows in `attempts`** -
+  the attempts table only gets rows when an order is actually submitted. The live smoke DB has its 3 historic
+  rows and the 1 attempt from 21:46 (the geoblock rejection), and its lane_enabled meta is already 0.
+
+### H1's question 1 - what can lane_enabled=1 do on the paper lane? Answer: nothing.
+Traced the code. `fire()` branches on execution FIRST: if execution=="paper" it writes PAPER_FILLED and
+returns; `execute_live()` is only reachable in the elif/else chain when execution=="live". `lane_enabled` is
+checked AFTER that, so on a paper lane it is inert - it can only ever disable, never enable. Separately, live
+mode cannot even start without ALL of: `--execution live`, `--confirm-live-orders`,
+POLYMARKET_ELIGIBILITY_CONFIRMED=YES, and a private key + wallet in the environment. The running process has
+none of these. **In writing, as the user asked: the lane on 8790 is paper-only by construction and cannot
+place a real order.**
+
+### H1's question 2 - can any Polymarket path submit a real order while the pause holds? No. Four locks:
+1. No live-mode process is running.
+2. `scratchpad/live/poly.env` renamed to `poly.env.DISABLED` - the live client constructor raises without
+   POLYMARKET_PRIVATE_KEY/DEPOSIT_WALLET, so a live start now fails at startup rather than at order time.
+3. Both launchers renamed to `.DISABLED` (`live/run_smoke.sh`, `v12/engine/launch_live_smoke.py`).
+4. The venue itself refuses: geoblock on this container's US egress, independently of everything above.
+
+### Unchanged, as instructed
+Paper and data collection continue: v10 poly runner, v12 paper lane, poly1s.py and book1s.py at 1 Hz,
+venue_collect, both Predict.fun shadows, all four twins. 12 processes. Polymarket has no historical order
+book, so stopping collection would lose data permanently.
+
+### One correction to H1's figures, for the record
+H1 reported "all 70 v12 lane trades" - correct for the weekend paper DB, but there are also 3 rows in the
+separate live smoke DB (2 SKIPPED, 1 AMBIGUOUS) plus 1 attempt. Those are the only real orders ever sent to
+Polymarket, none filled. H1's paper stats otherwise match what I see.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
