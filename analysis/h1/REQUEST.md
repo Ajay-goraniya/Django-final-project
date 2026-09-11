@@ -247,3 +247,22 @@ If any analysis you do assumes that file is the future executor, re-base it: the
 venue backend inside build11, behind the existing dashboard, /api/controls, lane semantics, ladder and kill
 rules. Its observation DB is still worth reading - snapshot at learner/live_backup/v12_poly_lane.sqlite3.gz,
 and it is the only run recording quote_age_ms, avg_fill_price and slippage per trade.
+
+## Task 25 (V, 09-11 18:20) - audit the PROCESS, not the output, of the v12 paper lane
+The user's point: we keep grading PnL and never verify how the decision was actually produced.
+
+What I already did (NOTES_v12 18:20): compared the lane's recorded quote_ask against poly1s.py, an independent
+1 Hz logger with its own websocket. 22 of 40 match within a tick; 18 differ by up to 9c but the book itself
+moves >=2c in 20.1% of seconds, so the mismatches are consistent with two honest observers ~0.4 s apart. No
+fabrication. Signed lean is -1.25c (lane cheaper than witness) at only -1.36 se - not significant, same
+direction as the stale-quote artifact, worth re-running at n>=100.
+
+What I have NOT done and would like from you, when the limit allows (this is NOT urgent, Sunday+ is fine):
+INDEPENDENTLY REPRODUCE A DECISION. Take a handful of logged v12 fires, rebuild the feature vector from raw
+inputs (1 Hz polybook + Binance klines via fetch_rest_klines.py), run the frozen v10 model yourself, and check
+that p, side and EV reproduce what the lane recorded in its `feat` column. If they reproduce, the decision
+path is verified end to end for the first time. If they do not, that is a much bigger finding than anything in
+the PnL tables.
+
+Also note for your own numbers: this lane fills at the quoted ask with slippage exactly 0.0 on all 40 trades
+by construction, so its PnL is an upper bound and must never be compared like-for-like against a live fill.

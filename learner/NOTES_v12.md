@@ -1250,6 +1250,47 @@ of 27 candles, and each disagreement was worth ~18 points at $10. That is the fi
 on top of it. Entry timing must be a pinned parameter in the real executor, not left to whenever the loop
 happens to come round.
 
+## 18:20 UTC - PROCESS AUDIT of the v12 lane (user: "you are just checking homework, not how the kid did it")
+Fair criticism, and acted on. Until now I had only graded outputs (PnL, W/L). This audits the mechanism, using
+an INDEPENDENT WITNESS: poly1s.py, a separate process with its own websocket connection logging the Polymarket
+book at 1 Hz. If the lane's claimed quotes are honest they should agree with it.
+
+### What the lane records about itself (40 trades)
+- state is `PAPER_FILLED` on all 40, reason `paper_at_ws_ask` on all 40, fee_rate_bps 700 on all 40.
+- **avg_fill_price == quote_ask on 40 of 40, and slippage is exactly 0.0 on every trade.**
+  That is not a bug, it is the paper model's assumption made explicit - it fills at the quote it saw. But it
+  means this lane can tell us NOTHING about fill quality, and its PnL is an upper bound, not an estimate.
+  Any live number will be worse by whatever crossing actually costs.
+
+### The real test: do its quotes match the independent logger?
+| | result |
+|---|---|
+| matched within 1 tick | 22 of 40 |
+| mismatched | 18 of 40, up to 9c apart, all within ~0.5 s |
+| signed (lane minus logger) | mean **-0.0125**, median 0.0000, cheaper on 15, dearer on 8 |
+| significance | **-1.36 se from zero** |
+
+Calibration - how much does the book itself move in one second? From 39,677 logger samples: mean absolute
+1-second change 0.0120, 90th percentile 0.030, and **20.1% of seconds move 2c or more.** So a 2-9c gap between
+two observations taken ~0.3-0.5 s apart is well inside normal book movement. The mismatches are NOT evidence
+of fabricated quotes.
+
+### Verdict
+- **No fabrication.** The lane's quotes are consistent with a genuinely independent observation of the same
+  book, given how fast that book moves. The 18 mismatches are two honest observers at different instants.
+- **But there is a lean worth watching.** The lane's quote is cheaper than the witness by 1.25c on average.
+  At -1.36 se that is NOT significant and I am not calling it a finding - but it points the same direction as
+  the stale-quote artifact that has killed five candidates, and 40 is a small n. Re-run this audit at n>=100.
+- **The zero-slippage assumption is the bigger caveat** and it is structural, not statistical: every PnL this
+  lane reports assumes a perfect fill at the observed ask.
+
+### What this does NOT yet audit, and should
+Feature computation and the decide() path are still taken on trust - I verified the FILE is byte-identical to
+what the user sent and that it imports btc_model_v10's Model/FEATURES, but I have not re-derived a decision
+independently from raw inputs. The honest way: recompute features for a logged candle from the 1 Hz book plus
+Binance klines and check the model's p and side reproduce. Queued for H1 as Task 25 rather than done now (user
+is limit-constrained until Sunday).
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
