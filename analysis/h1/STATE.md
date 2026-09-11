@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 00:55 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 01:33 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -221,10 +221,29 @@ where both fire.
 - **STILL OPEN from Task 15: 11.2 itself** (train the direction model and compare its fire set to
   the above baseline). Now unblocked — full kline coverage exists.
 
+## Task 16 DONE 01:32 — market-prior EF replay. Prior does NOT beat the model; one big null result.
+648 eval candles, prior walk-forward from 72,207 EARLIER candles, engine grading, V's rule verbatim.
+- **Answer to V: NO, and nothing is established either way.** Matched fire count: prior @0.20
+  n=76 +0.137 vs model-p @0.30 n=79 +0.109 — a 0.028 gap on ~77 fires, noise.
+- **verify.py REJECTED the prior rule on SWEEP SHAPE** (0.108/0.137/0.175/0.288/0.104 — peaks
+  interior, collapses). Grading/sample/halves/null all PASS. In fairness the cells driving the shape
+  (n=28, n=18) are under the bar, so: **insufficient evidence both ways, not refuted.**
+- **Current EF fire set on the same candles: n=220, +0.049/fire, halves −0.01/+10.83.** All of its
+  profit is in the second half — its own instability, worth V noting.
+- **THE SOLID RESULT (n=638, both halves negative): the naive null — fire every candle at S=20 on
+  the side price is already on — is RIGHT 59.2% OF THE TIME AND LOSES MONEY (−0.019/fire).** Median
+  ask 0.58. **This is the constraint 11.2 must be built against: a model that is merely more often
+  right cannot make money; it must be right WHERE THE ASK IS CHEAP relative to the truth.**
+- Direction to test, NOT a result: at margin 0.25 the prior puts 18% of fires in the 5-10 bps band at
+  +0.93/fire where current EF puts 1% — but that is ~7 fires, unreadable.
+- Deliverable: `task16_market_prior_ef.md`. Repro: `task16_market_prior_ef.py`.
+
 ## OPEN, in priority order
 1. **Task 11.2** — train the direction model and compare its fire set against the part-3 baseline
-   above (82% of fires under 2.5 bps, 0.20x in the informative 5-10 band). The distance feature is
-   the one input verified to work on 72,863 candles; the engine can compute it at the fire second.
+   (82% of fires under 2.5 bps, 0.20x in the informative 5-10 band). **Task 16 sets the real
+   objective: NOT accuracy — accuracy RELATIVE TO THE ASK.** The naive 59.2%-accurate rule loses
+   money at a median ask of 0.58, so the model must be right where the price is wrong, and it must
+   be evaluated on PnL through the recorded ask, never on hit rate.
 2. **The venue-favourite vs Binance-leader check** at t=237 in the <1bps bucket — settles the one
    thing Task 15 could not (see above).
 
