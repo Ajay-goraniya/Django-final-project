@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 02:05 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 02:47 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -281,8 +281,34 @@ diverges from the Binance leader in near-zero candles" vs (b) "noise at n=77".
 - <1bps cells are n=58-60, right at the bar: "consistent with noise", not a measurement.
 - Note: `2026-09-11_0200_venue_favourite_check.md`. Repro: `venue_favourite_check.py`.
 
+## Task 17.1 DONE 02:35 (model FROZEN) · Task 18 DONE 02:45 — 11.2 does NOT transfer to Polymarket
+- **17.1: model frozen and exported** to `analysis/h1/models/` (joblib + `ef11_2_predict.py` +
+  README, 0.27 MB, sklearn 1.9.0). Artifact reproduces the replay EXACTLY (n=91, +0.263,
+  halves +0.352/+0.177). Feature parity asserted. **The integrity check caught a wrong
+  TRAINING_CUTOFF_MS** (I had used the venue quote table's first ts; the real cutoff is later,
+  1788887700000) — fixed, so the forward test cannot silently include training candles.
+- **18: 11.2 DOES NOT TRANSFER.** At Polymarket asks with the 7% taker fee, graded on POLYMARKET's
+  own resolution (the settling source there): **negative at all six margins** (−0.007..−0.063), hit
+  **36-45%, BELOW RANDOM**. Graded on engine actual the same fires give +0.27..+0.59.
+  **Mechanism: 11.2 predicts the BINANCE CLOSE; Polymarket pays a Chainlink TWAP and the two differ
+  on 10.5% of candles. The fire rule selects where the model disagrees with the Polymarket ask — and
+  that ask is right about Polymarket's own resolution.** Staleness worsens it (+5c −0.157, +10c −0.256).
+- **The CURRENT EF fire set DOES transfer:** +0.281/fire at Polymarket asks on POLY grading (n=69,
+  halves +0.230/+0.330, monotone sweep), positive under BOTH gradings. Because EF's signal already
+  IS Polymarket. On this window it does better at Polymarket prices than on Predict.fun (+0.049).
+- **Platform reading: a model trained on Binance close is a PREDICT.FUN model.** For Polymarket it
+  must be RETRAINED against Polymarket's resolution — a new artifact, not a redeploy.
+- verify.py FAILED the EF-at-poly claim on grading provenance (two sources disagree 10.6%); honest
+  resolution is that the claim is positive under BOTH gradings, so it does not change the conclusion.
+- Deliverables: `task18_polymarket_transfer.md`, `models/README.md`. Repro: `task18_polymarket_transfer.py`.
+
 ## OPEN, in priority order
-1. **The 2.5-5 bps EF cell** (EF 45.0% vs a 70.0% null, n=40) — revisit once fills pass 60. The one
+1. **Task 17.3** — the rain-or-sun regime grid for the 11.2 fire set on the 648 candles, plus the
+   per-hour-of-day fire/PnL profile (weekend matters; Sat-Sun is the live test window).
+2. **Task 17.2** — the daily forward ledger for the FROZEN model; verdict at >=100 forward fires.
+3. **Task 19 (standing)** — `analysis/h1/POLYMARKET.md`: CLOB API, fees, TWAP resolution, history
+   endpoints, eligibility, v10 poly run by hour/weekday.
+4. **The 2.5-5 bps EF cell** (EF 45.0% vs a 70.0% null, n=40) — revisit once fills pass 60. The one
    remaining queued check; the venue-favourite check is DONE (above).
 2. If nothing else is open: extend the venue window as V's snapshots grow, and re-run 11.2's replay
    on the larger set — the 15pp window-vs-long-run gap above is the main uncertainty in that result.
