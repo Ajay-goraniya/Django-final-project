@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 05:02 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 05:32 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -403,6 +403,27 @@ J selects on cheapness (ask <= cap) so it had to be re-run. It survives.
   the honest rule it now has 2 fires, 0 hits (p=0.235 under the honest-rule 51.5%, i.e. nothing).
   Its stated baseline is now +0.018, not the retracted +0.266.
 - Deliverable: `task20c_rerun_16_18.md`. Repro: `task20c_rerun_16_18.py`.
+
+## Task 19 STARTED 05:30 — `POLYMARKET.md` created. Two data answers + a fee inconsistency.
+- **(3) WE CANNOT GRADE POLYMARKET RESEARCH FROM KLINES.** Best of five pre-fixed TWAP candidates
+  (`last30_mean >= open`) agrees with Polymarket's outcome on **91.4%**, against **89.5%** for just
+  using the engine's actual — a 1.9pp gain, and **~9% of candles still mislabelled**, concentrated in
+  flat candles (median |close-open| 1.47 bps vs 5.53 overall). **Any Polymarket study must grade on
+  Polymarket's own outcome table**; a kline TWAP would reintroduce the Task 14 error elsewhere.
+- **(6) THE v10 POLY RUN IS WEEKDAY-ONLY TOO: n=371, weekend n=0.** hit 52.8%, +0.133/$1, median ask
+  0.45, median fire second 68. **Nothing we have measured on EITHER venue includes a weekend** —
+  worth saying plainly before a weekend migration test. 00-08 UTC is near flat (+0.014, n=115) vs
+  ~+0.19 in the active blocks: an observation, NOT a rule.
+- **(2) FEE INCONSISTENCY BETWEEN TWO OFFICIAL SOURCES, unresolved.** Docs table says Crypto = 0.07;
+  the Help Centre says fees "peak at 1.56% at 50%", which implies 0.0625 (0.07 gives 1.75%). We used
+  0.07, the conservative side — if 0.0625 is right we are OVERSTATING Polymarket costs by ~11% of
+  the fee, i.e. the error favours Polymarket. **V's gamma `takerBaseFee 1000` matches neither** (700
+  / 625 on a 1e-4 scale); not guessing its units. Resolve against a real fill before migrating.
+- Also confirmed: formula `shares x feeRate x p x (1-p)`, makers free, symmetric about 0.50, so per
+  $1 staked the fee is `feeRate x (1 - ask)`.
+- Still to gather (needs API docs): CLOB auth/order types/tick/min size/rate limits/websocket and
+  what the executor must do differently; history endpoints and depth; published eligibility policy.
+- Deliverable: `POLYMARKET.md`. Repro: `task19_poly_research.py`.
 
 ## OPEN, in priority order
 1. **Task 19 (standing)** — the daily forward ledger for the FROZEN model; verdict at >=100 forward fires.
