@@ -75,3 +75,33 @@ H1's working file: analysis/h1/POLYMARKET.md (Task 19). This file is V's summary
 
 ## Plan
 - Next week (user): decide after the weekend. If go: build the executor in v12, run $1 live beside Tokyo for a day, ladder decides.
+
+
+## CORRECTION 09-11 14:15 (V) - the "verification is a hard blocker" claim is weaker than we stated
+The user asked how to do account verification, so I went back to the primary sources instead of repeating
+our own note. What the documentation actually says:
+
+- The **100/day unverified vs 10,000/day verified** figures come from the **BUILDER tiers page**
+  (docs.polymarket.com/builders/tiers) and are **Relay transactions per day for builders** - i.e. for someone
+  routing orders through the Builder program with a Builder API Key. The page: "Relayer requests beyond your
+  daily limit will be rate-limited and return an error."
+- **No daily transaction cap for an ordinary trading account is documented anywhere.** The wallets-auth page
+  confirms Deposit/Proxy/Safe wallets route through the Relayer for gasless execution but states no cap. The
+  help-centre trading-limits article says only "the Polymarket orderbook does not have trading size limits".
+- So H1's Task 19 finding is accurate about what the tiers page says, and my repeated framing ("an unverified
+  account cannot run the engine, verification is a prerequisite") **over-claimed it**. It may simply not apply
+  to a personal account trading its own wallet. UNKNOWN, not BLOCKER.
+
+**The verification route, if it turns out we do need it** (builder path, from the tiers page):
+1. Build and launch the integration at the Unverified tier (no approval needed to start).
+2. Generate volume routing orders through Polymarket.
+3. Email **builder@polymarket.com** with the Builder API Key, a use-case description, expected volume, and any
+   other relevant information.
+4. Approval typically within a few business days.
+Relayer/Builder API keys live under polymarket.com/settings (relayer-api-keys and builder tabs).
+
+**How to settle it cheaply, and the order to do it in:** do NOT email anyone yet. The first live smoke test is
+a handful of orders, far under any cap. Run that, watch for a relayer rate-limit error, and only then decide.
+If the error appears we know the cap binds and we apply; if it does not, the whole issue was never real. This
+replaces "wait days for verification before starting" with "start small and find out", which is also what the
+per-second limits (published only as "Standard"/"Highest", never quantified) require anyway.
