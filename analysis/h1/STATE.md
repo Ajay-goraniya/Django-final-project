@@ -1,5 +1,19 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 00:08 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 00:12 UTC. Update this file at the end of every check.
+
+## OPERATIONAL ISSUES — known failure modes for any session on this task (user, 00:05)
+A THIRD session was given the same `H1_BRIEF.md` retro tasks and hit all three of these. The user
+relayed its output and said *"be aware of those comman issues."*
+1. **`SendMessage` does not work in any direction** — by name, alias or full session ID. The working
+   channels are (a) git commits on the branch and (b) one-shot Routines via `create_trigger` with
+   `persistent_session_id`. Do not burn turns retrying SendMessage.
+2. **A new session may have NO PUSH ACCESS** to `Ajay-goraniya/django-final-project` and will only
+   discover it at `git push`. Its work is then stranded. **Check push access BEFORE doing hours of
+   analysis**, and if it is missing, hand results to a session that has it (H1 does) rather than
+   asking the user to change permissions.
+3. **Duplicated work.** That session independently re-derived "no EF gate passes both-halves
+   validation" — already closed here AND banned by the user. **Read `analysis/h1/STATE.md` first**;
+   the CLOSED table exists exactly to stop this.
 
 ## Standing user rules (binding)
 - **No gates.** No on/off gates, stake modifiers, or threshold sweeps on a score already known to be
@@ -132,6 +146,20 @@ Ran on `venues.sqlite3`: 640 candles, 54.7 h, walk-forward, 8 decision seconds, 
   0.494 vs 0.595 is ~1.8 SE. **Separable now that 09-10 klines are in** — compare the venue's implied
   favourite against the Binance leader at t=237 on the same candles. QUEUED.
 - Deliverable: `task15_distance_premise.md`. Repro: `task15_distance_premise.py`.
+
+## EF vs REVERSAL opposite sides, 00:10 (rescued from the stranded third session)
+Its one non-duplicate claim, re-derived by H1 rather than taken on trust: **it replicates, exact
+numbers, sign holds on all four sources.** When the two lanes oppose on the same candle the COMBINED
+position loses in every source (−0.220 / −0.354 / −0.329 / −0.516 per $1); when they agree it is
+strongly positive (+0.641 to +1.521). The engine is trading against itself on ~40% of the candles
+where both fire.
+- **NOT two independent signals:** REVERSAL fires *because* it thinks the move reverses, so
+  "REVERSAL opposes EF" and "EF is wrong" are largely the same event counted twice.
+- **NOT a finding yet:** every cell is under 60 (28/22/17/7) and the three twins share candles, so
+  they are one twin family plus a thin slice of real fills, not four independent samples.
+- **No rule proposed** — a disagreement gate is banned, and unimplementable anyway since REVERSAL
+  fires after EF, so at EF's fire second the disagreement does not exist yet.
+- Note: `2026-09-11_0010_ef_rev_conflict.md`. Repro: `ef_rev_conflict.py`.
 
 ## OPEN, in priority order
 1. **Task 15 part 1/3 — Task 11.2 on the now-complete kline set** (the blocker is gone, see above:

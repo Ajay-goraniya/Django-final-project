@@ -29,3 +29,19 @@ fitting, not testing.
 So the brain cannot be built from the current feature set. It needs information the book does not
 already have — deeper book state, trade-flow aggression, cross-venue lead/lag, the venue's own quote
 path — not a better model over the same inputs.
+
+## 2026-09-11 00:05 UTC — user relays a THIRD session's stranded work + "be aware of those common issues"
+The user pasted output from a third session (not H1, not V) that had been given the same
+`learner/H1_BRIEF.md` retro tasks. Its recurring failure modes, verbatim in substance:
+1. **`SendMessage` failed** to reach V by name, alias and full session ID — same as H1 found.
+2. **`git push` DENIED**: that session was not in the authorized repository set for
+   `Ajay-goraniya/django-final-project`. Its `learner/H1_RESPONSE.md` never reached the branch —
+   **confirmed: the file is not on the branch**. Its analysis was stranded and it asked the user to
+   either grant push access or relay by hand.
+3. **It duplicated work already done.** Its EF gate study concluded no gate passes both-halves
+   validation — which H1 had already established and the user had already banned outright.
+User instruction: *"be aware of those comman issues."*
+**H1 action taken:** did not ask the user to change any permission. Rescued the one non-duplicate
+claim it had (EF/REVERSAL same-candle conflict) by re-deriving it from the snapshots H1 already has,
+and pushed it (`ef_rev_conflict.py`, note below). Operational issues recorded in STATE.md so the
+next session does not repeat them.
