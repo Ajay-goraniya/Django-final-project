@@ -75,3 +75,10 @@ Running list. Not explanations for the user - working notes. Newest first. Statu
     (design first, pre-commit, then test): (a) pad 0 and accept lower fill probability; (b) compare the capped
     EV against a separate, lower execution floor rather than the signal threshold; (c) size the pad from the
     EV headroom actually available. Do NOT just lower the threshold.
+
+18. BLOCKED BY VENUE (09-11 21:46) - **Live Polymarket execution is impossible from this container: geoblock.**
+    First real submission was rejected with "Trading restricted in your region" from egress IP 160.79.106.135
+    (Columbus OH, US, Google LLC). US origins are excluded by Polymarket's ToS. Any live Polymarket execution
+    must run from a host in a permitted jurisdiction, and the user's own eligibility is a separate question.
+    Do not attempt to route around it. Everything upstream of the venue is verified working: auth, SDK calls,
+    the pad-0 EV fix, and the ambiguous-submit guard that disabled the lane.

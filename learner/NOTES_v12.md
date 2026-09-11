@@ -1532,6 +1532,52 @@ NOT done, deliberately: lowering the model threshold, widening the pad, or touch
 proper fix is a separate execution floor distinct from the signal threshold - IMPROVEMENTS item 17, to be
 designed and pre-committed, not improvised mid-test.
 
+## 21:46 UTC - FIRST REAL ORDER SUBMITTED TO POLYMARKET. REJECTED: GEOBLOCK. Definitive answer.
+The pad-0 fix worked and the order reached the exchange. Polymarket refused it.
+
+FIRE DOWN p=0.5909 ask=0.49 ev=0.1629 sec=62, quote age 3 ms. Cap 0.49 (pad 0), EV at cap 0.16287 - the
+check that blocked the first two signals PASSED, exactly as intended. One attempt, latency 986 ms. Response:
+
+    RequestRejectedError: Trading restricted in your region, please refer to available regions
+    https://docs.polymarket.com/developers/CLOB/geoblock
+
+Trade state AMBIGUOUS, 0 fills, no order id, no trade id. The lane self-disabled
+("ambiguous live order submission; manual reconciliation required") and I stopped the process. NO MONEY MOVED
+and no position exists - the rejection is pre-trade, but the AMBIGUOUS state is correct handling: the engine
+cannot prove from a transport-level rejection that nothing landed, so it refuses to keep trading. Reconciled
+manually: attempts=1, order_ids=[], trade_ids=[], so nothing was accepted.
+
+**The block is on the REQUEST ORIGIN, which is this container, not necessarily the user.** Egress IP
+160.79.106.135, Columbus Ohio, US, AS396982 Google LLC. US persons/IPs are excluded by Polymarket's ToS, so
+any order from this sandbox will be refused regardless of whose key signs it. The user's own jurisdiction is a
+separate question this test does NOT answer.
+
+### What the test did establish - all of it useful, none of it about edge
+1. Credentials and auth work end to end: L1 signature accepted, L2 credentials derived, account NOT in
+   closed-only mode (the client refuses to construct otherwise).
+2. The SDK integration is correct: the call reached Polymarket and came back with a semantic response, not a
+   client error. IMPROVEMENTS 11 fully closed.
+3. The pad-0 change fixed the EV-at-cap rejection; the executor will submit when the price check passes.
+4. Round-trip latency to rejection 986 ms - slow, and worth knowing for a 5-minute market.
+5. The ambiguous-submit guard fires correctly and disables the lane rather than retrying blind. That is the
+   single most important safety behaviour in the file and it has now been exercised for real.
+
+### What it did NOT establish
+Fill price, slippage, fill rate, the fee field, the relayer limit - every question the smoke test existed to
+answer. Those need an order that is actually accepted.
+
+### Options, for the user to choose - not mine to pick
+(a) Run the executor from a host in a permitted jurisdiction (their own machine or a VPS), pointing at the
+    same code. The container cannot do it.
+(b) Drop live Polymarket execution and keep it as a data/research venue only.
+(c) Confirm their own eligibility first; if they are themselves in a restricted jurisdiction, (a) does not
+    help and the answer is (b).
+I am not routing around a geoblock - that is a deliberate access control, and circumventing it would breach
+Polymarket's terms and put the account and funds at risk.
+
+Also: the key the user pasted into chat remains compromised and should be rotated before that wallet ever
+holds funds, independently of all of the above.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
