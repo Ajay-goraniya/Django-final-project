@@ -1051,6 +1051,26 @@ The paper run's 44/56 UP/DOWN mix earns **+0.162 on UP against +0.092 on DOWN**,
 Implication for the executor: it is harvesting a ONE-SIDED price difference, so its advantage moves with the model's side mix. A day the model leans DOWN is a day the venue advantage shrinks or inverts. That belongs in the lane design, not discovered later.
 Recommendation (H1, and I agree): build the executor and close the quote-age check in parallel; do NOT switch real money on the current number.
 
+## 14:15 UTC - USER DECISION: the handed-over v12 execution build is OBSERVATION ONLY
+"that execution is fucked up it does not have our dashboard so for now keep it for just seeing how it does
+but don't include it's code into our new model v12 pollymarket one".
+
+- The lane KEEPS RUNNING in paper (port 8790) and stays in the states table and the snapshots. We watch it.
+- Its CODE is barred from the real v12 Polymarket build. Written up in learner/v12_polymarket/DO_NOT_MERGE.md
+  so a later session cannot merge it by accident.
+- The reason is operational and correct: it is a standalone script whose only interface is a read-only JSON
+  blob. No dashboard, no /api/controls, no lane arm/disarm, no stake control, no order table, no manual
+  override. Everything we do operationally - arming, the ladder, killing a lane, reading fills - runs through
+  build11's dashboard. A venue lane that cannot be driven from the dashboard cannot be operated, and on a
+  5-minute market "stop it now" has to be one click.
+- **Design consequence: the Polymarket executor belongs INSIDE build11 as a venue backend** behind the
+  existing dashboard, /api/controls, lane semantics, ladder and kill rules, with the venue swapped
+  underneath - not a second process with its own private conventions. Two codebases drifting apart on
+  grading, fees and stake logic is precisely where this project has already manufactured fake results.
+- Worth reimplementing (ideas, not code): its trade schema (quote_ask, quote_age_ms, attempts, order_ids,
+  trade_ids, filled_shares, avg_fill_price, slippage, fee_rate_bps, pnl_per_dollar) and its live-guard
+  pattern (paper default; live needs CLI flag + wallet env + eligibility; ambiguous submit disables the lane).
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |

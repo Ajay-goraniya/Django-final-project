@@ -237,3 +237,13 @@ Please check whether the same separation exists on the FIRED set, where it would
 run the full verify.py set on it including paired() - and note my yes/no split is a subset comparison, not a
 rule-vs-rule on shared candles, so it needs a proper paired construction before it counts as anything.
 Decline this if you judge it a dead end; the user's "don't do unnecessary work" applies to my leads too.
+
+## Standing constraint (user, 09-11 14:15) - do not build on the handed-over v12 execution file
+The user ruled `btc_model_v12_polymarket.py` OBSERVATION ONLY: it keeps running in paper, but its code does
+not go into the real v12 Polymarket build, because it has no dashboard and no control endpoints and therefore
+cannot be operated. See learner/v12_polymarket/DO_NOT_MERGE.md.
+
+If any analysis you do assumes that file is the future executor, re-base it: the Polymarket executor will be a
+venue backend inside build11, behind the existing dashboard, /api/controls, lane semantics, ladder and kill
+rules. Its observation DB is still worth reading - snapshot at learner/live_backup/v12_poly_lane.sqlite3.gz,
+and it is the only run recording quote_age_ms, avg_fill_price and slippage per trade.
