@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 13:57 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 14:47 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -10,6 +10,18 @@ the distance premise. In that rejection **every other check passes and only `gra
 the reason the checks run as a set and grading runs first.
 Its `permutation()` permutes the model's PREDICTIONS, never the labels: shuffling labels destroys
 the market's calibration too, so longshots "win" at the base rate and it prints a fake profit.
+
+## 14:47 — REQUEST.md 249 lines: a standing constraint, not a task. Task 21b still short of n.
+- V/user (14:15): `btc_model_v12_polymarket.py` is **OBSERVATION ONLY** — it keeps running in paper
+  but its code does not enter the real v12 build (no dashboard, no control endpoints, so it cannot be
+  operated). See `learner/v12_polymarket/DO_NOT_MERGE.md`. The Polymarket executor will be a venue
+  backend inside build11 behind the existing dashboard, /api/controls, lanes, ladder and kill rules.
+  **Nothing in Tasks 21/23/24 assumed that file is the executor**, so no re-basing is needed.
+- Its observation DB (`learner/live_backup/v12_poly_lane.sqlite3.gz`) is the only run recording
+  `quote_age_ms`, `avg_fill_price` and `slippage` per trade — exactly what Task 21b needs — but it
+  holds **3 trades** (23 decisions). **Far below the 60 bar; not read.**
+- V's v10 runner `book_age_ms` (live from 13:28) is the other route to the same answer; check the
+  certifiable row count each time and run Task 21b only at n >= 60, UP and DOWN separately.
 
 ## 13:55 — USAGE SAVER IN FORCE UNTIL SUNDAY NIGHT (user: "I'm running low")
 User, 13:55: *"stop as much process as you can till sundays limit reset, I'm running low now every
@@ -433,21 +445,21 @@ diverges from the Binance leader in near-zero candles" vs (b) "noise at n=77".
   PnL-by-regime remains unanswered and only the forward test can settle it.
 - Deliverable: `task17_3_regime_grid.md`. Repro: `task17_3_regime_grid.py`.
 
-## Task 17.2 LIVE — forward ledger at 33 of 100 fires (13:41). STILL NOT READABLE.
+## Task 17.2 LIVE — forward ledger at 37 of 100 fires (14:47). STILL NOT READABLE.
 `task17_forward.py` + `task17_forward_11_2.md` + `task17_forward_state.json` (append-only; each run
 processes only candles newer than the last recorded, so reruns are idempotent and history cannot be
 silently restated). Frozen artifact only, never refitted. Forward = strictly after epoch 1789078800.
-- **33 forward fires: 12 hits (36.4%), −0.283/fire, −9.35 total.** First half −0.179, second half
-  −0.381. Baseline is the honest-rule replay (+0.018/fire ~ 0.00), NOT the retracted +0.266.
-- Against the honest-rule 51.5%, 12-or-fewer hits in 33 has probability **0.0583**. It has read
-  0.0054 (n=8), 0.0393, 0.0630, 0.0492, 0.0347, 0.0539 and now 0.0583 — crossing 0.05 in both
-  directions on single added fires. That is exactly why a p-value at this n is not a verdict.
-- **NOT READABLE. n=33 is below the 60 bar, let alone 100.** Recorded so the trend is visible
+- **37 forward fires: 14 hits (37.8%), −0.276/fire, −10.22 total.** First half −0.270, second half
+  −0.282 — the halves have converged. Baseline is the honest-rule replay (+0.018/fire ~ 0.00).
+- Against the honest-rule 51.5%, 14-or-fewer hits in 37 has probability **0.0668**. It has read
+  0.0054 (n=8), 0.0393, 0.0630, 0.0492, 0.0347, 0.0539, 0.0583 and now 0.0668 — crossing 0.05 in
+  both directions on single added fires. That is why a p-value at this n is not a verdict.
+- **NOT READABLE. n=37 is below the 60 bar, let alone 100.** Recorded so the trend is visible
   from the start rather than discovered at fire 100. **No conclusion drawn, and none should be.**
 - Accrual 2.25 fires/hour; the 100-fire verdict lands about Sat 12 Sep ~18:50 UTC.
 - Not messaging V: V's instruction is to report only when the verdict changes or at 100 fires, and
   V merges the branch anyway. V independently started its own 11.2 live shadow (e9676dc).
-- Kline set extended through 09-11 13:15 (73,019 candles) via the REST mirror.
+- Kline set extended through 09-11 14:35 (73,031 candles) via the REST mirror.
 - `book1s.sqlite3` has appeared (1 Hz price + both asks/sizes/ages) but holds only 13 epochs so far;
   the 5-s venue table stays primary until it accumulates.
 
