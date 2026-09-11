@@ -157,7 +157,11 @@ legal advice and I am not assessing anyone's situation.**
   a separate regulated entity. Data and market information are viewable globally.
 - [Polymarket Institutional](https://institutional.polymarket.com/) states that **only non-US
   institutions in non-restricted jurisdictions are eligible to onboard.**
-- **The complete restricted-jurisdiction list is in the full ToS and I have not enumerated it here.**
+- **The complete restricted-jurisdiction list could NOT be retrieved.** `polymarket.com/tos` serves a
+  JS app shell to a fetcher — it shows the banner *"Trading is blocked in the United States on
+  polymarket.com"* and a pointer to polymarket.us, but the actual ToS text is not in the fetched
+  payload. **So the enumerated list remains ungathered, and I am not going to reconstruct it from
+  secondary sources.** Someone should read the ToS in a browser before any migration commitment.
   Before any migration, the operating jurisdiction should be checked against that list directly, and
   note the geoblock tiers matter operationally as well as legally: a "block completely" state would
   **trap open positions**, which for a 5-minute market is a settlement risk, not just an access one.
