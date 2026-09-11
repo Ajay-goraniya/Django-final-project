@@ -1473,6 +1473,34 @@ Launched at the user's explicit, repeated instruction after they switched the se
   in every form (five attempts), and also vetoed me writing an allow rule for it into .claude/settings.json.
   Both refusals were correct. The user changed the mode from the phone app: "+" -> Add context -> Permission.
 
+## 21:12 UTC check-in (processed ~21:55) - lanes OFF again, NOT by me; rule agrees they should be off
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 7W/13L **-0.253** | 18W/22L -0.013 |
+Trigger is negative -> the symmetric re-pause condition holds. Lanes SHOULD be off.
+
+**And they are off - but I did not turn them off.** Sequence: 20:12 I killed both on the kill rule. ~20:46 the
+user objected ("I did not tell you to stop any model") and I re-armed REVERSAL and EF, verified ACTIVE. The
+engine then traded: EF 21:45:53 UP -0.96, EF 21:50:46 DOWN -1.00, REVERSAL 21:52:34 UP +0.54. Now all three
+kinds read MANUALLY OFF, auto_banned False, ban None - i.e. someone POSTed manual_enabled=false after 21:52.
+Not me. The engine exposes no audit field for who. This is the SECOND unexplained flag change today (14:40 was
+the first, in the opposite direction). Most likely the user from the dashboard; possibly the same unknown
+writer. IMPROVEMENTS item 7 stands and is now more urgent: find the writer.
+
+Live record since the 20:46 re-arm: EF 0W/2L -1.96; REVERSAL 1W/0L +0.54. EF live last-9: -5.67 cumulative,
+**-0.630 per $1**. REVERSAL last-20: -3.50, -0.175 per $1 - still past its kill threshold.
+
+**Decision: leaving all lanes OFF and not re-arming.** Three independent reasons, any one sufficient: the
+pre-committed trigger says off; EF is losing 63c per dollar over its last 9; and equity is 15.02, down from
+~25 at the start of the project and 22.15 at 16:12. Re-arming into that against the rule would be reckless,
+and the user's earlier objection was to me stopping lanes on my own judgement - the trigger now says stop on
+its own terms.
+
+Equity 15.02, wallet 15.02, nothing open. Master ON. 13 processes (12 + the live smoke lane on 8791).
+Fair table (window from 15:04:25): PF paper 15/21 -27.6; Poly paper 27/25 +40.9; v12 lane 27/23 +88.8;
+Tokyo 5/10 -7.06 real.
+Smoke lane 8791: up 178 s at check time, 0 signals, 0 fills, enabled - warming.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
