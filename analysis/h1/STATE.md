@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 01:33 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 02:22 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -238,12 +238,34 @@ where both fire.
   +0.93/fire where current EF puts 1% — but that is ~7 fires, unreadable.
 - Deliverable: `task16_market_prior_ef.md`. Repro: `task16_market_prior_ef.py`.
 
+## Task 11.2 DONE 02:20 — THE DIRECTION MODEL PASSES EVERY CHECK. Shadow candidate, not a ship.
+**First thing in this project to pass all seven `verify.py` checks.** Trained on 505,365 rows from
+72,207 candles ALL ending before the venue window (walk-forward by construction); evaluated as PnL
+at the recorded ask on 648 venue candles, engine grading.
+- **GBM @ EV margin 0.15: n=89, 62.7% hit, +0.266/fire, halves +0.356/+0.177.**
+  vs market prior +0.137 · vs current EF +0.049 · vs naive null −0.019. Beats all three.
+- **Permutation control p=0.000** (real +0.263 vs permuted mean −0.043, 200 draws). Signal is real.
+- **Seed-stable:** 5 seeds give +0.263/+0.246/+0.217/+0.299/+0.308, mean +0.266, **sd 0.034**, all
+  positive, n 86-92.
+- **Sweep monotone** (+0.266/+0.213/+0.210/+0.146/−0.045) — edge is BROAD AND SHALLOW: best when
+  taking many modest disagreements with the venue, decays on rare extreme ones.
+- **Real slippage, measured by re-paying the ask (not approximated): +0c +0.242, +3c +0.168,
+  +5c +0.124, +10c +0.027** — still positive at 10 cents. At J's measured 2.5x recorded->live ratio,
+  expect about **+0.10/fire**.
+- **It reaches the informative band:** 5-10 bps = 9% of its fires (current EF: 1%), 10-25 = 6%
+  (current EF: ~0%). Exactly the mechanism Task 15 part 3 predicted.
+- **Two of my own errors corrected in the writeup:** (a) I first called it a sweep-shape FAIL — that
+  was ONE seed; five-seed average is cleanly monotone. (b) I diagnosed miscalibration and TESTED it:
+  wrong — the model is already well calibrated (0.285->0.279, 0.713->0.712) and isotonic changed
+  little.
+- **LIMITS: n=89, 648 candles, ~2.3 days, ONE regime, PAPER.** No rain-or-sun grid possible at this
+  size. **Recommendation: forward shadow on the live book like J — verdict at >=100 graded, both
+  halves. Do NOT deploy on a 648-candle replay.**
+- Deliverable: `task11_2_direction_model.md`. Repro: `task11_2_direction_model.py`.
+
 ## OPEN, in priority order
-1. **Task 11.2** — train the direction model and compare its fire set against the part-3 baseline
-   (82% of fires under 2.5 bps, 0.20x in the informative 5-10 band). **Task 16 sets the real
-   objective: NOT accuracy — accuracy RELATIVE TO THE ASK.** The naive 59.2%-accurate rule loses
-   money at a median ask of 0.58, so the model must be right where the price is wrong, and it must
-   be evaluated on PnL through the recorded ask, never on hit rate.
+1. **Task 11.2 DONE** (above). Next: the two queued checks — venue favourite vs Binance leader at
+   t=237, and the 2.5-5 bps EF cell as fills accumulate.
 2. **The venue-favourite vs Binance-leader check** at t=237 in the <1bps bucket — settles the one
    thing Task 15 could not (see above).
 
