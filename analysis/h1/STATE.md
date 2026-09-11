@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 05:55 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 06:27 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -433,9 +433,21 @@ J selects on cheapness (ask <= cap) so it had to be re-run. It survives.
   `tick_size` are PER-TOKEN and must be read per market; websocket
   `wss://ws-subscriptions-clob.polymarket.com/ws/market` with `book`/`price_change`/
   `last_trade_price`/`tick_size_change`, **PING every 10 s**. Rate limits NOT documented — unknown.
-- Still to gather: published eligibility policy; rate/connection limits; fee rate against a real fill.
-- Forward ledger at 05:45: **9 fires, 2 hits, −0.487/fire** (p=0.076 vs the honest-rule 51.5%).
-  Still NOT READABLE and the verdict is unchanged, so V was not messaged.
+- **THROUGHPUT CONSTRAINT FOR THE MIGRATION DECISION.** Daily RELAYER transaction limits:
+  **Unverified 100/day · Verified 10,000/day · Partner unlimited.** The engine fires ~150/day, so an
+  **UNVERIFIED relayer account is a HARD BLOCKER.** Deposit/Proxy/Safe wallets all route through the
+  Relayer; an **EOA bypasses it** (direct on-chain, pays POL gas) but EOAs are "available for
+  allowlisted traders". **So a Polymarket run needs account verification OR EOA allowlisting before
+  it can operate at our fire rate** — a prerequisite, and both routes need someone outside this
+  project. Per-second/per-minute API limits are only "Standard"/"Highest", never quantified publicly.
+- Auth is two-step: L1 ERC-712 signature proving signer control -> L2 credentials (apiKey, secret,
+  passphrase) derived from the CLOB.
+- Still to gather: published eligibility policy; quantified API rate limits; fee rate vs a real fill.
+- **Forward ledger at 06:18: 13 fires, 6 hits (46.2%), +0.010/fire** — it swung UP from −0.487 at 9
+  fires and now sits essentially ON the honest replay's +0.018, not the retracted +0.266. Still NOT
+  READABLE (n=13) and the verdict is unchanged, so V was not messaged. **The swing is a useful
+  check on my own earlier framing: at 8 fires I flagged the start as improbable (p=0.005) while
+  labelling it "not a verdict" — five fires later it reversed. The label was doing real work.**
 - Deliverable: `POLYMARKET.md`. Repro: `task19_poly_research.py`.
 
 ## OPEN, in priority order

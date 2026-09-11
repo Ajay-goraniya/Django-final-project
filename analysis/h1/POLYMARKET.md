@@ -110,12 +110,40 @@ From [place-orders](https://docs.polymarket.com/trading/place-orders) and
   `price_change`, `last_trade_price`, `tick_size_change` (plus `best_bid_ask`, `new_market`,
   `market_resolved` with `customFeatureEnabled`). Subscribe with
   `{"assets_ids": ["<token_id>"], "type": "market"}`. **Must send a `PING` text frame every 10 s.**
-- **Rate limits:** not documented on these pages. Unknown — do not assume they are generous.
+- **Rate limits — one real constraint, and a way around it.** The
+  [builder tiers page](https://docs.polymarket.com/programs/builders/tiers) documents **daily
+  relayer transaction limits: Unverified 100/day · Verified 10,000/day · Partner unlimited.**
+  Per-second/per-minute API limits are described only as "Standard" vs "Highest" and are **not
+  quantified anywhere public**.
+  **At the engine's ~150 fires/day, an UNVERIFIED relayer account is a hard blocker (100/day).**
+  Verified at 10,000/day is comfortable.
+  Per [wallets-auth](https://docs.polymarket.com/trading/wallets-auth): Deposit, Proxy and Safe
+  wallets all route through the Relayer for gasless execution, so they are subject to that cap.
+  **An EOA bypasses the Relayer entirely** — it submits on-chain directly and pays gas in POL — so
+  it sidesteps the limit, but EOAs are "available for allowlisted traders", i.e. that is its own
+  gate, plus a gas balance to manage.
+- **Auth is two-step:** an **L1** ERC-712 typed-data signature proving signer control (once per
+  session), submitted to the CLOB to derive **L2 credentials** (`apiKey`, `secret`, `passphrase`)
+  used for order placement and private requests.
 
-## 6. Still to gather
+## 6. The throughput question, stated plainly for the migration decision
+
+The engine fires roughly **150 times a day**. That interacts with the relayer cap above:
+
+| route | daily cap | verdict at ~150 fires/day |
+|---|---|---|
+| Relayer, **unverified** | **100/day** | **blocker** |
+| Relayer, **verified** | 10,000/day | comfortable |
+| **EOA** (direct on-chain) | no relayer cap | comfortable, but needs allowlisting + POL gas |
+
+So a Polymarket run needs **either account verification or EOA allowlisting before it can operate at
+our fire rate.** That is a prerequisite, not a detail, and it is worth settling early because both
+routes involve someone outside this project.
+
+## 7. Still to gather
 
 - Published geo/eligibility policy (documentation and ToS as written; no legal interpretation).
-- Rate/connection limits, which are not in the public pages I could reach.
+- Quantified per-second/per-minute API limits — described only as "Standard"/"Highest" in public docs.
 - Reconciling the fee rate against a real fill (see §2).
 
 ---
