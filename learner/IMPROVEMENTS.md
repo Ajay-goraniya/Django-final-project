@@ -30,7 +30,7 @@ Running list. Not explanations for the user - working notes. Newest first. Statu
    manual_enabled TRUE, uptime 8.1 h). Cause unknown. Until understood, every check must verify per-kind
    flags, not just master_status. Find the writer.
 
-8. OPEN - **Re-arm criterion oscillates.** Armed 16:12 on +0.129, re-paused 17:12 on -0.038 - one hour live.
+8. OPEN (2 data points now) - **Re-arm criterion oscillates and has no dead zone.** 19:12 armed on +0.002 per $1, a hair above zero. Review condition pre-committed 19:12: 4+ flips by Sunday night with cumulative real PnL < +1.00 = refuted, redesign with a dead zone (arm > +0.05, disarm < -0.05, min 2 h dwell), designed before applied. Original note: Armed 16:12 on +0.129, re-paused 17:12 on -0.038 - one hour live.
    Net +0.07 so it cost nothing this time, but an hourly flip churns the lane and pays the spread both ways.
    If it flips again without net progress, redesign - and pre-commit the redesign, do not fit it mid-flight.
    Candidate: require the 40-fire window to agree with the 20, or a minimum dwell time once armed.

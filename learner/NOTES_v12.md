@@ -1308,6 +1308,30 @@ Fair table (window from the 15:04:25 joint restart): PF paper 9/10 +14.5; Poly p
 Reminder recorded at 18:20: the v12 lane's +87.1 is a zero-slippage upper bound and 2 coin-flip candles
 account for its lead over the v10 run - not a better model.
 
+## 19:12 UTC check-in - rule fired again, REVERSAL LIVE at $1 (second arm of the day)
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 9W/11L **+0.002** | 21W/19L +0.106 |
+| Polymarket paper (reported) | 9W/11L -0.048 | 20W/20L +0.021 |
+
+18:12 +0.022 (first) -> 19:12 +0.002 (second) = ARMED. Verified: master ON, REVERSAL ACTIVE effective True,
+EF and MAIN MANUALLY OFF, stake $1, nothing open, equity 22.15.
+
+Flagging honestly rather than dressing it up: **+0.002 per $1 is a hair above zero** - 9 wins in 20. The rule
+as written says "net positive", and +0.002 is net positive, so it fired. I am NOT adding a margin now; that
+would be changing the rule the moment it produces a marginal call, which is the post-hoc fitting the user
+banned. But this is the second piece of evidence for IMPROVEMENTS item 8: the criterion has no dead zone, so
+it will arm and disarm on noise around zero. The 40-fire window (+0.106) is genuinely positive and agrees,
+which is the only reason this reads as defensible rather than arbitrary.
+
+Pre-committing the review condition now so it cannot be rationalised later: if by Sunday night the lane has
+armed/disarmed 4+ times with cumulative real PnL below +1.00, the criterion is refuted as written and gets
+redesigned with a dead zone (e.g. arm above +0.05, disarm below -0.05, minimum 2-hour dwell) - designed and
+written down BEFORE being applied.
+
+Fair table (window from the 15:04:25 joint restart): PF paper 13/13 +29.8; Poly paper 20/17 +38.2; v12 lane
+21/14 +98.6; Tokyo 2/1 +0.7 real. 12 processes, snapshots refreshed.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
