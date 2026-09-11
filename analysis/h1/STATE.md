@@ -11,6 +11,12 @@ the reason the checks run as a set and grading runs first.
 Its `permutation()` permutes the model's PREDICTIONS, never the labels: shuffling labels destroys
 the market's calibration too, so longshots "win" at the base rate and it prints a fake profit.
 
+## Task 21 IN PROGRESS from 13:20 (V, REQUEST.md 12:55) — two numbers, no sweep
+21a: re-measure venue settlement disagreement on the full overlap; V gets 31/218 = 14.2%, the record
+says 10.4%; V suspects its own candle keying. 21b: is the 1.5c live-vs-paper entry gap on Predict.fun
+usable as the prior for what crossing will cost on Polymarket? One number with an error bar.
+Deliverable: `analysis/h1/task21_venue_disagreement_and_crossing.md`.
+
 ## 12:42 — BOTH LIVE LANES PAUSED BY THE USER. My work is unaffected; do not re-arm.
 V's commit 62d64bb: after the drawdown (EF −21.20 of the −28 giveback since the 08:21 high, equity
 22.27 at the $1 floor) the user's call was to PAUSE BOTH LANES. EF, REVERSAL and MAIN all read
