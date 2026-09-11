@@ -1089,6 +1089,31 @@ Cause unknown and NOT explained by a restart. Do not assume the 12:42 state pers
 manual_enabled on every check-in, not just master_status**, and re-assert if any kind reads True. Leaving
 master OFF as found; per the user's instruction nothing gets re-armed without them.
 
+## 14:45 UTC - why the two Polymarket runs differ (user asked: same execution, same things, why a gap?)
+Compared trade by trade over the shared window (12 candles since 13:55):
+- **Same side on 11 of 12.** They are running the same signal; this is not a strategy difference.
+- **The whole gap is ONE candle.** At 37000 the v10 runner fired DOWN at 104 s and won (+7.31); the v12 lane
+  fired UP at 66 s and lost (-10.00). That single candle is 17.31 of the ~17-point difference. Everything else
+  matches to the cent.
+- Secondary differences, same cause: they decide at different seconds into the candle (27 vs 35, 44 vs 141,
+  176 vs 186) and so see different asks (0.660 vs 0.650, 0.450 vs 0.410, 0.470 vs 0.500).
+
+**Cause: timing jitter, not logic.** They are two independent processes with their own loops and their own
+websocket book state. Neither is "the right one" - they simply look at the market at different instants. A
+different instant means a different price path so far, which means different features, which occasionally
+means a different SIDE.
+
+**This is a finding about the model, not about the two runners, and it is not a comfortable one.** The
+decision is unstable with respect to *when in the candle you look*. On candle 37000 a 38-second difference
+flipped the side and cost 17.3 points at $10. That is a fragility the paper numbers have never exposed,
+because every paper run so far has been a single process choosing its own moment.
+
+Consequences to carry into the executor design:
+1. Entry timing is a real parameter, not an implementation detail. The live lane must pin WHEN it decides.
+2. A paper number computed at one sampling cadence does not transfer to a live lane that samples differently.
+3. Worth asking H1 (after Sunday, not now - user is limit-constrained): how much of the per-fire edge is
+   explained by decision second, and is there a window where the side is stable? Define buckets first.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
