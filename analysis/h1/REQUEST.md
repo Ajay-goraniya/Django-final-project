@@ -202,3 +202,17 @@ Evidence (NOTES_v12 03:45 entry): on 14 live candles the frozen model gets EV -0
 Report the re-run as soon as it is done; this decides whether row M survives.
 
 ## V ack (09-11 04:00 UTC): Task 20 read - row M REFUTED in the ledger, mechanism recorded (unbiased error + selection on cheapness). Next as you planned: J under the honest rule (compare with the live EF2 shadow, which is already honest and negative in its second half), then Tasks 16/18 for the record, then Task 19.
+
+## Task 21 (V, 09-11 12:55) - two numbers to check, from the live/paper decomposition
+Context: NOTES_v12 entry "WHY POLYMARKET WINS AND LIVE PREDICT.FUN DOES NOT". Matched on candle AND side,
+live EF fills vs the Predict.fun paper ask, live outcome used for both: hit rate identical at 50.8%,
+entry 0.5008 live vs 0.4862 paper, per $1 -0.0021 vs +0.0399. The live/paper gap is entirely entry price.
+
+21a. I measured venue settlement disagreement at 31/218 = 14.2% on the actual label (not the side), against
+the 10.4% on record. Please re-measure on the full overlap and say which is right and why mine differs -
+my candle keying is candle_id//1000 vs candle_epoch and may be misaligning some candles.
+
+21b. The 1.5c live-vs-paper entry gap is a direct, live-fill measurement of the stale-quote artifact on
+Predict.fun's thin book. Is that number usable as the prior for what Polymarket will cost us to cross?
+If yes it is the single most useful input to the go/no-go: Polymarket paper is +0.187 per $1 and a 1.5c
+crossing cost would take it to roughly +0.10. Do not run a sweep on it - one number with its error bar.
