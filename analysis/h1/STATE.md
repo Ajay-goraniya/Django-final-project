@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 06:50 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 07:27 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -455,12 +455,36 @@ J selects on cheapness (ask <= cap) so it had to be re-run. It survives.
   not on my kline fetches. At 06:43 the klines advanced but the venue book had not, so 0 new fires.
   Don't spend a check fetching klines when `venues.sqlite3.gz` has not changed.
 - Still to gather: quantified API rate limits; fee rate vs a real fill; the enumerated ToS list.
-- **Forward ledger at 06:18: 13 fires, 6 hits (46.2%), +0.010/fire** — it swung UP from −0.487 at 9
+- **Forward ledger at 07:20: 15 fires, 6 hits (40.0%), −0.124/fire** (p=0.264 vs 51.5%), halves
+  −0.340/+0.065. Not readable, verdict unchanged, V not messaged.
+- (earlier) **Forward ledger at 06:18: 13 fires, 6 hits (46.2%), +0.010/fire** — it swung UP from −0.487 at 9
   fires and now sits essentially ON the honest replay's +0.018, not the retracted +0.266. Still NOT
   READABLE (n=13) and the verdict is unchanged, so V was not messaged. **The swing is a useful
   check on my own earlier framing: at 8 fires I flagged the start as improbable (p=0.005) while
   labelling it "not a verdict" — five fires later it reversed. The label was doing real work.**
 - Deliverable: `POLYMARKET.md`. Repro: `task19_poly_research.py`.
+
+## 07:25 — the EF flat-bucket edge, tested PROPERLY: still not established (p=0.341)
+Tokyo fills grew 256 -> 320 EF, and the `<1 bps` bucket 120 -> 150, so I revisited it. Uses NO venue
+quote, so Task 20 does not touch it. Venue-graded (settling source).
+- **The edge STRENGTHENED to +5.3pp with both halves IDENTICAL (+5.3/+5.3).** That looks like a
+  finding. **It is not.**
+- **Exact McNemar: p = 0.341.** The two rules AGREE on 96 of 150 fires. Of the 54 discordant pairs,
+  EF-only-right 31 vs move-only-right 23 — **the entire edge is 8 trades.** At this effect size it
+  needs about **n=490** fires.
+- **The identical halves were NOISE, not corroboration** — 54 discordant pairs split across halves
+  is ~27 each. `halves()` tests whether the SIGN is stable; it cannot distinguish a stable signal
+  from symmetric noise.
+- **METHOD UPGRADE, keep this: for a rule-vs-rule comparison on shared candles, the raw edge AND the
+  halves check both overstate the evidence. Use McNemar on the DISCORDANT pairs** — the ~64% of
+  trades where both rules agree inflate n without adding power. A 150-trade sample was really a
+  54-trade sample.
+- **Second time today a number passed the standard checks and failed a sharper one** (first: Task
+  20's quote rule). Same pattern both times: **the checks test the SHAPE of the result, not the
+  thing the result actually depends on.**
+- `2.5-5 bps` cell: n=46 (was 40), EF 47.8% vs a 71.7% null, holds its shape. Still under the bar,
+  still not read.
+- Note: `2026-09-11_0725_ef_flat_bucket_mcnemar.md`.
 
 ## OPEN, in priority order
 1. **Task 19 (standing)** — the daily forward ledger for the FROZEN model; verdict at >=100 forward fires.
