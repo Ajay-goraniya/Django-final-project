@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 03:57 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 04:27 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -361,6 +361,24 @@ a collector sample **up to 5 s earlier** (median age 1 s, p90 3 s).
   which FAILS a finding whose quote can predate the decision.** `book1s.sqlite3` (1 Hz + age_ms) is
   the right source as it accumulates.
 - Deliverable: `task20_stale_quote.md`. Repro: `task20_stale_quote.py`.
+
+## Task 20 item 3 DONE 04:25 — CANDIDATE J IS **NOT** A STALE-QUOTE ARTIFACT
+J selects on cheapness (ask <= cap) so it had to be re-run. It survives.
+- **cap 0.60: ORIGINAL +0.230 (n=151) -> NEXT +0.195 (n=147).** All caps stay clearly positive
+  (+0.207/+0.209/+0.195/+0.160/+0.142/+0.109). Halves positive under NEXT (+0.184/+0.205).
+- **Only 11-17 fires vanish out of 118-255, and they are mostly LOSERS** (−0.356/−0.057/−0.181/
+  −0.173/−0.282 per fire). **Compare 11.2: 55 of 97 vanished and were worth +0.290.** Opposite sign,
+  an order of magnitude fewer.
+- **WHY THE SAME-LOOKING RULE DIFFERS — keep this:** exposure to quote noise scales with how tightly
+  the rule optimises AGAINST the quote. 11.2's EV filter compares p directly to the ask (maximally
+  exposed); J's cap only excludes expensive entries and takes direction from EF (barely exposed).
+- **verify.py: 5 PASS (incl. the new quote_age), 2 FAIL — and I am overriding one.** Sweep "fail" is
+  a **+0.002** blip between caps 0.50 and 0.55; effectively monotone, not an overfit signature.
+  Cost fail is REAL on recorded quotes (+5c +0.020, +10c −0.101) but is **answered by better
+  evidence: V's replay on Tokyo's REAL FILLS gave +0.153/fire on 128 fills**, which already embeds
+  true slippage and sits between my +0c and +5c rows.
+- **J's case does not depend on the 5-s table at all.** Its live forward shadow still decides it.
+- Deliverable: `task20b_candidate_j.md`. Repro: `task20b_candidate_j.py`.
 
 ## OPEN, in priority order
 1. **Task 19 (standing)** — the daily forward ledger for the FROZEN model; verdict at >=100 forward fires.
