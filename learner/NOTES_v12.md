@@ -1114,6 +1114,52 @@ Consequences to carry into the executor design:
 3. Worth asking H1 (after Sunday, not now - user is limit-constrained): how much of the per-fire edge is
    explained by decision second, and is there a window where the side is stable? Define buckets first.
 
+## 15:10 UTC - USER GRANTS RE-ARM AUTHORITY. Pre-committed criterion, written BEFORE using it.
+User 15:08: "keep checking for live model as well, master is off, everything else on, whenever you think
+it's profit time turn the wanted signals as well, based on hourly till sundays and don't forget the notes."
+
+I will not re-arm on a feeling, and I will not invent the rule after seeing a good hour - that is the exact
+move the user banned. So the criterion is fixed HERE, now, before any re-arm, and the hourly notes record the
+numbers it was evaluated on whether or not it fires.
+
+### The re-arm rule (pre-committed 15:10 UTC 09-11)
+Evaluated at each hourly check, on the Predict.fun v10 paper run, because it trades Tokyo's own venue and
+risks no money while the lanes are off:
+1. **REVERSAL may be re-armed** when the Predict.fun paper run's **last 20 graded fires are net positive**
+   (per $1 > 0). REVERSAL goes first because it is the only lane with a positive LIVE record: 34 W / 10 L,
+   +0.092 per $1 since 14:47 on 09-10.
+2. **EF stays OFF** until, in addition, **EF's own live last-20 is net positive**. EF caused 21.20 of today's
+   28-point giveback and has no standing evidence better than flat (+0.006 per $1 across the EV-1.0 window).
+3. **MAIN stays OFF.** It has been off for the whole project and nothing here changes that.
+4. Re-arming requires master ON plus that lane's signal ON. Stake follows the ladder: equity 22.08 is under
+   the $1 rung, so **$1**, and it steps up only on two consecutive checks at or above a higher rung.
+5. **Kill rules stay as they are** and apply immediately on re-arm: REVERSAL off if average slippage exceeds
+   3c over 20 fills or PnL per $1 falls below -3.0 over 20 fills.
+6. **Immediate re-pause** if the paper run's last-20 turns negative again at a later check. Symmetric: the
+   same number that turns it on turns it off.
+7. Never: max_stake above 20, stop-loss or daily limits, --reset, re-enabling the trend guard.
+
+This is a regime switch, and the user's standing rule says a regime switch is itself a threshold - define the
+buckets FIRST and report the full grid, never the best cell. So: the bucket is "last 20 graded paper fires",
+chosen because 20 is the same window the existing kill rules already use, NOT swept or tuned. I am reporting
+both 20 and 40 every hour so the choice is visible and falsifiable.
+
+### Reading at 15:10 (evaluated, did NOT fire)
+| run | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper | 10/10, **+0.010 per $1** | 19/21, -0.022 per $1 |
+| Polymarket paper | 7/13, -0.308 per $1 | 17/23, -0.125 per $1 |
+
+Predict.fun's last-20 is fractionally positive (+0.010 per $1, +2.1 at $10) - technically above the line, but
+it is 10 wins in 20 and the 40-fire window behind it is negative, and Polymarket's same-signal run is -0.308
+over its last 20. A single fractionally-positive 20 on the back of a -28 day is not a regime turn; acting on
++2.1 at $10 would be reading noise as a signal.
+
+**So: NOT re-arming at 15:10.** To avoid this becoming a judgement call every hour, I am adding one
+tightening, also pre-committed now: the last-20 must be positive **at two consecutive hourly checks** before
+REVERSAL goes on - the same hysteresis the stake ladder already uses, and for the same reason. Today proved
+that acting on one good reading and reversing an hour later just donates the spread.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
