@@ -988,6 +988,38 @@ Polymarket paper run is the only thing in this project that has made money every
 **So stop testing and build.** The remaining unknown is not whether the paper edge is real - it is whether it
 survives real fills, and no amount of replay answers that. Only a live order does.
 
+## 14:00 UTC - v12 Polymarket lane RUNNING IN PAPER (user handed me the build)
+The user supplied btc_system_20260911_POLYMARKET_V12.zip plus RUN/VERIFICATION/CHECKPOINT docs and said
+"run it, paper only, tell me if you need credentials". No credentials are needed for paper and none were used.
+
+- Unpacked to scratchpad/v12; code copied into learner/v12_polymarket/ so it survives this container.
+- py_compile PASS on btc_model_v12_polymarket.py and test_v12_polymarket.py; bundled test suite PASS
+  (tick rounding, ladder boundaries, 2-check step-up/immediate step-down, threshold recheck, EV falling as the
+  entry price worsens, SQLite metadata, and an ambiguous-submit kill that disables the lane instead of resubmitting).
+- RUNNING: port 8790, db scratchpad/v12/results/v12_poly_weekend.sqlite3, execution=paper, mode=pnl,
+  --fixed-stake 10 to match the $10-per-fire scale the existing paper evidence is quoted at. All four feeds
+  live (spot, perp, depth, Polymarket venue websocket). Process count now 12.
+
+### Two things I had to correct or flag in the handed-over build
+1. **The documented run command produces the WRONG configuration.** POLYMARKET_V12_RUN.md omits --mode, and the
+   default is `accuracy`. Every profitable Polymarket paper number we have comes from `--mode pnl` (that is how
+   btc_model_v10_runner.py has always run). I started it in accuracy mode, caught it in the status endpoint,
+   killed it, deleted the db and relaunched with --mode pnl. Anyone following the doc verbatim would have spent
+   the weekend collecting the wrong run and not known.
+2. **requirements_polymarket_v12.txt pins `polymarket-client>=0.9.0,<1` but the code does `from polymarket import
+   SecureClient`.** That import is inside the live path only (line 280), so paper is unaffected and I did not
+   install it. Before ANY live arming, the package name and the SecureClient API must be verified against the
+   real library - a wrong guess here is discovered at the first live order, which is the worst place to find it.
+
+### Also noted, not a problem
+The verification doc is honest about its own DB snapshots disagreeing (+477.95 / 413 graded, +497.95 / 411, vs
+the README's +517.9) and keeps all three distinct rather than mixing them. That is the right call.
+
+### What is NOT claimed
+No live order, no fill rate, no live slippage. Live still needs: account verification (relayer caps unverified
+accounts at 100 tx/day against our ~150 fires/day), jurisdiction confirmation, funding and allowances, and the
+fee reconciliation against a first real fill.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
