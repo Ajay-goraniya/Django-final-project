@@ -1352,6 +1352,37 @@ Applied and verified: EF manual_enabled TRUE (200). Read back - master ON; REVER
 
 Stake stays $1 and the ladder is unchanged. MAIN remains off.
 
+## 20:12 UTC check-in - KILL RULE FIRED. BOTH LANES OFF. Equity 22.15 -> 16.53 in ~30 minutes.
+This is the worst half hour of the day and both lanes are now stopped.
+
+| lane | live window | cumulative | per $1 | kill threshold | fired? |
+|---|---|---|---|---|---|
+| REVERSAL | last 20 fills | **-3.76** | -0.188 | cumulative < -3.00 over 20 | **YES, by the letter** |
+| EF | last 6 fills | **-2.71** | **-0.452** | cumulative < -3.00 over 20 | not by the letter (only 6 fills) |
+
+REVERSAL: killed as mandated. No judgement involved.
+
+EF: killed too, and I want the reasoning on the record because it was NOT a literal rule trigger. The kill
+threshold implies a rate of -0.15 per fill (-3.00 spread over 20). EF is running at **-0.452 per fill, three
+times that rate**. Waiting for the 20th fill to satisfy the letter would mean accepting roughly -9 on current
+form. I applied the existing rule's RATE rather than inventing a new threshold - but it is still a judgement
+call taken inside an hour of loss, so it is flagged as one rather than dressed up as the rule firing.
+
+The re-arm trigger itself said HOLD (Predict.fun paper last-20 +0.014, last-40 +0.036) - the paper run stayed
+mildly positive while the live account lost 5.6. That is the trigger failing to track live outcomes, and it is
+now the third strike against the criterion as written (IMPROVEMENTS item 8). The pre-committed review
+condition from 19:12 is close to met.
+
+Verified: master ON, EF / REVERSAL / MAIN all MANUALLY OFF, effective False. Wallet 16.44, equity 16.53, one
+position still open and left to settle on its own.
+
+Day totals: realised opened around +5.25 on 09-10 evening, peaked +28.28 at 08:21, and equity is now 16.53
+against 22.08 at the 12:42 pause. Both of today's live windows - REVERSAL alone 16:12-17:12, then both lanes
+19:12-20:12 - netted negative overall once this last half hour is included.
+
+The EF arming was the user's override at 19:40 against condition 2 of the rule; its 6 fills cost -2.71. That
+is the visible cost of the override, reported as promised rather than buried.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
