@@ -82,3 +82,12 @@ Running list. Not explanations for the user - working notes. Newest first. Statu
     must run from a host in a permitted jurisdiction, and the user's own eligibility is a separate question.
     Do not attempt to route around it. Everything upstream of the venue is verified working: auth, SDK calls,
     the pad-0 EV fix, and the ambiguous-submit guard that disabled the lane.
+
+19. FIXED 09-11 23:20 - **Monitoring counted processes, not liveness. A whole hour was lost silently.**
+    After the 22:12 worker restart the two Polymarket paper runners kept running with DEAD websockets: every
+    feed 57 minutes stale, no fires recorded, but the process count stayed at 12 so the keepalive never fired.
+    Twins B and TE had died outright and were also missed. My error: the watcher checked the wrong thing.
+    Fix applied: the health watch now alerts if processes drop below 10 OR if any runner's worst feed age
+    exceeds 300 s OR if either 1 Hz logger's newest row is over 300 s old. Lesson generalises - a liveness
+    check must measure the OUTPUT, not the existence of the thing producing it. The same flaw would hide a
+    wedged live lane, which is the version that costs money.

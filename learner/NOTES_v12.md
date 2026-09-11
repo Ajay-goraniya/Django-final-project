@@ -1652,6 +1652,29 @@ inside build11 for the Tokyo host (dashboard, /api/controls, lane semantics, lad
 over what tonight verified - auth flow, SDK calls, pad-0 EV handling, the ambiguous-submit guard - and the
 trade schema with quote_age_ms / fill / slippage / fee per trade.
 
+## 23:20 UTC - an hour of paper data lost to a monitoring gap I created. Fixed.
+At the 23:09 states check the fair table looked frozen, so I dug in. Both Polymarket paper runners (v10 on
+8788, v12 lane on 8790) had EVERY feed 57 minutes stale - spot, perp, depth and venue all dead since the
+22:12 worker restart - and had recorded nothing since. Twins B (8795) and TE (8798) were dead outright, so the
+real process count was 10, not 12.
+
+**This was my mistake, not the container's.** The keepalive I wrote checked only the NUMBER of python
+processes. The runners stayed alive with dead sockets underneath, so the count never dropped and nothing
+alerted for an hour. I monitored existence instead of output.
+
+Recovered: proxy_restart.sh relaunched the engines and runner on the same DBs, the v12 lane restarted
+separately (the script predates it), twins B and TE relaunched from v11/launch. All 12 processes up, every
+feed under 2 s. Cost: ~1 h of paper fires on both Polymarket runs. Paper only; Tokyo was already flat with
+lanes off, and the 1 Hz loggers (poly1s, book1s) reconnected on their own so no irreplaceable book data was
+lost.
+
+New health watch replaces the keepalive: alerts if processes < 10, OR any runner's worst feed age > 300 s, OR
+either 1 Hz logger's newest row is > 300 s old. IMPROVEMENTS 19.
+
+The generalisable lesson, and the reason this matters beyond tonight: a liveness check must measure the
+OUTPUT, not the existence of the producer. The identical flaw would hide a wedged LIVE lane - the version that
+costs money rather than paper fires.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
