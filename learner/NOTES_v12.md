@@ -1221,6 +1221,35 @@ are now disagreeing about the regime.
 Fair table at 17:12 (window from the 15:04:25 joint restart): Predict.fun paper 6/8 -10.1; Polymarket paper
 11/6 +47.8; Polymarket v12 lane 11/5 +61.2; Tokyo live 2/1 +0.7 real. 12 processes, snapshots refreshed.
 
+## 18:10 UTC - is the v12 lane actually better than the v10 paper run? (user asked) NO - it is two candles.
+Same venue, same signal, same window (27 shared candles since the 15:04:25 joint restart). Decomposed:
+
+| | v10 paper | v12 lane |
+|---|---|---|
+| same-side candles (25 of 27) | **+48.5** | **+50.0** |
+| DIFFERENT-side candles (2) | -20.0 | **+36.1** |
+| exclusive fires | +7.9 (1 candle) | 0.0 (none) |
+
+On the 25 candles where they agree - 93% of them - they are within 1.5 points of each other. **The entire
+~50-point gap is two candles where they took opposite sides and v12 happened to be right on both:**
+- 45700: v10 DOWN 0.62 at 120 s (lost) | v12 UP 0.53 at 179 s (won)
+- 47800: v10 UP 0.48 at 50 s (lost) | v12 DOWN 0.25 at 110 s (won)
+
+Median decision second is identical at 62 s, so neither is systematically earlier or later. This is the same
+decision-timing jitter documented at 14:45, now landing in v12's favour instead of against it - at 14:45 the
+single divergent candle went the OTHER way and v12 was 17 points BEHIND.
+
+**Conclusion: v12 is not better. Two coin flips out of 27 are carrying the whole difference**, and a 2-of-27
+sample cannot distinguish skill from luck. Nothing in the v12 code changes the direction model - the user's
+own checkpoint says so, and the checksums confirm the file is unmodified - so there is no mechanism by which
+it could be better at picking sides.
+
+What this DOES confirm, for the second time today and now with a bigger sample: **the model's side is
+unstable in the decision second.** Two independent copies of the same model on the same data disagreed on 2
+of 27 candles, and each disagreement was worth ~18 points at $10. That is the finding; the PnL gap is noise
+on top of it. Entry timing must be a pinned parameter in the real executor, not left to whenever the loop
+happens to come round.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
