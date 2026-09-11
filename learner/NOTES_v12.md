@@ -1189,6 +1189,38 @@ Fair table at 16:12 (window from the 15:04:25 joint restart): Predict.fun paper 
 6/3 +35.8; Polymarket v12 lane 6/3 +38.8; Tokyo 0/0 (was paused for all of it). Both Polymarket runs are
 agreeing again post-restart. 12 processes, snapshots refreshed.
 
+## 17:12 UTC check-in - SYMMETRIC RE-PAUSE FIRED. REVERSAL off again after ~1 hour live.
+The same number that armed it disarmed it, exactly as pre-committed at 15:10. No discretion applied.
+
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (the trigger) | 9W/11L **-0.038 per $1** | 18W/22L -0.035 |
+| Polymarket paper (reported, not a condition) | 11W/9L +0.089 | 18W/22L -0.109 |
+
+15:10 +0.010 (first sighting) -> 16:12 +0.129 (armed) -> 17:12 **-0.038 (re-paused)**.
+
+Applied and verified: REVERSAL manual_enabled false, 200. Read back - master ON, all three kinds
+"MANUALLY OFF", effective False. Stake stays $1. Nothing open.
+
+**What the live hour actually did:** REVERSAL traded 2W/1L and finished +0.07 real (equity 22.08 -> 22.63 at
+its best, back to 22.15 now; all-time 36/14, +2.73). So the armed hour was a small net positive and the exit
+was orderly - no loss taken to learn this.
+
+Honest assessment of the rule after one full cycle: it armed on a 20-fire window that was +0.129 and
+re-paused an hour later at -0.038. That is a fast flip, and it is the thing to watch - a criterion that
+oscillates hourly will churn the lane and pay the spread each way even when each individual decision looks
+defensible. I am NOT changing it now: changing a rule the first time it costs something is exactly the
+post-hoc fitting the user banned, and the evidence so far is one arm and one disarm with a net positive
+between them. If it flips again tomorrow without net progress, that is a pattern worth a redesign - and the
+redesign would be pre-committed too, not applied mid-flight.
+
+Also worth recording against the rule's premise: Polymarket's last-20 is +0.089 while Predict.fun's is
+-0.038. The trigger tracks the venue Tokyo trades on, which is correct for a Tokyo lane, but the two venues
+are now disagreeing about the regime.
+
+Fair table at 17:12 (window from the 15:04:25 joint restart): Predict.fun paper 6/8 -10.1; Polymarket paper
+11/6 +47.8; Polymarket v12 lane 11/5 +61.2; Tokyo live 2/1 +0.7 real. 12 processes, snapshots refreshed.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
