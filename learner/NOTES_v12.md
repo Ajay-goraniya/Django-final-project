@@ -1332,6 +1332,26 @@ written down BEFORE being applied.
 Fair table (window from the 15:04:25 joint restart): PF paper 13/13 +29.8; Poly paper 20/17 +38.2; v12 lane
 21/14 +98.6; Tokyo 2/1 +0.7 real. 12 processes, snapshots refreshed.
 
+## 19:40 UTC - USER OVERRIDE: EF armed as a MONITORED run (rule condition 2 not met)
+User: "maybe start ef too, monitored run."
+
+This overrides condition 2 of the 15:10 pre-committed rule. EF's own live last-20 was **-0.443 per $1** at the
+16:12 evaluation and EF caused 21.20 of today's 28-point giveback, so under the rule as written it would stay
+off. Recorded plainly: **this is the user's call, not the rule's, and it is not evidence the rule was wrong.**
+I said so in one line and did it - at $1 a fire the downside is bounded and it is their capital.
+
+Applied and verified: EF manual_enabled TRUE (200). Read back - master ON; REVERSAL ACTIVE effective True;
+**EF ACTIVE effective True**; MAIN MANUALLY OFF; stake $1; equity 22.15; nothing open.
+
+"Monitored" made concrete - EF runs under the SAME kill rule REVERSAL already has, no new threshold invented:
+- EF off immediately if cumulative PnL over its last 20 fills < -3.0, or average slippage > 3c over 20 fills.
+- The symmetric paper re-pause still applies to BOTH lanes: if the Predict.fun paper last-20 goes negative at
+  an hourly check, both REVERSAL and EF pause.
+- EF's own live last-20 is reported every hour from now whether or not it matters to a decision, so the cost
+  of this override is visible rather than buried.
+
+Stake stays $1 and the ladder is unchanged. MAIN remains off.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
