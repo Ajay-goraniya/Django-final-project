@@ -842,6 +842,13 @@ Old-version findings keep going to NOTES_v11.md.
 - Slippage over the last 20 REVERSAL fills is -0.9c (favourable), and the paper twins gave back over the same window (A +89 -> +37.9), so this is the signal being wrong in this regime, not execution decay.
 - Deliberately NOT acting: an EF kill rule invented now would be a threshold fitted to this drawdown, which the user has banned. EF's standing evidence (EV-1.0 window, 116/101, +0.006 per $1) is flat, not negative. Escalated to the user for the call instead.
 
+## 12:42 UTC - BOTH LANES PAUSED (user decision)
+- Asked the user for the call on the drawdown (EF -21.20 of the -28 giveback since the 08:21 high, equity 22.27, stake already at the $1 floor). User chose: PAUSE BOTH LANES.
+- Applied: POST /api/controls/signal manual_enabled=false for EF and for REVERSAL, both 200. Verified against /api/controls: EF, REVERSAL and MAIN all read "MANUALLY OFF", effective_enabled false. Master stays ON so the engine keeps running, quoting, grading and logging - it just does not take positions.
+- One position was still open at the time of the pause; it settles on its own. Wallet 22.08, equity 22.10.
+- Everything else keeps running: the v10 paper runs on both venues, all four twins, both 1 Hz book loggers, the EF2 and 11.2 shadows. Data collection into the weekend is unaffected.
+- IMPORTANT for the next check-in and for the safety net: do NOT re-arm the lanes. The standing "if master is OFF, re-arm" rule does not apply here - master is ON by design and the lanes are off by the user's instruction. Only the user reverses this.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
