@@ -46,7 +46,7 @@ Running list. Not explanations for the user - working notes. Newest first. Statu
 11. DONE 09-11 20:41 (verified against PyPI 0.10.0: package `polymarket`, SecureClient.create/get_closed_only_mode/place_market_order all match) - **Verify `polymarket-client` / `from polymarket import SecureClient`** before any live arming. The
     requirements pin and the import do not obviously match; a wrong guess surfaces at the first live order.
 
-12. OPEN - **Quote-age certification is the Polymarket go/no-go**, not crossing cost. Only 23 of 427 v10 paper
+12. OPEN, FIRST READING NEGATIVE (H1 21b, 09-11 21:00: certifiable n=61 -0.062/$1; fresh-quote -0.141 vs stale-quote +0.232) - **Quote-age certification is the Polymarket go/no-go**, not crossing cost. Only 23 of 427 v10 paper
     asks matched the collector at the same second. book_age_ms now logged; H1 re-runs at n>=60, UP and DOWN
     separately. No real money before that closes.
 

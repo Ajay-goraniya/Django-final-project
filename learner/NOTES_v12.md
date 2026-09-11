@@ -1409,6 +1409,48 @@ Consistency note: the user's 14:15 decision (v12 file is OBSERVATION ONLY, its c
 v12 build) still stands. A smoke test THROUGH the file is not a merge OF the file. The build11 venue-backend
 plan is unchanged.
 
+## 21:00 UTC - H1 Task 21b: the CERTIFIABLE Polymarket number is NEGATIVE. The quote-age check closed the wrong way.
+Write-up: analysis/h1/task21b_certifiable.md. The book_age_ms rows I added at 13:28 crossed 60, so H1 ran the
+honest at-or-after re-run on them.
+
+| set | n | per $1 | hit | halves |
+|---|---|---|---|---|
+| certifiable rows (quote age KNOWN, median 15 ms) | 61 | **-0.062** | 45.9% | -0.013 / -0.108 |
+| the 430 uncertifiable rows before 13:28 | 430 | +0.120 | - | - |
+
+verify.py passes the certifiable number on quote age, sample size and both halves - it is a readable number.
+
+The part with no time confound, and the part that should worry us most: INSIDE the certifiable window,
+- trades that paid a FRESH quote (<= 1 s, n=48): **-0.141 per $1**
+- trades that paid a STALE quote (> 1 s, n=13): **+0.232 per $1**
+Both cells are under the 60 bar so neither is a result on its own. But same hours, same model, same venue,
+and the profitable trades are precisely the ones that paid a stale quote. That is the Task 20 mechanism
+reproducing on the Polymarket paper run. Also: 21% of the "certifiable" rows are themselves over a second old
+(p90 3.6 s, max 9.3 s), so the set is not uniformly fresh - if anything the fresh-only number is worse.
+By side: UP n=27 +0.032, DOWN n=34 -0.136 - both under the bar, not read.
+
+H1's caveat, kept: not like-for-like. The certifiable rows are one ~7-hour evening window; the +0.120 spans
+days. So the drop is not PROVEN to be the quote age, and n=61 in one window is not rain-or-sun. Strong
+warning, not a refutation. The honest go/no-go is a re-run at ~150 certifiable trades with the UP/DOWN split
+readable - i.e. another day of rows, not more analysis of old ones.
+
+### What this changes
+1. **+0.187 / +0.123 must not be sized on.** Task 24 found the paper number passing every check except quote
+   age; this is that check closing, and it goes the wrong way.
+2. **The 2-order live smoke test the user asked for is MORE valuable now, not less** - but for a different
+   reason than the user has in mind. It measures fill quality against the quote, which is exactly the variable
+   this result says the edge depends on. It is evidence about execution, not confirmation of an edge.
+   Building the executor stays right (H1 agrees); switching real money on the paper number does not.
+3. The v12 observation lane's +117 is a zero-slippage upper bound AND its signal is the same one that reads
+   -0.062 when the quote is fresh. Two independent reasons not to read it as money.
+
+### Status of the smoke test
+Staged and blocked: SDK installed (polymarket-client 0.10.0, import verified), credentials in
+scratchpad/live/poly.env (mode 600, never printed or committed), launcher scratchpad/live/run_smoke.sh
+(port 8791, own DB, $4 stake), watcher running that stops the lane after 2 live fills. The launch itself is
+refused by this session's auto-mode permission classifier on every attempt; the user has been asked to change
+the session permission mode or add an allow rule for that one command. Not retrying without that.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
