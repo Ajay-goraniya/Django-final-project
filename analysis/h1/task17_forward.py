@@ -106,6 +106,15 @@ def main():
                  'than none.\n')
     lines.append('_Last updated %s UTC._\n' % dt.datetime.utcnow().strftime('%Y-%m-%d %H:%M'))
     lines.append('## %s\n' % verdict)
+    if n >= 2 and n < 100:
+        t0 = min(x['epoch'] for x in f)
+        hrs = (st['last_epoch'] - t0) / 3600.0
+        if hrs > 0:
+            rate = n / hrs
+            eta = dt.datetime.utcfromtimestamp(st['last_epoch'] + (100 - n) / rate * 3600)
+            lines.append('Accrual: **%.2f fires/hour** (%d over %.1f h). At that rate the 100-fire '
+                         'verdict lands about **%s UTC**.\n'
+                         % (rate, n, hrs, eta.strftime('%a %d %b %H:%M')))
     lines.append('| | n | hit | per-fire | total |')
     lines.append('|---|---|---|---|---|')
     lines.append('| **forward, all** | %d | %.1f%% | **%+.3f** | %+.2f |'

@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 08:00 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 08:20 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -455,7 +455,11 @@ J selects on cheapness (ask <= cap) so it had to be re-run. It survives.
   not on my kline fetches. At 06:43 the klines advanced but the venue book had not, so 0 new fires.
   Don't spend a check fetching klines when `venues.sqlite3.gz` has not changed.
 - Still to gather: quantified API rate limits; fee rate vs a real fill; the enumerated ToS list.
-- **Forward ledger at 07:50: 16 fires, 6 hits (37.5%), −0.179/fire** (p=0.192 vs 51.5%), halves
+- **VERDICT ETA, now computed automatically in the ledger: accrual is 1.75 fires/hour (16 over
+  9.2 h), so the 100-fire verdict lands about Sun 13 Sep 07:47 UTC.** Useful for planning: that is
+  AFTER the Sat-Sun window, so **the verdict will arrive with weekend fires included** — which
+  matters because neither the 11.2 replay nor the v10 poly run has a single weekend candle.
+- (earlier) **Forward ledger at 07:50: 16 fires, 6 hits (37.5%), −0.179/fire** (p=0.192 vs 51.5%), halves
   −0.423/+0.065. Not readable, verdict unchanged, V not messaged.
 - (earlier) **Forward ledger at 07:20: 15 fires, 6 hits (40.0%), −0.124/fire** (p=0.264 vs 51.5%), halves
   −0.340/+0.065. Not readable, verdict unchanged, V not messaged.
