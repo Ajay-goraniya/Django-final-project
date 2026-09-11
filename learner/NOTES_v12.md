@@ -820,6 +820,13 @@ Old-version findings keep going to NOTES_v11.md.
 - Ladder: equity 30.45 is back at/above the $2 rung - FIRST sighting at 11:26. Step up to $2 only if still >= 30 at the 11:56 check-in. Down to $1 stays immediate.
 - Twins (129 min): A +89.1, B +213.9, C +149.3@$10. Shadows: EF2/J 128 graded (refuted); 11.2 live shadow 9 graded, 2 W 7 L, -0.543/fire, both halves negative - the live shadow keeps agreeing with H1's honest forward ledger (23 fires -0.271). 11 processes, snapshots refreshed.
 
+## 11:56 UTC check-in (Fri 09-11)
+- Fair table since 21:55 (09-09): Predict.fun paper 85/74 +99.0@$10; Polymarket paper 127/121 +246.6@$10; v11 live EF 202/171 +1.22 real.
+- Tokyo: realised +6.28, wallet 28.34, equity 28.97 (1 open), 416 settled, 269/271 filled. Stake $1 (ladder OK). REVERSAL 33/8 +7.06 (+0.092 per $1); $2-phase EF 66/59 -2.67 (-0.010 per $1). The 11:26 sighting at 30.45 is void - equity fell back under 30.
+- Twins (159 min): A +78.7, B +215.1, C +156.5@$10. Shadows: EF2/J 133 graded (refuted); 11.2 live shadow 10 graded, 3 W 7 L, -0.361/fire, both halves negative.
+- H1 fef1c5e merged: honest forward ledger 29 fires, 10 hits (34.5%), p=0.049 vs the 51.5% honest rate - context only, still under the 60-fire bar. The live shadow (3/10) and the ledger (10/29) now agree in sign and rough level. H1 also noted the new analysis/astra/ channel.
+- 11 processes, snapshots refreshed.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
