@@ -1,7 +1,7 @@
-# Task 22 — what an order delay actually costs, on both venues
+# Task 23 — what an order delay actually costs, on both venues
 H1, 2026-09-11 14:05 UTC. **Asked by the user:** *"check the pollymarket book few miliseconds after
 the signal fired? i mean if predict has 300ms delay in order then you check pollymarket book 300ms
-later?"* — yes, that is the right correction, and it is answerable. Script `task22_delay_cost.py`.
+later?"* — yes, that is the right correction, and it is answerable. Script `task23_delay_cost.py`.
 
 ## The measurement
 An EV filter only ever takes a **cheap** print. Task 20's lesson is that quote noise is unbiased on

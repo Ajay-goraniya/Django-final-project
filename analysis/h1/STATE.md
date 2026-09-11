@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 14:05 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 13:58 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -11,8 +11,36 @@ the reason the checks run as a set and grading runs first.
 Its `permutation()` permutes the model's PREDICTIONS, never the labels: shuffling labels destroys
 the market's calibration too, so longshots "win" at the base rate and it prints a fake profit.
 
-## Task 22 DONE 14:05 — the user's delay question, answered: the delay is nearly free
-`analysis/h1/task22_delay_cost.md` + `task22_delay_cost.py`. User asked (13:55) whether to read the
+## Task 24 DONE 13:58 — checked V's "the venue IS the finding, stop testing and build" (5f96d1e)
+`analysis/h1/task24_poly_venue_check.md` + `.py`. Unrequested; run because the conclusion is to build
+a live executor. **The core claim mostly survives and fails exactly one check.**
+- Gate: grading PASS (poly labels match the poly `outcome` table 429/429 — right settling source),
+  sample PASS (429; UP 189 / DOWN 240), halves PASS (+0.099/+0.147), costs PASS (+2c still +0.072),
+  null PASS (vs −0.276). **quote_age FAIL** — 23 of 427 asks match the collector at the same second.
+  My per-fire on all 429 is **+0.123, not V's +0.187** — reconcile before either is quoted onward.
+- **A haircut does NOT fix the quote-age problem.** Task 20: the honest rule REMOVES fires (55 of 97,
+  worth +0.290 each), it does not merely shift prices. Only an at-or-after re-run answers it, which
+  V's new `book_age_ms` (from 13:28) now permits — hours away at ~2 fires/hour.
+- **"204 candles Predict.fun's book never offered at all" is NOT supported.** The collector has a
+  Predict.fun quote on **429 of 429** poly-fired candles, and on 100% of the only-poly candles. The
+  extra candles are ones where Predict.fun's book WAS there and the filter declined the price. That
+  makes the claim a *pricing* difference, not an *availability* one — i.e. it is not independent of
+  the open quote-age question, which the availability framing makes it look.
+- **Strict vs broad:** V picked the broad 225-candle cell over the matched n=80 (level: +0.3078 vs
+  +0.3027) because "the broad one is the one with the money in it". n=80 is over the bar, so the
+  strict read is the defensible one, and the broad split needs `paired()` to count at all.
+- **I was WRONG about one thing, and it favours V.** I expected Polymarket's cheaper UP to be fair
+  value for a different settlement rule. It is not: on the same 808 candles Predict.fun settles UP
+  48.6% and Polymarket 48.5%, −0.1 pp. So the price gap is real, not compensation.
+- **NEW: the venue edge is a SIDE SKEW, not a flat edge.** 1 Hz matched, n=43,552, both halves stable:
+  poly UP ask **−3.33c ± 0.12**, poly DOWN ask **+2.62c ± 0.12**. Paper mix 44% UP / 56% DOWN, earning
+  +0.162 UP vs +0.092 DOWN — consistent. An executor is harvesting a side skew and its advantage will
+  move with the model's side mix. Report the at-or-after re-run UP/DOWN separately.
+- My recommendation: build the executor AND close the check in parallel; they do not block each other.
+  Do not switch real money on the current number.
+
+## Task 23 (was 22; V took that number) DONE 13:40 — the user's delay question, answered: the delay is nearly free
+`analysis/h1/task23_delay_cost.md` + `task23_delay_cost.py`. User asked (13:55) whether to read the
 Polymarket book ~300 ms after the signal, matching Predict.fun's order delay. Right correction; done.
 - Measured on both 1 Hz loggers: a **cheap print** (≥2c below that candle's median) moves back by
   **+0.16c ± 0.02 (Polymarket, n=19,492)** and **+0.22c ± 0.02 (Predict.fun, n=30,995)** one second

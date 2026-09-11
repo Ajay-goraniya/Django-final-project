@@ -121,7 +121,7 @@ as the four that have already fallen on this branch.
 ## 2026-09-11 13:55 UTC — user: "check the pollymarket book few miliseconds after the signal fired?
 ## i mean if predict has 300ms delay in order then you check pollymarket book 300ms later?"
 **Right correction, done, and it settles which part of the quote problem actually costs money.**
-Deliverable `analysis/h1/task22_delay_cost.md`. Tokyo's real lag is 236 ms (delay_ms 85 + book age
+Deliverable `analysis/h1/task23_delay_cost.md`. Tokyo's real lag is 236 ms (delay_ms 85 + book age
 151, 427 fills), and at that lag a cheap print reverts only **~0.04c** on either venue — the delay
 is essentially free. The damage is at **5 s** (0.88c poly / 1.25c pred), which is the collector
 staleness Task 20 caught. So the fix is the at-or-after rule, not a 300 ms offset. Side result: the
