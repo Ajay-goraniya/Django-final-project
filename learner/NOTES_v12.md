@@ -882,6 +882,38 @@ thin book (1.5c). If Polymarket's book costs the same 1.5c to cross, +0.187 per 
 if it costs what its wider depth suggests it should not, most of the edge survives. Only live fills answer it,
 which is what poly1s.py at 1 Hz since 06:03 and the executor work are for.
 
+## 13:05 UTC - CORRECTION to the 12:55 entry (user challenged it: "I thought Polymarket was expensive")
+The user is right on fees and I understated two things. Redone with decision TIMING matched as well
+(the two runners do not fire at the same second: Predict.fun 87.4s into the candle on average, Polymarket
+78.4s, and price drifts with time, so the raw comparison was partly a timing artifact).
+
+Matched on candle + side + decisions within 5s of each other, n=80:
+| | Predict.fun | Polymarket |
+|---|---|---|
+| gross ask | 0.484 | 0.457 |
+| fee | 2% | 7% |
+| ALL-IN cost per share | 0.4889 | 0.4742 |
+| cheaper all-in | - | on 43/80 = 54% of pairs |
+| per $1, each venue's OWN grading | +0.3078 | +0.3027 |
+
+So: **Polymarket IS the expensive venue on fees** - 7% taker vs 2%, which is ~1.3c on a 0.5 share. Its gross
+ask is cheaper by 2.7c (not the 3.9c I said - 1.2c of that was the timing mismatch). Net of its own fee it is
+1.5c cheaper, and cheaper on only 54% of matched pairs rather than 66%.
+
+And the headline: **on each venue's own grading the two are a dead heat, +0.3078 vs +0.3027 per $1.** The
++0.394 in the 12:55 entry came from pricing Polymarket's cheaper ask against PREDICT.FUN's labels - paying
+the TWAP venue's price while being graded by the Binance-close venue. That is the cross-venue grading error
+this project has already been burned by once, and I repeated it. Retracted.
+
+What survives: Gap 1 (live vs paper on Predict.fun, identical 50.8% hit rate, 1.5c worse entry, edge gone) is
+unaffected - it never crossed venues. What does NOT survive: "Polymarket's book is cheaper for the same bet
+and that is the venue edge". On matched fires the venues are level.
+
+Then why is the Polymarket paper run +554 and the Predict.fun paper run +174? Not price per fire. It fires
+422 times vs 295 over the same window - it takes ~43% more trades at a similar per-fire edge. Volume, not
+better prices. To verify next: whether the extra fires are as good as the common ones, or whether the
+Predict.fun runner is simply missing fires (book gaps, quote availability) that Polymarket's deeper book allows.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
