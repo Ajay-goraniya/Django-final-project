@@ -616,6 +616,13 @@ Old-version findings keep going to NOTES_v11.md.
 - EF2 shadow (J): 38 graded; cap 0.60: 26, 50%, +0.286/fire, halves +7.62/-0.18; cap 0.50: 21, +0.339, halves +7.05/+0.07; none: 38, +0.167. Second half flat to negative - J is not holding on live quotes so far.
 - H1 dcb26c8 (Task 16 market-prior EF replay: "the prior does not beat the model") merged - detail in the next entry. 8 processes, books live, snapshots refreshed.
 
+## 01:40 UTC Fri 09-11: H1 Task 16 - market prior vs model: neither wins; the venue prices the favourite fairly (merged dcb26c8)
+- Walk-forward bucket prior (72,207 candles before the venue window) as the EF probability, the engine's own EV rule, recorded raw asks, engine grading, 648 candles: at matched fire counts prior +0.137/fire (n=76, margin 0.20) vs model-p +0.109 (n=79, margin 0.30) - inside noise; the prior's margin sweep is non-monotone (0.108/0.137/0.175/0.288/0.104), verify.py FAIL on sweep shape. Not a finding in either direction; every margin above 0.20 is under 60 fires.
+- Current EF fire set on the same candles: n=220, 53.6%, +0.049/fire, halves -0.01/+10.83 - all of EF's profit on this window is in the second half.
+- The solid large-sample result: the naive null (fire every candle at 20 s on the side price is on, at the recorded ask) is right 59.2% and LOSES -0.019/fire over 638, both halves negative, median ask 0.58. The venue prices the favourite about fairly; being more often right does not pay - the model has to be right where the ask is cheap relative to the truth. That is the constraint 11.2 is built against.
+- Direction to test, not a result: the prior at margin 0.25 puts 18% of its fires in the 5-10 bps band at +0.93/fire (about 7 fires) where EF puts 1%.
+- Live read-across: EF's edge is thin (+0.07 per $1 since 14:25, +0.035 at $2 tonight); REVERSAL carries the PnL (+0.21 per $1, 16/3) at ~20 fires/day. No lane change (gates banned; REVERSAL kill rules far off); ladder stays $2.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
