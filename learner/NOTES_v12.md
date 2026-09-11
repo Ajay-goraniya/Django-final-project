@@ -1291,6 +1291,23 @@ independently from raw inputs. The honest way: recompute features for a logged c
 Binance klines and check the model's p and side reproduce. Queued for H1 as Task 25 rather than done now (user
 is limit-constrained until Sunday).
 
+## 18:12 UTC check-in - rule evaluated, first sighting again, lanes stay OFF
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 9W/11L **+0.022** | 20W/20L +0.077 |
+| Polymarket paper (reported) | 10W/10L -0.042 | 19W/21L -0.051 |
+
+Positive again, so this is the FIRST of the two consecutive sightings needed (the 17:12 -0.038 reset the
+count). Nothing armed. If 19:12 is also positive, REVERSAL arms at $1.
+Note the 40-fire window is now +0.077, i.e. agreeing with the 20 for the first time today - that is the
+condition IMPROVEMENTS item 8 suggests requiring, but I am not changing the rule mid-flight.
+
+Tokyo: master ON, all three kinds MANUALLY OFF, equity 22.15, nothing open. Lane flags verified per-kind.
+Fair table (window from the 15:04:25 joint restart): PF paper 9/10 +14.5; Poly paper 16/12 +37.4; v12 lane
+17/10 +87.1; Tokyo 2/1 +0.7 real. 12 processes, snapshots refreshed.
+Reminder recorded at 18:20: the v12 lane's +87.1 is a zero-slippage upper bound and 2 coin-flip candles
+account for its lead over the v10 run - not a better model.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
