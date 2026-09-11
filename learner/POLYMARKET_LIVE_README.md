@@ -109,3 +109,21 @@ The same three numbers we judge everything by, on the live lane, not on paper:
 - **PnL per $1 staked**, graded on Polymarket's outcome, both halves of the run positive, and positive
   every day rather than on average. A number that only works some days is a number we have to explain
   before we trust it.
+
+## 7. Correction, 09-11 14:05 - what crossing actually costs
+
+An earlier version of my reasoning used a 1.5 cent crossing cost. H1 decomposed it and that number was wrong:
+the genuine crossing part (fill minus the quote the engine itself saw at the order, median quote age 151 ms)
+is only **+0.26c +/- 0.18c**, and across all 380 live EF fills it is **+0.46c +/- 0.09c, both halves identical**.
+The rest of the 1.5c was a timing difference between two price feeds, not a cost anyone pays. Proof it was not
+an execution cost: the same decomposition run on REVERSAL returns +15.4c, which is obviously not crossing.
+
+**The defensible crossing prior is +0.5c +/- 0.1c**, valid at $1-$4 stakes where the top of book covers the
+order. Polymarket's fee is separate and must not be double-counted with it. On that prior the Polymarket paper
++0.187 per $1 lands near **+0.18, not +0.10** - crossing is close to a rounding error at our size.
+
+That makes the crossing question settled and NOT the blocker. The blocker is quote age: only 23 of 427 paper
+asks matched the 5-second collector at the same second, and the paper had no record of how old its quote was.
+This is the same exposure that took the 11.2 replay from +0.27 per fire to about zero. Fixed at 13:28 - the
+paper runner now records book_age_ms on every fire - so the number can be certified from here forward, but
++0.187 is not an honest figure until that re-run happens on fires that carry the column.
