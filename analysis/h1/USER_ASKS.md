@@ -126,3 +126,12 @@ Deliverable `analysis/h1/task23_delay_cost.md`. Tokyo's real lag is 236 ms (dela
 is essentially free. The damage is at **5 s** (0.88c poly / 1.25c pred), which is the collector
 staleness Task 20 caught. So the fix is the at-or-after rule, not a 300 ms offset. Side result: the
 Polymarket book is ~30% quieter at every lag — but that is one 7-hour weekday window, not rain-or-sun.
+
+## 2026-09-11 13:55 UTC — user: "stop as much process as you can till sundays limit reset, I'm
+## running low now every checks in every 2 hours till sundays night"
+Done. H1 check 2-hourly with the off-hour self-arm removed and one armed leg deleted; v11 safety net
+2-hourly; one queued H1→V message deleted and folded into a single relay. V's own 30-min check-in
+re-arms itself from a prompt I am not permitted to edit across sessions, so V was asked to re-arm it
+120 min out — if the 30-min cadence returns, that is the reason. Only two sessions exist (H1, V);
+"Astra" is a directory, not a running session. **Deliberately not cut:** the 1 Hz book loggers —
+Polymarket publishes no historical order book, so anything not captured live is lost permanently.

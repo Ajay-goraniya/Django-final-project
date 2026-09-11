@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 13:58 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 13:57 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -10,6 +10,22 @@ the distance premise. In that rejection **every other check passes and only `gra
 the reason the checks run as a set and grading runs first.
 Its `permutation()` permutes the model's PREDICTIONS, never the labels: shuffling labels destroys
 the market's calibration too, so longshots "win" at the base rate and it prints a fake profit.
+
+## 13:55 — USAGE SAVER IN FORCE UNTIL SUNDAY NIGHT (user: "I'm running low")
+User, 13:55: *"stop as much process as you can till sundays limit reset, I'm running low now every
+checks in every 2 hours till sundays night."* Done:
+- **H1 check is now 2-hourly** (`43 */2 * * *`) and the **off-hour self-arm is gone** — the prompt now
+  says DO NOT call send_later. One armed off-hour leg deleted. **Do not restore the 30-min cadence.**
+- **v11 safety net set to 2-hourly** (`37 */2 * * *`).
+- **V's own 30-min check-in could NOT be changed by me** — `update_trigger` refuses to edit the prompt
+  of a routine firing into another session, and that trigger re-arms itself from its own prompt. V was
+  asked to re-arm it 120 min out each time. If the 30-min cadence reappears, that is why.
+- One queued H1→V message deleted and its content folded into the cadence message, saving a turn.
+- Each check-in is now: pull, ledger, one line, stop. No exploratory work unless REQUEST.md grew.
+- Only two sessions exist (H1, V). "Astra" is a directory V made, not a running session — nothing to
+  close. The 5-hour window resets ~17:30 UTC today; the weekly reset is what the user is waiting on.
+- **Not cut, deliberately:** the 1 Hz loggers. Polymarket has no historical order-book data, so
+  anything not captured live is gone forever. Those stay running whatever the token cost.
 
 ## Task 24 DONE 13:58 — checked V's "the venue IS the finding, stop testing and build" (5f96d1e)
 `analysis/h1/task24_poly_venue_check.md` + `.py`. Unrequested; run because the conclusion is to build
