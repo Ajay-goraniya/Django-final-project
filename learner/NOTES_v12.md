@@ -1501,6 +1501,37 @@ Fair table (window from 15:04:25): PF paper 15/21 -27.6; Poly paper 27/25 +40.9;
 Tokyo 5/10 -7.06 real.
 Smoke lane 8791: up 178 s at check time, 0 signals, 0 fills, enabled - warming.
 
+## 21:30 UTC - LIVE SMOKE: two signals fired, ZERO orders sent. The executor refused both. Restarted with pad 0.
+The first real live result, and it is about the executor, not the edge.
+
+| time | side | ask | quote age | signal EV | EV at cap (+1 tick) | outcome |
+|---|---|---|---|---|---|---|
+| 21:21:16 | UP | 0.52 | 18 ms | 0.1579 | **0.1368** | SKIPPED, 0 attempts |
+| 21:27:14 | DOWN | 0.44 | 23 ms | 0.2566 | **0.2297** | SKIPPED, 0 attempts |
+
+Both skipped with reason `ev_failed_at_cap`. No order reached Polymarket; the `attempts` table is empty.
+
+**Why, and it is structural.** The decision threshold is DYNAMIC per candle, not the fixed 0.25 I assumed:
+signal 1 fired at EV 0.1579 and failed at 0.1368, so its threshold was in (0.1368, 0.1579]; signal 2 fired at
+0.2566 and failed at 0.2297, so its threshold was in (0.2297, 0.2566]. In both cases the model fired with less
+than one tick's worth of EV headroom, and the recheck at the padded cap is measured against that same
+threshold. So the executor asks "would I still have fired at a price one tick worse?" and the answer is almost
+always no, BECAUSE the model fires at the margin by construction.
+
+Consequence beyond this test: **the paper runs count trades the live executor would decline.** Another
+independent reason paper and live are not comparable, on top of the zero-slippage assumption (18:20) and the
+quote-age result (H1 21b).
+
+**Action taken: restarted the lane with `--pad-ticks 0`** (config flag, no code change; recorded in
+run_smoke.sh with the reasoning). At pad 0 the cap equals the observed ask, so the EV recheck is identically
+satisfied and orders can actually reach the book. The trade-off is explicit: no pad means lower fill
+probability, and FAK cancels rather than chases. That is not a loss - unfilled-at-the-ask IS the measurement
+the user wants, and it is the honest version of the paper run's assumption.
+
+NOT done, deliberately: lowering the model threshold, widening the pad, or touching the decision logic. The
+proper fix is a separate execution floor distinct from the signal threshold - IMPROVEMENTS item 17, to be
+designed and pre-committed, not improvised mid-test.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
