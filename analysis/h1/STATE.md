@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 10:47 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 11:20 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -325,17 +325,21 @@ diverges from the Binance leader in near-zero candles" vs (b) "noise at n=77".
   PnL-by-regime remains unanswered and only the forward test can settle it.
 - Deliverable: `task17_3_regime_grid.md`. Repro: `task17_3_regime_grid.py`.
 
-## Task 17.2 LIVE 03:20 — forward ledger running. FIRST 8 FORWARD FIRES ARE BAD.
+## Task 17.2 LIVE — forward ledger at 26 of 100 fires (11:20). STILL NOT READABLE.
 `task17_forward.py` + `task17_forward_11_2.md` + `task17_forward_state.json` (append-only; each run
 processes only candles newer than the last recorded, so reruns are idempotent and history cannot be
 silently restated). Frozen artifact only, never refitted. Forward = strictly after epoch 1789078800.
-- **8 forward fires: 1 hit (12.5%), −0.734/fire, −5.87 total.** Against the replay's +0.266 and
-  62.7% hit. If 62.7% were the true rate, **1-or-fewer hits in 8 has probability 0.0054**.
-- **NOT READABLE. n=8 is far below the 60 bar, let alone 100.** Recorded so the trend is visible
+- **26 forward fires: 9 hits (34.6%), −0.299/fire, −7.78 total.** First half +0.010, second half
+  −0.609. Baseline is the honest-rule replay (+0.018/fire ~ 0.00), NOT the retracted +0.266.
+- Against the honest-rule 51.5%, 9-or-fewer hits in 26 has probability **0.0630** — it was 0.0393
+  at 25 fires and one added fire pushed it back over 0.05. That movement is exactly why a p-value
+  at this n is not a verdict: at 8 fires it read 0.0054 and swung back too.
+- **NOT READABLE. n=26 is below the 60 bar, let alone 100.** Recorded so the trend is visible
   from the start rather than discovered at fire 100. **No conclusion drawn, and none should be.**
+- Accrual 2.11 fires/hour; the 100-fire verdict lands about Sat 12 Sep ~22:00 UTC.
 - Not messaging V: V's instruction is to report only when the verdict changes or at 100 fires, and
   V merges the branch anyway. V independently started its own 11.2 live shadow (e9676dc).
-- Kline set extended through 09-11 03:10 (72,902 candles) via the REST mirror.
+- Kline set extended through 09-11 11:15 (72,995 candles) via the REST mirror.
 - `book1s.sqlite3` has appeared (1 Hz price + both asks/sizes/ages) but holds only 13 epochs so far;
   the 5-s venue table stays primary until it accumulates.
 
