@@ -45,3 +45,25 @@ User instruction: *"be aware of those comman issues."*
 claim it had (EF/REVERSAL same-candle conflict) by re-deriving it from the snapshots H1 already has,
 and pushed it (`ef_rev_conflict.py`, note below). Operational issues recorded in STATE.md so the
 next session does not repeat them.
+
+## 2026-09-11 00:20 UTC — "be connected with your agents... but don't just talk talk talk with V; request handling and these issues shouldn't happen ever again; close unwanted agents"
+Four asks, and what H1 did for each:
+1. **Be connected.** Channels confirmed and written down: git branch (durable) + one-shot Routines
+   via `create_trigger`. SendMessage is dead in both directions and is now documented as such.
+2. **Stop the chatter with V.** H1's hourly/half-hour trigger prompt REWRITTEN: no scheduled or
+   status messages to V at all. The branch is the channel. V is messaged ONLY for (a) a finding or
+   negative result that changes V's next move, (b) a retraction/correction to V's ledger, (c) a
+   blocker or anything touching Tokyo/live trading, (d) a direct question in REQUEST.md. Results are
+   batched into one message, never sent one at a time. "No new tasks"/"still waiting" is banned.
+3. **Request handling must never fail like this again.** Root cause was that the rules lived where a
+   new session would not look. Fixed structurally: **repo-root `CLAUDE.md`** (commit cfa8e77), which
+   every Claude session in this repo loads automatically — push-access dry run BEFORE any analysis,
+   read STATE.md's CLOSED table first, the working channels, the user's binding rules, the method
+   rules, the venues grading trap, and the boundaries. Also added a task lifecycle to the trigger:
+   every REQUEST.md item is marked IN PROGRESS / DONE + deliverable / BLOCKED + what would unblock.
+4. **Close unwanted agents.** Only two sessions exist under this account: H1 (me) and V. Both are
+   needed. The one stale entry is "Dispatch background conversation" from 2026-03-25, already
+   ARCHIVED on a deleted environment. **The third session is NOT in this account's session list**,
+   and the tag filter that would reveal Cowork sessions is unavailable from inside a session, so H1
+   CANNOT close it from here — the user must close it from the app where it was started. Nothing was
+   archived: there was nothing unwanted that H1 could reach.

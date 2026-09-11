@@ -1,5 +1,17 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 00:12 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 00:22 UTC. Update this file at the end of every check.
+
+## FIXED 00:22 — the protocol now lives in repo-root `CLAUDE.md` (commit cfa8e77)
+Every Claude session in this repo loads it automatically, so the three failures below cannot repeat
+by anyone simply not knowing. It carries: push-access dry run BEFORE any analysis, read this file's
+CLOSED table first, the working channels, the user's binding rules, the method rules, the venues
+grading trap, and the Tokyo/secrets/file-ownership boundaries.
+**Messaging V is now rationed** (user: "don't just talk talk talk with V"). The branch is the
+channel. V gets a Routine ONLY for a finding/negative result that changes V's next move, a
+retraction, a blocker or anything touching live trading, or a direct question in REQUEST.md —
+batched into one message. No status pings, ever.
+**Task lifecycle:** every REQUEST.md item is marked IN PROGRESS (with time) / DONE (with deliverable
+path) / BLOCKED (with what would unblock it). Never silently unworked, never re-run when DONE.
 
 ## OPERATIONAL ISSUES — known failure modes for any session on this task (user, 00:05)
 A THIRD session was given the same `H1_BRIEF.md` retro tasks and hit all three of these. The user
