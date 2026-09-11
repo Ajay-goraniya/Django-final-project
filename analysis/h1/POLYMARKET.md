@@ -140,11 +140,33 @@ So a Polymarket run needs **either account verification or EOA allowlisting befo
 our fire rate.** That is a prerequisite, not a detail, and it is worth settling early because both
 routes involve someone outside this project.
 
-## 7. Still to gather
+## 7. Geographic eligibility — as published, no interpretation
 
-- Published geo/eligibility policy (documentation and ToS as written; no legal interpretation).
+Reporting what the documentation says, not what it means for anyone in particular. **This is not
+legal advice and I am not assessing anyone's situation.**
+
+- **Polymarket operates a tiered geoblock**, documented at
+  [Geographic Restrictions](https://docs.polymarket.com/api-reference/geoblock) and in the
+  [Help Centre](https://help.polymarket.com/en/articles/13364163-geographic-restrictions). Two
+  published tiers: **"block completely"** (no new orders, and existing positions cannot be closed)
+  and **"close-only"** (existing positions may be closed, no new positions opened).
+- Named examples in the published pages: **Italy** — view only, no trading; **Germany** —
+  trading prohibited, existing positions held to resolution to redeem; **Singapore** — close-only.
+- The [Terms of Use](https://polymarket.com/tos) state that **US persons and persons in certain
+  other jurisdictions may not trade** on polymarket.com; US users are directed to **polymarket.us**,
+  a separate regulated entity. Data and market information are viewable globally.
+- [Polymarket Institutional](https://institutional.polymarket.com/) states that **only non-US
+  institutions in non-restricted jurisdictions are eligible to onboard.**
+- **The complete restricted-jurisdiction list is in the full ToS and I have not enumerated it here.**
+  Before any migration, the operating jurisdiction should be checked against that list directly, and
+  note the geoblock tiers matter operationally as well as legally: a "block completely" state would
+  **trap open positions**, which for a 5-minute market is a settlement risk, not just an access one.
+
+## 8. Still to gather
+
 - Quantified per-second/per-minute API limits — described only as "Standard"/"Highest" in public docs.
 - Reconciling the fee rate against a real fill (see §2).
+- The enumerated restricted-jurisdiction list from the full ToS.
 
 ---
 

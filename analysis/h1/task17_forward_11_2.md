@@ -4,7 +4,7 @@ Cumulative, append-only. Frozen artifact `models/ef11_2_gbm_seed0.joblib`, never
 
 **Quote rule: NEXT — the first collector sample at or AFTER the decision second.** The original ledger used the last sample at or *before* it, i.e. a quote up to 5 s older than the price it decided on. That is the Task 20 artifact; those eight fires were discarded and this ledger rebuilt, because a mixed history would be worse than none.
 
-_Last updated 2026-09-11 06:19 UTC._
+_Last updated 2026-09-11 06:44 UTC._
 
 ## ACCUMULATING — 13 of 100 forward fires. NOT READABLE YET.
 

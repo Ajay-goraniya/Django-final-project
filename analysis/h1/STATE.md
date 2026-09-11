@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 06:27 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 06:50 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -442,7 +442,19 @@ J selects on cheapness (ask <= cap) so it had to be re-run. It survives.
   project. Per-second/per-minute API limits are only "Standard"/"Highest", never quantified publicly.
 - Auth is two-step: L1 ERC-712 signature proving signer control -> L2 credentials (apiKey, secret,
   passphrase) derived from the CLOB.
-- Still to gather: published eligibility policy; quantified API rate limits; fee rate vs a real fill.
+- **ELIGIBILITY, as published (no interpretation, not legal advice):** tiered geoblock with two
+  documented states — **"block completely"** (no new orders AND existing positions cannot be closed)
+  and **"close-only"**. Named examples: Italy view-only, Germany prohibited (positions held to
+  resolution), Singapore close-only. ToS: **US persons and certain other jurisdictions may not
+  trade** on polymarket.com; US users go to polymarket.us, a separate regulated entity. Institutional
+  onboarding is **non-US only, non-restricted jurisdictions**. The full restricted list is in the ToS
+  and is NOT enumerated here — check the operating jurisdiction against it directly before migrating.
+  **Operational note: a "block completely" state TRAPS open positions**, which on a 5-minute market
+  is a settlement risk, not just an access one.
+- **Forward-ledger efficiency note:** the ledger is gated on V's SNAPSHOT pushes (venues.sqlite3),
+  not on my kline fetches. At 06:43 the klines advanced but the venue book had not, so 0 new fires.
+  Don't spend a check fetching klines when `venues.sqlite3.gz` has not changed.
+- Still to gather: quantified API rate limits; fee rate vs a real fill; the enumerated ToS list.
 - **Forward ledger at 06:18: 13 fires, 6 hits (46.2%), +0.010/fire** — it swung UP from −0.487 at 9
   fires and now sits essentially ON the honest replay's +0.018, not the retracted +0.266. Still NOT
   READABLE (n=13) and the verdict is unchanged, so V was not messaged. **The swing is a useful
