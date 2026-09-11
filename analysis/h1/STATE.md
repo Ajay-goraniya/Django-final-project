@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 09:47 UTC. Update this file at the end of every check.
+Last updated: 2026-09-11 10:17 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -460,8 +460,8 @@ J selects on cheapness (ask <= cap) so it had to be re-run. It survives.
   (2) quantified per-second API limits — described only as "Standard"/"Highest", not published.
   (3) the fee rate (docs 0.07 vs help-centre-implied 0.0625) — only a REAL FILL settles it, which is
   V's side. All three are recorded in POLYMARKET.md as open with what would unblock each.
-- **Forward ledger at 09:47: 22 fires, 8 hits (36.4%), −0.238/fire, both halves negative**
-  (−0.166 / −0.311). Accrual 2.05/h, ETA **Sat 12 Sep 23:21 UTC**. NOT readable (n=22), verdict
+- **Forward ledger at 10:17: 23 fires, 8 hits (34.8%), −0.271/fire, both halves negative**
+  (−0.166 / −0.368). Accrual 2.04/h, ETA **Sat 12 Sep 23:24 UTC**. NOT readable (n=23), verdict
   unchanged, V not messaged. Tracking below the honest +0.018, as the ladder predicts.
 - **Nothing else is open.** Task 19's three gaps are BLOCKED with named unblockers; the 2.5-5 bps
   cell needs ~14 more fills; everything else is DONE or retracted. Per the user's "don't do
