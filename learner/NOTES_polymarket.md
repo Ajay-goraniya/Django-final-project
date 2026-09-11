@@ -56,7 +56,8 @@ H1's working file: analysis/h1/POLYMARKET.md (Task 19). This file is V's summary
 - PLAN-CHANGING (H1 09-11 05:58): Polymarket's only historical endpoint (GET /v2/prices-history) returns MIDPOINTS only; no historical
   order book, bid/ask or trades. An honest replay needs the ask at or after the decision (Task 20), so every Polymarket evaluation must
   come from OUR forward collection (1 Hz logger or live paper run) started BEFORE the window we want to judge. Nothing can be
-  reconstructed later. => start a Polymarket book logger now (V, 09-11 06:00).
+  reconstructed later. => DONE 06:03 UTC 09-11: learner/tools/poly1s.py logs Polymarket's best ask/size/bid for both sides at 1 Hz
+  (engine's PolyBook client) into polybook.sqlite3, snapshot learner/live_backup/polybook.sqlite3.gz. Exact-second asks exist from here on.
 - Executor delta vs Predict.fun (H1): EIP-712 typed-data signing on Polygon (chainId 137; deposit wallets need ERC-7739 wrapped
   signatures); order types GTC/GTD/FAK/FOK, GTD expires one minute BEFORE its stated expiry; min_order_size and tick_size are per token
   (read from the book endpoint per market); websocket wss://ws-subscriptions-clob.polymarket.com/ws/market with book / price_change /

@@ -724,6 +724,10 @@ Old-version findings keep going to NOTES_v11.md.
 - Shadows: EF2/J 77 graded; cap 0.60: 49, 43%, +0.071/fire, halves +9.44/-5.95; cap 0.50: 36, 36%, +0.059, halves +10.12/-7.99; none: 77, +0.036, halves +6.34/-3.53. Second half firmly negative at every cap. 11.2 live shadow 1/1.
 - H1 1970ccf (Task 19: POLYMARKET.md) merged - see the Polymarket notes. 10 processes, snapshots refreshed.
 
+## 06:05 UTC Fri 09-11: Polymarket book logger started (forward collection is the only Polymarket evidence possible)
+- H1 (Task 19): Polymarket's one historical endpoint returns midpoints only - no historical order book, bid/ask or trades - so an honest replay (ask at or after the decision) can never be reconstructed for Polymarket; it has to be collected forward, before the window we want to judge.
+- learner/tools/poly1s.py (running in the scratchpad, 11 processes): 1 Hz log of Polymarket's BTC 5-min book - best ask/size/bid for UP and DOWN, message age, status - via the engine's own PolyBook websocket client from btc_model_v11.py, so it records exactly what the live signal sees. Table pb in polybook.sqlite3; snapshot pushed by ci.sh as learner/live_backup/polybook.sqlite3.gz. Data starts 06:03 UTC 09-11; the weekend will be the first Polymarket window with exact-second asks. Together with book1s (Predict.fun, 1 Hz) any rule can now be replayed honestly on both venues from here on.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
