@@ -1839,6 +1839,26 @@ Tokyo 5/10 -7.06 real. Predict.fun paper has now pulled clearly ahead of Polymar
 window (+55.9 vs -1.9) and has held that for three consecutive hours, which is longer than the noise swing I
 flagged at 01:20.
 
+## 03:20 UTC check-in (Sat 09-12) - third consecutive positive trigger, still held
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 11W/9L +0.148 | 21W/19L +0.092 |
+Third positive hour running (01:20 +0.134, 02:20 +0.418, 03:20 +0.148), and the 40-fire window has now been
+positive and rising for three checks too (+0.015, +0.082, +0.092). Not arming - the criterion is refuted and
+its replacement is not written yet. Recording the run so the redesign can be tested against it: had the old
+rule been live it would have armed at 02:20 and been running for 78 minutes by now.
+
+Tokyo: master ON, all kinds false, equity 15.02, nothing open. 12 processes, 12 G free.
+Fair table (window from 15:04:25 09-11): PF paper 31/30 +51.9; Poly paper 42/45 -4.5; v12 lane 44/40 +104.9;
+Tokyo 5/10 -7.06 real.
+
+Worth noting for the Sunday review: the v12 lane (+104.9) and the v10 Polymarket runner (-4.5) are now 109
+points apart on the same venue, same signal, same window. That is far beyond the timing jitter measured at
+14:45 yesterday (one candle, 17 points). Either the jitter compounds much more than a 27-candle sample
+suggested, or something structural differs between the two runners. Do not read either number as the venue's
+edge until that is resolved - and note the v12 lane is the zero-slippage one, so its number is the optimistic
+side of the pair by construction.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
