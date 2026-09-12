@@ -98,3 +98,39 @@ Running list. Not explanations for the user - working notes. Newest first. Statu
     recycle loses all of it. Polymarket depth cannot be re-downloaded at any price (no historical book
     endpoint); Binance depth only partly. Decide a destination (object storage, or split parts committed to a
     data branch) and move it before the weekend test. This outranks every trading item on this list.
+
+## v12 checkpoint code review (09-12 01:50) - poly_core.py / poly_live.py / btc_model_v12_polymarket.py
+
+21. BUG, WILL FAIL HERE - **chart_seed() calls api.binance.com, which is geo-blocked from these containers.**
+    btc_model_v12_polymarket.py line 183 uses https://api.binance.com/api/v3/klines for the 288-candle chart
+    seed. Verified just now: that host returns **HTTP 451** from this container, while
+    https://data-api.binance.vision returns 200 on the identical path. The call is wrapped in an
+    isinstance(data,list) check so it fails silently - the chart simply never seeds and nobody is told.
+    Every other Binance endpoint in the file already uses data-stream.binance.vision. One-line fix: swap the
+    host. Known issue in this project (repo CLAUDE.md documents the geo-block); the checkpoint author would
+    not have hit it on their own machine.
+
+22. RISK, cannot be settled without a real fill - **order id compared against a locally computed EIP-712
+    hash, and a mismatch HALTS the lane.** poly_core.py:173 does `if r.get('id')!=oid` where `oid` is
+    `client.journal_hash` (keccak of the typed data, computed in poly_live.py's TrackedClient._sign_order)
+    and `r['id']` is `str(response.order_id)` from the SDK. If Polymarket's order_id is that hash in the same
+    string form, this is a strong integrity check. If it differs by case, 0x prefix, or representation, the
+    FIRST live order halts the whole lane with "Order hash mismatch". Consequence is heavy for a formatting
+    difference. Suggest: log both values and compare case-insensitively on the hex body before halting, or
+    downgrade the first occurrence to REVIEW rather than halt.
+
+23. MINOR - **halt_check's slippage query silently drops orphan fills.** poly_core.py:113 inner-joins fills to
+    orders; a fill whose order row is missing (crash between order() and fill()) is excluded from the
+    20-fill slippage window rather than flagged. Verified with a synthetic DB. The window then measures fewer
+    than 20 real fills while believing it has 20.
+
+24. OK, checked and sound - order_plan() guards hold up under probing: cap>=1 is rejected (ask 0.99 with a
+    1-tick pad raises "price cap outside market"), the fee reserve uses the worst executable level not just
+    the top, the padded-price EV recheck is the conservative inherited v10 rule, and the venue minimum is
+    enforced against the CAP (more conservative than against the ask). No division-by-zero reachable in
+    cost=max(cap+f, cap/(1-f/cap)) for rate<1.
+
+25. GOOD, worth keeping in the build11 port - live mode pre-checks polymarket.com/api/geoblock and refuses to
+    start unless blocked is explicitly False; live starts with master=False so it must be armed by hand; the
+    reconcile path only counts CONFIRMED taker trades belonging to this order id; a submit timeout records
+    UNKNOWN and never resubmits (covered by their test_timeout_never_resubmits_on_restart).
