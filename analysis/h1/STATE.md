@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-11 22:47 UTC. Update this file at the end of every check.
+Last updated: 2026-09-12 00:47 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -25,7 +25,7 @@ the market's calibration too, so longshots "win" at the base rate and it prints 
   "certifiable" rows are themselves over a second old (p90 3.6 s, max 9.3 s).
 - By side: UP n=27 +0.032, DOWN n=34 −0.136 — both under the bar, not read, so Task 24's side-skew
   question stays open.
-- **Certifiable count 22:47: 76.** Re-run at ~150 for a readable UP/DOWN split, per what I told V.
+- **Certifiable count 09-12 00:47: 85.** Re-run at ~150 for a readable UP/DOWN split (told V).
 - **Consequence:** Task 24's "+0.187 passes everything but quote age" — this is that check closing,
   and it goes the wrong way. Not a refutation yet (one evening, n=61, real confound), but the +0.187
   must not be sized on. The next step is another day of `book_age_ms` rows, not more analysis of the
@@ -481,23 +481,25 @@ diverges from the Binance leader in near-zero candles" vs (b) "noise at n=77".
   PnL-by-regime remains unanswered and only the forward test can settle it.
 - Deliverable: `task17_3_regime_grid.md`. Repro: `task17_3_regime_grid.py`.
 
-## Task 17.2 LIVE — forward ledger at 54 of 100 fires (22:47). STILL NOT READABLE.
+## Task 17.2 LIVE — forward ledger at 57 of 100 fires (09-12 00:47). STILL NOT READABLE.
 `task17_forward.py` + `task17_forward_11_2.md` + `task17_forward_state.json` (append-only; each run
 processes only candles newer than the last recorded, so reruns are idempotent and history cannot be
 silently restated). Frozen artifact only, never refitted. Forward = strictly after epoch 1789078800.
-- **54 forward fires: 24 hits (44.4%), −0.159/fire, −8.57 total.** First half −0.325, second half
-  **+0.008** — the second half has crossed into positive. Baseline is the honest-rule replay (~0.00).
-- Against the honest-rule 51.5%, 24-or-fewer hits in 54 has probability **0.1837** — it has walked
-  0.0054 → 0.0393 → 0.0630 → 0.0492 → 0.0347 → 0.0539 → 0.0583 → 0.0668 → 0.0744 → 0.1330 → 0.1457
-  → 0.1837 as the hit rate climbs back toward the baseline. **The clearest demonstration yet that the
-  early p-values were noise**; refusing to read them was right in both directions. Do not now read
-  the positive second half either — it is the same mistake with the sign reversed.
-- **NOT READABLE. n=54 is below the 60 bar, let alone 100.** Recorded so the trend is visible
+- **57 forward fires: 25 hits (43.9%), −0.177/fire, −10.07 total.** First half −0.257, second half
+  −0.099 — the second half went positive at n=54 and is back negative at n=57, which is exactly why
+  it was not read. Baseline is the honest-rule replay (~0.00).
+- Against the honest-rule 51.5%, 25-or-fewer hits in 57 has probability **0.1535** — the walk so far
+  is 0.0054 → 0.0393 → 0.0630 → 0.0492 → 0.0347 → 0.0539 → 0.0583 → 0.0668 → 0.0744 → 0.1330 →
+  0.1457 → 0.1837 → 0.1535. **The clearest demonstration yet that the early p-values were noise**;
+  refusing to read them was right in both directions, and the n=54 second half proved it again by
+  going positive for one check and straight back negative.
+- **NOT READABLE. n=57 is below the 60 bar, let alone 100.** First weekend fires are now accruing —
+  the replay window was weekday-only, so Sat/Sun is genuinely new evidence for this model. Recorded so the trend is visible
   from the start rather than discovered at fire 100. **No conclusion drawn, and none should be.**
 - Accrual 2.25 fires/hour; the 100-fire verdict lands about Sat 12 Sep ~18:50 UTC.
 - Not messaging V: V's instruction is to report only when the verdict changes or at 100 fires, and
   V merges the branch anyway. V independently started its own 11.2 live shadow (e9676dc).
-- Kline set extended through 09-11 22:35 (73,127 candles) via the REST mirror.
+- Kline set extended through 09-12 00:35 (73,151 candles) via the REST mirror.
 - `book1s.sqlite3` has appeared (1 Hz price + both asks/sizes/ages) but holds only 13 epochs so far;
   the 5-s venue table stays primary until it accumulates.
 
