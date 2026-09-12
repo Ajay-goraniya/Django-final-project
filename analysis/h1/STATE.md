@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-12 18:47 UTC. Update this file at the end of every check.
+Last updated: 2026-09-12 20:47 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -484,13 +484,14 @@ Buckets were defined before any weekend data existed, and I pre-committed: if it
 its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that.
 - **14:50: n=62, +0.073, halves +0.025/+0.121, verify.py ALL FOUR PASS.**
 - **16:50: n=71, +0.004, halves +0.032/−0.024, verify.py FAILS both halves AND beats-the-null.**
-- **18:47: n=81, −0.021.** It has now gone +0.073 → +0.004 → −0.021 over three consecutive checks and
-  is heading toward the weekday number, not away from it.
+- **18:47: n=81, −0.021. 20:47: n=89, +0.010.** The cell has now read +0.073 → +0.004 → −0.021 →
+  +0.010 over four consecutive checks. It is oscillating around zero, which is what a null cell does;
+  no reading of it at any single check would have been worth anything.
   **Nine added fires turned "passes every check" into "fails two."** Had it shipped at 14:50 it would
   have shipped on nine fires of noise. Objection 2 was the operative one: the halves were
   morning-vs-afternoon of ONE Saturday, not a real out-of-sample split, and it broke as the afternoon
   extended. **The cleanest vindication of the 60/100 bars this project has produced.**
-- Full grid 18:47: weekend n=81 −0.021 · weekday n=57 −0.177 (UNDER THE BAR, NOT READ) · all n=138 −0.085.
+- Full grid 20:47: weekend n=89 +0.010 · weekday n=57 −0.177 (UNDER THE BAR, NOT READ) · all n=146 −0.063.
 - **Why it is still not a finding:** (1) it is ONE Saturday — 62 fires from one day is one draw of the
   regime; (2) its halves are morning-vs-afternoon of the SAME continuous day, the weakest form of the
   check (the 09-11 flat bucket looked identical to three decimals and died at McNemar p=0.341);
