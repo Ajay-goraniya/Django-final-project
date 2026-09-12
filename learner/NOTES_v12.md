@@ -2534,6 +2534,41 @@ question in the v12.2.4 port; count how many MAIN signals clear the EV bar in pa
 far and both refused; redesign the re-arm criterion on a longer window, its two windows disagreed at nine of
 today's checks.
 
+## 20:38 UTC safety net (Sat 09-12) - THE SILENT FLAG REVERT HAPPENED AGAIN. Second occurrence.
+Caught by the per-kind check, which is the only reason it was seen at all.
+
+| reading | uptime | master | MAIN | REVERSAL | EF |
+|---|---|---|---|---|---|
+| 20:20 check-in | 136,252.9 s (37.8 h) | ON | False | False | False |
+| 20:38 safety net | 137,320.4 s (38.1 h) | OFF | **True** | **True** | **True** |
+
+Uptime rose by 1,068 s between the two readings, so the engine did NOT restart. Master turned itself off and
+all three kinds turned themselves on, in place, inside 18 minutes. This is the same signature as 09-11 14:40
+(master off, all three kinds True, no restart, uptime 8.1 h at the time) and it is now a repeating fault, not
+a one-off.
+
+Action taken: re-asserted all three kinds to False via /api/controls/signal. Verified after the write - master
+OFF, all three False. Master was already off so nothing could have fired, but the exposure is real: if master
+had been switched on in those 18 minutes, ALL THREE lanes would have fired, MAIN included, and MAIN is meant
+to be off always and has never traded live.
+
+Wrote learner/tools/reassert_lanes_off.py for this. It reads state first, writes only the kinds that are
+actually True, prints before and after, and never touches master.
+
+What is now known about the fault, kept separate from what is guessed:
+- KNOWN: it has occurred twice, 09-11 14:40 and 09-12 20:38, about 30 h apart.
+- KNOWN: both times master went OFF and all three kinds went True together.
+- KNOWN: both times uptime was continuous across the event, so it is not a restart or safe-startup path.
+- KNOWN: "safe startup" is the label the health line prints whenever master is off, so seeing that text does
+  NOT imply a restart happened - I nearly misread it that way and it would have sent the investigation wrong.
+- NOT KNOWN: what writes the flags. Nothing in this session touched them between 20:20 and 20:38.
+- WORTH TESTING FIRST on Sunday: whether the engine has a scheduled or watchdog path that reverts controls to
+  their defaults, since all three kinds returning to True is exactly what a default would look like, and
+  master defaulting off is the documented safe-startup behaviour applied without a restart.
+
+Until that is understood the per-kind check at every check-in is the control, and it must not be reduced to a
+master_status check. The 09-11 note already said this; this occurrence is the proof it was right.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
