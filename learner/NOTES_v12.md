@@ -2033,6 +2033,43 @@ over the fair window. Runner gap 111.9, back inside the 111-112 band it held fro
 band. Still an observation, not a finding - the Sunday job is to reproduce one shared candle in both runners
 and find where the numbers part, not to keep watching the gap.
 
+## 10:20 UTC check-in (Sat 09-12) - strongest hour of the run on all three paper lanes
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 12W/8L +0.324 | 21W/19L +0.092 |
+Fourth positive reading running, and the highest last-20 of the whole sequence. The last-40 fell from +0.174
+to +0.092 in the same hour, so once again the two windows move against each other. Not arming; unchanged
+reason.
+
+Tokyo: master ON, all three kinds false, equity 15.02, nothing open, stake $1 matching the ladder, uptime
+27.8 h. No silent flag revert. 12 processes, 12 G free (disk crossed to 70% used).
+
+Fair table (window opens with the newest run, Polymarket paper v10 at 09-11 15:15 UTC, 19.1 h):
+| run | W/L | acc | open | PnL @$10 |
+|---|---|---|---|---|
+| Predict.fun paper (v10) | 52/46 | 53% | 1 | +118.6 |
+| Polymarket paper (v10) | 68/62 | 52% | 1 | +116.9 |
+| Polymarket v12 lane (paper exec) | 70/56 | 56% | 1 | +240.8 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 15.02, equity 15.02) |
+
+Biggest hour so far: Polymarket v10 +48.1 on 6W/3L, the v12 lane +60.1 on 7W/2L, Predict.fun +23.2. The
+Polymarket v10 runner has gone from -11.8 at 06:20 to +116.9 in four hours.
+
+Runner gap 123.9, the widest of the run and a clear break from the 111-112 band that held for four of the
+previous five hours. Both runners rose, the v12 lane simply rose more. That is the second reading against a
+fixed offset in three hours, so the constant-offset hypothesis from 05:20-07:20 should not be carried into
+Sunday as settled. What has held across every hour is direction: the two runners have never moved opposite
+ways. Same signal, same venue, co-moving, unequal magnitude - which is what a slippage-model difference looks
+like, and the v12 lane is the zero-slippage one.
+
+Also answered this hour (user question, no code change): the v12 checkpoint's EV is NOT hardcoded. Its --ev
+flag defaults to None, and decide() then uses the model's regime thresholds 0.15/0.25/0.25, byte-identical to
+the lane running here. What IS hardcoded is the mode: --mode accepts only 'pnl' and the call passes the
+literal string, so the accuracy lane is unreachable even though model_v10.json ships full accuracy floors.
+poly_core.py:48 runs math.isfinite on the threshold, which would throw on the dict accuracy mode returns, so
+that is structural and not just a CLI restriction. EV-none works identically in live: the --live flag only
+swaps the broker, and the executor re-check honours whatever threshold the decision carried.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
