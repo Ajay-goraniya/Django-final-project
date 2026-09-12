@@ -1948,6 +1948,40 @@ runners moved UP together this time (-11.8 -> -1.6 and +99.3 -> +110.4) having m
 with the gap steady at 111-112 throughout. Two hours of co-movement at a fixed offset is now the better
 supported explanation than drifting timing jitter.
 
+## 07:20 UTC check-in (Sat 09-12) - flipped straight back positive, one hour after flipping negative
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 13W/7L +0.264 | 23W/17L +0.143 |
+Back to +0.264 one hour after -0.140. The last-40 barely moved across both hours (+0.142 -> +0.143) while the
+last-20 swung 0.40 per $1 between consecutive readings.
+
+That is the cleanest evidence yet for what is wrong with the criterion, and it is a stronger statement than
+yesterday's refutation. A window whose reading swings 0.40 in an hour, while the window twice its length sits
+still, is not measuring a changing edge - it is measuring the last few coin flips. Yesterday we could say the
+rule armed at bad moments; today we can say the quantity it arms on carries almost no information at this
+length. The 22:12 refutation stands and is now better understood.
+
+Concretely for the redesign: the last-40 has now been positive and stable across five consecutive hours
+(+0.033, +0.164, +0.142, +0.143) while the last-20 went +0.118, -0.140, +0.264. Any replacement should be
+built on a window where consecutive readings are not near-independent. The right first step Sunday is to
+measure how long that window has to be before hour-to-hour readings correlate at all - not to pick 40 because
+it looks calmer this morning, which would be the same fit-to-recent-noise error one level up.
+
+Tokyo: master ON, all three kinds false, equity 15.02, nothing open, stake $1 matching the ladder, uptime
+24.8 h. No silent flag revert. 12 processes, 12 G free.
+
+Fair table (window opens with the newest run, Polymarket paper v10 at 09-11 15:15 UTC, 16.1 h):
+| run | W/L | acc | open | PnL @$10 |
+|---|---|---|---|---|
+| Predict.fun paper (v10) | 44/38 | 54% | 0 | +94.7 |
+| Polymarket paper (v10) | 54/55 | 50% | 2 | +25.3 |
+| Polymarket v12 lane (paper exec) | 55/49 | 53% | 2 | +137.3 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 15.02, equity 15.02) |
+
+Good hour on both venues: Predict.fun paper +40.8 and Polymarket paper +26.9 in the hour. Runner gap 112.0,
+the third consecutive hour at 111-112 with both runners moving the same direction. The constant-offset reading
+is now the working hypothesis for the Sunday review rather than a passing observation.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
