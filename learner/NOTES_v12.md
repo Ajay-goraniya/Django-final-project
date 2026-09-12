@@ -1819,6 +1819,26 @@ observation-only. This checkpoint is a different thing and does have the dashboa
 candidate for the real v12 lane. The build11 venue-backend question is now a genuine choice rather than a
 foregone one, and it is a Sunday decision, not a tonight one.
 
+## 02:20 UTC check-in (Sat 09-12) - strongest trigger reading yet, still not arming
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 14W/6L **+0.418** | 21W/19L +0.082 |
+
+That is the best reading the trigger has produced since it was created, and both windows now agree. Under the
+ORIGINAL rule this would be the second consecutive positive check (01:20 +0.134, 02:20 +0.418) and REVERSAL
+would arm right now.
+
+**Still not arming.** The criterion was refuted at 22:12 under its own pre-committed review condition, and the
+commitment was that a redesigned rule is written down BEFORE it is used again. A 14-6 hour is exactly when
+that commitment is worth something - if I only honour a pre-commitment when the numbers are bad, it was never
+a pre-commitment. Recording the reading so the redesign can be judged against it later.
+
+Tokyo: master ON, all three kinds false, equity 15.02, nothing open. 12 processes, 12 G free.
+Fair table (window from 15:04:25 09-11): PF paper 29/27 +55.9; Poly paper 39/41 -1.9; v12 lane 40/37 +81.0;
+Tokyo 5/10 -7.06 real. Predict.fun paper has now pulled clearly ahead of Polymarket paper on the shared
+window (+55.9 vs -1.9) and has held that for three consecutive hours, which is longer than the noise swing I
+flagged at 01:20.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
