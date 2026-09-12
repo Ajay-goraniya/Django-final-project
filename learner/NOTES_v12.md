@@ -2199,6 +2199,39 @@ Fair table (window opens with the newest run, Polymarket paper v10 at 09-11 15:1
 
 Read the 11:20-12:27 stretch of all three paper runs as a gap, not as a quiet market.
 
+## 13:20 UTC check-in (Sat 09-12) - all runs trading normally again; trigger turned negative
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 9W/11L -0.038 | 22W/18L +0.137 |
+Trigger went negative, from +0.015 to -0.038, with the same 9W/11L record - the win count has been under
+water for three checks while the per-$1 crossed zero in both directions. Not arming; lanes are already off so
+the symmetric re-pause is moot.
+
+Recovery confirmed holding: both feed-reporting engines read 0 s on all four feeds, and Predict.fun graded
+3 new fires and Polymarket 3 in the hour, so the engines are deciding and trading again. The watcher has
+stayed silent since it gained the feed-age check, which is now a silence that means something.
+
+Tokyo: master ON, all three kinds false, equity 15.02, nothing open, stake $1 matching the ladder, uptime
+30.8 h. No silent flag revert. 13 processes, 12 G free.
+
+Fair table (window opens with the newest run, Polymarket paper v10 at 09-11 15:15 UTC, 22.1 h):
+| run | W/L | acc | open | PnL @$10 |
+|---|---|---|---|---|
+| Predict.fun paper (v10) | 56/51 | 52% | 0 | +103.5 |
+| Polymarket paper (v10) | 70/67 | 51% | 1 | +100.7 |
+| Polymarket v12 lane (paper exec) | 73/61 | 54% | 1 | +225.3 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 15.02, equity 15.02) |
+
+Mild give-back hour: Predict.fun +5.8, Polymarket v10 -13.4, v12 lane -12.8. Runner gap 124.6, holding near
+the 123.9 of the last two readings.
+
+H1 correction merged and applied to the notes this hour: the certifiable Polymarket number is +0.022/$1 at
+n=148, not the -0.062 at n=61 I recorded yesterday, and the fresh-vs-stale split is retracted outright. The
+five-fold gap against the uncertifiable +0.120 survives, so the decision not to size on +0.187 is unchanged.
+The accurate sentence is now "about zero once the price is verifiable", not "it loses money". Worth keeping
+in view for the Sunday session: two of my own recorded numbers have been corrected in 24 hours, both in the
+direction of the earlier reading being too confident on a small sample.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
