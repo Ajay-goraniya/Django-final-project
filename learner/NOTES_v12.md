@@ -1982,6 +1982,33 @@ Good hour on both venues: Predict.fun paper +40.8 and Polymarket paper +26.9 in 
 the third consecutive hour at 111-112 with both runners moving the same direction. The constant-offset reading
 is now the working hypothesis for the Sunday review rather than a passing observation.
 
+## 08:20 UTC check-in (Sat 09-12) - strong hour on all three paper runs
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 13W/7L +0.290 | 24W/16L +0.213 |
+Second positive reading in a row and both windows rose together this time (+0.264 -> +0.290 and
++0.143 -> +0.213). Still not arming: unchanged reason, the rule is refuted and unreplaced.
+
+Tokyo: master ON, all three kinds false, equity 15.02, nothing open, stake $1 matching the ladder, uptime
+25.9 h. No silent flag revert. 12 processes, 12 G free.
+
+Fair table (window opens with the newest run, Polymarket paper v10 at 09-11 15:15 UTC, 17.1 h):
+| run | W/L | acc | open | PnL @$10 |
+|---|---|---|---|---|
+| Predict.fun paper (v10) | 46/40 | 53% | 0 | +100.8 |
+| Polymarket paper (v10) | 59/56 | 51% | 0 | +67.0 |
+| Polymarket v12 lane (paper exec) | 60/51 | 54% | 0 | +175.6 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 15.02, equity 15.02) |
+
+Best hour of the run on Polymarket: the v10 runner took +41.7 and the v12 lane +38.3, both 5W/1L on the hour.
+Predict.fun added +6.1. All three paper runs are now positive over the fair window for the first time since
+the window opened, and the Polymarket v10 runner has climbed from -11.8 at 06:20 to +67.0 in two hours.
+
+Runner gap 108.6, the first time it has moved off the 111-112 band in four hours. One hour is not enough to
+call the constant-offset hypothesis either way, but it is the first datapoint against it, so note it rather
+than let the earlier three-hour run of 111-112 harden into a conclusion. Sunday question unchanged: reproduce
+one shared candle end to end in both runners and find where the per-trade numbers actually part.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
