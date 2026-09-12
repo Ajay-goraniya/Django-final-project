@@ -2310,6 +2310,50 @@ This is the behaviour the method is for - a passing number that gets held back b
 too weak to support it. Worth remembering against the re-arm criterion, where five good hours in a row nearly
 justified reinstating a rule that had already been refuted.
 
+## 15:20 UTC check-in (Sat 09-12) - unchanged trigger; v12.2.3 confirmed working on the user's live box
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 10W/10L -0.059 | 21W/19L +0.089 |
+Identical to 14:20 - Predict.fun graded nothing in the hour. Not arming.
+
+Tokyo: master ON, all three kinds false, equity 15.02, nothing open, uptime 32.9 h. No silent flag revert.
+13 processes, 12 G free.
+
+Fair table (window opens with the newest run, Polymarket paper v10 at 09-11 15:15 UTC, 24.1 h):
+| run | W/L | acc | open | PnL @$10 |
+|---|---|---|---|---|
+| Predict.fun paper (v10) | 60/56 | 52% | 0 | +90.1 |
+| Polymarket paper (v10) | 78/71 | 52% | 1 | +154.9 |
+| Polymarket v12 lane (paper exec) | 81/64 | 56% | 1 | +288.0 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 15.02, equity 15.02) |
+
+Polymarket keeps climbing: the v10 runner +19.3 and the v12 lane +27.8 in the hour. Predict.fun +0.6.
+
+### v12.2.3 verified from the user's live payload
+The dashboard error finally named itself once the handler was hardened: "Object of type datetime is not JSON
+serializable" on /api/state. Cause was mine - the SDK's account-PnL point carries a datetime and I put that
+field in the payload without normalising it. Before the hardening the exception escaped to the base handler,
+which replies with an HTML traceback the page cannot parse, so the panel went dark with no reason. The same
+value also made the venue snapshot write raise inside its loop's exception handler, discarding every snapshot
+and silently keeping the reported PnL on the local basis. Fixed at the venue layer, the encoder and the DB
+write. 91 tests.
+
+Their live state now reads: pnl_basis VENUE_POSITION_PNL with 3 rows priced and 0 awaiting; local vs venue
+divergence worst_abs 8e-05, i.e. our arithmetic and Polymarket's position PnL agree to four decimals, which is
+the strongest check available that the venue-truth path is correct; dashboard_errors empty; reserve phantom
+3.00 with effective 0.00 and headroom back to the full 18.40; feeds lagging 64-67 ms with zero reconnects.
+
+MAIN fired live on their box (DOWN, 60 reads, p 0.272). Two things flagged to them honestly:
+1. ENTRY TIMING DIFFERS FROM BUILD 11. MAIN needs 12 s AND 60 feature rebuilds. In build 11 the rebuild runs
+   per market event at 10-20/s, so 60 reads takes 3-6 s and the 12 s rule binds. In v12 the loop runs at 4/s,
+   so 60 reads takes 15 s and the READ COUNT binds - their fire landed 17 s into the candle. The lane enters
+   later than it was tuned for. This is the cadence caveat H1's extraction warned about and I should have
+   caught it before shipping. Not corrected unilaterally: changing the loop rate or the read count is a
+   parameter change on an untested lane, which is the user's call, and it must be measured not guessed.
+2. venue_realized_pnl (10.41) and the account PnL series (-0.035) are different quantities. Since the position
+   query now includes CLOSED positions, that sum spans their whole history, not this run. The per-candle
+   attribution is the number that drives reporting and it is the one matching to four decimals.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
