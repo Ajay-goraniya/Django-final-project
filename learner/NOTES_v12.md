@@ -2232,6 +2232,52 @@ The accurate sentence is now "about zero once the price is verifiable", not "it 
 in view for the Sunday session: two of my own recorded numbers have been corrected in 24 hours, both in the
 direction of the earlier reading being too confident on a small sample.
 
+## 14:20 UTC check-in (Sat 09-12) - ran late at 14:40; v12.2 delivered
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 10W/10L -0.059 | 21W/19L +0.089 |
+Negative again on the 20-fire window at an exactly even 10W/10L, while the 40 holds +0.089. Not arming.
+
+Tokyo: master ON, all three kinds false, equity 15.02, nothing open, uptime 32.2 h. No silent flag revert.
+13 processes, 12 G free. Engine feeds all current; the watcher has stayed silent since the feed-age check
+was added at 12:20.
+
+Fair table (window opens with the newest run, Polymarket paper v10 at 09-11 15:15 UTC, 23.4 h):
+| run | W/L | acc | open | PnL @$10 |
+|---|---|---|---|---|
+| Predict.fun paper (v10) | 59/55 | 52% | 1 | +89.5 |
+| Polymarket paper (v10) | 75/69 | 52% | 2 | +135.6 |
+| Polymarket v12 lane (paper exec) | 78/63 | 55% | 2 | +260.2 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 15.02, equity 15.02) |
+
+Strong stretch on Polymarket: the v10 runner is up 38.7 since 13:20 and the v12 lane 34.9. Predict.fun gave
+back 6.4. Runner gap 124.6, flat against last hour.
+
+### v12.2 shipped to the user (out of band, not a check-in item)
+The user sent a v12.1 package and their live Mumbai dashboard. Three defects were visible on the screenshot
+itself and are now fixed and delivered as learner/v12_2/ with 82 passing tests:
+
+1. MAIN and REVERSAL read 0.00 and could never fire - the build reported them as having no signal source
+   because the packaged v10 classifier has none. True, but they never ran on v10: in Build 11 they share a
+   Binance pressure engine, which v12 already has every input for. Ported in poly_lanes.py with the original
+   constants and gate order, wired to the same controls EF uses, 14 parity tests. NOT claimed as profitable -
+   MAIN has 0 live fills ever and REVERSAL 53. A paper run fired MAIN and the EV guard then correctly refused
+   it, because after MAIN's 12 s confirmation the market had already priced the move at fair 0.99. That
+   lateness is inherent to the lane on a 5-minute binary and must not be "fixed" by lowering the EV bar.
+2. Money was computed locally and labelled an estimate. Fees now come from the venue's fee_rate_bps per
+   trade, PnL and win/loss from the venue position's realized/total PnL, sizing bankroll from venue cash plus
+   venue position value. The local figure is kept beside it and the divergence reported.
+3. Feed age measured time since the last message, which tests socket liveness not data freshness, so a
+   lagging feed read as LIVE. Arrival age and event lag are now separate and both must pass. The single 2 s
+   limit was also BELOW the measured maximum gap on spot (2.62 s) and perp (2.43 s), so a healthy feed was
+   intermittently blocking fires - limits are per stream now, set from a 100 s measurement.
+
+Also: the pending reserve is now cross-checked against Polymarket's open-order list, so a dead local row
+stops holding funds (their screenshot showed $3.00 locked by a rejected order and available reading 13.42
+against a 16.42 wallet); endpoint failover because every api.binance.com mirror answers 451 from some regions
+while data-api.binance.vision serves the same payloads; the book cache no longer discards the whole feed on
+clock skew; latency samples every attempt rather than only accepted ones; execution budget configurable.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
