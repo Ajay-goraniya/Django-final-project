@@ -2118,6 +2118,56 @@ hour by hour, which has now told us everything it can.
 Watcher note: the new liveness watcher has been running since 11:30 and has printed nothing, which is its
 healthy state.
 
+## 12:20 UTC check-in (Sat 09-12) - INCIDENT: three engines ran deaf for 72 minutes after the proxy port changed
+I caught this only because the fair table was identical at 11:20, 12:10 and 12:21. "No fires" looked like the
+models declining to trade, and at 12:10 I said exactly that in chat. That was wrong, and it is worth writing
+down plainly: three engines were alive, answering HTTP, and receiving nothing.
+
+What happened. The 11:30 container restart changed the agent proxy port from 43733 to 41463. Processes carry
+their environment from launch, so every engine started before the restart still dialled 43733 and its
+websockets died. The harness had also killed the stale-proxy recovery task mid-run, which is why the four
+build11 twins came back (etime 69 min) while build10, the v10 runner and the v12 lane did not. Those three
+kept serving /api/state with feed_age_s around 4,320 s.
+
+How I confirmed it rather than guessing: /api/state on 8788 and 8790 reported all four feeds ~4,326 s stale
+and last_decision 72 minutes old, and /proc/<pid>/environ on the stalled processes held https_proxy port
+43733 against the live 41463. That is the documented stale-proxy condition, and restart_all.sh is its runbook.
+
+Recovery. Stopped 7833, 7837 and 8029 by exact pid, never by pattern. restart_all.sh brought back build10 and
+the v10 runner on the same databases. It does not cover the v12 lane, so I added restart_v12_lane.sh for it,
+same database, no --reset. All feeds now read 0 s and all seven ports answer. Both Polymarket runners graded
+their open trade on the way back: Polymarket v10 +17.2 and the v12 lane +17.3.
+
+Data lost: 72 minutes of decisions and fires on three engines. NOT lost: the 1 Hz Polymarket order book, which
+is the only irreplaceable tape here. book1s.py, poly1s.py and venue_collect.py survived because they were
+never restarted and reconnect on their own; their rows stayed 0-3 s old throughout.
+
+The watcher gap, which is mine. I rebuilt the watcher at 11:30 specifically to check liveness rather than pid
+count, and it still missed this. It probed ports for a 200 and checked row age in the LOGGER databases - both
+of which were healthy, because the loggers are separate processes from the engines. An engine can answer HTTP
+with every feed dead. Fixed: watch_live.py now reads feed_age_s from 8788 and 8790 and alerts above 180 s, and
+covers all seven ports instead of five. Improvement #19 was the same lesson one level shallower; this is the
+second time a monitor has passed a dead run, and the rule that generalises is to check the thing the run is
+supposed to PRODUCE, never a proxy for it.
+
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 9W/11L +0.015 | 22W/18L +0.139 |
+Unchanged from 11:20, since Predict.fun graded nothing during the outage. Not arming.
+
+Tokyo: unaffected throughout - it runs on its own host, not in this container. Master ON, all three kinds
+false, equity 15.02, nothing open, uptime 29.9 h.
+
+Fair table (window opens with the newest run, Polymarket paper v10 at 09-11 15:15 UTC, 21.2 h):
+| run | W/L | acc | open | PnL @$10 |
+|---|---|---|---|---|
+| Predict.fun paper (v10) | 53/49 | 52% | 0 | +97.7 |
+| Polymarket paper (v10) | 69/64 | 52% | 0 | +114.1 |
+| Polymarket v12 lane (paper exec) | 71/58 | 55% | 0 | +238.1 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 15.02, equity 15.02) |
+
+Read the 11:20-12:27 stretch of all three paper runs as a gap, not as a quiet market.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
