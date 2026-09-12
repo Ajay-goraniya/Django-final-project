@@ -2569,6 +2569,39 @@ What is now known about the fault, kept separate from what is guessed:
 Until that is understood the per-kind check at every check-in is the control, and it must not be reduced to a
 master_status check. The 09-11 note already said this; this occurrence is the proof it was right.
 
+## 21:20 UTC check-in (Sat 09-12) - flags held after the re-assert; both windows still split
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 10W/10L +0.045 | 20W/20L -0.011 |
+Short window barely positive, long window barely negative, both at exactly even win counts. Tenth disagreement
+today. Not arming.
+
+Lane flags 42 minutes after the 20:38 re-assert: MAIN, REVERSAL and EF all still False. The re-assert held.
+
+Master is still OFF. It turned itself off during the 20:38 event and I have deliberately NOT turned it back
+on. Master ON with every lane off and master OFF with every lane off are identical in what can trade - nothing
+- and switching master on is an enabling action with no reason behind it right now. The standing state was
+master ON, so this is a change worth naming rather than letting drift silently: the account is currently one
+step further from trading than it was this morning, not one step closer.
+
+Tokyo uptime 38.8 h, still continuous. 13 processes. Disk crossed to 71% used, 12 G free - first move in the
+figure all day, worth a glance tomorrow but not close to a problem.
+
+Fair table (window opens with the newest run, Polymarket paper v10 at 09-11 15:15 UTC, 30.1 h):
+| run | W/L | acc | open | PnL @$10 |
+|---|---|---|---|---|
+| Predict.fun paper (v10) | 78/75 | 51% | 0 | +74.8 |
+| Polymarket paper (v10) | 104/93 | 53% | 0 | +199.5 |
+| Polymarket v12 lane (paper exec) | 108/86 | 56% | 0 | +357.6 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 15.02, equity 15.02) |
+
+Predict.fun -22.0 on 2W/4L, Polymarket v10 -4.7, the v12 lane +28.0. First hour in ten where the two
+Polymarket runners moved in OPPOSITE directions, and the gap jumped from 135.6 to 158.1. That is the largest
+single-hour move in the gap so far and it cuts against the constant-offset reading recorded at 19:20. Noted
+without a conclusion: one hour does not overturn nine, and the honest position is still that the gap is
+unexplained and neither runner's number should be read as the venue's edge until a shared candle is
+reproduced end to end.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
