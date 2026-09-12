@@ -2070,6 +2070,23 @@ poly_core.py:48 runs math.isfinite on the threshold, which would throw on the di
 that is structural and not just a CLI restriction. EV-none works identically in live: the --live flag only
 swaps the broker, and the executor re-check honours whatever threshold the decision carried.
 
+## 11:30 UTC (Sat 09-12) - session container restarted; no model process was lost
+The harness restarted the session container and reported three background tasks killed: the keepalive, the
+health watch, and a stale-proxy recovery one-shot. Those were my watcher shells, not the runs. All 12 model
+processes survived, because they were launched detached with setsid.
+
+Verified liveness rather than pid presence, which is the whole point of improvement #19: book1s and poly1s
+were both writing rows 1 second old, venue_collect 3 seconds, and the four build11 twins plus the v12 lane all
+answered /api/state with 200. The v10 runner and v12 lane had traded 362 seconds earlier, one candle back.
+Tokyo unaffected at 28.7 h uptime, master ON, all three kinds false, equity 15.02. No Polymarket book data was
+lost - which was the real risk here, since that tape cannot be refetched.
+
+Replaced the watcher with learner/tools/watch_live.py and restarted it. It checks what the runs PRODUCE:
+row age per logger database against a per-feed limit, the process count as a floor rather than a signal, and
+an HTTP probe of all five ports. It prints only ALERT lines and repeats a given condition at most once every
+10 minutes. The old keepalive counted processes alone, which is exactly what let two dead-websocket runners
+pass for an hour on 09-11.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
