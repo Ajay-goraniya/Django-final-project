@@ -1,5 +1,5 @@
 {
- "last_epoch": 1789242900,
+ "last_epoch": 1789250100,
  "fires": [
   {
    "epoch": 1789079400,
@@ -1752,6 +1752,66 @@
    "bi": 0,
    "hit": true,
    "pnl": 1.177777777777778
+  },
+  {
+   "epoch": 1789244100,
+   "day": "2026-09-12",
+   "hour": 20,
+   "wknd": true,
+   "S": 120,
+   "side": "UP",
+   "ask": 0.44,
+   "bi": 0,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789244400,
+   "day": "2026-09-12",
+   "hour": 20,
+   "wknd": true,
+   "S": 120,
+   "side": "DOWN",
+   "ask": 0.5,
+   "bi": 0,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789246200,
+   "day": "2026-09-12",
+   "hour": 20,
+   "wknd": true,
+   "S": 30,
+   "side": "UP",
+   "ask": 0.44,
+   "bi": 0,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789247100,
+   "day": "2026-09-12",
+   "hour": 21,
+   "wknd": true,
+   "S": 120,
+   "side": "UP",
+   "ask": 0.42,
+   "bi": 0,
+   "hit": true,
+   "pnl": 1.3333333333333335
+  },
+  {
+   "epoch": 1789247400,
+   "day": "2026-09-12",
+   "hour": 21,
+   "wknd": true,
+   "S": 45,
+   "side": "UP",
+   "ask": 0.46,
+   "bi": 0,
+   "hit": false,
+   "pnl": -1.0
   }
  ]
 }
