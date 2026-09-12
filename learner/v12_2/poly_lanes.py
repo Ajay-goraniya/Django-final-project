@@ -224,8 +224,22 @@ class LaneEngine:
         self.feature = {}
         self.reject_up = 0.0; self.reject_down = 0.0; self.reject_ts = 0.0
         self.candle_high_seen = 0.0; self.candle_low_seen = 0.0
-        self.current_main = None      # {'direction','ts_ms','probability_up'}
-        self.current_reversal = None
+        # A signal is not a position. current_main is set only once an order has
+        # actually been placed; main_signal records that the lane called the
+        # candle whether or not it could be bought. v12.2.3 conflated the two, so
+        # a MAIN refused by the EV guard still showed on the dashboard as though
+        # it had traded, and still consumed the candle so it could never retry.
+        self.current_main = None      # a REAL position: {'direction','ts_ms','probability_up'}
+        self.main_signal = None       # the call, executed or not
+        self.main_attempts = 0
+        self.main_last_reason = ''
+        self.current_reversal = None  # a REAL hedge position
+        self.reversal_signal = None   # the call, executed or not
+        self.reversal_attempts = 0
+        # A decision is outstanding between being returned and the engine saying
+        # what happened to it. Without this the lane would call the same candle
+        # again on the very next evaluation.
+        self.pending = {'MAIN': False, 'REVERSAL': False}
         self.main_streak_dir = ""; self.main_streak_start_ms = 0; self.main_streak_reads = 0
         self.main_block = ""; self.reversal_state = {"status": "idle", "detail": ""}
         self._candle_id = None
@@ -246,6 +260,9 @@ class LaneEngine:
             # New candle: MAIN/REVERSAL are once per candle, and the rejection
             # extremes are per-candle state (build11 resets them the same way).
             self.current_main = None; self.current_reversal = None
+            self.main_signal = None; self.main_attempts = 0; self.main_last_reason = ''
+            self.reversal_signal = None; self.reversal_attempts = 0
+            self.pending = {'MAIN': False, 'REVERSAL': False}
             self.main_streak_dir = ""; self.main_streak_start_ms = 0; self.main_streak_reads = 0
             self.reject_up = self.reject_down = 0.0
             self.candle_high_seen = self.candle_low_seen = 0.0
@@ -407,8 +424,37 @@ class LaneEngine:
                       * feasibility_factor(required, self.sigma_per_root_second(), seconds_left))
         return clamp(0.5 + edge * confidence, 0.02, 0.98), confidence
 
+    MAIN_MAX_ATTEMPTS = 6
+    def confirm(self, kind, placed, reason=''):
+        """Told by the engine what actually happened to the order.
+
+        Placed means the venue has it. Refused means the signal stands but the
+        price was not payable, so the lane keeps watching and may fire again in
+        the same candle if the book improves. Attempts are capped so a signal
+        that is never payable cannot retry all candle.
+        """
+        self.pending[kind] = False
+        if kind == 'MAIN':
+            self.main_last_reason = reason or ''
+            if placed:
+                self.current_main = dict(self.main_signal or {})
+            else:
+                self.main_attempts += 1
+        elif kind == 'REVERSAL':
+            if placed:
+                self.current_reversal = dict(self.reversal_signal or {})
+            else:
+                # A refused REVERSAL is simply not a hedge. The call stands and
+                # may be retried while the flip holds and the window is open.
+                self.reversal_attempts += 1
+
     def _try_main(self, ts_ms, f):
-        if self.current_main is not None: return None
+        # A placed position ends the candle for this lane. A refused one does not,
+        # until the attempt cap is reached.
+        if self.current_main is not None or self.pending.get('MAIN'): return None
+        if self.main_attempts >= self.MAIN_MAX_ATTEMPTS:
+            self.main_block = f'not payable after {self.main_attempts} attempts'
+            return None
         phase = (ts_ms - int(self.candle["time"])) / 1000.0
         if phase > MAIN_LAST_SECOND:
             self.main_block = "outside the callable window"; return None
@@ -425,7 +471,8 @@ class LaneEngine:
             return None
         self.main_block = ""
         p_up, conf = self._main_probability(f, direction)
-        self.current_main = dict(direction=direction, ts_ms=ts_ms, probability_up=p_up)
+        self.main_signal = dict(direction=direction, ts_ms=ts_ms, probability_up=p_up)
+        self.pending['MAIN'] = True
         p_side = p_up if direction == "UP" else 1.0 - p_up
         return dict(kind="MAIN", side=direction, p=p_side, probability_up=p_up,
                     confidence=conf, sec=int(phase), rv60=None,
@@ -437,7 +484,14 @@ class LaneEngine:
         opposite the MAIN already on the books. No persistence requirement:
         build11 removed the old eight-check gate because it fired once in 57
         candles. This is a hedge leg, not a close - MAIN stays open."""
+        # Build 11 hedges an open MAIN. If MAIN was refused there is nothing to
+        # hedge, and firing here would be an outright position wearing the word
+        # hedge, so REVERSAL waits for a real one.
         if not self.current_main or self.current_reversal is not None: return None
+        if self.pending.get('REVERSAL'): return None
+        if self.reversal_attempts >= self.MAIN_MAX_ATTEMPTS:
+            self.reversal_state = {"status": "watching", "detail": "hedge not payable"}
+            return None
         phase = safe_float(f.get("phase_second"), 0.0)
         if not (REVERSAL_MIN_SECOND <= phase <= REVERSAL_LAST_SECOND):
             self.reversal_state = {"status": "idle", "detail": "outside 30-285s window"}
@@ -454,7 +508,8 @@ class LaneEngine:
         self.reversal_state = {"status": "firing", "detail": detail}
         fair = safe_float(f.get("fair_p_up"), 0.5)
         p_up = fair if live == "UP" else 1.0 - fair
-        self.current_reversal = dict(direction=live, ts_ms=ts_ms)
+        self.reversal_signal = dict(direction=live, ts_ms=ts_ms)
+        self.pending['REVERSAL'] = True
         p_side = p_up if live == "UP" else 1.0 - p_up
         return dict(kind="REVERSAL", side=live, p=p_side, probability_up=(fair if live == "UP" else 1.0 - fair),
                     sec=int(phase), rv60=None,
@@ -480,10 +535,16 @@ class LaneEngine:
             fair_p_up=f.get("fair_p_up"), volume_ratio=f.get("volume_ratio"),
             probability_up=f.get("probability_up"), phase_second=f.get("phase_second"),
             main=(dict(self.current_main) if self.current_main else None),
+            main_signal=(dict(self.main_signal) if self.main_signal else None),
+            main_placed=bool(self.current_main),
+            main_attempts=self.main_attempts, main_last_reason=self.main_last_reason,
             main_block=self.main_block, main_streak=dict(direction=self.main_streak_dir, reads=self.main_streak_reads),
             reversal=dict(self.reversal_state,
                           direction=(self.current_reversal or {}).get('direction')),
             reversal_fired=bool(self.current_reversal),
+            reversal_signal=(dict(self.reversal_signal) if self.reversal_signal else None),
+            reversal_placed=bool(self.current_reversal), reversal_attempts=self.reversal_attempts,
+            pending=dict(self.pending),
             aligned=self._aligned_direction(f) if f else None,
             thresholds=dict(odds_up=GATED_ODDS_UP, odds_down=GATED_ODDS_DOWN, vol_min=GATED_VOL_MIN,
                             hold_ms=MAIN_HOLD_MS, hold_reads=MAIN_HOLD_READS,

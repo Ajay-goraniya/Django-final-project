@@ -276,3 +276,43 @@ and the reported PnL silently stayed on the local basis. That is part of why
 
 Regression tests cover all three, including the exact payload shape from your
 box: the raw encode fails as it did live, and the server's encoder succeeds.
+
+---
+
+# 12.2.4 — a signal is not a position
+
+You saw MAIN reported as fired while no order existed, and the lane never tried
+again. Both are real defects and both were mine.
+
+**What actually happened to your fire.** MAIN called DOWN at probability 0.728.
+The DOWN contract was asking 0.80, which after the one-tick pad and fee costs
+0.8209 all-in, against a venue break-even of 0.8114. The EV was **-0.113**, so
+the order was correctly refused; clearing even the lowest threshold would have
+needed a probability of 0.944. The guard did its job. The reporting did not.
+
+**Defect 1: the dashboard said fired when it meant called.** The lane set its
+position the moment it produced a decision, before any order was attempted, so a
+refused MAIN rendered exactly like a held one. Signal and position are now
+separate throughout: a call that never reached the book shows as
+`SIGNAL DOWN · called but not executed · <reason>` in muted styling, and only a
+placed order shows as a position. The engine reads the order's actual outcome
+back from the journal and tells the lane, so the page cannot claim more than
+happened.
+
+**Defect 2: a refused MAIN consumed the candle.** Because the position was
+latched on the call, MAIN could never retry when the price improved seconds
+later. A refused order now leaves the signal standing and the lane may fire
+again in the same candle, capped at 6 attempts so a permanently unpayable signal
+cannot retry all candle. A placed order still ends the candle: one position per
+candle, as in the original.
+
+**Consequence worth stating: REVERSAL now requires a real MAIN position.**
+Previously it hedged the call. If MAIN was refused there is nothing to hedge,
+and firing anyway would be an outright bet wearing the word hedge. REVERSAL
+carries the same signal/position split and the same retry cap.
+
+A note on fidelity. Build 11's MAIN has **no EV gate at all** — it fires on the
+signal and economics enter only at sizing. Routing MAIN through the v10 EV check
+is my decision, not a port of the original, and it is why MAIN can be refused
+here when it would simply have traded there. I think refusing a -0.113 EV bet is
+right, but it is a departure and it should be visible rather than buried.

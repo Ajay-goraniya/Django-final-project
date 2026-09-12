@@ -95,6 +95,8 @@ class ReversalLane(unittest.TestCase):
         e = engine_with()
         fired = drive(e, 0, 100060.0, seconds=20, step_ms=100)
         self.assertTrue(fired and fired[0][1]['kind'] == 'MAIN')
+        # REVERSAL hedges a real position, so the order has to have been placed.
+        e.confirm('MAIN', placed=True)
         return e
 
     def test_requires_a_main_first(self):
@@ -149,6 +151,74 @@ class Primitives(unittest.TestCase):
     def test_model_weights_clamped_to_anchor_band(self):
         m = L.Model({'delta_1s': 99.0})
         self.assertAlmostEqual(m.weights['delta_1s'], 1.10 + L.MODEL_WEIGHT_CLAMP)
+
+class SignalIsNotAPosition(unittest.TestCase):
+    """v12.2.3 latched the candle the moment MAIN called it, before any order was
+    attempted. A MAIN the EV guard refused therefore showed on the dashboard as
+    though it had traded, and could never retry when the price improved."""
+
+    def _fired(self):
+        e = engine_with()
+        out = drive(e, 0, 100060.0, seconds=20, step_ms=100)
+        self.assertTrue(out and out[0][1]['kind'] == 'MAIN')
+        return e
+
+    def test_calling_it_does_not_create_a_position(self):
+        e = self._fired()
+        self.assertIsNotNone(e.main_signal, 'the call is recorded')
+        self.assertIsNone(e.current_main, 'but nothing is held until an order is placed')
+        self.assertFalse(e.monitor()['main_placed'])
+
+    def test_a_refused_order_lets_the_lane_try_again(self):
+        e = self._fired()
+        e.confirm('MAIN', placed=False, reason='padded price fails model EV')
+        self.assertIsNone(e.current_main)
+        self.assertEqual(e.main_attempts, 1)
+        again = drive(e, 21000, 100070.0, seconds=6, step_ms=100, candle_id=0)
+        self.assertTrue([d for _, d in again if d['kind'] == 'MAIN'],
+                        'the signal still stands, so it may fire again at a better price')
+
+    def test_a_placed_order_ends_the_candle_for_main(self):
+        e = self._fired()
+        e.confirm('MAIN', placed=True)
+        self.assertIsNotNone(e.current_main)
+        again = drive(e, 21000, 100070.0, seconds=6, step_ms=100, candle_id=0)
+        self.assertEqual([d for _, d in again if d['kind'] == 'MAIN'], [],
+                         'one position per candle')
+
+    def test_retries_are_capped(self):
+        e = self._fired()
+        for _ in range(L.LaneEngine.MAIN_MAX_ATTEMPTS):
+            e.confirm('MAIN', placed=False, reason='not payable')
+        again = drive(e, 21000, 100070.0, seconds=6, step_ms=100, candle_id=0)
+        self.assertEqual([d for _, d in again if d['kind'] == 'MAIN'], [])
+        self.assertIn('not payable after', e.main_block)
+
+    def test_reversal_requires_a_real_main_position(self):
+        # Hedging a position that was never taken is an outright bet, not a hedge.
+        e = self._fired()
+        e.confirm('MAIN', placed=False, reason='padded price fails model EV')
+        flipped = drive(e, 40000, 99930.0, seconds=30, step_ms=100,
+                        imbalance=-0.9, buy=False, candle_id=0)
+        self.assertEqual([d for _, d in flipped if d['kind'] == 'REVERSAL'], [],
+                         'no REVERSAL while MAIN holds nothing')
+
+    def test_reversal_fires_once_main_actually_holds(self):
+        e = self._fired()
+        e.confirm('MAIN', placed=True)
+        flipped = drive(e, 40000, 99930.0, seconds=30, step_ms=100,
+                        imbalance=-0.9, buy=False, candle_id=0)
+        revs = [d for _, d in flipped if d['kind'] == 'REVERSAL']
+        self.assertTrue(revs); self.assertEqual(revs[0]['side'], 'DOWN')
+
+    def test_monitor_reports_both_states_distinctly(self):
+        e = self._fired()
+        e.confirm('MAIN', placed=False, reason='padded price fails model EV')
+        m = e.monitor()
+        self.assertEqual(m['main_signal']['direction'], 'UP')
+        self.assertIsNone(m['main'])
+        self.assertFalse(m['main_placed'])
+        self.assertIn('EV', m['main_last_reason'])
 
 
 if __name__ == '__main__':

@@ -221,7 +221,17 @@ function updateUI(state){
       var k=ctl[kind]||{};
       if(k.source_available===false){text(dirId,'DISABLED');text(metaId,'no signal source');cls(dirId,'big');return;}
       if(!k.manual_enabled){text(dirId,'OFF');text(metaId,'switched off in Trade Controls');cls(dirId,'big muted');return;}
-      if(state&&state.direction){text(dirId,state.direction);text(metaId,(kind==='MAIN'?'held alignment':'hedge against MAIN')+(state.probability_up!=null?' · p '+formatNumber(state.probability_up,3):''));cls(dirId,'big '+(state.direction==='UP'?'up':'down'));return;}
+      if(state&&state.direction){text(dirId,state.direction);text(metaId,(kind==='MAIN'?'position held':'hedge against MAIN')+(state.probability_up!=null?' · p '+formatNumber(state.probability_up,3):''));cls(dirId,'big '+(state.direction==='UP'?'up':'down'));return;}
+      // A called signal that never reached the book is neither a position nor
+      // silence. Saying the direction alone read as though it had traded.
+      if(kind==='REVERSAL'&&L.reversal_signal&&!L.reversal_placed){
+        text(dirId,'SIGNAL '+L.reversal_signal.direction);
+        text(metaId,'hedge called but not executed'+(L.reversal_attempts?' · '+L.reversal_attempts+' attempt'+(L.reversal_attempts>1?'s':''):''));
+        cls(dirId,'big muted');return;}
+      if(kind==='MAIN'&&L.main_signal&&!L.main_placed){
+        text(dirId,'SIGNAL '+L.main_signal.direction);
+        text(metaId,'called but not executed'+(L.main_last_reason?' · '+L.main_last_reason:'')+(L.main_attempts?' · '+L.main_attempts+' attempt'+(L.main_attempts>1?'s':''):''));
+        cls(dirId,'big muted');return;}
       if(!k.effective_enabled){text(dirId,'ARMED');text(metaId,'master switch is off');cls(dirId,'big muted');return;}
       text(dirId,'WATCHING');cls(dirId,'big');
       if(kind==='MAIN'){
@@ -233,7 +243,7 @@ function updateUI(state){
       }
     }
     lane('MAIN','mainDirection','mainMeta',L.main);
-    lane('REVERSAL','revDirection','revMeta',(L.reversal_fired?{direction:(L.reversal||{}).direction}:null));
+    lane('REVERSAL','revDirection','revMeta',(L.reversal_placed?L.reversal_signal:null));
   })();text('capBan',live.lane+' · '+(controls.master_enabled?'MASTER ON':'MASTER OFF')+(live.halt?' · '+live.halt:''));
   renderBook(live);
   if(activePnlRange==='1D')renderTradePnl(live);

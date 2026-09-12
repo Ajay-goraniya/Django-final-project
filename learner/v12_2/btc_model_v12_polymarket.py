@@ -192,6 +192,19 @@ class PolyRunner(Runner):
         d['signal_price']=float(self.st.s_px[-1]) if self.st.s_px else None
         await self.executor.fire(ep,d,token,self.info[ep]['conditionId'],stake,
                                  (lambda k=kind,dd=d: dd if self.ui.allowed(k) else {'fire':False}),kind=kind)
+        # Read back what the venue leg actually did. A signal that never reached
+        # the book must not be reported, or treated, as a position.
+        row=self.db.sql('SELECT status FROM signals WHERE epoch=? AND kind=?',(ep,kind))
+        status=row[0]['status'] if row else 'UNKNOWN'
+        placed=status in ('PENDING','FILLED','RESERVED')
+        reason=''
+        if not placed:
+            diag=self.db.sql('SELECT detail FROM diagnostics WHERE epoch=? ORDER BY ts DESC LIMIT 1',(ep,))
+            reason=f"{status}: {diag[0]['detail'][:120]}" if diag else status
+        self.lanes.confirm(kind,placed,reason)
+        self.lane_decision=self.lanes.monitor()
+        if not placed:
+            print(f'[{kind}] signal not executed - {reason}',flush=True)
         self.revision+=1
     async def housekeeping(self):
         while True:
