@@ -2009,6 +2009,30 @@ call the constant-offset hypothesis either way, but it is the first datapoint ag
 than let the earlier three-hour run of 111-112 harden into a conclusion. Sunday question unchanged: reproduce
 one shared candle end to end in both runners and find where the per-trade numbers actually part.
 
+## 09:20 UTC check-in (Sat 09-12) - quiet hour, all three paper runs still positive
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 12W/8L +0.231 | 23W/17L +0.174 |
+Third positive reading in a row, both windows easing back slightly from 08:20 (+0.290 -> +0.231,
++0.213 -> +0.174). Not arming, unchanged reason.
+
+Tokyo: master ON, all three kinds false, equity 15.02, nothing open, stake $1 matching the ladder, uptime
+26.8 h. No silent flag revert. 12 processes, 12 G free.
+
+Fair table (window opens with the newest run, Polymarket paper v10 at 09-11 15:15 UTC, 18.1 h):
+| run | W/L | acc | open | PnL @$10 |
+|---|---|---|---|---|
+| Predict.fun paper (v10) | 49/44 | 53% | 0 | +95.4 |
+| Polymarket paper (v10) | 62/59 | 51% | 1 | +68.8 |
+| Polymarket v12 lane (paper exec) | 63/54 | 54% | 1 | +180.7 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 15.02, equity 15.02) |
+
+Flat hour after the strong one: Predict.fun -5.4, Polymarket v10 +1.8, v12 lane +5.1. All three stay positive
+over the fair window. Runner gap 111.9, back inside the 111-112 band it held from 05:20 to 07:20, so the
+108.6 reading at 08:20 looks like the outlier rather than the break. Four of the last five hours sit in that
+band. Still an observation, not a finding - the Sunday job is to reproduce one shared candle in both runners
+and find where the numbers part, not to keep watching the gap.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
