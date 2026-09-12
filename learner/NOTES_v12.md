@@ -2087,6 +2087,37 @@ an HTTP probe of all five ports. It prints only ALERT lines and repeats a given 
 10 minutes. The old keepalive counted processes alone, which is exactly what let two dead-websocket runners
 pass for an hour on 09-11.
 
+## 11:20 UTC check-in (Sat 09-12) - the strong hour handed most of itself back
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 9W/11L +0.015 | 22W/18L +0.139 |
+Still nominally positive but barely, down from +0.324 an hour ago, and the win count went under water at
+9W/11L while the per-$1 stayed just above zero. That combination is worth noting: the reading is positive only
+because the winners were cheap, not because the calls were right. Not arming; unchanged reason.
+
+Tokyo: master ON, all three kinds false, equity 15.02, nothing open, stake $1 matching the ladder, uptime
+28.8 h. No silent flag revert. 13 processes now, the 12 runs plus the new watcher. 12 G free.
+
+Fair table (window opens with the newest run, Polymarket paper v10 at 09-11 15:15 UTC, 20.1 h):
+| run | W/L | acc | open | PnL @$10 |
+|---|---|---|---|---|
+| Predict.fun paper (v10) | 53/49 | 52% | 0 | +97.7 |
+| Polymarket paper (v10) | 68/64 | 52% | 1 | +96.9 |
+| Polymarket v12 lane (paper exec) | 70/58 | 55% | 1 | +220.8 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 15.02, equity 15.02) |
+
+Give-back hour after the best one: Predict.fun -20.9, Polymarket v10 -20.0, the v12 lane -20.0. All three lost
+almost exactly the same amount, and the v10 Polymarket runner took only two losses and no wins to do it.
+
+Runner gap 123.9, identical to last hour to one decimal, because both Polymarket runners lost the same 20.0.
+Set beside 08:20 (gap 108.6) and 09:20 (111.9), the gap is not settling at one value. What is now consistent
+across every hour of this run is that the two move together in direction and usually in size, and differ in
+level. Sunday: reproduce one shared candle in both and find the level difference, rather than tracking the gap
+hour by hour, which has now told us everything it can.
+
+Watcher note: the new liveness watcher has been running since 11:30 and has printed nothing, which is its
+healthy state.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
