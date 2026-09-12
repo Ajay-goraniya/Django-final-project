@@ -2378,6 +2378,34 @@ Quiet hour: Predict.fun +15.4, Polymarket v10 +4.2, v12 lane +2.4. Runner gap 13
 v12 lane has now held a higher accuracy than the v10 runner (56% vs 52%) for six consecutive hours on the same
 venue and signal. That persistence is worth the Sunday reproduction task - it is no longer plausibly jitter.
 
+## 17:00 UTC (Sat 09-12) - the weekend cell FAILED two hours after passing. Keep this one.
+H1 follow-up to the 15:00 message. The cell that passed every check at 14:50 has broken on nine more fires.
+
+| time | n | per fire | halves | verify.py |
+|---|---|---|---|---|
+| 14:50 | 62 | +0.073 | +0.025 / +0.121 | True on all four |
+| 16:50 | 71 | +0.004 | +0.032 / -0.024 | FAILS halves, FAILS beats-the-null |
+
+Nine fires turned "passes every check" into "fails two". Had it gone into this ledger as a candidate at 15:00
+it would have entered on nine fires' worth of noise, and the ledger would now be carrying a dead row that
+looked validated when it was written.
+
+Objection 2 from the 15:00 message was the operative one, and it was registered before the data arrived: the
+halves were morning against afternoon of a single Saturday, which is not an out-of-sample split, and it broke
+the moment the afternoon extended. This is now the cleanest worked example we have of why a contiguous-window
+halves pass is close to worthless - better than the 09-11 flat-bucket case, because there we inferred the
+weakness from McNemar afterwards and here we watched the number break in real time.
+
+Nothing from today counts toward the registered test, unchanged: 100+ weekend fires across at least TWO
+SEPARATE weekends, halves split by weekend rather than fire index, verify.py True, full grid reported.
+
+Parent verdict untouched: ledger row M (11.2) REFUTED, now 128 forward fires at -0.076.
+
+Read this next to the re-arm criterion, which had five consecutive positive hours this morning and was held
+for the same reason - a run of good readings inside one continuous window is not evidence that survives the
+window being extended. Two independent cases in one day, both caught by refusing to act on a passing number
+whose design was too weak to support it.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
