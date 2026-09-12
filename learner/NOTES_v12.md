@@ -2406,6 +2406,34 @@ for the same reason - a run of good readings inside one continuous window is not
 window being extended. Two independent cases in one day, both caught by refusing to act on a passing number
 whose design was too weak to support it.
 
+## 17:20 UTC check-in (Sat 09-12) - trigger back to barely positive; strong hour on Polymarket
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 11W/9L +0.019 | 20W/20L -0.007 |
+The last-20 crossed back above zero at +0.019 and the last-40 crossed below at -0.007, so the two windows have
+swapped signs from an hour ago. That is the eighth time today they have disagreed. Not arming - one positive
+reading is not two, and the criterion it would satisfy is refuted anyway.
+
+Tokyo: master ON, all three kinds false, equity 15.02, nothing open, uptime 34.9 h. No silent flag revert.
+13 processes, 12 G free.
+
+Fair table (window opens with the newest run, Polymarket paper v10 at 09-11 15:15 UTC, 26.1 h):
+| run | W/L | acc | open | PnL @$10 |
+|---|---|---|---|---|
+| Predict.fun paper (v10) | 68/62 | 52% | 0 | +95.7 |
+| Polymarket paper (v10) | 89/77 | 54% | 1 | +199.9 |
+| Polymarket v12 lane (paper exec) | 92/70 | 57% | 1 | +335.0 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 15.02, equity 15.02) |
+
+Best hour since 10:20 on Polymarket: the v10 runner +40.9 on 7W/2L and the v12 lane +44.7 on 7W/2L. Predict.fun
++2.8. The Polymarket v10 runner has now crossed 54% accuracy over 166 graded fires, and the v12 lane 57% over
+162 - both up a full point in one hour, which on this sample size is roughly seven candles going the same way.
+
+Runner gap 135.1, widest again, seventh consecutive hour with the v12 lane ahead on accuracy. Sunday task is
+unchanged and getting more worthwhile: reproduce one shared candle in both runners end to end and find where
+the numbers part. Two runs on the same venue and the same signal should not hold a four-point accuracy gap for
+seven hours, and until that is explained neither number should be read as the venue's edge.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
