@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-12 10:50 UTC. Update this file at the end of every check.
+Last updated: 2026-09-12 12:50 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -11,25 +11,23 @@ the reason the checks run as a set and grading runs first.
 Its `permutation()` permutes the model's PREDICTIONS, never the labels: shuffling labels destroys
 the market's calibration too, so longshots "win" at the base rate and it prints a fake profit.
 
-## Task 21b DONE 20:50 — the certifiable Polymarket number is NEGATIVE
-`analysis/h1/task21b_certifiable.md` + `.py`. Run the moment the certifiable count crossed 60 (62 at
-20:45; 7 at 14:47, 26 at 16:46, 46 at 18:46).
-- **Certifiable rows (quote age known, median 15 ms): −0.062 per $1, n=61, hit 45.9%, halves
-  −0.013 / −0.108.** `verify.py` PASSES (quote age, sample, halves) — a readable number, and negative.
-- Uncertifiable rows (before 13:28): +0.120, n=430.
-- **Caveat stated first:** not like-for-like. The certifiable rows are ONE ~7-hour evening window; the
-  +0.120 spans days. The drop is NOT proven to be quote age, and n=61 in one window is not rain-or-sun.
-- **No time confound here:** inside the certifiable window, fresh (≤1 s) n=48 → **−0.141**; stale
-  (>1 s) n=13 → **+0.232**. Both under the 60 bar so NEITHER IS READ, but the ordering is the Task 20
-  mechanism exactly — the trades that paid a stale quote are the profitable ones. 21% of the
-  "certifiable" rows are themselves over a second old (p90 3.6 s, max 9.3 s).
-- By side: UP n=27 +0.032, DOWN n=34 −0.136 — both under the bar, not read, so Task 24's side-skew
-  question stays open.
-- **Certifiable count 09-12 04:47: 110.** Re-run at ~150 for a readable UP/DOWN split (told V).
-- **Consequence:** Task 24's "+0.187 passes everything but quote age" — this is that check closing,
-  and it goes the wrong way. Not a refutation yet (one evening, n=61, real confound), but the +0.187
-  must not be sized on. The next step is another day of `book_age_ms` rows, not more analysis of the
-  old ones. Fifth candidate to shrink at the recorded→honest step; the evidence-ladder rule held.
+## Task 21b UPDATED 09-12 12:50 — **I CORRECT MYSELF: the certifiable number is ~0, not negative**
+`analysis/h1/task21b_certifiable.md` (correction section at the end) + `.py`.
+- n has grown 61 → 148. **Then −0.062 (halves −0.013/−0.108). Now +0.022 (halves −0.058/+0.102),
+  hit 49.3%.** verify.py passes quote age and sample, **fails both halves only**. Still not a finding,
+  but "the Polymarket paper does not make money on verified quotes" is NOT what the data says now,
+  and I said it to both V and the user. Corrected to both.
+- **RETRACTED — my fresh/stale reading.** At n=61 I called fresh −0.141 (n=48) vs stale +0.232 (n=13)
+  "the part that should worry you" and read it as the Task 20 mechanism recurring. I had marked both
+  cells under-the-bar and then reasoned from them anyway — the same error as reading them. Now:
+  fresh **+0.015 (n=130)**, stale +0.078 (n=18). The ordering collapsed. There was no effect, only a
+  small sample.
+- **What stands:** uncertifiable +0.120 (n=430) vs certifiable +0.022 (n=148) — still ~5x, still
+  consistent with recorded-quote optimism, still the reason +0.187 must not be sized on. But the
+  certifiable number is FLAT, not negative, and the window confound (one 23-h stretch vs several days)
+  is not excluded.
+- **By side:** DOWN n=93 **+0.019** (readable); UP n=55 +0.028 (under the bar, not read). Task 24's
+  side-skew prediction (poly cheaper on UP ⇒ UP earns more) is **not visible yet**. Marked, not read.
 
 ## Task 25 QUEUED 18:46, NOT started (V, REQUEST.md 18:20) — deliberately deferred
 V asks me to **independently reproduce a v12 lane decision**: take logged fires, rebuild the feature
