@@ -1779,6 +1779,46 @@ Tokyo 5/10 -7.06 real. Polymarket paper recovered 25 points this hour (-21.3 -> 
 "Predict.fun has overtaken Polymarket" reading was itself an hour of noise - worth remembering before anyone
 builds a story on a single hour.
 
+## 01:40 UTC - Polymarket v12 CHECKPOINT received and audited (user-supplied zip)
+Unpacked, verified, copied to learner/v12_checkpoint/ (476 K; the 19 MB baseline_paper.sqlite3 left out of
+git deliberately - it is a reproducible artefact, not source).
+
+### Verified, not taken on trust
+- **SHA256SUMS.txt: every file OK.**
+- **Its 32 tests pass here**, 0.578 s. Coverage includes the one that matters most: a timeout never
+  resubmits on restart.
+- **The model is byte-identical to ours.** md5 of model_v10.json and btc_model_v10.py match
+  learner/ exactly. It has not been retrained or rewritten, exactly as its checkpoint claims.
+- Live guards look right: `--live` is opt-in, and on live it sets master=False so it starts disarmed and
+  needs explicit arming through the controls page. poly_live.py names the env vars but reads them only
+  when live.
+
+### What is genuinely better than the observation-only build
+It has the OLD DASHBOARD - dashboard_html.html, controls_html.html, data_html.html plus poly_dashboard.py.
+That was the exact objection at 14:15 ("it does not have our dashboard"), and it is now addressed. It also
+ships an audit script and a baseline DB so its headline can be reproduced rather than believed.
+
+### The number it reports, and the caveat that outranks it
+paper_audit.json: 412 settled, 216/196, 52.4%, **+487.95 on 4120 staked = +0.118 per $1**, 150 fires/24 h,
+span 09-08 17:39 to 09-11 11:30. Integrity ok, 412/412 probability checks match.
+
+**But its trades table has NO quote-age column** (cols: candle_epoch, ts_ms, mode, side, p, ask, ev, sec,
+rv60, stake, actual, win, pnl, graded_ms, feat). So this +0.118 is the SAME kind of number as our old +0.123:
+uncertifiable. On the rows where we CAN certify quote age, the honest figure is **-0.066 per $1** (n=90,
+01:24 check). The checkpoint is careful elsewhere - it explicitly says not to represent historical PnL as a
+fill-rate test - but the headline still needs that qualifier attached every time it is quoted.
+
+### Not started
+Its start_paper.sh wants port 8787, which collides with nothing currently running, but I am not launching a
+third Polymarket paper lane without a reason: two are already running and a third only adds timing-jitter
+noise. If the user wants this one running instead of the observation build, say so and I will swap them.
+
+### Carry-over that still applies
+The user's 14:15 rule was about the OLD standalone file (no dashboard, no controls) - that file stays
+observation-only. This checkpoint is a different thing and does have the dashboard, so it is a legitimate
+candidate for the real v12 lane. The build11 venue-backend question is now a genuine choice rather than a
+foregone one, and it is a Sunday decision, not a tonight one.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |

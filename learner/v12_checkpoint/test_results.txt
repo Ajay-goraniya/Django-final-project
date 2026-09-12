@@ -1,0 +1,37 @@
+test_failed_attempt_has_no_pnl (test_polymarket.DashboardTests.test_failed_attempt_has_no_pnl) ... ok
+test_http_pages_and_api (test_polymarket.DashboardTests.test_http_pages_and_api) ... ok
+test_invalid_daily_limits_apply_neither (test_polymarket.DashboardTests.test_invalid_daily_limits_apply_neither) ... ok
+test_invalid_stake_does_not_apply_master (test_polymarket.DashboardTests.test_invalid_stake_does_not_apply_master) ... ok
+test_ladder_two_checks_up_immediate_down (test_polymarket.DashboardTests.test_ladder_two_checks_up_immediate_down) ... ok
+test_main_cannot_accidentally_enable (test_polymarket.DashboardTests.test_main_cannot_accidentally_enable) ... ok
+test_master_toggle (test_polymarket.DashboardTests.test_master_toggle) ... ok
+test_original_dashboard_has_old_panels (test_polymarket.DashboardTests.test_original_dashboard_has_old_panels) ... ok
+test_out_of_order_settlement_updates_streak (test_polymarket.DashboardTests.test_out_of_order_settlement_updates_streak) ... ok
+test_snapshot_serializes (test_polymarket.DashboardTests.test_snapshot_serializes) ... ok
+test_state_x_off_disables_window (test_polymarket.DashboardTests.test_state_x_off_disables_window) ... ok
+test_budget_and_cap (test_polymarket.Tests.test_budget_and_cap) ... ok
+test_crossed_book (test_polymarket.Tests.test_crossed_book) ... ok
+test_database_separation (test_polymarket.Tests.test_database_separation) ... ok
+test_fill_dedup_and_pnl (test_polymarket.Tests.test_fill_dedup_and_pnl) ... ok
+test_model_changed_before_post_abandons (test_polymarket.Tests.test_model_changed_before_post_abandons) ... ok
+test_no_graded_failed_order (test_polymarket.Tests.test_no_graded_failed_order) ... ok
+test_no_stake_inflation (test_polymarket.Tests.test_no_stake_inflation) ... ok
+test_old_snapshot_rejected (test_polymarket.Tests.test_old_snapshot_rejected) ... ok
+test_other_token_does_not_refresh_current (test_polymarket.Tests.test_other_token_does_not_refresh_current) ... ok
+test_padded_ev (test_polymarket.Tests.test_padded_ev) ... ok
+test_paper_execution_end_to_end (test_polymarket.Tests.test_paper_execution_end_to_end) ... ok
+test_paper_fill_survives_broker_restart (test_polymarket.Tests.test_paper_fill_survives_broker_restart) ... ok
+test_partial_acceptance_stops_retries (test_polymarket.Tests.test_partial_acceptance_stops_retries) ... ok
+test_partial_paper_fill (test_polymarket.Tests.test_partial_paper_fill) ... ok
+test_persisted_reservation (test_polymarket.Tests.test_persisted_reservation) ... ok
+test_reconnect_requires_snapshot (test_polymarket.Tests.test_reconnect_requires_snapshot) ... ok
+test_remove_ask (test_polymarket.Tests.test_remove_ask) ... ok
+test_resolution_requires_final (test_polymarket.Tests.test_resolution_requires_final) ... ok
+test_retry_only_on_fresh_quote (test_polymarket.Tests.test_retry_only_on_fresh_quote) ... ok
+test_tick_change_invalidates_terms (test_polymarket.Tests.test_tick_change_invalidates_terms) ... ok
+test_timeout_never_resubmits_on_restart (test_polymarket.Tests.test_timeout_never_resubmits_on_restart) ... ok
+
+----------------------------------------------------------------------
+Ran 32 tests in 0.546s
+
+OK

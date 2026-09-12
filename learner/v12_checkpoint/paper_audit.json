@@ -1,0 +1,76 @@
+{
+  "source_sha256": "d92184545137b865c7e47e3b55a3a921919f908de2e1cb04fe6f9ef224c4e39c",
+  "integrity": "ok",
+  "settled": 412,
+  "wins": 216,
+  "losses": 196,
+  "accuracy_pct": 52.42718446601942,
+  "pnl": 487.94950349719403,
+  "staked": 4120.0,
+  "pnl_per_dollar": 0.11843434550902768,
+  "pending": 1,
+  "invalid_quote_rows": [
+    1788892800
+  ],
+  "first_fire_utc": "2026-09-08T17:39:10.683000+00:00",
+  "last_settled_fire_utc": "2026-09-11T11:30:36.177000+00:00",
+  "observed_span_hours": 65.857081666655,
+  "settled_fires_per_24h_of_observed_span": 150.14330653231065,
+  "daily": {
+    "2026-09-08": {
+      "settled": 45,
+      "wins": 29,
+      "pnl": 139.91240824059201,
+      "pending": 0
+    },
+    "2026-09-09": {
+      "settled": 136,
+      "wins": 69,
+      "pnl": 105.76658607817134,
+      "pending": 0
+    },
+    "2026-09-10": {
+      "settled": 159,
+      "wins": 82,
+      "pnl": 202.69883305670385,
+      "pending": 0
+    },
+    "2026-09-11": {
+      "settled": 72,
+      "wins": 36,
+      "pnl": 39.571676121726824,
+      "pending": 1
+    }
+  },
+  "fee_formula_mismatch_epochs": [],
+  "model_probability_comparisons": 412,
+  "model_probability_mismatches": [],
+  "price_sensitivity": [
+    {
+      "extra_price": 0,
+      "pnl": 487.949503497194
+    },
+    {
+      "extra_price": 0.005,
+      "pnl": 437.3346478423017
+    },
+    {
+      "extra_price": 0.01,
+      "pnl": 387.8977460434239
+    },
+    {
+      "extra_price": 0.02,
+      "pnl": 292.39126319971103
+    },
+    {
+      "extra_price": 0.03,
+      "pnl": 201.1168193129737
+    }
+  ],
+  "limitations": [
+    "Logged paper outcomes were not independently re-fetched.",
+    "Dust ask <= .02 explicitly excluded; all excluded epochs listed.",
+    "Sensitivity assumes every original fill and outcome unchanged; does not model actual liquidity, fresh quote gates or cancellations.",
+    "No weekend coverage and no live fill-rate validation."
+  ]
+}
