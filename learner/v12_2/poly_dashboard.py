@@ -123,6 +123,53 @@ class Dashboard:
             elif s['mode']=='percent': current=equity*s['percent']/100
             if s['mode']!='ladder': current=max(s['min_stake'],min(s['max_stake'],current))
             self.db.set('next_stake',round(current,2))
+    def ev_controls(self):
+        """EV mode and slippage allowance, as live settings.
+
+        slippage_ticks is the number of ticks added to the ask before the order
+        is capped. It is the fill-versus-frequency dial: measured on 206 real
+        fires, 0 ticks lets every signal through the EV re-check, 1 tick lets 57%
+        through and 2 ticks 37%, because one tick is a median 2.1% of the ask
+        while the EV bar is 0.15 to 0.25. Padding buys fill probability and costs
+        signals, and the number here decides the trade.
+        """
+        cfg=self.db.get('ev_settings') or {}
+        mode,value=self.r.ev_setting() if hasattr(self.r,'ev_setting') else ('regime',None)
+        pad=self.r.pad_ticks() if hasattr(self.r,'pad_ticks') else cfg.get('pad_ticks',1)
+        regime=(self.r.m.regime or {}) if hasattr(self.r,'m') else {}
+        return dict(
+            mode=mode,modes=list(getattr(self.r,'EV_MODES',('regime','fixed','accuracy'))),
+            value=value,slippage_ticks=pad,tick_size=0.01,
+            regime_thresholds=(regime.get('thresholds') or {}),
+            regime_edges=(regime.get('rv60_edges') or []),
+            measured=dict(survive_pct={0:100,1:57,2:37},sample=206,
+                          note='share of signals that clear the EV re-check at each pad'),
+            describe={'regime':'model thresholds per volatility regime',
+                      'fixed':'one EV threshold on every candle',
+                      'accuracy':'confidence and EV floors instead of an EV threshold'}.get(mode,''))
+    def lane_card(self,kind):
+        """Build 36's MAIN/REVERSAL card: the call, plus what became of the order.
+
+        The direction line shows the signal, as it did in build 36 where a
+        prediction existed whether or not it executed. The reason line carries the
+        execution outcome, so nothing on the panel implies a position that was
+        never taken."""
+        L=self.r.lane_decision or {}
+        if kind=='MAIN':
+            sig=L.get('main_signal') or L.get('main'); placed=L.get('main_placed')
+            attempts=L.get('main_attempts') or 0; why=L.get('main_last_reason') or ''
+        else:
+            sig=L.get('reversal_signal'); placed=L.get('reversal_placed')
+            attempts=L.get('reversal_attempts') or 0; why=''
+        if not sig or not sig.get('direction'): return None
+        if placed:
+            reason='order placed'
+        elif attempts:
+            reason=f'called, not executed ({attempts} attempt{"s" if attempts>1 else ""})'+(f' · {why}' if why else '')
+        else:
+            reason='called, submitting'
+        return dict(direction=sig.get('direction'),ts_ms=sig.get('ts_ms'),
+                    probability_up=sig.get('probability_up',0.5),reason=reason,placed=bool(placed))
     def pnl_by_kind(self):
         """Settled PnL split by lane. MAIN and REVERSAL can hold opposite sides
         of one candle, so a single blended number would hide the hedge."""
@@ -163,6 +210,7 @@ class Dashboard:
           execution=dict(ready=ready,missing=[] if ready else ['waiting for feed / balance readiness']),
           kinds=kinds,
           state_x=dict(enabled=self.db.get('sx_enabled'),active=self.db.get('sx_enabled') and time.time()<self.db.get('sx_until',0),loss_streak=self.db.get('sx_losses',0),resume_time=dt.datetime.fromtimestamp(self.db.get('sx_until',0),LONDON).strftime('%H:%M'),trigger_reason='2 consecutive settled losses'),
+          ev=self.ev_controls(),
           daily_limits=self.daily(),shared_stake=self.db.get('stake_settings'),shared_next_stake=self.db.get('next_stake',1),win_streak=w,loss_streak=l,rules=self.db.get('rules'),lane='LIVE' if self.r.a.live else 'PAPER')
     def apply(self,path,p):
         if p.get('confirmed') is not True: raise ValueError('Confirmation required')
@@ -194,6 +242,27 @@ class Dashboard:
                 if kind not in ('MAIN','REVERSAL','EF'): raise ValueError('Invalid signal kind')
                 if not isinstance(p.get('manual_enabled'),bool): raise ValueError('Invalid signal toggle')
                 self.db.set({'MAIN':'main_enabled','REVERSAL':'reversal_enabled','EF':'ef_enabled'}[kind],p['manual_enabled'])
+            elif path=='/api/controls/ev':
+                # Changes what the engine will pay and how often it fires, so it
+                # is confirmed like every other trading control and bounded here.
+                modes=list(getattr(self.r,'EV_MODES',('regime','fixed','accuracy')))
+                cfg=dict(self.db.get('ev_settings') or {})
+                if 'mode' in p:
+                    if p['mode'] not in modes: raise ValueError('mode must be one of '+', '.join(modes))
+                    cfg['mode']=p['mode']
+                if 'value' in p and p['value'] is not None:
+                    v=float(p['value'])
+                    if not (0<=v<=5) or not math.isfinite(v): raise ValueError('EV threshold must be 0..5')
+                    cfg['value']=v
+                if 'slippage_ticks' in p:
+                    t=int(p['slippage_ticks'])
+                    if not 0<=t<=5: raise ValueError('slippage must be 0..5 ticks')
+                    cfg['pad_ticks']=t
+                if cfg.get('mode')=='fixed' and cfg.get('value') is None:
+                    raise ValueError('fixed mode needs a value')
+                self.db.set('ev_settings',cfg)
+                if hasattr(self.r,'executor') and 'pad_ticks' in cfg: self.r.executor.pad=int(cfg['pad_ticks'])
+                return dict(ok=True,ev=self.ev_controls())
             elif path=='/api/controls/state-x':
                 if not isinstance(p.get('manual_enabled'),bool): raise ValueError('Invalid SX toggle')
                 self.db.set('sx_enabled',p['manual_enabled']); self.db.set('sx_losses',0); self.db.set('sx_until',0)
@@ -298,7 +367,7 @@ class Dashboard:
         venue_positions=list(getattr(r,'account_positions',[]) or [])
         position_value=sum(float(x.get('current_value') or 0) for x in venue_positions if isinstance(x,dict))
         sizing_bankroll=self.equity()
-        self.cache=dict(feature_names=FEATURES,open_positions=positions,economics=self.pnl(),model=dict(version=10),learning=dict(status='Fixed v10 weights'),candle=current,feature=d.get('features',{}),feed=self.feed_state(),metrics=dict(main={},reversal={},ef=metric,combined=metric),main=(self.r.lane_decision or {}).get('main'),reversal=(self.r.lane_decision or {}).get('reversal'),lanes=(self.r.lane_decision or {}),main_block=(self.r.lane_decision or {}).get('main_block',''),ef=ef,ef_monitor=dict(status=d.get('reason') or f"v10 pnl · p {d.get('p','--')} · EV {d.get('ev','--')}"),book=book,last_fill=last,controls=ctr,capital=dict(balance=sizing_bankroll,sizing_bankroll=sizing_bankroll,wallet=cash,pending_payout=pending,open_position_value=position_value,free=cash,wallet_free=cash,funding_headroom=max(0,cash-reserve),reserve_detail=rd,fresh=age<15,balance_age_sec=age,realised=metrics['pnl'],reserved=reserve,next_stake=self.db.get('next_stake',1),truth=dict(source='Polymarket API (balance, positions, open orders, account PnL)',venue_positions=venue_positions,
+        self.cache=dict(feature_names=FEATURES,open_positions=positions,economics=self.pnl(),model=dict(version=10),learning=dict(status='Fixed v10 weights'),candle=current,feature=d.get('features',{}),feed=self.feed_state(),metrics=dict(main={},reversal={},ef=metric,combined=metric),main=self.lane_card('MAIN'),reversal=self.lane_card('REVERSAL'),lanes=(self.r.lane_decision or {}),main_block=(self.r.lane_decision or {}).get('main_block',''),ef=ef,ef_monitor=dict(status=d.get('reason') or f"v10 pnl · p {d.get('p','--')} · EV {d.get('ev','--')}"),book=book,last_fill=last,controls=ctr,capital=dict(balance=sizing_bankroll,sizing_bankroll=sizing_bankroll,wallet=cash,pending_payout=pending,open_position_value=position_value,free=cash,wallet_free=cash,funding_headroom=max(0,cash-reserve),reserve_detail=rd,fresh=age<15,balance_age_sec=age,realised=metrics['pnl'],reserved=reserve,next_stake=self.db.get('next_stake',1),truth=dict(source='Polymarket API (balance, positions, open orders, account PnL)',venue_positions=venue_positions,
                         reserve_confirmed=rd['confirmed'],reserve_unverified=rd['unverified'],
                         reserve_phantom=rd['phantom'],reserve_total_local=rd['total'],
                         reserve_phantom_ids=rd['phantom_ids'],
@@ -310,7 +379,7 @@ class Dashboard:
                         local_vs_venue=divergence)),trades=self.pnl(),latency=r.executor.latency_stats(),chart_revision=r.revision,error=r.error,dashboard_errors=list(getattr(self,'errors',[])),lane='LIVE' if r.a.live else 'PAPER',model_hash=r.hash,fee_basis=r.broker.basis,halt=self.db.get('halt'))
         self.cache_at=time.monotonic(); return self.cache
     def page(self,name):
-        text=(ROOT/name).read_text().replace('__VERSION__','12 Polymarket').replace('__BUILD__','12.2.4 · v10 PnL · '+('LIVE' if self.r.a.live else 'PAPER')).replace('__UPTIME_SEC__',str(time.time()-self.r.started))
+        text=(ROOT/name).read_text().replace('__VERSION__','12 Polymarket').replace('__BUILD__','12.3.0 · v10 PnL · '+('LIVE' if self.r.a.live else 'PAPER')).replace('__UPTIME_SEC__',str(time.time()-self.r.started))
         return text
     def make_server(self):
         ui=self

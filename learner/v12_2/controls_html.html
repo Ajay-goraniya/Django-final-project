@@ -14,6 +14,16 @@
 <div id="kindStates" class="stateGrid"></div><div class="note">Master controls all new real orders; the small MAIN / REVERSAL / EF switches can block each stream individually. Master starts OFF after every terminal launch. Individual choices persist across restarts. Signal generation, settlement and accuracy remain active while trading is OFF or banned.</div>
 <div id="ready" class="small readiness" style="margin-top:9px"></div>
 <div class="stateXBox"><div class="row"><div><div class="label">State X Protection</div><div id="stateXStatus" class="big" style="font-size:17px">NORMAL</div><div id="stateXDetails" class="small">loading…</div></div><button id="stateXToggle" type="button" class="miniToggle off">OFF</button></div></div></section>
+<section class="card"><div class="row"><div><div class="label">EV and slippage</div><div class="big">FREQUENCY DIAL</div><div id="evStatus" class="small">loading…</div></div></div>
+<div class="row" style="margin-top:9px"><label class="small" for="evMode">EV mode</label>
+<select id="evMode"><option value="regime">regime · model default 0.15 / 0.25 / 0.25</option><option value="fixed">fixed threshold</option><option value="accuracy">accuracy floors</option></select>
+<label class="small" for="evValue">fixed value</label><input id="evValue" type="number" step="0.01" min="0" max="5" style="width:90px"></div>
+<div class="row" style="margin-top:9px"><label class="small" for="evSlip">slippage allowance</label>
+<select id="evSlip"><option value="0">0 ticks · order priced at the ask</option><option value="1">1 tick</option><option value="2">2 ticks</option><option value="3">3 ticks</option></select>
+<button id="saveEv">Apply</button></div>
+<div class="note">Slippage is how many ticks above the ask the order may pay, and it is the fill-versus-frequency dial. Measured on 206 real fires: 0 ticks lets 100% of signals clear the EV re-check, 1 tick lets 57% clear and 2 ticks 37%, because one tick is a median 2.1% of the ask while the EV bar is 0.15 to 0.25. More padding fills more often and fires less often.</div>
+<div id="evNote" class="small" style="margin-top:9px"></div></section>
+
 
 <section class="card"><div class="label">Shared staking · all three signals</div><div class="row"><div><div id="nextStake" class="big">--</div><div class="small">one current stake and one combined streak</div></div><div id="streak" class="small"></div></div>
 <div class="formGrid">
@@ -59,6 +69,29 @@ function e(id){return document.getElementById(id)}function money(v){return '$'+N
 function request(method,url,body,done){var x=new XMLHttpRequest();x.open(method,url,true);if(body)x.setRequestHeader('Content-Type','application/json');x.onreadystatechange=function(){if(x.readyState===4){var r={};try{r=JSON.parse(x.responseText)}catch(_){r={ok:false,error:'bad server response'}}done(r)}};x.send(body?JSON.stringify(body):null)}
 function show(msg,ok){e('msg').textContent=msg||'';e('msg').className='msg '+(ok?'up':'down')}
 function minutes(v){var p=String(v||'').split(':');return Number(p[0])*60+Number(p[1])}
+function renderEv(){
+ var ev=state.ev||{};
+ if(!ev.mode)return;
+ if(!window.__evDirty){e('evMode').value=ev.mode;e('evSlip').value=String(ev.slippage_ticks);
+  if(ev.value!=null)e('evValue').value=ev.value;}
+ var m=ev.measured||{},pct=(m.survive_pct||{})[ev.slippage_ticks];
+ e('evStatus').textContent='mode '+ev.mode+(ev.value!=null&&ev.mode==='fixed'?' at '+ev.value:'')
+   +' · slippage '+ev.slippage_ticks+' tick'+(ev.slippage_ticks===1?'':'s')
+   +(pct==null?'':' · about '+pct+'% of signals clear the EV re-check at this setting');
+ e('evNote').textContent=(ev.describe||'')+(ev.regime_thresholds&&ev.mode==='regime'
+   ? ' · low '+ev.regime_thresholds.low+' / mid '+ev.regime_thresholds.mid+' / high '+ev.regime_thresholds.high : '');
+}
+function bindEv(){
+ ['evMode','evSlip','evValue'].forEach(function(id){e(id).onchange=function(){window.__evDirty=true;};});
+ e('saveEv').onclick=function(){
+  var mode=e('evMode').value,slip=Number(e('evSlip').value),val=e('evValue').value;
+  var body={confirmed:true,mode:mode,slippage_ticks:slip};
+  if(mode==='fixed'){if(val===''){show('Fixed mode needs a value',false);return;}body.value=Number(val);}
+  if(!confirm('Apply EV mode '+mode+(mode==='fixed'?' at '+val:'')+' and slippage '+slip+' tick'+(slip===1?'':'s')+'?'))return;
+  e('saveEv').disabled=true;
+  request('POST','/api/controls/ev',body,function(r){window.__evDirty=false;e('saveEv').disabled=false;finish(r);});
+ };
+}
 function bindSignalToggles(){
  Array.prototype.forEach.call(document.querySelectorAll('[data-kind-toggle]'),function(b){
   b.onclick=function(){
@@ -78,14 +111,14 @@ function bindSignalToggles(){
  });
 }
 var limitsDirty=false;
-function render(){
+function render(){renderEv();
  var on=!!state.master_enabled,ready=state.execution||{},stake=state.shared_stake||{},sx=state.state_x||{},sxOn=!!sx.enabled,sxActive=!!sx.active;
  e('master').textContent=on?'ON':'OFF';e('master').className='toggle'+(on?'':' off');
  e('masterStatus').textContent=(on?state.lane+' ORDERS ARMED':'SAFE · NEW ORDERS BLOCKED')+' · '+state.clock+' '+state.timezone;
  e('masterStatus').className='small '+(on?'up':'');
  e('ready').textContent=ready.ready?'Execution preflight READY · mainnet websocket fresh':('Execution locked · '+(ready.missing||[]).join(' · '));
  e('ready').className='small readiness '+(ready.ready?'up':'warn');
- e('kindStates').innerHTML=KINDS.map(function(k){var s=state.kinds[k]||{},manual=s.manual_enabled!==false;return '<div class="cell"><div class="label '+(k==='MAIN'?'main':k==='REVERSAL'?'rev':'ef')+'">'+k+'</div>'+'<div class="kindLine"><b class="'+(s.effective_enabled?'up':s.auto_banned?'warn':'down')+'">'+(s.effective_enabled?'TRADING':s.auto_banned?'BANNED':'BLOCKED')+'</b>'+'<button type="button" class="miniToggle'+(manual?'':' off')+'" data-kind-toggle="'+k+'">'+(manual?'ON':'OFF')+'</button></div>'+'<div class="small">'+(s.status||'')+'</div></div>'}).join('');bindSignalToggles();
+ e('kindStates').innerHTML=KINDS.map(function(k){var s=state.kinds[k]||{},manual=s.manual_enabled!==false;return '<div class="cell"><div class="label '+(k==='MAIN'?'main':k==='REVERSAL'?'rev':'ef')+'">'+k+'</div>'+'<div class="kindLine"><b class="'+(s.effective_enabled?'up':s.auto_banned?'warn':'down')+'">'+(s.effective_enabled?'TRADING':s.auto_banned?'BANNED':'BLOCKED')+'</b>'+'<button type="button" class="miniToggle'+(manual?'':' off')+'" data-kind-toggle="'+k+'">'+(manual?'ON':'OFF')+'</button></div>'+'<div class="small">'+(s.status||'')+'</div></div>'}).join('');bindSignalToggles();bindEv();
  e('stateXToggle').textContent=sxOn?'ON':'OFF';e('stateXToggle').className='miniToggle'+(sxOn?'':' off');
  e('stateXStatus').textContent=sxActive?(sxOn?'SX ACTIVE · BLOCKING':'SX ACTIVE · SHADOW'):(sxOn?'ARMED':'SHADOW');e('stateXStatus').className='big '+(sxActive?'sxActive':'up');e('stateXStatus').style.fontSize='17px';
  e('stateXDetails').textContent=sxActive?((sxOn?'no new orders until ':'would block until ')+(sx.resume_time||'--')+' · '+(sx.trigger_reason||'--')+' · triggered '+Number(sx.trigger_count||0)+'x'):('2 consecutive settled losses → 15 min no new orders · '+(sxOn?'ON: blocks':'OFF: service disabled')+' · loss streak '+Number(sx.loss_streak||0)+' · triggered '+Number(sx.trigger_count||0)+'x');

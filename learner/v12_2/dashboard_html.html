@@ -214,36 +214,26 @@ function updateUI(state){
     cls('capBan','small '+(controls.master_enabled?'up':'down'));
   }
   (function(){
-    // MAIN and REVERSAL are real lanes from build 12.2. Render what the engine
-    // reports instead of the fixed DISABLED text this panel used to carry.
-    var L=live.lanes||{},ctl=(controls.kinds||{});
-    function lane(kind,dirId,metaId,state){
-      var k=ctl[kind]||{};
-      if(k.source_available===false){text(dirId,'DISABLED');text(metaId,'no signal source');cls(dirId,'big');return;}
-      if(!k.manual_enabled){text(dirId,'OFF');text(metaId,'switched off in Trade Controls');cls(dirId,'big muted');return;}
-      if(state&&state.direction){text(dirId,state.direction);text(metaId,(kind==='MAIN'?'position held':'hedge against MAIN')+(state.probability_up!=null?' · p '+formatNumber(state.probability_up,3):''));cls(dirId,'big '+(state.direction==='UP'?'up':'down'));return;}
-      // A called signal that never reached the book is neither a position nor
-      // silence. Saying the direction alone read as though it had traded.
-      if(kind==='REVERSAL'&&L.reversal_signal&&!L.reversal_placed){
-        text(dirId,'SIGNAL '+L.reversal_signal.direction);
-        text(metaId,'hedge called but not executed'+(L.reversal_attempts?' · '+L.reversal_attempts+' attempt'+(L.reversal_attempts>1?'s':''):''));
-        cls(dirId,'big muted');return;}
-      if(kind==='MAIN'&&L.main_signal&&!L.main_placed){
-        text(dirId,'SIGNAL '+L.main_signal.direction);
-        text(metaId,'called but not executed'+(L.main_last_reason?' · '+L.main_last_reason:'')+(L.main_attempts?' · '+L.main_attempts+' attempt'+(L.main_attempts>1?'s':''):''));
-        cls(dirId,'big muted');return;}
-      if(!k.effective_enabled){text(dirId,'ARMED');text(metaId,'master switch is off');cls(dirId,'big muted');return;}
-      text(dirId,'WATCHING');cls(dirId,'big');
-      if(kind==='MAIN'){
-        var st=L.main_streak||{};
-        text(metaId,L.main_block||((L.aligned?'aligned '+L.aligned:'flow and odds do not agree')+(st.reads?' · '+st.reads+' reads':'')));
-      }else{
-        var rv=L.reversal||{};
-        text(metaId,L.main?(rv.detail||'watching for a flip against MAIN'):'waits for a MAIN to hedge');
-      }
+    // Build 36's MAIN / REVERSAL panels, restored verbatim in layout and wording.
+    // The direction line shows the call, as it always did there; what happened to
+    // the order goes on the reason line, which is the line that exists for it.
+    var main=live.main,reversal=live.reversal,L=live.lanes||{};
+    if(main&&main.direction){
+      text('mainDirection',main.direction);cls('mainDirection','big '+directionClass(main.direction));
+      text('mainMeta',formatTime(main.ts_ms)+' '+londonZone(main.ts_ms)+' · P(up) '+(100*main.probability_up).toFixed(1)+'%');
+      text('mainReason',main.reason||'');
+    }else{
+      text('mainDirection','WAITING');cls('mainDirection','big main');
+      text('mainMeta',live.main_block||'watching for a sustained alignment');text('mainReason','');
     }
-    lane('MAIN','mainDirection','mainMeta',L.main);
-    lane('REVERSAL','revDirection','revMeta',(L.reversal_placed?L.reversal_signal:null));
+    if(reversal&&reversal.direction){
+      text('revDirection',reversal.direction);cls('revDirection','big '+directionClass(reversal.direction));
+      text('revMeta',formatTime(reversal.ts_ms)+' '+londonZone(reversal.ts_ms)+' · opposite MAIN · P(up) '+(100*reversal.probability_up).toFixed(1)+'%');
+      text('revReason',reversal.reason||'');
+    }else{
+      text('revDirection','NOT TRIGGERED');cls('revDirection','big rev');
+      text('revMeta',(L.reversal&&L.reversal.detail)||'one maximum per candle');text('revReason','');
+    }
   })();text('capBan',live.lane+' · '+(controls.master_enabled?'MASTER ON':'MASTER OFF')+(live.halt?' · '+live.halt:''));
   renderBook(live);
   if(activePnlRange==='1D')renderTradePnl(live);

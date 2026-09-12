@@ -135,7 +135,14 @@ class PolyRunner(Runner):
         if bad: return {'fire':False,'reason':'Binance feed not usable: '+'; '.join(f'{k} {v}' for k,v in bad.items())}
         s,p=self.st.s_ts,self.st.p_ts
         if len(s)<51 or len(p)<21 or s[-1]-s[0]<600*US or p[-1]-p[0]<60*US: return {'fire':False,'reason':'Warming up: 10 minutes of spot / 60 seconds of perpetual trades'}
-        d=self.m.decide(self.st,ep*US,int(now*US),mode='pnl',ev_threshold=self.a.ev)
+        # EV mode is a live control, not a launch flag. 'regime' uses the model's
+        # own per-volatility thresholds (0.15 low, 0.25 mid/high); 'fixed' applies
+        # one number to every candle; 'accuracy' hands over to the model's
+        # confidence/EV floors instead. The CLI --ev still seeds it on first run.
+        mode,ev_thr=self.ev_setting()
+        d=self.m.decide(self.st,ep*US,int(now*US),
+                        mode=('accuracy' if mode=='accuracy' else 'pnl'),
+                        ev_threshold=ev_thr)
         f=self.st.features(ep*US,int(now*US)) or {}
         d['features']={k:float(v) for k,v in f.items() if isinstance(v,(int,float)) and math.isfinite(v)}
         d['features']['ts_ms']=int(now*1000)
@@ -144,6 +151,7 @@ class PolyRunner(Runner):
         last=0
         while True:
             d=self.decide_now(); ep=int(time.time()//300)*300; self.last_decision=d
+            self.executor.pad=self.pad_ticks()
             if d.get('fire') and self.ui.allowed() and self.cash is not None and time.monotonic()-self.cash_at<15:
                 token=self.market[ep][0 if d['side']=='UP' else 1]; stake=self.db.get('next_stake',1.)
                 reserved=self.db.live_reserve()
@@ -178,6 +186,7 @@ class PolyRunner(Runner):
         if not self.ui.allowed(kind): return
         if self.cash is None or time.monotonic()-self.cash_at>=15: return
         if ep not in self.market or ep not in self.info: return
+        self.executor.pad=self.pad_ticks()      # live slippage allowance
         token=self.market[ep][0 if decision['side']=='UP' else 1]
         if token not in self.books.terms: return
         stake=self.db.get('next_stake',1.); reserved=self.db.live_reserve()
@@ -264,6 +273,32 @@ class PolyRunner(Runner):
                     self.db.sql('UPDATE results SET claim_status=? WHERE epoch=?',('CONFIRMED' if state in ('CONFIRMED','STATE_CONFIRMED','STATE_MINED','MINED') else 'REVIEW',row['epoch']))
                 except Exception: self.db.sql("UPDATE results SET claim_status='REVIEW' WHERE epoch=?",(row['epoch'],))
             await asyncio.sleep(20)
+    EV_MODES=('regime','fixed','accuracy')
+    def ev_setting(self):
+        """Current EV mode and the threshold it implies.
+
+        Returns (mode, ev_threshold) where ev_threshold is None for 'regime',
+        so the model falls back to its own per-volatility table, and None for
+        'accuracy', where the confidence and EV floors govern instead.
+        """
+        cfg=self.db.get('ev_settings') or {}
+        mode=cfg.get('mode')
+        if mode not in self.EV_MODES:
+            # First run: honour the launch flag if one was given.
+            mode='fixed' if getattr(self.a,'ev',None) is not None else 'regime'
+        if mode=='fixed':
+            v=cfg.get('value',getattr(self.a,'ev',None))
+            try: v=float(v)
+            except (TypeError,ValueError): v=None
+            if v is None or not math.isfinite(v): return 'regime',None
+            return 'fixed',v
+        return mode,None
+    def pad_ticks(self):
+        cfg=self.db.get('ev_settings') or {}
+        v=cfg.get('pad_ticks',getattr(self.a,'pad_ticks',1))
+        try: v=int(v)
+        except (TypeError,ValueError): v=int(getattr(self.a,'pad_ticks',1))
+        return max(0,min(5,v))
     async def venue_truth_loop(self):
         """Pull the venue's own money numbers and attach them to settled rows.
 

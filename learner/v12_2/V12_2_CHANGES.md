@@ -316,3 +316,69 @@ signal and economics enter only at sizing. Routing MAIN through the v10 EV check
 is my decision, not a port of the original, and it is why MAIN can be refused
 here when it would simply have traded there. I think refusing a -0.113 EV bet is
 right, but it is a departure and it should be visible rather than buried.
+
+---
+
+# 12.3.0 — why live fires so much less than paper, and the dial for it
+
+## The measurement, before the fix
+
+You asked why almost every EF signal fires in paper and almost none live. Measured
+on 206 real fires from the paper lane, re-running each through the live path:
+
+| slippage allowance | signals that clear the live EV re-check |
+|---|---|
+| 0 ticks | 206 of 206 (100%) |
+| **1 tick (the old default)** | **118 of 206 (57%)** |
+| 2 ticks | 77 of 206 (37%) |
+
+Before submitting, live pads the price up by one tick and re-checks EV at that
+padded price. Paper never did. One tick is a median **2.1%** of the ask, and most
+fires sit between 0.30 and 0.60 where **44%** get refused once that cent is added,
+against an EV bar of 0.15 to 0.25.
+
+Smaller contributors, in order: the ten-minute warm-up after every restart (five
+restarts today is fifty minutes of silence), live needing master and the lane
+enabled, and the cash, quote-age, minimum-size and deadline checks.
+
+**The comparison was never like-for-like.** The paper lane books every signal at
+the raw websocket ask with no pad and no re-check, so both its trade count and
+its PnL describe a strategy the live path cannot execute. That is the same
+recorded-quote optimism we keep finding, this time showing up as frequency.
+
+## EV and slippage are controls now
+
+New section in Trade Controls, and `/api/controls/ev`:
+
+- **EV mode**: `regime` (the model's own 0.15 / 0.25 / 0.25 by volatility),
+  `fixed` (one threshold on every candle), `accuracy` (confidence and EV floors
+  instead). Default unchanged at `regime`.
+- **Slippage allowance**: 0 to 5 ticks above the ask. This is the same dial as
+  `--pad-ticks`, but settable while running and persisted across restarts. The
+  running executor picks it up without a relaunch.
+
+The panel states the measured trade-off next to the control, so the choice is
+made against numbers rather than feel. More padding fills more often and fires
+less often; there is no setting that gives both.
+
+Your report that roughly half of orders are rejected for no match at the exact
+price is the other side of this same dial. At 0 ticks the order is priced at the
+ask and will miss whenever the ask moves between signing and arrival. At 1 tick
+it crosses more reliably and loses 43% of the signals. Start at 1, watch the
+rejection rate against the fire count, and move it with the evidence.
+
+## MAIN and REVERSAL panels restored to build 36
+
+I had replaced them with my own layout. They are back to the build 36 markup and
+wording, verbatim: direction, then time and P(up), then the reason line. The call
+shows on the direction line exactly as it did there, and what became of the order
+goes on the reason line, which is the line that exists for it.
+
+## Why MAIN and REVERSAL still are not submitting
+
+Same cause as EF, measured above. MAIN calls a side only after its alignment
+holds for twelve seconds, by which time the market has usually repriced, so the
+EV re-check refuses it. The slippage dial moves this too, but the honest fix is
+to count how many MAIN signals clear the bar in paper before funding the lane.
+Lowering the EV bar to force it through would remove the only guard stopping the
+lane from buying near-resolved contracts.

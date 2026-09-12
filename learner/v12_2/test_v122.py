@@ -428,6 +428,133 @@ class DatetimeFromTheSdk(unittest.TestCase):
         finally:
             db.c.close(); os.unlink(path)
 
+class EvAndSlippageControls(unittest.TestCase):
+    """EV mode and slippage are live controls now, not launch flags.
+
+    Slippage is the fill-versus-frequency dial: measured on 206 real fires, a pad
+    of 0 ticks lets every signal through the EV re-check, 1 tick lets 57% through
+    and 2 ticks 37%, because one tick is a median 2.1% of the ask against an EV
+    bar of 0.15 to 0.25.
+    """
+
+    def _runner(self):
+        import types, pathlib, sys
+        sys.argv = ['x']
+        import btc_model_v12_polymarket as E
+        a = types.SimpleNamespace(live=False, port=0, host='127.0.0.1',
+            model=str(pathlib.Path('model_v10.json').resolve()),
+            db=tempfile.mktemp(suffix='.sqlite3'), capital=50, mode='pnl', ev=None,
+            quote_age_ms=750, pad_ticks=1, execution_budget_ms=2000,
+            post_timeout_ms=1200, max_attempts=3)
+        return E.PolyRunner(a)
+
+    def test_defaults_to_the_model_regime_thresholds(self):
+        r = self._runner()
+        mode, thr = r.ev_setting()
+        self.assertEqual(mode, 'regime')
+        self.assertIsNone(thr, 'regime hands the decision back to the model table')
+        self.assertEqual(r.pad_ticks(), 1)
+
+    def test_fixed_mode_applies_one_threshold(self):
+        r = self._runner()
+        r.ui.apply('/api/controls/ev', dict(confirmed=True, mode='fixed', value=0.10))
+        self.assertEqual(r.ev_setting(), ('fixed', 0.10))
+
+    def test_accuracy_mode_hands_over_to_the_floors(self):
+        r = self._runner()
+        r.ui.apply('/api/controls/ev', dict(confirmed=True, mode='accuracy'))
+        mode, thr = r.ev_setting()
+        self.assertEqual(mode, 'accuracy')
+        self.assertIsNone(thr)
+
+    def test_slippage_is_settable_and_bounded(self):
+        r = self._runner()
+        r.ui.apply('/api/controls/ev', dict(confirmed=True, slippage_ticks=0))
+        self.assertEqual(r.pad_ticks(), 0)
+        r.ui.apply('/api/controls/ev', dict(confirmed=True, slippage_ticks=3))
+        self.assertEqual(r.pad_ticks(), 3)
+        for bad in (-1, 6, 'x'):
+            with self.assertRaises((ValueError, TypeError)):
+                r.ui.apply('/api/controls/ev', dict(confirmed=True, slippage_ticks=bad))
+
+    def test_slippage_reaches_the_executor(self):
+        r = self._runner()
+        r.ui.apply('/api/controls/ev', dict(confirmed=True, slippage_ticks=0))
+        self.assertEqual(r.executor.pad, 0, 'the running executor must pick it up without a restart')
+
+    def test_bad_mode_and_missing_value_are_rejected(self):
+        r = self._runner()
+        with self.assertRaises(ValueError):
+            r.ui.apply('/api/controls/ev', dict(confirmed=True, mode='whatever'))
+        with self.assertRaises(ValueError):
+            r.ui.apply('/api/controls/ev', dict(confirmed=True, mode='fixed'))
+
+    def test_controls_report_the_measured_trade_off(self):
+        r = self._runner()
+        ev = r.ui.controls()['ev']
+        self.assertEqual(ev['mode'], 'regime')
+        self.assertEqual(ev['slippage_ticks'], 1)
+        self.assertEqual(ev['measured']['survive_pct'][0], 100)
+        self.assertEqual(ev['measured']['survive_pct'][1], 57)
+        self.assertIn('modes', ev)
+
+    def test_settings_survive_a_restart(self):
+        r = self._runner()
+        path = r.a.db
+        r.ui.apply('/api/controls/ev', dict(confirmed=True, mode='fixed', value=0.05, slippage_ticks=0))
+        # release both the connection and the advisory lock, as a real stop does
+        r.db.c.close()
+        try: r.process_lock.close()
+        except Exception: pass
+        import types, pathlib, sys
+        sys.argv = ['x']
+        import btc_model_v12_polymarket as E
+        a = types.SimpleNamespace(live=False, port=0, host='127.0.0.1',
+            model=str(pathlib.Path('model_v10.json').resolve()), db=path, capital=50,
+            mode='pnl', ev=None, quote_age_ms=750, pad_ticks=1,
+            execution_budget_ms=2000, post_timeout_ms=1200, max_attempts=3)
+        r2 = E.PolyRunner(a)
+        self.assertEqual(r2.ev_setting(), ('fixed', 0.05))
+        self.assertEqual(r2.pad_ticks(), 0)
+
+
+class LaneCardMatchesBuild36(unittest.TestCase):
+    """The panel shows the call on the direction line, as build 36 did, and what
+    became of the order on the reason line."""
+
+    def _ui(self, lane_decision):
+        import types, pathlib, sys
+        sys.argv = ['x']
+        import btc_model_v12_polymarket as E
+        a = types.SimpleNamespace(live=False, port=0, host='127.0.0.1',
+            model=str(pathlib.Path('model_v10.json').resolve()),
+            db=tempfile.mktemp(suffix='.sqlite3'), capital=50, mode='pnl', ev=None,
+            quote_age_ms=750, pad_ticks=1, execution_budget_ms=2000,
+            post_timeout_ms=1200, max_attempts=3)
+        r = E.PolyRunner(a); r.lane_decision = lane_decision
+        return r.ui
+
+    def test_no_signal_gives_no_card(self):
+        self.assertIsNone(self._ui({}).lane_card('MAIN'))
+
+    def test_placed_order_says_so(self):
+        ui = self._ui({'main_signal': dict(direction='UP', ts_ms=1, probability_up=0.8),
+                       'main_placed': True})
+        c = ui.lane_card('MAIN')
+        self.assertEqual(c['direction'], 'UP'); self.assertTrue(c['placed'])
+        self.assertEqual(c['reason'], 'order placed')
+
+    def test_refused_order_names_the_reason_without_hiding_the_call(self):
+        ui = self._ui({'main_signal': dict(direction='DOWN', ts_ms=1, probability_up=0.27),
+                       'main_placed': False, 'main_attempts': 2,
+                       'main_last_reason': 'SKIPPED: padded price fails model EV'})
+        c = ui.lane_card('MAIN')
+        self.assertEqual(c['direction'], 'DOWN', 'build 36 shows the call on this line')
+        self.assertFalse(c['placed'])
+        self.assertIn('not executed', c['reason'])
+        self.assertIn('2 attempts', c['reason'])
+        self.assertIn('model EV', c['reason'])
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=1)
