@@ -1,0 +1,192 @@
+"""Tests for the v12.2 changes: venue-sourced money, honest feed staleness,
+clock-skew tolerance and per-attempt latency."""
+import json, os, sqlite3, tempfile, time, unittest
+import poly_core as C
+import poly_feeds as F
+
+
+class VenueTruth(unittest.TestCase):
+    def setUp(self):
+        self.path = tempfile.mktemp(suffix='.sqlite3')
+        self.db = C.Journal(self.path, 'LIVE', 'hash')
+
+    def tearDown(self):
+        try: self.db.c.close(); os.unlink(self.path)
+        except Exception: pass
+
+    def _settled(self, epoch, condition, local_pnl):
+        self.db.reserve(epoch, dict(side='UP'), 'tok', condition, 'EF')
+        self.db.sql('INSERT INTO results(epoch,actual,payout,pnl,ts) VALUES(?,?,?,?,?)',
+                    (epoch, 'UP', 1.0, local_pnl, time.time()))
+
+    def test_venue_pnl_overrides_local_and_is_labelled(self):
+        self._settled(1000, 'cond-a', local_pnl=0.50)
+        n = self.db.apply_venue_pnl([dict(condition_id='cond-a', realized_pnl=0.42,
+                                          total_pnl=0.42, entry_fees=0.03, current_value=0.0)])
+        self.assertEqual(n, 1)
+        row = self.db.sql('SELECT venue_pnl,pnl,pnl_basis,venue_fees FROM results WHERE epoch=1000')[0]
+        self.assertAlmostEqual(row['venue_pnl'], 0.42)
+        self.assertAlmostEqual(row['pnl'], 0.50, msg='local figure is kept for comparison')
+        self.assertEqual(row['pnl_basis'], 'VENUE_POSITION_PNL')
+        self.assertAlmostEqual(row['venue_fees'], 0.03)
+
+    def test_venue_metrics_count_only_venue_priced_rows(self):
+        self._settled(1000, 'cond-a', 0.50)
+        self._settled(1300, 'cond-b', -1.00)
+        self.db.apply_venue_pnl([dict(condition_id='cond-a', realized_pnl=0.42, total_pnl=0.42,
+                                      entry_fees=0.0, current_value=0.0)])
+        vm = self.db.venue_metrics()
+        self.assertEqual(vm['n'], 1, 'a row the venue has not priced is excluded, not back-filled')
+        self.assertEqual(vm['wins'], 1); self.assertEqual(vm['losses'], 0)
+        self.assertEqual(vm['basis'], 'VENUE_POSITION_PNL')
+        self.assertEqual(self.db.metrics()['n'], 2, 'local metrics still see both')
+
+    def test_divergence_between_local_and_venue_is_reported(self):
+        self._settled(1000, 'cond-a', 0.50)
+        self.db.apply_venue_pnl([dict(condition_id='cond-a', realized_pnl=0.42, total_pnl=0.42,
+                                      entry_fees=0.0, current_value=0.0)])
+        d = self.db.pnl_divergence()
+        self.assertEqual(d['compared'], 1)
+        self.assertAlmostEqual(d['worst_abs'], 0.08, places=6)
+
+    def test_venue_snapshot_persists(self):
+        self.db.venue_snapshot(dict(ts=time.time(), cash=13.73, portfolio_value=20.0, open_value=6.27,
+                                    realized_pnl=1.1, unrealized_pnl=-0.2, fees_paid=0.05,
+                                    account_pnl=dict(realized_pnl=1.1)))
+        r = self.db.sql('SELECT cash,portfolio_value,realized_pnl FROM venue_state')[0]
+        self.assertAlmostEqual(r['cash'], 13.73)
+        self.assertAlmostEqual(r['portfolio_value'], 20.0)
+
+    def test_fill_records_venue_fee_basis(self):
+        self.db.reserve(1000, dict(side='UP'), 'tok', 'cond', 'EF')
+        self.db.order('o1', 1000, 1, dict(budget=1.0), kind='EF')
+        self.db.fill('o1', 1000, 't1', dict(shares=2.0, spent=1.0, fees=0.007, price=0.5,
+                                            fee_basis='VENUE_FEE_RATE_BPS', fee_rate_bps=35.0), 'basis')
+        r = self.db.sql('SELECT fee_basis,fee_rate_bps FROM fills WHERE id=?', ('t1',))[0]
+        self.assertEqual(r['fee_basis'], 'VENUE_FEE_RATE_BPS')
+        self.assertAlmostEqual(r['fee_rate_bps'], 35.0)
+
+
+class FeedStaleness(unittest.TestCase):
+    def test_arrival_and_lag_are_independent(self):
+        h = F.FeedHealth(('spot',))
+        now = time.time()
+        # Socket alive (message just arrived) but the data in it is 6s old.
+        h.note('spot', (now - 6.0) * 1000, now=now)
+        self.assertLess(h.arrival_age('spot'), 1.0)
+        self.assertGreater(h.event_lag('spot'), 5.0)
+        bad = h.stale(('spot',))
+        self.assertIn('spot', bad, 'a lagging feed must be rejected even though it is arriving')
+        self.assertIn('behind its event time', bad['spot'])
+
+    def test_fresh_feed_passes_both(self):
+        h = F.FeedHealth(('spot',))
+        now = time.time()
+        h.note('spot', (now - 0.1) * 1000, now=now)
+        self.assertEqual(h.stale(('spot',)), {})
+
+    def test_dead_socket_is_caught_even_with_no_lag_history(self):
+        h = F.FeedHealth(('spot',))
+        h.note('spot', None, now=time.time() - 30)
+        bad = h.stale(('spot',))
+        self.assertIn('no message', bad['spot'])
+
+    def test_clock_behind_venue_is_skew_not_negative_lag(self):
+        h = F.FeedHealth(('spot',))
+        now = time.time()
+        h.note('spot', (now + 3.0) * 1000, now=now)   # event stamped in our future
+        self.assertEqual(h.event_lag('spot'), 0.0, 'lag is clamped, never negative')
+        self.assertLess(h.clock_skew_s, 0.0, 'the offset is recorded as skew')
+
+    def test_snapshot_shape(self):
+        h = F.FeedHealth(('spot', 'perp'))
+        h.note('spot', time.time() * 1000)
+        s = h.snapshot(('spot', 'perp'))
+        for k in ('arrival_age_s', 'event_lag_s', 'messages', 'host', 'reconnects', 'clock_skew_s', 'limits'):
+            self.assertIn(k, s)
+
+
+class BookClockSkew(unittest.TestCase):
+    def _event(self, token, stamp_s, ask=0.5):
+        return {'event_type': 'book', 'asset_id': token, 'timestamp': stamp_s * 1000,
+                'asks': [{'price': str(ask), 'size': '100'}],
+                'bids': [{'price': str(ask - 0.02), 'size': '100'}]}
+
+    def test_skewed_clock_no_longer_discards_the_whole_feed(self):
+        # v12.1 dropped any event more than 2s from local time, so a host whose
+        # clock was off by more than that logged an empty book and no error.
+        b = C.BookCache()
+        now = time.time()
+        for i in range(40):
+            b.apply(self._event('tok', now + 30 + i * 0.1))   # venue 30s "ahead"
+        self.assertGreater(b.applied, 0, 'events must still be applied under clock skew')
+        self.assertIsNotNone(b.quote('tok', max_age=5.0))
+        self.assertLess(b.health()['clock_offset_s'], 0.0)
+
+    def test_genuinely_old_events_are_still_dropped(self):
+        b = C.BookCache()
+        now = time.time()
+        b.apply(self._event('tok', now - 600))
+        self.assertEqual(b.applied, 0)
+        self.assertEqual(b.dropped_stale, 1)
+
+    def test_quote_age_never_negative(self):
+        b = C.BookCache()
+        b.apply(self._event('tok', time.time() + 30))
+        q = b.quote('tok', max_age=5.0)
+        self.assertIsNotNone(q)
+        self.assertGreaterEqual(q['age_ms'], 0.0)
+
+
+class LatencyTelemetry(unittest.TestCase):
+    def test_every_outcome_is_sampled_not_only_accepted(self):
+        ex = C.Executor.__new__(C.Executor)
+        ex.latency_samples = []
+        ex._sample({'total_attempt_ms': 100.0, 'sign_ms': 10.0}, 'ACCEPTED')
+        ex._sample({'total_attempt_ms': 900.0, 'sign_ms': 12.0}, 'REJECTED')
+        ex._sample({'total_attempt_ms': 1500.0, 'sign_ms': 11.0}, 'UNKNOWN')
+        st = ex.latency_stats()
+        self.assertEqual(st['total']['n'], 3, 'rejections and timeouts are the slow ones; they must count')
+        self.assertIn('REJECTED', st['by_outcome'])
+        self.assertIn('sign_ms', st)
+        self.assertEqual(st['max_ms'], 1500.0)
+
+    def test_configurable_execution_budget(self):
+        ex = C.Executor.__new__(C.Executor)
+        C.Executor.__init__(ex, None, None, None, budget_s=5.0, post_timeout_s=2.0, attempts=4)
+        self.assertEqual(ex.budget_s, 5.0)
+        self.assertEqual(ex.post_timeout_s, 2.0)
+        self.assertEqual(ex.max_attempts, 4)
+
+
+class SignalMigration(unittest.TestCase):
+    def test_v121_database_migrates_and_keeps_history(self):
+        path = tempfile.mktemp(suffix='.sqlite3')
+        c = sqlite3.connect(path)
+        c.executescript('''CREATE TABLE meta(k TEXT PRIMARY KEY,v TEXT);
+            CREATE TABLE signals(epoch INTEGER PRIMARY KEY,ts REAL,side TEXT,token TEXT,
+                condition_id TEXT,decision TEXT,status TEXT);
+            CREATE TABLE orders(id TEXT PRIMARY KEY,epoch INTEGER,attempt INTEGER,status TEXT,
+                plan TEXT,ts REAL,latency REAL,reason TEXT);
+            CREATE TABLE fills(id TEXT PRIMARY KEY,order_id TEXT,epoch INTEGER,shares REAL,
+                spent REAL,fees REAL,price REAL,basis TEXT);
+            CREATE TABLE results(id INTEGER PRIMARY KEY AUTOINCREMENT,epoch INTEGER UNIQUE,
+                actual TEXT,payout REAL,pnl REAL,ts REAL,claim_status TEXT DEFAULT 'PENDING',claim_id TEXT);
+            CREATE TABLE diagnostics(ts REAL,epoch INTEGER,detail TEXT);
+            CREATE TABLE candles(epoch INTEGER PRIMARY KEY,open REAL,high REAL,low REAL,close REAL,volume REAL);''')
+        c.execute("INSERT INTO signals VALUES(500,1.0,'UP','tok','cond','{}','FILLED')")
+        for k, v in (('lane', '"LIVE"'), ('model_hash', '"hash"'), ('build', '"12.1"')):
+            c.execute('INSERT INTO meta VALUES(?,?)', (k, v))
+        c.commit(); c.close()
+        db = C.Journal(path, 'LIVE', 'hash')
+        rows = db.sql('SELECT epoch,kind,status FROM signals')
+        self.assertEqual(len(rows), 1, 'existing history is preserved')
+        self.assertEqual(rows[0]['kind'], 'EF', 'pre-existing rows were EF by definition')
+        self.assertTrue(db.reserve(500, dict(side='DOWN'), 't', 'c', 'MAIN'),
+                        'the same candle can now carry a second lane')
+        self.assertEqual(len(db.sql('SELECT 1 FROM signals WHERE epoch=500')), 2)
+        db.c.close(); os.unlink(path)
+
+
+if __name__ == '__main__':
+    unittest.main(verbosity=1)

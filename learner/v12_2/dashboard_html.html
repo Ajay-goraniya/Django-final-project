@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>BTC Model v__VERSION__</title>
+<style>
+:root{color-scheme:dark;--bg:#080b10;--panel:#10151d;--line:#263142;--muted:#8b98aa;--text:#eaf0f8;--up:#27d17f;--down:#ff5d6c;--main:#60a5fa;--rev:#f7b955;--ef:#9b59ff;--warn:#ffd166}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px}body{min-height:100vh}.shell{width:100%;max-width:760px;margin:0 auto;min-height:100vh}.top{position:sticky;top:0;z-index:5;background:#080b10f3;backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:10px 12px;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center}.brand{font-weight:800;letter-spacing:.5px}.status{color:var(--muted);text-align:right;white-space:nowrap}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:8px;padding:8px}.card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:11px;min-width:0}.span3{grid-column:span 3}.span4{grid-column:span 4}.span6{grid-column:span 6}.span8{grid-column:span 8}.span12{grid-column:span 12}.label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.7px}.big{font-size:25px;font-weight:800;margin-top:5px}.up{color:var(--up)}.down{color:var(--down)}.main{color:var(--main)}.rev{color:var(--rev)}.ef{color:var(--ef)}.forbidden{color:var(--main);font-weight:800}.muted{color:var(--muted)}.navlink{color:var(--text);text-decoration:none;border:1px solid var(--line);background:var(--panel);padding:7px 12px;border-radius:9px;font-weight:700;white-space:nowrap}.navlink:hover{border-color:var(--main)}.warn{color:var(--warn)}.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.metric{font-size:22px;font-weight:800;margin:5px 0}.small{font-size:11px;color:var(--muted);line-height:1.5}.bar{height:7px;border-radius:10px;background:#202a38;overflow:hidden;margin-top:7px}.bar>i{display:block;height:100%;background:currentColor;width:0}.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin-top:8px}.check{border:1px solid var(--line);padding:6px;border-radius:6px;color:var(--muted)}.check.ok{border-color:#1c6848;color:var(--up)}.chartBox{height:390px;position:relative}.chartBox canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}.tip{position:absolute;display:none;pointer-events:none;background:#05070bcc;border:1px solid var(--line);padding:7px;border-radius:7px;white-space:pre;z-index:3}.features{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:9px}.f{border-bottom:1px solid #1b2430;padding:4px 0}.f b{float:right}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:7px 6px;border-bottom:1px solid #202a38;text-align:left;white-space:nowrap}.scroll{overflow:auto}.error{color:#ff9aa4;white-space:pre-wrap}.pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:3px 7px}.pager{display:flex;gap:5px;align-items:center;justify-content:center;flex:1}.pageButton{min-width:32px;padding:5px 8px;border:1px solid var(--line);border-radius:5px;background:#161d27;color:var(--text)}.pageButton.active{border-color:#8ab4ff;color:#8ab4ff;background:#17243a}.pageGap{color:var(--muted);padding:0 2px}button:disabled{opacity:.45}a{color:#8ab4ff}.rangeBtn{padding:5px 9px;border:1px solid var(--line);border-radius:6px;background:#161d27;color:var(--muted)}.rangeBtn.active{border-color:#8ab4ff;color:#8ab4ff;background:#17243a}
+.bookHeader{display:grid;grid-template-columns:minmax(0,1fr) 175px;gap:12px;align-items:start}.sideTiles{display:grid;grid-template-columns:1fr 1fr;margin-top:9px;background:#0b1017;border:1px solid var(--line);border-radius:9px;overflow:hidden}.sideTile{padding:10px 11px;min-width:0}.sideTile+.sideTile{border-left:1px solid #202a38}.sideTile .px{font-size:22px;font-weight:900;margin:3px 0}.bookFacts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:9px}.fact,.pnlStat{background:#0b1017;border:1px solid #202a38;border-radius:8px;padding:7px}.fact b{display:block;font-size:13px;margin-top:3px}.fillBox{background:#0b1017;border:1px solid var(--line);border-radius:9px;padding:10px;text-align:right}.pnlTop{display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:12px;align-items:start}.pnlHero{display:grid;grid-template-columns:1fr 1fr;gap:10px}.pnlHero>div{text-align:right}.pnlStats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:11px}.pnlStat b{display:block;font-size:17px;margin-top:4px}.chartCard{padding:10px}.chartTitle{line-height:1.2}
+.pnlChart{margin-top:15px;padding-top:11px;border-top:1px solid #202a38}.pnlChartHead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:7px}.pnlRange{display:flex;gap:14px;color:var(--muted);font-size:10px;letter-spacing:.35px}.pnlRange b{margin-left:4px;font-size:11px}.pnlCanvasWrap{height:190px;border:1px solid #1d2735;border-radius:8px;background:#0b1017;overflow:hidden}.pnlCanvasWrap canvas{display:block;width:100%;height:190px}
+@media(max-width:720px){.span3,.span4{grid-column:span 6}.span6,.span8{grid-column:span 12}.bookFacts,.pnlStats{grid-template-columns:repeat(2,minmax(0,1fr))}.chartBox{height:340px}}
+@media(max-width:560px){.top{grid-template-columns:minmax(0,1fr) auto}.top .status{grid-column:2;grid-row:2}.top .navs{grid-column:2;grid-row:1}.grid{gap:6px;padding:6px}.card{padding:9px}.span3,.span4,.span6,.span8,.span12{grid-column:span 12}.big{font-size:22px}.features{grid-template-columns:repeat(2,minmax(0,1fr))}.checks{grid-template-columns:1fr}.bookHeader,.pnlTop{grid-template-columns:1fr}.fillBox{text-align:left}.chartBox{height:315px}}
+</style><script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+</head><body><div class="shell">
+<header class="top"><div><div class="brand">BTC MODEL v__VERSION__</div><div class="small">build <b id="buildStamp">__BUILD__</b></div><div id="runStamp" class="small">--</div></div><div class="navs" style="display:flex;gap:7px"><a href="/data" class="navlink">Data</a><a href="/controls" class="navlink">Trade Controls</a></div><div id="topStatus" class="status">connecting…</div></header>
+<main class="grid">
+  <section class="card span3"><div class="label">BTCUSDT</div><div id="price" class="big">--</div><div id="candleInfo" class="small">waiting for kline</div></section>
+  <section class="card span4"><div class="label">MAIN prediction</div><div id="mainDirection" class="big main">WAITING</div><div id="mainMeta" class="small">settlement-aware · waits while final-close evidence is weak</div><div id="mainReason" class="small"></div></section>
+  <section class="card span4"><div class="label">REVERSAL prediction</div><div id="revDirection" class="big rev">NOT TRIGGERED</div><div id="revMeta" class="small">one maximum per candle</div><div id="revReason" class="small"></div></section>
+  <section class="card span4"><div class="label">EF prediction &middot; independent</div><div id="efDirection" class="big ef">WATCHING</div><div id="efMeta" class="small">v10 expected value &middot; one maximum</div><div id="efReason" class="small"></div><div id="efShadow" class="small"></div></section>
+
+  <section class="card span3"><div class="label">Main accuracy</div><div id="mainAcc" class="metric">--</div><div id="mainAccN" class="small">0 / 0</div></section>
+  <section class="card span3"><div class="label">Reversal accuracy</div><div id="revAcc" class="metric rev">--</div><div id="revAccN" class="small">0 / 0 triggered</div></section>
+  <section class="card span3"><div class="label">EF accuracy</div><div id="efAcc" class="metric ef">--</div><div id="efAccN" class="small">0 / 0 triggered</div></section>
+  <section class="card span3"><div class="label">Combined PnL accuracy</div><div id="combinedAcc" class="metric">--</div><div id="combinedAccN" class="small">net MAIN + REV + EF PnL per candle</div></section>
+
+  <section class="card span12"><div class="bookHeader"><div><div class="label">Polymarket order book &middot; websocket</div><div class="sideTiles"><div class="sideTile"><div class="label">UP &middot; YES ASK</div><div id="bookUp" class="px up">--</div><div id="bookUpSub" class="small">waiting for live snapshot</div></div><div class="sideTile"><div class="label">DOWN &middot; NO ASK</div><div id="bookDown" class="px down">--</div><div id="bookDownSub" class="small">waiting for live snapshot</div></div></div><div class="bookFacts"><div class="fact"><div class="label">Spread</div><b id="bookSpread">--</b></div><div class="fact"><div class="label">Book age</div><b id="bookAge">--</b></div><div class="fact"><div class="label">Environment</div><b id="bookEnvironment">MAINNET</b></div><div class="fact"><div class="label">Requests</div><b id="bookRequests">--</b></div></div><div id="bookMeta" class="small" style="margin-top:8px">connecting</div></div><div class="fillBox"><div class="label">Last live order</div><div id="fillPrice" class="metric">--</div><div id="fillMeta" class="small">--</div></div></div></section>
+
+  <section class="card span12"><div class="pnlTop"><div><div class="label">P&amp;L · confirmed fills / paper estimates</div><div id="pnlTotal" class="big">--</div><div id="pnlMeta" class="small">no settled order yet</div></div><div class="pnlHero"><div><div class="label">Fill rate</div><div id="pnlFill" class="metric">--</div><div class="small">confirmed orders</div></div><div><div class="label">Shared next stake</div><div id="capStake" class="metric">--</div><div class="small">v10 PnL</div></div></div></div><div class="pnlStats"><div class="pnlStat"><div class="label">Bankroll</div><b id="capBalance">--</b><div id="capSplit" class="small">wallet + unclaimed</div></div><div class="pnlStat"><div class="label">Unclaimed wins</div><b id="capPending">--</b><div class="small">settled, not yet redeemed</div></div><div class="pnlStat"><div class="label">Available</div><b id="capFree">--</b><div class="small">Polymarket available-to-trade</div></div><div class="pnlStat"><div class="label">Average entry</div><b id="pnlAvgEntry">--</b><div id="pnlAvg" class="small">--</div></div></div><div id="openPos"></div><div id="capMeta" class="small" style="margin-top:8px">--</div><div id="capTruth" class="small">--</div><div id="capBan" class="small">--</div><div class="pnlChart"><div class="pnlChartHead"><div><button class="rangeBtn active" data-range="1D">24H</button> <button class="rangeBtn" data-range="1W">1W</button> <button class="rangeBtn" data-range="ALL">ALL</button></div><div class="pnlRange"><span>HIGH <b id="pnlHigh">--</b></span><span>LOW <b id="pnlLow">--</b></span><span>CURRENT <b id="pnlNow">--</b></span></div></div><div class="pnlCanvasWrap"><canvas id="pnlCanvas"></canvas></div></div></section>
+
+  <section class="card span12 chartCard"><div class="label chartTitle">BTCUSDT 5-MINUTE CHART &middot; MAIN / REVERSAL / EF<br>MARKERS</div><div id="lwchart" style="height:46vh"></div><div id="chartFallback" class="chartBox" style="height:46vh;display:none"><canvas id="chart"></canvas><div id="tip" class="tip"></div></div><div id="chartMode" class="small muted" style="display:none">offline chart renderer &middot; drag to pan, pinch to zoom, double-tap to reset</div></section>
+
+  <section class="card span12"><div class="row" style="justify-content:space-between"><div class="label">Settled candle history</div><span><a href="/data">Data</a> &middot; <a href="/export.csv">export CSV</a></span></div><div class="scroll"><table id="history"><thead><tr><th>Candle</th><th>Actual</th><th>MAIN</th><th>Buy</th><th>at</th><th>Result</th><th>REVERSAL</th><th>Buy</th><th>Result</th><th>EF</th><th>Buy</th><th>Result</th><th>Combined PnL</th><th>Stake</th><th>P&amp;L</th></tr></thead><tbody></tbody></table></div><div class="row" style="justify-content:space-between;padding-top:10px"><button id="histPrev">previous</button><div id="histPages" class="pager"></div><button id="histNext">next</button></div></section>
+</main></div>
+<script>
+(function(){
+'use strict';
+// v4.5 fix: the marker placement below needs the candle length. In v4.0.3 this
+// referenced a name that only existed in Python, so drawing the chart threw a
+// ReferenceError as soon as any prediction marker was on screen.
+var CANDLE_MS=300000;
+function el(id){return document.getElementById(id);}
+function text(id,value){var node=el(id);if(node)node.textContent=value;}
+function cls(id,value){var node=el(id);if(node)node.className=value;}
+function esc(value){return String(value == null ? '' : value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});}
+function pct(metric){return metric && metric.accuracy != null ? (100*metric.accuracy).toFixed(1)+'%' : '--';}
+// v7.7: delay_ms is now the TOTAL across every replacement of one order.
+// The last attempt is shown beside it only when a retry actually happened.
+function latency(f){var total=Number((f&&f.delay_ms)||0),last=f?f.last_attempt_ms:null;
+  var text=total+'ms total';
+  if(last!=null&&Number(last)<total-1)text+=' (last try '+Number(last)+'ms)';
+  return text;}
+function directionClass(value){return value==='UP'?'up':value==='DOWN'?'down':'';}
+function londonParts(ms){
+  // Every displayed time is Europe/London. toISOString() is UTC and was the
+  // source of the old "UTC" labels; Intl applies GMT/BST correctly including
+  // the DST switch, which a fixed offset cannot.
+  try{
+    var f=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',
+      year:'numeric',month:'2-digit',day:'2-digit',
+      hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+    var o={};f.formatToParts(new Date(ms)).forEach(function(p){o[p.type]=p.value;});
+    if(o.hour==='24')o.hour='00';
+    return o;
+  }catch(_){
+    var d=new Date(ms);
+    return {year:String(d.getUTCFullYear()),
+      month:('0'+(d.getUTCMonth()+1)).slice(-2),day:('0'+d.getUTCDate()).slice(-2),
+      hour:('0'+d.getUTCHours()).slice(-2),minute:('0'+d.getUTCMinutes()).slice(-2),
+      second:('0'+d.getUTCSeconds()).slice(-2)};
+  }
+}
+function londonZone(ms){
+  try{
+    var f=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',timeZoneName:'short'});
+    var p=f.formatToParts(new Date(ms)).filter(function(x){return x.type==='timeZoneName';});
+    return p.length?p[0].value:'GMT';
+  }catch(_){return 'GMT';}
+}
+function londonHM(ms){var p=londonParts(ms);return p.hour+':'+p.minute;}
+function londonHMS(ms){var p=londonParts(ms);return p.hour+':'+p.minute+':'+p.second;}
+function londonDate(ms){var p=londonParts(ms);return p.year+'-'+p.month+'-'+p.day;}
+function londonStamp(ms){return londonDate(ms)+' '+londonHMS(ms);}
+function londonShort(ms){return londonDate(ms)+' '+londonHM(ms);}
+var RUN_UPTIME_BASE=Number('__UPTIME_SEC__')||0;
+var RUN_PAGE_BASE=(window.performance&&typeof window.performance.now==='function')?window.performance.now():Date.now();
+function runtimeText(totalSeconds){
+  var left=Math.max(0,Math.floor(Number(totalSeconds)||0)),out=[];
+  var units=[['y',31536000],['mo',2592000],['d',86400],['h',3600],['m',60],['s',1]];
+  units.forEach(function(unit){var n=Math.floor(left/unit[1]);if(n){out.push(n+unit[0]);left-=n*unit[1];}});
+  return out.length?out.join(' '):'0s';
+}
+function tickRuntime(){
+  var node=document.getElementById('runStamp');if(!node)return;
+  var now=(window.performance&&typeof window.performance.now==='function')?window.performance.now():Date.now();
+  node.textContent='runtime · '+runtimeText(RUN_UPTIME_BASE+(now-RUN_PAGE_BASE)/1000);
+}
+function formatTime(ms){try{return londonHMS(ms);}catch(_){return '--';}}
+function formatNumber(value,digits){return value == null ? '--' : Number(value).toFixed(digits == null ? 3 : digits);}
+function requestJSON(url,callback){
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET',url+(url.indexOf('?')>=0?'&':'?')+'_='+Date.now(),true);
+  xhr.timeout=5000;
+  xhr.onreadystatechange=function(){if(xhr.readyState!==4)return;if(xhr.status>=200&&xhr.status<300){try{callback(null,JSON.parse(xhr.responseText));}catch(err){callback(err);}}else{callback(new Error('HTTP '+xhr.status));}};
+  xhr.ontimeout=function(){callback(new Error('request timeout'));};
+  xhr.onerror=function(){callback(new Error('request failed'));};
+  try{xhr.send();}catch(err){callback(err);}
+}
+var live=null;
+var chartData={candles:[],markers:[],history:[]};
+var chartRevision=-1;
+var chartBusy=false;
+function defaultViewCount(){
+  var width=(document.documentElement&&document.documentElement.clientWidth)||window.innerWidth||360;
+  return Math.max(20,Math.min(60,Math.round(width/9)));
+}
+var viewCount=defaultViewCount();
+var viewEnd=null;
+var followLive=true;
+var hoverX=null;
+var visibleChart=null;
+var pointers={};
+var dragState=null;
+var pinchState=null;
+function efMarkerText(marker){var up=marker.direction==='UP';if(marker.correct==null)return up?'EFUP':'EFDOWN';return 'EF'+(up?'U':'D')+(marker.correct?'W':'L');}
+function markerText(marker){var shadow=!!marker.financial_is_shadow;if(marker.kind==='EF')return (shadow?'S·':'')+efMarkerText(marker);var result=marker.correct==null?'•':marker.correct?'✓':'✕';return (shadow?'S·':'')+(marker.kind==='MAIN'?'M':'R')+' '+marker.direction+' '+result;}
+function renderHistory(){ loadHistory(); }
+
+function updateUI(state){
+  live=state||{};
+  var candle=live.candle||{},feature=live.feature||{},feed=live.feed||{},processing=live.processing||{},metrics=live.metrics||{};
+  text('topStatus',(feed.status||'--')+' · '+(feed.last_event_age_ms==null?'no data':feed.last_event_age_ms+' ms old'));
+  text('price',candle.close?Number(candle.close).toFixed(1):'--');
+  cls('price','big '+(candle.close>=candle.open?'up':'down'));
+  if(candle.time){
+    var left=Number(candle.seconds_left||0),minutes=Math.floor(left/60),seconds=String(Math.floor(left%60));if(seconds.length<2)seconds='0'+seconds;
+    text('candleInfo',londonHM(candle.time)+' '+londonZone(candle.time)+' · closes in '+minutes+':'+seconds);
+  }else text('candleInfo','waiting for kline');
+  text('feedLatency',feed.exchange_latency_ms==null?'--':feed.exchange_latency_ms+' ms');
+  text('procLatency',processing.feature_compute_us==null?'--':processing.feature_compute_us+' µs');
+  text('procInfo','feature age '+(processing.feature_age_ms==null?'--':processing.feature_age_ms)+' ms · every WebSocket event');
+  var main=live.main;
+  if(main){text('mainDirection',main.direction);cls('mainDirection','big '+directionClass(main.direction));text('mainMeta',formatTime(main.ts_ms)+' '+londonZone(main.ts_ms)+' · P(up) '+(100*main.probability_up).toFixed(1)+'%');text('mainReason',main.reason||'');}
+  else{text('mainDirection','WAITING');cls('mainDirection','big main');text('mainMeta',live.main_block||'watching for a sustained alignment');text('mainReason','');}
+  var reversal=live.reversal;
+  if(reversal){text('revDirection',reversal.direction);cls('revDirection','big '+directionClass(reversal.direction));text('revMeta',formatTime(reversal.ts_ms)+' '+londonZone(reversal.ts_ms)+' · opposite MAIN · P(up) '+(100*reversal.probability_up).toFixed(1)+'%');text('revReason',reversal.reason||'');}
+  else{text('revDirection','NOT TRIGGERED');cls('revDirection','big rev');text('revMeta','at most one opposite prediction per candle');text('revReason','');}
+  var ef=live.ef,efMonitor=live.ef_monitor||{};
+  if(ef){text('efDirection',ef.direction==='UP'?'EFUP':'EFDOWN');cls('efDirection','big ef');text('efMeta',formatTime(ef.ts_ms)+' '+londonZone(ef.ts_ms)+' · live order uses shared stake');text('efReason',ef.reason||'');}
+  else{text('efDirection','WATCHING');cls('efDirection','big ef');text('efMeta',efMonitor.status||'watching for v10 expected value');text('efReason','score '+formatNumber(efMonitor.score,2)+' · flow '+formatNumber(efMonitor.opposite_flow,2)+' · book '+formatNumber(efMonitor.opposite_book,2)+' · rejection '+formatNumber(efMonitor.rejection,2)+' · crossing '+formatNumber(efMonitor.crossing_feasibility,2));}
+  text('efShadow',live.lane+' · v10 PnL · fees: '+live.fee_basis);
+  var gated=live.gated,gm=live.gated_metrics||{};
+  var monitor=live.reversal_monitor||{},checks=monitor.checks||{};
+  text('persist',monitor.status||'waiting');
+  var checkHtml='',key;for(key in checks){if(Object.prototype.hasOwnProperty.call(checks,key)){var okay=!!checks[key];checkHtml+='<div class="check '+(okay?'ok':'')+'">'+(okay?'✓':'·')+' '+esc(key.split('_').join(' '))+'</div>';}}
+  var checksNode=el('checks');if(checksNode)checksNode.innerHTML=checkHtml||'<div class="check">monitor starts at 30 seconds</div>';
+  text('mainAcc',pct(metrics.main));text('mainAccN',Number(metrics.main&&metrics.main.wins||0)+' W / '+Number(metrics.main&&metrics.main.losses||0)+' L · settled PnL · real '+Number(metrics.main&&metrics.main.real||0)+' · shadow '+Number(metrics.main&&metrics.main.shadow||0));
+  text('revAcc',pct(metrics.reversal));text('revAccN',Number(metrics.reversal&&metrics.reversal.wins||0)+' W / '+Number(metrics.reversal&&metrics.reversal.losses||0)+' L · settled PnL · real '+Number(metrics.reversal&&metrics.reversal.real||0)+' · shadow '+Number(metrics.reversal&&metrics.reversal.shadow||0));
+  text('efAcc',pct(metrics.ef));text('efAccN',Number(metrics.ef&&metrics.ef.wins||0)+' W / '+Number(metrics.ef&&metrics.ef.losses||0)+' L · settled PnL · real '+Number(metrics.ef&&metrics.ef.real||0)+' · shadow '+Number(metrics.ef&&metrics.ef.shadow||0));
+  text('combinedAcc',pct(metrics.combined));text('combinedAccN',Number(metrics.combined&&metrics.combined.wins||0)+' W / '+Number(metrics.combined&&metrics.combined.losses||0)+' L · net MAIN + REV + EF settled PnL per candle · real '+Number(metrics.combined&&metrics.combined.real||0)+' · shadow '+Number(metrics.combined&&metrics.combined.shadow||0)+' · mixed '+Number(metrics.combined&&metrics.combined.mixed||0));
+  var cap=live.capital||{},ban=cap.ban||{};
+  {
+    var bal=Number(cap.balance||0),fresh=!!cap.fresh;
+    var wal=Number(cap.wallet||0),pend=Number(cap.pending_payout||0);
+    var fund=Number(cap.wallet_free||0);
+    var controls=live.controls||{};
+    text('capBalance',fresh?'$'+bal.toFixed(2):'UNAVAILABLE');
+    cls('capBalance','big '+(fresh?'':'down'));
+    text('capSplit',fresh?('$'+wal.toFixed(2)+' USD + $'+pend.toFixed(2)+' unclaimed'):'no proved wallet read');
+    text('capPending','$'+pend.toFixed(2));
+    cls('capPending',pend>0?'up':'');
+    text('capFree','$'+Number(cap.free||0).toFixed(2));
+    var age=cap.balance_age_sec==null?'--':Number(cap.balance_age_sec).toFixed(0)+'s';
+    text('capMeta',(fresh?'Polymarket USD live':'Polymarket USD unavailable')
+      +' \u00b7 balance age '+age
+      +' \u00b7 settled trade P&L '+(cap.realised>=0?'+':'')+Number(cap.realised||0).toFixed(2)
+      +' \u00b7 local unresolved reserve $'+Number(cap.reserved||0).toFixed(2)
+      +' \u00b7 Polymarket spendable $'+Number(fund).toFixed(2)
+      +' \u00b7 open position value $'+Number(cap.open_position_value||0).toFixed(2)
+      +' \u00b7 sizing bankroll $'+Number(cap.sizing_bankroll==null?cap.balance:cap.sizing_bankroll).toFixed(2)
+      +' \u00b7 local safety headroom $'+Number(cap.funding_headroom==null?fund:cap.funding_headroom).toFixed(2)
+      +' \u00b7 venue balance is source of truth; local reserve is diagnostic/concurrency protection'
+      +' \u00b7 v10 PnL stake');
+    cls('capMeta','small');
+
+    // v7.8: the one addition to the v7.7 panel. Buy, Used, shares and P&L
+    // are Polymarket's own numbers from GET /v1/positions, never the local
+    // stake we asked for.
+    var pos=live.open_positions||[],posHtml='';
+    pos.forEach(function(p){
+      var pnl=p.pnl_usd==null?null:Number(p.pnl_usd);
+      var buy=p.buy_price==null?'--':'$'+Number(p.buy_price).toFixed(3);
+      var used=p.used_usd==null?'--':'$'+Number(p.used_usd).toFixed(2);
+      posHtml+='<div class="small" style="margin-top:8px">'
+        +'<b>'+esc(p.kind)+' '+esc(p.direction)+'</b>'
+        +' \u00b7 Buy '+buy
+        +' \u00b7 Used '+used
+        +' \u00b7 '+Number(p.shares||0).toFixed(3)+' shares'
+        +' \u00b7 Current P&L <b class="'+(pnl>0?'up':(pnl<0?'down':''))+'">'
+        +(pnl==null?'--':((pnl>=0?'+':'\u2212')+'$'+Math.abs(pnl).toFixed(2)))
+        +'</b></div>';
+    });
+    var posNode=document.getElementById('openPos');
+    if(posNode) posNode.innerHTML=posHtml;
+
+    var truth=cap.truth||{},vp=truth.venue_positions||[],vpValue=0;
+    vp.forEach(function(x){vpValue+=Number(x.current_value||0)});
+    text('capTruth',(truth.source||'Polymarket account API')
+      +' \u00b7 venue positions '+vp.length
+      +(vp.length?' ($'+vpValue.toFixed(2)+' current value)':'')
+      +' \u00b7 P&L uses '+live.fee_basis);
+    cls('capTruth','small');
+    text('capStake','$'+Number(controls.shared_next_stake||cap.next_stake||0).toFixed(2));
+    text('capBan',controls.master_enabled?live.lane+' MASTER ON':live.lane+' MASTER OFF');
+    cls('capBan','small '+(controls.master_enabled?'up':'down'));
+  }
+  text('mainDirection','DISABLED');text('revDirection','DISABLED');text('revMeta','Not part of v10 Polymarket strategy');text('capBan',live.lane+' · '+(controls.master_enabled?'MASTER ON':'MASTER OFF')+(live.halt?' · '+live.halt:''));
+  renderBook(live);
+  if(activePnlRange==='1D')renderTradePnl(live);
+  liveCandleTick(live);
+  var names=live.feature_names||['delta_1s','delta_5s','delta_30s','ofi_1s','ofi_5s','spot_imbalance5','return_250ms_bps','return_1s_bps','return_5s_bps','body_usd','above_open_balance_30s','open_cross_count','path_efficiency','body_range_ratio','close_location','aggressive_bid_cluster','aggressive_ask_cluster','volume_profile_delta','probability_up'];
+  var featureHtml='';for(var n=0;n<names.length;n++){var name=names[n],digits=(name.indexOf('return')>=0||name==='body_usd')?2:3;featureHtml+='<div class="f"><span>'+name+'</span><b>'+formatNumber(feature[name],digits)+'</b></div>';}
+  var featureNode=el('features');if(featureNode)featureNode.innerHTML=featureHtml;
+  var economics=live.economics||{};
+  var econText=(economics.count?('net '+formatNumber(economics.pnl,2)+' USD over '+economics.count+' settled orders'):'no settled order yet');
+  var flowNode=el('flowStatus');if(flowNode)flowNode.innerHTML='1. WebSocket cache: <b>'+esc(feed.status||'--')+'</b><br>2. Features: <b>'+(feature.ts_ms?'LIVE':'WAITING')+'</b><br>3. MAIN: <b>'+(main?esc(main.direction):'WAITING')+'</b> · REVERSAL: <b>'+(reversal?esc(reversal.direction):'not triggered')+'</b> · EF: <b>'+(ef?esc(ef.direction):'watching')+'</b><br>4. Evaluation: <b>official Polymarket resolution</b><br>5. Economics: <b>'+esc(econText)+'</b><br>6. Learning: <b>'+esc((live.learning&&live.learning.status)||'idle')+'</b> · model v'+Number((live.model&&live.model.version)||0);
+  text('error',live.error||'');
+  if(live.chart_revision!==chartRevision)loadChart();else safeDrawChart();
+}
+// ---- v5/v7 chart -----------------------------------------------------
+// Candles plus entry arrows, exactly as v5/v7 drew them: BUY below the bar,
+// SELL above, colour by outcome, and the label turns into W/L once settled.
+// A reversal leg is prefixed with R and drawn in the v7 amber.
+var lwChart=null, lwSeries=null, fallbackChart=false, lwAttempt=0, lwLoading=false;
+var LW_SOURCES=['https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js',
+  'https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js'];
+function ensureLwLibrary(){
+  if(typeof LightweightCharts!=='undefined')return true;
+  if(lwLoading||lwAttempt>=6)return false;
+  var script=document.createElement('script');
+  script.src=LW_SOURCES[lwAttempt%LW_SOURCES.length];lwAttempt++;lwLoading=true;script.async=true;
+  script.onload=function(){lwLoading=false;initLwChart();if(lwSeries)renderLwChart(chartData);};
+  script.onerror=function(){lwLoading=false;window.setTimeout(ensureLwLibrary,1500);};
+  document.head.appendChild(script);
+  return false;
+}
+function setChartMode(useFallback){
+  fallbackChart=!!useFallback;
+  var host=document.getElementById('lwchart'),box=document.getElementById('chartFallback'),note=document.getElementById('chartMode');
+  if(host)host.style.display=fallbackChart?'none':'block';
+  if(box)box.style.display=fallbackChart?'block':'none';
+  if(note)note.style.display=fallbackChart?'block':'none';
+}
+function activateFallbackChart(){if(!fallbackChart)setChartMode(true);return true;}
+function initLwChart(){
+  if(lwChart)return;
+  // Never latch. A slow CDN must not cost the real chart for the session:
+  // show the local canvas meanwhile, then upgrade the moment the library lands.
+  if(!ensureLwLibrary()){activateFallbackChart();return;}
+  var host=document.getElementById('lwchart'); if(!host)return;
+  setChartMode(false);
+  try{
+    lwChart=LightweightCharts.createChart(host,{
+      layout:{background:{color:'#0b0e14'},textColor:'#99a'},
+      grid:{vertLines:{color:'#1a2030'},horzLines:{color:'#1a2030'}},
+      timeScale:{timeVisible:true,secondsVisible:false}});
+    lwSeries=lwChart.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',
+      borderVisible:false,wickUpColor:'#26a69a',wickDownColor:'#ef5350'});
+  }catch(problem){lwChart=null;lwSeries=null;activateFallbackChart();return;}
+  lwChart.applyOptions({width:host.clientWidth});
+  window.addEventListener('resize',function(){
+    lwChart.applyOptions({width:host.clientWidth});});
+}
+var lastTradeCurve=[];
+function drawTradePnl(curve){
+  var c=document.getElementById('pnlCanvas'); if(!c)return;
+  var w=Math.max(280,c.clientWidth||600),h=190,dpr=Math.max(1,window.devicePixelRatio||1);
+  var pixelW=Math.round(w*dpr),pixelH=Math.round(h*dpr);
+  if(c.width!==pixelW||c.height!==pixelH){c.width=pixelW;c.height=pixelH;c.style.width='100%';c.style.height=h+'px';}
+  var x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);
+  if(!curve||!curve.length){x.fillStyle='#8b98aa';x.font='11px monospace';x.textAlign='center';x.textBaseline='middle';x.fillText('P&L starts after the first settled order',w/2,h/2);return;}
+  var points=[0].concat(curve.map(function(v){return Number(v)||0;}));
+  var rawLo=Math.min.apply(null,points),rawHi=Math.max.apply(null,points);
+  var rawSpan=Math.max(rawHi-rawLo,1),verticalPad=Math.max(rawSpan*.12,.50);
+  var lo=rawLo-verticalPad,hi=rawHi+verticalPad;
+  var plot={l:10,r:w-10,t:10,b:h-23},span=hi-lo;
+  function py(v){return plot.t+(plot.b-plot.t)*(1-(v-lo)/span);}
+  function px(i){return plot.l+(plot.r-plot.l)*(i/Math.max(1,points.length-1));}
+  x.lineWidth=1;x.strokeStyle='#17202d';
+  for(var gridLine=0;gridLine<4;gridLine++){
+    var gridY=plot.t+(plot.b-plot.t)*(gridLine/3);
+    x.beginPath();x.moveTo(plot.l,gridY+.5);x.lineTo(plot.r,gridY+.5);x.stroke();
+  }
+  if(lo<=0&&hi>=0){
+    x.save();x.setLineDash([4,4]);x.strokeStyle='#354156';x.lineWidth=1;
+    x.beginPath();x.moveTo(plot.l,py(0));x.lineTo(plot.r,py(0));x.stroke();x.restore();
+  }
+  x.lineWidth=1.5;x.lineCap='butt';x.lineJoin='round';
+  function segment(ax,ay,bx,by,color){x.strokeStyle=color;x.beginPath();x.moveTo(ax,ay);x.lineTo(bx,by);x.stroke();}
+  for(var i=1;i<points.length;i++){
+    var a=points[i-1],b=points[i],x1=px(i-1),x2=px(i),y1=py(a),y2=py(b);
+    if((a<0&&b>0)||(a>0&&b<0)){
+      var ratio=Math.abs(a)/(Math.abs(a)+Math.abs(b)),crossX=x1+(x2-x1)*ratio,crossY=py(0);
+      segment(x1,y1,crossX,crossY,a>=0?'#27d17f':'#ff5d6c');
+      segment(crossX,crossY,x2,y2,b>=0?'#27d17f':'#ff5d6c');
+    }else segment(x1,y1,x2,y2,b>=0?'#27d17f':'#ff5d6c');
+  }
+  x.font='9px monospace';x.fillStyle='#66758a';x.textBaseline='bottom';
+  x.textAlign='left';x.fillText('START',plot.l,h-4);
+  x.textAlign='right';x.fillText(curve.length+' ORDERS',plot.r,h-4);
+}
+function renderBook(live){
+  var b=live.book||{},up=b.up||{},dn=b.down||{};
+  var environment=String(b.environment||'mainnet').toUpperCase()+' · LIVE WEBSOCKET';
+  var rpm=Number(b.requests_last_minute||0);
+  var limit=Number(b.documented_limit_rpm||240);
+  var access=b.environment==='testnet'
+    ?' \u00b7 separate sandbox, no key \u00b7 '+rpm+'/'+limit+' req/min'
+    :(b.api_key_configured?' \u00b7 API key active \u00b7 '+rpm+'/'+limit+' req/min'
+      :' \u00b7 public book feed');
+  var market=b.market?(' \u00b7 '+b.market):'';
+  text('bookEnvironment',environment);
+  text('bookRequests',rpm+' / '+limit+' min');
+  text('bookAge',b.age_ms==null?'--':Math.round(b.age_ms)+' ms');
+  text('bookSpread',up.spread==null?'--':Number(up.spread).toFixed(3));
+  if(String(b.status||'').indexOf('live')!==0||up.price==null||dn.price==null){
+    text('bookUp','--');text('bookDown','--');
+    text('bookUpSub',String(b.status||'').indexOf('live')===0?'no liquid quote':(b.status||'offline'));
+    text('bookDownSub',b.error||'waiting for live snapshot');
+    text('bookMeta',environment+' \u00b7 '+(b.error||b.status||'connecting')+market+access);
+  } else {
+    text('bookUp',Number(up.price).toFixed(3));
+    text('bookDown',Number(dn.price).toFixed(3));
+    text('bookUpSub','break-even '+(100*Number(up.break_even)).toFixed(1)+'% \u00b7 size '+formatNumber(up.size,0));
+    text('bookDownSub','break-even '+(100*Number(dn.break_even)).toFixed(1)+'% \u00b7 size '+formatNumber(dn.size,0));
+    text('bookMeta',(b.market||'current BTC 5m market')+access+' \u00b7 wallet events '+(b.wallet_ws_ready?'ready':'not ready'));
+  }
+  var f=live.last_fill;
+  if(f){
+    var fp=f.fill_price!=null?f.fill_price:f.price,qp=f.quoted_price!=null?f.quoted_price:f.quoted;
+    if(f.filled&&fp!=null){
+      text('fillPrice',Number(fp).toFixed(3));cls('fillPrice','metric up');
+      text('fillMeta',f.kind+' '+f.direction+' \u00b7 bought '+Number(f.shares||0).toFixed(4)
+        +' shares for $'+Number(f.stake||0).toFixed(2)
+        +' \u00b7 quoted '+Number(qp).toFixed(3)
+        +' \u00b7 slip '+(f.slippage>=0?'+':'')+Number(f.slippage).toFixed(3)
+        +' \u00b7 '+latency(f)+' \u00b7 '+f.attempts+' attempt'+(f.attempts>1?'s':''));
+    }else{
+      text('fillPrice',f.order_status||'NOT FILLED');cls('fillPrice','metric down');
+      var ferr=f.error||{},fmsg=f.failure_reason||((ferr.class||'')+(ferr.message?': '+ferr.message:''))||'awaiting live order';
+      text('fillMeta',f.kind+' '+f.direction+' \u00b7 '+fmsg
+        +' \u00b7 '+latency(f)+' \u00b7 '+Number(f.attempts||0)
+        +' attempt'+(Number(f.attempts||0)===1?'':'s'));
+    }
+  }
+}
+var activePnlRange='1D';
+function renderTradePnl(live){
+  var t=live.trades||{};
+  lastTradeCurve=t.curve||[];
+  if(!t.count){
+    text('pnlTotal','--');cls('pnlTotal','big');
+    text('pnlMeta','no settled live order in this range · '+Number(t.attempted||0)+' terminal attempts · '+Number(t.failed||0)+' failed');
+    text('pnlFill',t.fill_rate==null?'--':(100*Number(t.fill_rate)).toFixed(0)+'%');
+    text('pnlAvgEntry',t.avg_price==null?'--':Number(t.avg_price).toFixed(3));
+    text('pnlAvg','attempt stats only · first-attempt failures '+(t.first_attempt_failure_rate==null?'--':(100*Number(t.first_attempt_failure_rate)).toFixed(0)+'%'));
+    text('pnlHigh','--');text('pnlLow','--');text('pnlNow','--');
+    cls('pnlHigh','');cls('pnlLow','');cls('pnlNow','');
+    drawTradePnl(lastTradeCurve);return;
+  }
+  var extrema=[0].concat(lastTradeCurve.map(function(value){return Number(value)||0;}));
+  var high=Math.max.apply(null,extrema),low=Math.min.apply(null,extrema);
+  text('pnlHigh',(high>0?'+':'')+high.toFixed(2));
+  text('pnlLow',(low>0?'+':'')+low.toFixed(2));
+  cls('pnlHigh',high>=0?'up':'down');cls('pnlLow',low>=0?'up':'down');
+  var current=extrema[extrema.length-1];
+  text('pnlNow',(current>0?'+':'')+current.toFixed(2));
+  cls('pnlNow',current>=0?'up':'down');
+  var v=Number(t.pnl||0),el=document.getElementById('pnlTotal');
+  if(el){el.textContent=(v>=0?'+':'')+v.toFixed(2)+' USD';el.className='big '+(v>=0?'up':'down');}
+  text('pnlMeta',t.count+' settled orders \u00b7 per 100 orders '+(t.per_100==null?'--':Number(t.per_100).toFixed(2))
+    +' \u00b7 return on stake '+(t.return_on_stake==null?'--':(100*t.return_on_stake).toFixed(1)+'%')
+    +' \u00b7 MAIN '+Number((t.by_kind||{}).MAIN||0).toFixed(2)
+    +' \u00b7 REVERSAL '+Number((t.by_kind||{}).REVERSAL||0).toFixed(2)
+    +' \u00b7 EF '+Number((t.by_kind||{}).EF||0).toFixed(2));
+  text('pnlFill',t.fill_rate==null?'--':(100*t.fill_rate).toFixed(0)+'%');
+  text('pnlAvgEntry',t.avg_price==null?'--':Number(t.avg_price).toFixed(3));
+  text('pnlAvg','avg price '+(t.avg_price==null?'--':Number(t.avg_price).toFixed(3))
+    +' \u00b7 avg shares '+(t.avg_shares==null?'--':Number(t.avg_shares).toFixed(3))
+    +' \u00b7 avg total delay '+(t.avg_delay_ms||0)+'ms \u00b7 first-attempt failures '
+    +(t.first_attempt_failure_rate==null?'--':(100*Number(t.first_attempt_failure_rate)).toFixed(0)+'%')
+    +' \u00b7 '+(t.retries||0)+' retried');
+  drawTradePnl(lastTradeCurve);
+}
+var histOffset=0,histLimit=10,histTotal=0;
+function goHistoryPage(page){
+  var pages=Math.max(1,Math.ceil(histTotal/histLimit));
+  page=Math.max(1,Math.min(pages,Number(page)||1));
+  histOffset=(page-1)*histLimit;loadHistory();
+}
+function renderHistoryPages(total){
+  histTotal=Number(total||0);
+  var holder=el('histPages');if(!holder)return;holder.innerHTML='';
+  var pages=Math.ceil(histTotal/histLimit),current=Math.floor(histOffset/histLimit)+1;
+  if(!pages)return;
+  var chosen=[];
+  if(pages<=7){for(var p=1;p<=pages;p++)chosen.push(p);}
+  else{
+    var wanted={1:true};wanted[pages]=true;wanted[current]=true;
+    if(current>1)wanted[current-1]=true;if(current<pages)wanted[current+1]=true;
+    for(var key in wanted)if(Object.prototype.hasOwnProperty.call(wanted,key))chosen.push(Number(key));
+    chosen.sort(function(a,b){return a-b;});
+  }
+  var previous=0;
+  chosen.forEach(function(page){
+    if(previous&&page>previous+1){var gap=document.createElement('span');gap.className='pageGap';gap.textContent='…';holder.appendChild(gap);}
+    var button=document.createElement('button');button.type='button';button.className='pageButton'+(page===current?' active':'');button.textContent=String(page);
+    button.addEventListener('click',function(){goHistoryPage(page);});holder.appendChild(button);previous=page;
+  });
+}
+function loadHistory(){
+  requestJSON('/api/history?offset='+histOffset+'&limit='+histLimit,function(err,data){
+    if(err||!data)return;
+    var body=document.querySelector('#history tbody'); if(!body)return;
+    body.innerHTML='';
+    (data.rows||[]).forEach(function(r){
+      var tr=document.createElement('tr'),m=r.main||{},v=r.reversal||{},e=r.ef||{};
+      var net=v.direction?v:m;
+      function cell(t,c){var td=document.createElement('td');td.textContent=t;if(c)td.className=c;return td;}
+      function mark(o){return o&&o.correct!=null?(o.correct?'win':'loss'):'--';}
+      function cls(o){return o&&o.correct!=null?(o.correct?'up':'down'):'';}
+      function buy(o){if(!o)return ['--',''];if(o.financial_is_shadow)return ['SHADOW','forbidden'];if(o.forbidden)return ['F','forbidden'];if(o.filled==null)return ['--',''];if(!o.filled)return ['failed','down'];return [o.fill_price==null?'--':Number(o.fill_price).toFixed(3),'up'];}
+      var mainBuy=buy(m),reversalBuy=buy(v),efBuy=buy(e);
+      tr.appendChild(cell(londonStamp(r.candle_id)));
+      tr.appendChild(cell(r.actual||'--',r.actual==='UP'?'up':'down'));
+      tr.appendChild(cell(m.direction||'--',m.direction==='UP'?'up':'down'));
+      tr.appendChild(cell(mainBuy[0],mainBuy[1]));
+      tr.appendChild(cell(m.at!=null?(m.at+'s'):'--'));
+      tr.appendChild(cell(mark(m),cls(m)));
+      tr.appendChild(cell(v.direction||'--',v.direction?(v.direction==='UP'?'up':'down'):''));
+      tr.appendChild(cell(reversalBuy[0],reversalBuy[1]));
+      tr.appendChild(cell(v.direction?mark(v):'--',cls(v)));
+      tr.appendChild(cell(e.direction?(e.direction==='UP'?'EFUP':'EFDOWN'):'--',e.direction?'ef':''));
+      tr.appendChild(cell(efBuy[0],efBuy[1]));
+      tr.appendChild(cell(e.direction?mark(e):'--',cls(e)));
+      var combinedResult=r.combined_financial_result||null;
+      tr.appendChild(cell(combinedResult?combinedResult.toLowerCase():'--',combinedResult==='WIN'?'up':combinedResult==='LOSS'?'down':''));
+      var legs=[m,v,e],stake=0,pnl=0,hasMoney=false;
+      legs.forEach(function(o){
+        var settled=o&&(o.financial_result==='WIN'||o.financial_result==='LOSS'||o.financial_result==='FLAT');
+        if(settled&&o.stake!=null&&(o.filled||o.financial_is_shadow)){stake+=Number(o.stake);hasMoney=true;}
+        if(settled&&o.pnl!=null){pnl+=Number(o.pnl);hasMoney=true;}
+      });
+      if(r.combined_financial_pnl!=null){pnl=Number(r.combined_financial_pnl);hasMoney=true;}
+      tr.appendChild(cell(hasMoney&&stake>0?'$'+stake.toFixed(2):'--'));
+      tr.appendChild(cell(hasMoney?(pnl>=0?'+$':'-$')+Math.abs(pnl).toFixed(2):'--',hasMoney?(pnl>0?'up':pnl<0?'down':''):''));
+      body.appendChild(tr);
+    });
+    var to=(data.offset||0)+(data.rows||[]).length;
+    renderHistoryPages(data.total||0);
+    var p=document.getElementById('histPrev'),n=document.getElementById('histNext');
+    if(p)p.disabled=(data.offset||0)<=0;
+    if(n)n.disabled=to>=(data.total||0);
+  });
+}
+function renderLwChart(data){
+  initLwChart();
+  if(fallbackChart){safeDrawChart();return;}
+  if(!lwSeries||!data)return;
+  var candles=(data.candles||[]).map(function(c){
+    return {time:Math.floor((c.time||c.candle_id||0)/1000),
+            open:+c.open,high:+c.high,low:+c.low,close:+c.close};
+  }).filter(function(c){return c.time>0;});
+  if(candles.length)lwSeries.setData(candles);
+  var marks=(data.markers||[]).map(function(m){
+    var rev=(m.kind==='REVERSAL'),ef=(m.kind==='EF');
+    var buy=(m.direction==='UP');
+    var res=(m.correct===null||m.correct===undefined)?'PENDING':(m.correct?'WIN':'LOSS');
+    return {time:Math.floor((m.candle_id||0)/1000),
+      position:buy?'belowBar':'aboveBar',
+      color:(m.signals_off||m.financial_is_shadow)?'#60a5fa':ef?'#9b59ff':res==='LOSS'?(rev?'#7a6a55':'#888')
+           :(rev?'#d2a24c':(buy?'#26a69a':'#ef5350')),
+      shape:buy?'arrowUp':'arrowDown',
+      text:((m.financial_is_shadow?'S·':'')+(ef?efMarkerText(m):res==='PENDING'?(rev?'R'+(buy?'BUY':'SELL'):(buy?'BUY':'SELL'))
+          :((rev?'R':'')+(res==='WIN'?'W':'L'))))};
+  }).filter(function(m){return m.time>0;});
+  marks.sort(function(a,b){return a.time-b.time;});
+  lwSeries.setMarkers(marks);
+}
+function liveCandleTick(state){
+  // The chart used to redraw only when a prediction or settlement bumped the
+  // revision, so between events it sat still while price moved on. The live
+  // candle is now pushed straight from the state feed.
+  if(fallbackChart){scheduleFallbackDraw();return;}
+  if(!lwSeries||!state||!state.candle)return;
+  var c=state.candle;
+  var t=Math.floor((c.time||0)/1000);
+  if(t<=0)return;
+  try{lwSeries.update({time:t,open:+c.open,high:+c.high,low:+c.low,close:+c.close});}catch(e){}
+}
+function loadChart(){if(chartBusy)return;chartBusy=true;requestJSON('/api/chart',function(err,data){chartBusy=false;if(err){text('error','Dashboard chart: '+err.message);return;}chartData=data||{candles:[],markers:[],history:[]};chartRevision=chartData.revision;renderHistory();renderLwChart(chartData);});}
+function copyCandle(source){return {time:Number(source.time),open:Number(source.open),high:Number(source.high),low:Number(source.low),close:Number(source.close)};}
+function allCandles(){
+  var byTime={},source=chartData.candles||[],i,c;
+  for(i=0;i<source.length;i++){c=copyCandle(source[i]);if(isFinite(c.time)&&isFinite(c.open)&&isFinite(c.high)&&isFinite(c.low)&&isFinite(c.close))byTime[String(c.time)]=c;}
+  if(live&&live.candle){c=copyCandle(live.candle);if(isFinite(c.time)&&isFinite(c.open)&&isFinite(c.high)&&isFinite(c.low)&&isFinite(c.close))byTime[String(c.time)]=c;}
+  var out=[];for(var key in byTime)if(Object.prototype.hasOwnProperty.call(byTime,key))out.push(byTime[key]);out.sort(function(a,b){return a.time-b.time;});return out;
+}
+function clampView(total){
+  if(total<=0){viewEnd=0;return {start:0,end:0};}
+  viewCount=Math.max(8,Math.min(viewCount,total));
+  if(viewEnd==null||followLive)viewEnd=total;
+  viewEnd=Math.max(viewCount,Math.min(total,Math.round(viewEnd)));
+  return {start:Math.max(0,viewEnd-viewCount),end:viewEnd};
+}
+function setChartRange(value){viewCount=Math.max(8,Number(value)||60);followLive=true;viewEnd=null;safeDrawChart();}
+function resetChartView(){viewCount=defaultViewCount();followLive=true;viewEnd=null;hoverX=null;safeDrawChart();}
+window.setChartRange=setChartRange;window.resetChartView=resetChartView;
+function zoomChart(factor,anchorX){
+  var all=allCandles(),total=all.length;if(!total)return;
+  var view=clampView(total),oldCount=view.end-view.start,newCount=Math.max(8,Math.min(total,Math.round(oldCount*factor)));
+  var ratio=visibleChart&&visibleChart.cw>0?Math.max(0,Math.min(1,(anchorX-visibleChart.pad.l)/visibleChart.cw)):0.5;
+  var anchorIndex=view.start+ratio*oldCount;
+  var newStart=Math.round(anchorIndex-ratio*newCount);
+  newStart=Math.max(0,Math.min(total-newCount,newStart));
+  viewCount=newCount;viewEnd=newStart+newCount;followLive=viewEnd>=total;safeDrawChart();
+}
+function safeDrawChart(){try{drawChart();}catch(problem){text('topStatus','dashboard chart error');text('error',String(problem&&problem.stack||problem));}}
+var fallbackDrawQueued=false;
+function scheduleFallbackDraw(){
+  if(fallbackDrawQueued)return;
+  fallbackDrawQueued=true;
+  var run=function(){fallbackDrawQueued=false;safeDrawChart();};
+  if(window.requestAnimationFrame)window.requestAnimationFrame(run);else window.setTimeout(run,32);
+}
+function drawChart(){
+  var canvas=el('chart');if(!canvas)return;var box=canvas.parentElement,dpr=window.devicePixelRatio||1,w=Math.max(300,box.clientWidth),h=Math.max(250,box.clientHeight);
+  if(canvas.width!==Math.floor(w*dpr)||canvas.height!==Math.floor(h*dpr)){canvas.width=Math.floor(w*dpr);canvas.height=Math.floor(h*dpr);canvas.style.width=w+'px';canvas.style.height=h+'px';}
+  var ctx=canvas.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+  var all=allCandles(),view=clampView(all.length),candles=all.slice(view.start,view.end),i;
+  if(!candles.length){ctx.fillStyle='#8b98aa';ctx.font='12px monospace';ctx.fillText('Waiting for Binance candles…',20,30);visibleChart=null;return;}
+  var pad={l:8,r:67,t:16,b:28},cw=w-pad.l-pad.r,ch=h-pad.t-pad.b,lo=Infinity,hi=-Infinity;
+  var indexByTime={};for(i=0;i<candles.length;i++){indexByTime[String(candles[i].time)]=i;lo=Math.min(lo,candles[i].low);hi=Math.max(hi,candles[i].high);}
+  var markers=chartData.markers||[],visibleMarkers=[];
+  for(i=0;i<markers.length;i++){var mk=markers[i],idx=indexByTime[String(Number(mk.candle_id))];if(idx===undefined)continue;var mp=Number(mk.price);if(isFinite(mp)){lo=Math.min(lo,mp);hi=Math.max(hi,mp);}visibleMarkers.push({marker:mk,index:idx});}
+  var margin=Math.max((hi-lo)*0.10,1);lo-=margin;hi+=margin;
+  var xStep=cw/candles.length,bodyW=Math.max(2,Math.min(11,xStep*0.58));function y(price){return pad.t+(hi-price)/(hi-lo)*ch;}function x(index){return pad.l+(index+0.5)*xStep;}
+  visibleChart={pad:pad,cw:cw,ch:ch,xStep:xStep,start:view.start,end:view.end,total:all.length,candles:candles};
+  ctx.strokeStyle='#1c2531';ctx.lineWidth=1;ctx.fillStyle='#8290a2';ctx.font='10px monospace';
+  for(var g=0;g<=5;g++){var yy=pad.t+ch*g/5;ctx.beginPath();ctx.moveTo(pad.l,yy);ctx.lineTo(pad.l+cw,yy);ctx.stroke();ctx.fillText((hi-(hi-lo)*g/5).toFixed(1),pad.l+cw+5,yy+3);}
+  var ticks=Math.max(2,Math.min(6,Math.floor(cw/68)));
+  for(g=0;g<=ticks;g++){var gridIndex=Math.min(candles.length-1,Math.floor((candles.length-1)*g/ticks)),xx=x(gridIndex);ctx.beginPath();ctx.moveTo(xx,pad.t);ctx.lineTo(xx,pad.t+ch);ctx.stroke();ctx.fillText(londonHM(candles[gridIndex].time),Math.max(0,Math.min(cw-24,xx-15)),h-8);}
+  for(i=0;i<candles.length;i++){var c=candles[i],up=c.close>=c.open,color=up?'#27d17f':'#ff5d6c',cx=x(i);ctx.strokeStyle=color;ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(cx,y(c.high));ctx.lineTo(cx,y(c.low));ctx.stroke();var top=Math.min(y(c.open),y(c.close)),bodyHeight=Math.max(1,Math.abs(y(c.open)-y(c.close)));ctx.fillRect(cx-bodyW/2,top,bodyW,bodyHeight);}
+  var hoverCandleTime=null;
+  if(hoverX!=null&&!dragState&&!pinchState){
+    var hoverIdx=Math.max(0,Math.min(candles.length-1,Math.floor((hoverX-pad.l)/xStep)));
+    hoverCandleTime=candles[hoverIdx].time;
+  }
+  var markerSlots={};
+  for(i=0;i<visibleMarkers.length;i++){
+    var item=visibleMarkers[i],marker=item.marker,slotKey=String(marker.candle_id),slot=markerSlots[slotKey]||0;markerSlots[slotKey]=slot+1;
+    var fraction=Math.max(0.05,Math.min(0.92,(Number(marker.ts_ms)-Number(marker.candle_id))/CANDLE_MS));
+    var mx=pad.l+(item.index+fraction)*xStep+(slot?Math.min(8,xStep*0.18):0),my=y(Number(marker.price)),isMain=marker.kind==='MAIN',isEf=marker.kind==='EF',isOff=!!marker.signals_off,isShadow=!!marker.financial_is_shadow;
+    ctx.fillStyle=(isOff||isShadow)?'#60a5fa':(isEf?'#9b59ff':(isMain?(marker.direction==='UP'?'#26a69a':'#ef5350'):'#f7b955'));ctx.strokeStyle='#071019';ctx.lineWidth=2;ctx.beginPath();
+    var glyph=Math.max(3.5,Math.min(7,xStep*0.52)),tip=glyph*1.6;ctx.lineWidth=Math.max(1,glyph/3.5);
+    if(marker.direction==='UP'){ctx.moveTo(mx,my-tip);ctx.lineTo(mx-glyph,my+glyph*0.29);ctx.lineTo(mx+glyph,my+glyph*0.29);}else{ctx.moveTo(mx,my+tip);ctx.lineTo(mx-glyph,my-glyph*0.29);ctx.lineTo(mx+glyph,my-glyph*0.29);}ctx.closePath();ctx.fill();ctx.stroke();
+    if(!(xStep>=26||(hoverCandleTime!=null&&Number(marker.candle_id)===hoverCandleTime)))continue;
+    var label=markerText(marker),labelY=marker.direction==='UP'?my-16:my+27;ctx.font='bold 10px monospace';var labelW=ctx.measureText(label).width+8,labelX=Math.max(2,Math.min(w-labelW-2,mx-labelW/2));
+    ctx.fillStyle='rgba(5,7,11,.88)';ctx.fillRect(labelX,labelY-11,labelW,14);ctx.strokeStyle=(isOff||isShadow)?'#60a5fa':(isEf?'#9b59ff':(isMain?(marker.direction==='UP'?'#26a69a':'#ef5350'):'#f7b955'));ctx.strokeRect(labelX,labelY-11,labelW,14);ctx.fillStyle=(isOff||isShadow)?'#a7d2ff':(isEf?'#c7a3ff':(isMain?(marker.direction==='UP'?'#9de8df':'#ffb0b7'):'#ffd98f'));ctx.fillText(label,labelX+4,labelY);
+  }
+  var tip=el('tip');if(hoverX!=null&&!dragState&&!pinchState){var hoverIndex=Math.max(0,Math.min(candles.length-1,Math.floor((hoverX-pad.l)/xStep))),hc=candles[hoverIndex],hx=x(hoverIndex);ctx.strokeStyle='#7e8b9c';ctx.beginPath();ctx.moveTo(hx,pad.t);ctx.lineTo(hx,pad.t+ch);ctx.stroke();var related=[];for(i=0;i<visibleMarkers.length;i++)if(Number(visibleMarkers[i].marker.candle_id)===hc.time)related.push(markerText(visibleMarkers[i].marker));tip.style.display='block';tip.style.left=Math.min(w-190,Math.max(4,hx+8))+'px';tip.style.top='18px';tip.textContent=londonShort(hc.time)+' '+londonZone(hc.time)+'\nO '+hc.open.toFixed(1)+' H '+hc.high.toFixed(1)+'\nL '+hc.low.toFixed(1)+' C '+hc.close.toFixed(1)+(related.length?'\n'+related.join('\n'):'');}else if(tip)tip.style.display='none';
+}
+var weightsData=null;
+function renderWeights(){
+  var table=el('weights');if(!table||!weightsData)return;
+  var body=table.getElementsByTagName('tbody')[0];if(!body)return;
+  var list=weightsData.weights||[],rows='',i;
+  for(i=0;i<list.length;i++){
+    var item=list[i],drift=Number(item.drift||0),atLimit=Math.abs(Math.abs(drift)-Number(item.max_drift||0))<1e-9;
+    rows+='<tr><td>'+esc(item.name)+'</td><td>'+formatNumber(item.weight,3)+'</td><td class="muted">'+formatNumber(item.anchor,2)+'</td><td class="'+(drift>0?'up':drift<0?'down':'muted')+'">'+(drift>=0?'+':'')+formatNumber(drift,3)+(atLimit?' (clamped)':'')+'</td></tr>';
+  }
+  body.innerHTML=rows||'<tr><td colspan="4" class="muted">no weights</td></tr>';
+  text('weightMeta','Original v10 · '+(weightsData.status||'fixed weights'));
+  var learning=weightsData.learning||{};
+  text('learnStatus',(learning.status||'idle')+(learning.error==null?'':' · last error '+formatNumber(learning.error,3)));
+}
+function loadWeights(){requestJSON('/api/weights',function(err,data){if(err)return;weightsData=data;renderWeights();});}
+function pollState(){requestJSON('/api/state',function(err,state){if(err){text('topStatus','dashboard API error');text('error',String(err.message||err));}else{try{updateUI(state);}catch(problem){text('topStatus','dashboard render error');text('error',String(problem&&problem.stack||problem));}}window.setTimeout(pollState,250);});}
+var canvas=el('chart');if(canvas){
+  canvas.addEventListener('wheel',function(event){event.preventDefault();var rect=canvas.getBoundingClientRect();zoomChart(Math.exp(event.deltaY*0.0018),event.clientX-rect.left);},{passive:false});
+  canvas.addEventListener('pointerdown',function(event){event.preventDefault();canvas.setPointerCapture(event.pointerId);var rect=canvas.getBoundingClientRect(),x=event.clientX-rect.left;pointers[event.pointerId]={x:x,y:event.clientY-rect.top};hoverX=x;if(Object.keys(pointers).length===1){dragState={x:x,end:viewEnd};pinchState=null;}else if(Object.keys(pointers).length===2){var ids=Object.keys(pointers),a=pointers[ids[0]],b=pointers[ids[1]];pinchState={distance:Math.max(1,Math.hypot(a.x-b.x,a.y-b.y)),count:viewCount,center:(a.x+b.x)/2};dragState=null;}safeDrawChart();});
+  canvas.addEventListener('pointermove',function(event){var rect=canvas.getBoundingClientRect(),x=event.clientX-rect.left,y=event.clientY-rect.top;if(pointers[event.pointerId]){pointers[event.pointerId]={x:x,y:y};var ids=Object.keys(pointers);if(ids.length>=2){var a=pointers[ids[0]],b=pointers[ids[1]],distance=Math.max(1,Math.hypot(a.x-b.x,a.y-b.y));if(!pinchState)pinchState={distance:distance,count:viewCount,center:(a.x+b.x)/2};var factor=pinchState.distance/distance,desired=Math.max(8,Math.round(pinchState.count/factor));zoomChart(desired/viewCount,(a.x+b.x)/2);pinchState.distance=distance;pinchState.count=viewCount;pinchState.center=(a.x+b.x)/2;}else if(dragState&&visibleChart){var shift=Math.round((dragState.x-x)/Math.max(1,visibleChart.xStep)),total=visibleChart.total;viewEnd=Math.max(viewCount,Math.min(total,(dragState.end==null?total:dragState.end)+shift));followLive=viewEnd>=total;hoverX=x;safeDrawChart();}}else{hoverX=x;safeDrawChart();}});
+  function endPointer(event){delete pointers[event.pointerId];if(Object.keys(pointers).length===0){dragState=null;pinchState=null;}else if(Object.keys(pointers).length===1){var id=Object.keys(pointers)[0];dragState={x:pointers[id].x,end:viewEnd};pinchState=null;}safeDrawChart();}
+  canvas.addEventListener('pointerup',endPointer);canvas.addEventListener('pointercancel',endPointer);
+  canvas.addEventListener('pointerleave',function(event){if(!pointers[event.pointerId]){hoverX=null;safeDrawChart();}});
+  canvas.addEventListener('dblclick',function(){resetChartView();});
+}
+window.addEventListener('resize',function(){safeDrawChart();drawTradePnl(lastTradeCurve);});
+var pollingStarted=false;
+function startPolling(){if(pollingStarted)return;pollingStarted=true;pollState();}
+function startStream(){
+  if(!window.EventSource){startPolling();return;}
+  var source;
+  try{source=new EventSource('/events');}catch(err){startPolling();return;}
+  source.onmessage=function(event){
+    try{updateUI(JSON.parse(event.data));}
+    catch(problem){text('topStatus','dashboard render error');text('error',String(problem&&problem.stack||problem));}
+  };
+  source.onerror=function(){try{source.close();}catch(err){}startPolling();};
+}
+var previousButton=el('histPrev'),nextButton=el('histNext');
+if(previousButton)previousButton.addEventListener('click',function(){goHistoryPage(Math.floor(histOffset/histLimit));});
+if(nextButton)nextButton.addEventListener('click',function(){goHistoryPage(Math.floor(histOffset/histLimit)+2);});
+Array.prototype.forEach.call(document.querySelectorAll('.rangeBtn'),function(button){
+  button.addEventListener('click',function(){
+    activePnlRange=button.getAttribute('data-range')||'1D';
+    Array.prototype.forEach.call(document.querySelectorAll('.rangeBtn'),function(b){b.classList.toggle('active',b===button);});
+    requestJSON('/api/pnl?range='+encodeURIComponent(activePnlRange),function(err,data){if(!err&&data)renderTradePnl({trades:data});});
+  });
+});
+loadChart();loadWeights();startStream();
+window.setInterval(loadWeights,5000);
+tickRuntime();window.setInterval(tickRuntime,1000);
+})();
+</script></body></html>
