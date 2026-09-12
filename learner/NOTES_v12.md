@@ -2465,6 +2465,37 @@ last four hours alone. On a few hundred graded fires these swings are what a coi
 like; the only numbers that have held steady all day are the accuracy figures near 52%, which is close enough
 to chance that the PnL is being driven by price paid, not by being right.
 
+## 19:20 UTC check-in (Sat 09-12) - recovered the give-back in one hour
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 10W/10L +0.013 | 19W/21L -0.076 |
+Back to barely positive on the short window at an even 10W/10L; the long window stays negative. The windows
+have now disagreed at nine of today's checks. Not arming.
+
+Tokyo: master ON, all three kinds false, equity 15.02, nothing open, uptime 36.8 h. No silent flag revert.
+13 processes, 12 G free.
+
+Fair table (window opens with the newest run, Polymarket paper v10 at 09-11 15:15 UTC, 28.1 h):
+| run | W/L | acc | open | PnL @$10 |
+|---|---|---|---|---|
+| Predict.fun paper (v10) | 72/68 | 51% | 0 | +87.4 |
+| Polymarket paper (v10) | 96/84 | 53% | 1 | +211.5 |
+| Polymarket v12 lane (paper exec) | 99/77 | 56% | 1 | +347.1 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 15.02, equity 15.02) |
+
+The whole of last hour's give-back came back: Predict.fun +27.6 on 3W/1L, Polymarket v10 +30.3 on 6W/4L, the
+v12 lane +30.2 on 6W/4L. Predict.fun is +87.4 against the +95.7 it held two hours ago, so the -35.9 hour was
+noise rather than a turn.
+
+Runner gap 135.6, unchanged to a decimal, ninth consecutive hour with the v12 lane ahead. That the gap held
+exactly while both runners gained thirty points is the clearest sign yet that the difference is a constant
+offset in how the two price the same decisions, not divergent trading. Sunday: reproduce one shared candle in
+both and find the constant.
+
+This hour is the direct illustration of the point recorded at 18:20. Nothing about either model changed
+between 18:20 and 19:20, yet Predict.fun moved -35.9 then +27.6. Reading either hour as signal would have been
+wrong in opposite directions.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
