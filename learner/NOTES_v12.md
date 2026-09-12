@@ -2602,6 +2602,37 @@ without a conclusion: one hour does not overturn nine, and the honest position i
 unexplained and neither runner's number should be read as the venue's edge until a shared candle is
 reproduced end to end.
 
+## 22:20 UTC (Sat 09-12) - first check after the container died; no real money moved while it was down
+
+The container ran out of process slots at ~21:58 (BlockingIOError Errno 11 on fork), then restarted at 21:59.
+Every one of the 12 engines died with it and all seven ports were down. Relaunched all of them via
+restart_all.sh and restart_v12_lane.sh; feeds came back sub-second on 8788 and 8790 (the 8790 venue feed that
+the watcher had flagged at 195 s stale reads 0.05 s now). The watcher itself died on the same fork error and is
+running again.
+
+Tokyo is a separate host and kept running throughout. It shows fills at 21:45, 21:50 and 21:52, which is after
+the 21:20 check where the lanes read OFF - so I checked the order rows rather than the health summary's fill
+list. Those rows are status SHADOW, not F. The last real fill is 19:59:37. No real money moved during the
+outage. tokyo_health.py prints shadow rows in its "last 6 fills" line without marking them, which is how this
+looked alarming for a minute; worth fixing before it misleads a check that matters.
+
+Lane flags: master OFF ("safe startup"), MAIN/REVERSAL/EF all manual_enabled False. Re-asserted twice this
+hour (22:02 and 22:20), nothing was enabled either time - no silent revert since the 21:20 check. Equity 15.02,
+wallet 15.02, realised -8.04, settled 442, nothing open. Ladder says $1 at this equity and current stake is
+$1 - OK.
+
+Re-arm reading, Predict.fun v10 paper: last-20 +0.155 per $1 (cum +3.104), last-40 +0.002 per $1 (cum +0.081),
+476 graded in total. The last-20 is the strongest reading in a while and the last-40 is flat, which is the same
+shape as every other positive reading in this sequence. NOT ARMING: the criterion was refuted at 22:12 on 09-11
+under its own pre-committed review condition and no replacement has been written down. A good hour does not
+reinstate a refuted rule - that is the whole point of having refuted it.
+
+Shipped Polymarket v12.3.0 this hour (EV mode toggle regime/fixed/accuracy, 0-5 tick slippage dial, build 36
+MAIN/REV panels restored verbatim). 109 tests and 30/30 checksums verified from a clean unpack of the zip that
+went to the user. The measurement behind it: on 206 real fires, pad 0 keeps 206/206 through the live EV
+re-check, pad 1 (the default) keeps 118/206, pad 2 keeps 77/206 - so the paper-vs-live frequency gap is the
+pre-submit re-check the fair-table paper lane never performs, not a lane being broken.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
