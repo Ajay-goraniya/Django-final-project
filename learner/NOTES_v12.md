@@ -2278,6 +2278,38 @@ against a 16.42 wallet); endpoint failover because every api.binance.com mirror 
 while data-api.binance.vision serves the same payloads; the book cache no longer discards the whole feed on
 clock skew; latency samples every attempt rather than only accepted ones; execution budget configurable.
 
+## 15:00 UTC (Sat 09-12) - H1: the weekend cell of the refuted 11.2 test PASSES, and is NOT being shipped
+Write-up: analysis/h1/task17_weekend_cell.md. Recording it here so it cannot be reframed later as a find.
+
+The weekend cell cleared 60 fires and passes every check in verify.py: n=62, 51.6% hit, +0.073 per fire,
+halves +0.025/+0.121, beats the +0.018 null, quote age clean. Verdict True.
+
+It is marked and NOT actionable, and it is deliberately NOT entering the ledger as a candidate. H1's four
+reasons, the first three registered before the data arrived:
+
+1. It is ONE Saturday. All 62 fires come from a single day, so this is one draw of the regime, not rain-or-sun.
+2. The halves check is nearly empty here - morning versus afternoon of one continuous day, not two independent
+   weekends. That is the weakest form of the check, and a contiguous-window halves pass has already been wrong
+   on this branch: the 09-11 flat bucket matched to three decimals and still died on McNemar at p=0.341.
+3. Shipping it would be an on/off gate on a score that failed its own 100-fire test two checks ago - the exact
+   shape the user banned after four attempts failed on 09-10.
+4. There is no mechanism. Nothing explains why this model would work at weekends and not weekdays, and a
+   calendar split without a reason is a label on a subset.
+
+Be precise about the claim: "the weekend cell passes", NOT "weekend beats weekday". The weekday cell is n=57,
+under the 60 bar, so it is not read and that comparison is not available. Full grid for the record: weekend
+n=62 +0.073, weekday n=57 -0.177 (not read), all n=119 -0.047.
+
+The test it would need, registered now: 100+ weekend fires across at least TWO SEPARATE weekends, positive in
+both halves split BY WEEKEND rather than by fire index, verify.py True, and the weekday cell reported at
+whatever n it has reached. Next weekend supplies the second block.
+
+Parent verdict unchanged: ledger row M (11.2) stays REFUTED. Nothing here rescues it.
+
+This is the behaviour the method is for - a passing number that gets held back because the design around it is
+too weak to support it. Worth remembering against the re-arm criterion, where five good hours in a row nearly
+justified reinstating a rule that had already been refuted.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
