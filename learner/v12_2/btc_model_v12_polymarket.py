@@ -260,7 +260,10 @@ class PolyRunner(Runner):
         while True:
             if self.a.live and self.broker is not None and getattr(self.broker,'client',None) is not None:
                 try:
-                    truth=await asyncio.wait_for(self.broker.venue_truth(),20)
+                    # Ask for the markets that still need pricing as well as the
+                    # open ones, so a settled candle is not left on the local figure.
+                    need=self.db.conditions_awaiting_venue()
+                    truth=await asyncio.wait_for(self.broker.venue_truth(condition_ids=need or None),25)
                     self.venue_state=truth
                     self.cash=truth.get('cash'); self.cash_at=time.monotonic()
                     self.db.venue_snapshot(truth)

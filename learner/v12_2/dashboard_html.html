@@ -213,7 +213,28 @@ function updateUI(state){
     text('capBan',controls.master_enabled?live.lane+' MASTER ON':live.lane+' MASTER OFF');
     cls('capBan','small '+(controls.master_enabled?'up':'down'));
   }
-  text('mainDirection','DISABLED');text('revDirection','DISABLED');text('revMeta','Not part of v10 Polymarket strategy');text('capBan',live.lane+' · '+(controls.master_enabled?'MASTER ON':'MASTER OFF')+(live.halt?' · '+live.halt:''));
+  (function(){
+    // MAIN and REVERSAL are real lanes from build 12.2. Render what the engine
+    // reports instead of the fixed DISABLED text this panel used to carry.
+    var L=live.lanes||{},ctl=(controls.kinds||{});
+    function lane(kind,dirId,metaId,state){
+      var k=ctl[kind]||{};
+      if(k.source_available===false){text(dirId,'DISABLED');text(metaId,'no signal source');cls(dirId,'big');return;}
+      if(!k.manual_enabled){text(dirId,'OFF');text(metaId,'switched off in Trade Controls');cls(dirId,'big muted');return;}
+      if(state&&state.direction){text(dirId,state.direction);text(metaId,(kind==='MAIN'?'held alignment':'hedge against MAIN')+(state.probability_up!=null?' · p '+formatNumber(state.probability_up,3):''));cls(dirId,'big '+(state.direction==='UP'?'up':'down'));return;}
+      if(!k.effective_enabled){text(dirId,'ARMED');text(metaId,'master switch is off');cls(dirId,'big muted');return;}
+      text(dirId,'WATCHING');cls(dirId,'big');
+      if(kind==='MAIN'){
+        var st=L.main_streak||{};
+        text(metaId,L.main_block||((L.aligned?'aligned '+L.aligned:'flow and odds do not agree')+(st.reads?' · '+st.reads+' reads':'')));
+      }else{
+        var rv=L.reversal||{};
+        text(metaId,L.main?(rv.detail||'watching for a flip against MAIN'):'waits for a MAIN to hedge');
+      }
+    }
+    lane('MAIN','mainDirection','mainMeta',L.main);
+    lane('REVERSAL','revDirection','revMeta',(L.reversal_fired?{direction:(L.reversal||{}).direction}:null));
+  })();text('capBan',live.lane+' · '+(controls.master_enabled?'MASTER ON':'MASTER OFF')+(live.halt?' · '+live.halt:''));
   renderBook(live);
   if(activePnlRange==='1D')renderTradePnl(live);
   liveCandleTick(live);

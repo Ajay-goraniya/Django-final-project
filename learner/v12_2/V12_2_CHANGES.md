@@ -200,3 +200,45 @@ first and count how many of its signals actually clear the EV bar before giving
 it any money. REVERSAL fires on the first flip with no persistence requirement,
 so it should not suffer the same lateness, but that is a prediction, not a
 measurement.
+
+---
+
+# 12.2.2 — fixes found on your live box
+
+**The dashboard still showed the lanes as DISABLED.** Trade Controls reported
+MAIN and REVERSAL correctly, but the front page carried a hardcoded
+`text('mainDirection','DISABLED'); text('revDirection','DISABLED');
+text('revMeta','Not part of v10 Polymarket strategy')` left over from when the
+lanes were stubs. I changed the Python and missed the page. Both panels now
+render engine state, and each of the five cases was exercised directly:
+
+| situation | MAIN panel | REVERSAL panel |
+|---|---|---|
+| armed, no alignment | WATCHING · flow and odds do not agree | WATCHING · waits for a MAIN to hedge |
+| master switch off | ARMED · master switch is off | ARMED · master switch is off |
+| switched off in controls | OFF · switched off in Trade Controls | OFF |
+| MAIN fired | UP · held alignment · p 0.820 | WATCHING · signal still agrees with MAIN UP |
+| REVERSAL fired | UP | DOWN · hedge against MAIN |
+
+**Venue PnL was not attaching to settled rows.** Your `/api/state` showed
+`pnl_basis: LOCAL_FROM_FILLS` with `awaiting_venue: 2`, so the whole point of
+the change was not taking effect. Cause: a 5-minute position is `OPEN` only
+while the candle runs, becomes `REDEEMABLE` at settlement and `CLOSED` after
+redemption, and the position query used no status filter — so it returned
+everything except the settled positions whose PnL was wanted. All three statuses
+are now queried and merged, deduplicated, and narrowed to the specific markets
+still awaiting a price so it costs one small lookup rather than paging history.
+
+**Confirmed working on your box from the state you sent:**
+
+    reserve_detail: phantom 3.00, effective 0.00   <- the stuck reserve released
+    funding_headroom: 18.40                        <- full wallet, not 3.00 short
+    fee_basis: VENUE_CONFIRMED_TRADE_AND_VENUE_FEE
+    feed: lag 0.064-0.070s, clock skew 0, zero reconnects
+    controls: all three lanes source_available, manual_enabled
+
+The `dashboard API error` you saw at 1m19s did not reproduce in any startup
+state I could construct, and your later paste returned HTTP 200 with a complete
+payload, so I am recording it as transient during startup rather than inventing
+a cause for it. If it returns, the message itself is written into the page under
+the header — send me that line.

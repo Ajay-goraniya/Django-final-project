@@ -8,6 +8,22 @@ ROOT=pathlib.Path(__file__).parent
 LONDON=ZoneInfo('Europe/London')
 DEFAULT_STAKE=dict(mode='ladder',fixed_stake=1.,percent=10.,current_stake=1.,win_trigger=3,loss_trigger=2,min_stake=1.,max_stake=50.)
 
+def _json_safe(obj):
+    """Replace non-finite floats with null so one bad number cannot fail the
+    whole response. json.dumps(allow_nan=False) raises on NaN and Infinity, and
+    NaN is not valid JSON for the browser either, so neither emitting nor
+    raising is acceptable - the value is dropped and the rest survives."""
+    if isinstance(obj,float):
+        return obj if math.isfinite(obj) else None
+    if isinstance(obj,dict):
+        return {k:_json_safe(v) for k,v in obj.items()}
+    if isinstance(obj,(list,tuple)):
+        return [_json_safe(v) for v in obj]
+    if isinstance(obj,set):
+        return sorted(str(v) for v in obj)
+    return obj
+
+
 class Dashboard:
     def __init__(self,r):
         self.r=r; self.db=r.db; self.cache=None; self.cache_at=0
@@ -106,6 +122,16 @@ class Dashboard:
         out={r['kind']:r['pnl'] for r in rows}
         for k in ('EF','MAIN','REVERSAL'): out.setdefault(k,0.0)
         return out
+    def note_error(self,endpoint,exc):
+        """Record and print a dashboard failure so it is diagnosable.
+
+        A blank dashboard with no reason costs more time than the fault itself.
+        The last few are kept in memory and surfaced in /api/state."""
+        import traceback
+        entry=dict(ts=time.time(),endpoint=endpoint,error=f'{type(exc).__name__}: {exc}')
+        self.errors=(getattr(self,'errors',[])+[entry])[-10:]
+        print(f'[dashboard] {endpoint} failed: {entry["error"]}',flush=True)
+        traceback.print_exc()
     def controls(self):
         now=dt.datetime.now(LONDON); ready=self.r.cash is not None and time.monotonic()-self.r.cash_at<15
         w,l=self.db.get('streak',[0,0])
@@ -268,10 +294,10 @@ class Dashboard:
                         venue_fees_paid=vt.get('fees_paid'),account_pnl=vt.get('account_pnl'),
                         venue_age_sec=(time.time()-vt['ts']) if vt.get('ts') else None,
                         pnl_basis=('VENUE_POSITION_PNL' if live_venue else 'LOCAL_FROM_FILLS'),
-                        local_vs_venue=divergence)),trades=self.pnl(),latency=r.executor.latency_stats(),chart_revision=r.revision,error=r.error,lane='LIVE' if r.a.live else 'PAPER',model_hash=r.hash,fee_basis=r.broker.basis,halt=self.db.get('halt'))
+                        local_vs_venue=divergence)),trades=self.pnl(),latency=r.executor.latency_stats(),chart_revision=r.revision,error=r.error,dashboard_errors=list(getattr(self,'errors',[])),lane='LIVE' if r.a.live else 'PAPER',model_hash=r.hash,fee_basis=r.broker.basis,halt=self.db.get('halt'))
         self.cache_at=time.monotonic(); return self.cache
     def page(self,name):
-        text=(ROOT/name).read_text().replace('__VERSION__','12 Polymarket').replace('__BUILD__','12.2 · v10 PnL · '+('LIVE' if self.r.a.live else 'PAPER')).replace('__UPTIME_SEC__',str(time.time()-self.r.started))
+        text=(ROOT/name).read_text().replace('__VERSION__','12 Polymarket').replace('__BUILD__','12.2.2 · v10 PnL · '+('LIVE' if self.r.a.live else 'PAPER')).replace('__UPTIME_SEC__',str(time.time()-self.r.started))
         return text
     def make_server(self):
         ui=self
@@ -283,7 +309,8 @@ class Dashboard:
                 if hmac.compare_digest(self.headers.get('Authorization',''),expected): return True
                 self.send_response(401); self.send_header('WWW-Authenticate','Basic realm="BTC"'); self.end_headers(); return False
             def send(self,body,ctype='application/json',status=200):
-                if not isinstance(body,bytes): body=json.dumps(body,allow_nan=False).encode() if ctype=='application/json' else body.encode()
+                if not isinstance(body,bytes):
+                    body=json.dumps(_json_safe(body),allow_nan=False).encode() if ctype=='application/json' else body.encode()
                 self.send_response(status); self.send_header('Content-Type',ctype); self.send_header('Content-Length',str(len(body))); self.send_header('Cache-Control','no-store'); self.end_headers(); self.wfile.write(body)
             def do_GET(self):
                 if not self.auth(): return
@@ -306,7 +333,16 @@ class Dashboard:
                         for row in rows: w.writerow(dict(model='v12_polymarket_v10',lane='LIVE' if ui.r.a.live else 'PAPER',**row))
                         self.send(b.getvalue(),'text/csv; charset=utf-8')
                     else: self.send({'error':'Not found'},status=404)
-                except (ValueError,TypeError) as e: self.send({'ok':False,'error':str(e)},status=400)
+                except (ValueError,TypeError) as e:
+                    ui.note_error(p.path,e); self.send({'ok':False,'error':str(e),'endpoint':p.path},status=400)
+                except Exception as e:
+                    # Anything not caught above used to escape to the base handler,
+                    # which replies with an HTML traceback. The page cannot parse
+                    # that, so a single unexpected exception blanked the whole
+                    # dashboard with "dashboard API error" and no way to see why.
+                    # Always answer with JSON, and put the reason in the log.
+                    ui.note_error(p.path,e)
+                    self.send({'ok':False,'error':f'{type(e).__name__}: {e}','endpoint':p.path},status=500)
             def do_POST(self):
                 if not self.auth(): return
                 # Reject cross-origin browser writes, even on localhost.

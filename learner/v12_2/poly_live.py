@@ -112,34 +112,54 @@ class LiveBroker:
         if order_missing and not trade_unsettled and age>=2.0 and misses>=2:
             return dict(terminal=True,fills=[],live=False,verified_no_fill=True,reason='not present in open orders and no matching account trade after repeated venue checks')
         return dict(terminal=False,fills=[],live=False,reason='venue reconciliation in progress')
-    async def positions(self,status=None):
+    # A 5-minute candle's position is OPEN only while the candle is live. Once it
+    # settles it becomes REDEEMABLE, and CLOSED after redemption. Querying without
+    # a status filter therefore misses exactly the settled positions whose PnL we
+    # need, which is why v12.2's first live run kept reporting LOCAL_FROM_FILLS
+    # with rows "awaiting venue". All three statuses are queried and merged.
+    POSITION_STATUSES=('OPEN','REDEEMABLE','CLOSED')
+    async def positions(self,status=None,condition_ids=None):
         """Venue positions with the venue's own PnL and cost fields.
 
         realized_pnl / unrealized_pnl / total_pnl / entry_cost_usdc /
         entry_fees_usdc / current_value are computed by Polymarket, not here.
+
+        condition_ids narrows the query to the markets we actually need priced,
+        so attaching PnL to a settled candle does not page the whole history.
         """
-        out=[]
+        out=[]; seen=set()
         if not hasattr(self.client,'list_positions'): return out
-        kw={} if status is None else {'status':status}
-        async for page in self.client.list_positions(**kw):
-            for p in getattr(page,'items',()):
-                out.append(dict(
-                    condition_id=str(getattr(p,'condition_id','') or ''),
-                    asset_id=str(getattr(p,'asset_id','') or ''),
-                    outcome=str(getattr(p,'outcome','') or ''),
-                    size=float(getattr(p,'current_size',0) or 0),
-                    avg_price=float(getattr(p,'avg_price',0) or 0),
-                    entry_cost=float(getattr(p,'entry_cost_usdc',0) or 0),
-                    entry_fees=float(getattr(p,'entry_fees_usdc',0) or 0),
-                    total_cost=float(getattr(p,'total_cost_usdc',0) or 0),
-                    current_price=float(getattr(p,'current_price',0) or 0),
-                    current_value=float(getattr(p,'current_value',0) or 0),
-                    realized_pnl=float(getattr(p,'realized_pnl',0) or 0),
-                    unrealized_pnl=float(getattr(p,'unrealized_pnl',0) or 0),
-                    total_pnl=float(getattr(p,'total_pnl',0) or 0),
-                    status=str(getattr(p,'status','') or ''),
-                    redeemable=bool(getattr(p,'redeemable',False)),
-                ))
+        statuses=[status] if status else list(self.POSITION_STATUSES)
+        ids=list(condition_ids) if condition_ids else None
+        for st in statuses:
+            kw={'status':st}
+            if ids: kw['condition_id']=ids
+            try:
+                pages=self.client.list_positions(**kw)
+            except TypeError:
+                pages=self.client.list_positions()      # older client surface
+            async for page in pages:
+                for p in getattr(page,'items',()):
+                    key=(str(getattr(p,'condition_id','')),str(getattr(p,'asset_id','')))
+                    if key in seen: continue
+                    seen.add(key)
+                    out.append(dict(
+                        condition_id=str(getattr(p,'condition_id','') or ''),
+                        asset_id=str(getattr(p,'asset_id','') or ''),
+                        outcome=str(getattr(p,'outcome','') or ''),
+                        size=float(getattr(p,'current_size',0) or 0),
+                        avg_price=float(getattr(p,'avg_price',0) or 0),
+                        entry_cost=float(getattr(p,'entry_cost_usdc',0) or 0),
+                        entry_fees=float(getattr(p,'entry_fees_usdc',0) or 0),
+                        total_cost=float(getattr(p,'total_cost_usdc',0) or 0),
+                        current_price=float(getattr(p,'current_price',0) or 0),
+                        current_value=float(getattr(p,'current_value',0) or 0),
+                        realized_pnl=float(getattr(p,'realized_pnl',0) or 0),
+                        unrealized_pnl=float(getattr(p,'unrealized_pnl',0) or 0),
+                        total_pnl=float(getattr(p,'total_pnl',0) or 0),
+                        status=str(getattr(p,'status','') or ''),
+                        redeemable=bool(getattr(p,'redeemable',False)),
+                    ))
         return out
     async def portfolio_value(self):
         try:
@@ -163,15 +183,15 @@ class LiveBroker:
                     economic_pnl=g('economic_pnl'),trade_pnl=g('trade_pnl'),
                     fees_paid=g('fees_paid'),volume=g('volume_usdc'),
                     trade_count=getattr(p,'trade_count',None))
-    async def venue_truth(self):
+    async def venue_truth(self,condition_ids=None):
         """One authenticated snapshot of everything the dashboard reports as money.
 
         Cash, portfolio value, per-position PnL and account PnL all come from
         Polymarket. Nothing in here is derived from the local journal.
         """
         cash,value,pos,pnl,snap=await asyncio.gather(
-            self.cash(),self.portfolio_value(),self.positions(),self.account_pnl(),
-            self.account_snapshot(),return_exceptions=True)
+            self.cash(),self.portfolio_value(),self.positions(condition_ids=condition_ids),
+            self.account_pnl(),self.account_snapshot(),return_exceptions=True)
         err=lambda x: None if isinstance(x,BaseException) else x
         pos=err(pos) or []
         snap=err(snap) or {}

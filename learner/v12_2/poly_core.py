@@ -222,10 +222,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.2')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.2.2')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -329,6 +329,16 @@ class Journal:
                      (a['total'],a['realized'],a['fees'],a['value'],time.time(),row['epoch']))
             n+=1
         return n
+    def conditions_awaiting_venue(self,limit=60):
+        """Markets with a settled row the venue has not yet priced.
+
+        Passed to the positions query so attaching PnL to a settled candle costs
+        one narrow lookup instead of paging the whole position history.
+        """
+        rows=self.sql('''SELECT DISTINCT s.condition_id FROM results r JOIN signals s USING(epoch)
+                         WHERE r.venue_pnl IS NULL AND s.condition_id IS NOT NULL
+                         ORDER BY r.epoch DESC LIMIT ?''',(int(limit),))
+        return [r['condition_id'] for r in rows if r['condition_id']]
     def venue_metrics(self):
         """Wins, losses and PnL from the venue's numbers only. Rows the venue has
         not priced yet are excluded rather than back-filled from local math."""

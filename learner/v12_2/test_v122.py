@@ -268,6 +268,122 @@ class VenueVerifiedReserve(unittest.TestCase):
         self.assertAlmostEqual(max(0, cash - reserve), 16.42,
                                msg='a phantom reserve no longer reduces fundable')
 
+class SettledPositionsAreQueried(unittest.TestCase):
+    """A 5-minute position is OPEN only while the candle runs; once it settles it
+    is REDEEMABLE, then CLOSED. The first live run of v12.2 kept reporting
+    LOCAL_FROM_FILLS because the default query returned neither."""
+
+    def setUp(self):
+        self.path = tempfile.mktemp(suffix='.sqlite3')
+        self.db = C.Journal(self.path, 'LIVE', 'hash')
+
+    def tearDown(self):
+        try: self.db.c.close(); os.unlink(self.path)
+        except Exception: pass
+
+    def test_settled_rows_awaiting_venue_are_listed(self):
+        self.db.reserve(1000, dict(side='UP'), 'tok', 'cond-a', 'EF')
+        self.db.reserve(1300, dict(side='UP'), 'tok', 'cond-b', 'EF')
+        for ep in (1000, 1300):
+            self.db.sql('INSERT INTO results(epoch,actual,payout,pnl,ts) VALUES(?,?,?,?,?)',
+                        (ep, 'UP', 1.0, 0.5, time.time()))
+        self.assertEqual(sorted(self.db.conditions_awaiting_venue()), ['cond-a', 'cond-b'])
+        self.db.apply_venue_pnl([dict(condition_id='cond-a', realized_pnl=0.4, total_pnl=0.4,
+                                      entry_fees=0.0, current_value=0.0)])
+        self.assertEqual(self.db.conditions_awaiting_venue(), ['cond-b'],
+                         'a priced market drops out of the query')
+
+    def test_all_three_statuses_are_requested(self):
+        import poly_live
+        self.assertEqual(poly_live.LiveBroker.POSITION_STATUSES, ('OPEN', 'REDEEMABLE', 'CLOSED'))
+
+    def test_positions_merges_statuses_without_duplicates(self):
+        import asyncio, poly_live
+        class FakePage:
+            def __init__(self, items): self.items = items
+        class FakePos:
+            def __init__(self, cid, aid, rp):
+                self.condition_id, self.asset_id, self.realized_pnl = cid, aid, rp
+                self.current_size = 1.0; self.total_pnl = rp; self.entry_fees_usdc = 0.0
+                self.status = 'REDEEMABLE'
+            def __getattr__(self, n): return 0
+        class FakeClient:
+            def __init__(self): self.asked = []
+            def list_positions(self, **kw):
+                self.asked.append(kw.get('status'))
+                pos = [FakePos('cond-a', 'asset-1', 0.4)]      # same position each time
+                async def gen():
+                    yield FakePage(pos)
+                return gen()
+        b = poly_live.LiveBroker.__new__(poly_live.LiveBroker)
+        b.client = FakeClient()
+        out = asyncio.run(b.positions(condition_ids=['cond-a']))
+        self.assertEqual(b.client.asked, ['OPEN', 'REDEEMABLE', 'CLOSED'])
+        self.assertEqual(len(out), 1, 'the same position seen under two statuses is counted once')
+        self.assertAlmostEqual(out[0]['realized_pnl'], 0.4)
+
+class DashboardNeverGoesDark(unittest.TestCase):
+    """The live box showed "dashboard API error" with no way to see the reason.
+
+    The handler caught only ValueError and TypeError, so anything else escaped to
+    the base HTTP handler, which answers with an HTML traceback the page cannot
+    parse. A single unexpected exception therefore blanked the whole dashboard.
+    """
+
+    def test_non_finite_numbers_are_dropped_not_fatal(self):
+        import poly_dashboard as D
+        body = {'a': float('nan'), 'b': float('inf'), 'c': 1.5,
+                'nested': {'d': float('-inf')}, 'list': [float('nan'), 2.0]}
+        safe = D._json_safe(body)
+        out = json.dumps(safe, allow_nan=False)      # exactly what the server does
+        back = json.loads(out)
+        self.assertIsNone(back['a']); self.assertIsNone(back['b'])
+        self.assertEqual(back['c'], 1.5)
+        self.assertIsNone(back['nested']['d'])
+        self.assertEqual(back['list'], [None, 2.0])
+
+    def test_sets_are_serialisable(self):
+        import poly_dashboard as D
+        # venue_truth carries open_order_ids as a set; json.dumps cannot encode one
+        out = json.dumps(D._json_safe({'ids': {'b', 'a'}}), allow_nan=False)
+        self.assertEqual(json.loads(out)['ids'], ['a', 'b'])
+
+    def test_every_endpoint_answers_json_even_when_it_raises(self):
+        import poly_dashboard as D, urllib.request, urllib.error, threading, types, tempfile as TF
+        class Boom(D.Dashboard):
+            def __init__(self): pass
+        ui = Boom()
+        ui.password = None
+        ui.errors = []
+        # snapshot raises something the old handler did not catch
+        ui.snapshot = lambda: (_ for _ in ()).throw(KeyError('venue_state'))
+        ui.controls = lambda: {'ok': True}
+        ui.history = lambda o, l: {'rows': []}
+        ui.orders = lambda k, o, l: {'rows': []}
+        ui.pnl = lambda r='1D': {'pnl': 0}
+        ui.chart = lambda: {'candles': []}
+        ui.page = lambda n: '<html></html>'
+        ui.db = types.SimpleNamespace(sql=lambda *a, **k: [])
+        ui.r = types.SimpleNamespace(hash='h', m=types.SimpleNamespace(coef=[]),
+                                     a=types.SimpleNamespace(host='127.0.0.1', port=0, live=False))
+        srv = D.Dashboard.make_server(ui)
+        port = srv.server_address[1]
+        t = threading.Thread(target=srv.serve_forever, daemon=True); t.start()
+        try:
+            try:
+                r = urllib.request.urlopen(f'http://127.0.0.1:{port}/api/state', timeout=5)
+                body = json.loads(r.read())
+                code = r.status
+            except urllib.error.HTTPError as e:
+                body = json.loads(e.read())          # must still be JSON
+                code = e.code
+            self.assertEqual(code, 500)
+            self.assertIn('KeyError', body['error'], 'the reason must reach the page')
+            self.assertEqual(body['endpoint'], '/api/state')
+            self.assertTrue(ui.errors, 'the failure is recorded for /api/state to surface')
+        finally:
+            srv.shutdown(); srv.server_close()
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=1)
