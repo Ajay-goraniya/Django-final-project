@@ -2633,6 +2633,26 @@ went to the user. The measurement behind it: on 206 real fires, pad 0 keeps 206/
 re-check, pad 1 (the default) keeps 118/206, pad 2 keeps 77/206 - so the paper-vs-live frequency gap is the
 pre-submit re-check the fair-table paper lane never performs, not a lane being broken.
 
+## 23:21 UTC (Sat 09-12) - the last-20 swung 0.26 per $1 in one hour, on six fires
+
+Re-arm reading, Predict.fun v10 paper: last-20 -0.102 per $1 (cum -2.043), last-40 -0.035 per $1 (cum -1.390),
+482 graded. An hour ago it was last-20 +0.155, last-40 +0.002. Six new graded fires moved the 20-window by
+0.257 per $1 and flipped its sign.
+
+This is worth recording plainly because it is the clearest single-hour demonstration of why the criterion was
+refuted at 22:12 on 09-11. Under the old rule the +0.155 at 22:20 would have been the first of the two
+consecutive positives; this hour would then have cancelled it. The rule was never measuring a state of the
+world that lasts an hour - a 20-fire window moves more than its own decision threshold on a normal hour's
+trading, so "two consecutive positive readings" is close to a coin flip taken twice. Not arming, and the
+reason is now demonstrated rather than asserted.
+
+Lane state unchanged: master OFF ("safe startup"), MAIN/REVERSAL/EF all manual_enabled False, re-asserted,
+nothing was enabled. Equity 15.02, wallet 15.02, realised -8.04, settled 442, nothing open, ladder $1 OK.
+Order rows went 899 -> 910 over the hour while filled stayed at 442, which is the shadow lane logging and no
+real money moving - the same distinction that made the 22:20 check look alarming for a minute.
+
+Engines all up 79 minutes since the container restart, 13 python processes (the 12 plus the watcher).
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
