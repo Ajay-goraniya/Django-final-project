@@ -265,6 +265,9 @@ class PolyRunner(Runner):
                     self.cash=truth.get('cash'); self.cash_at=time.monotonic()
                     self.db.venue_snapshot(truth)
                     self.db.apply_venue_pnl(truth.get('positions'))
+                    # Cross-check the local reserve against the venue's open
+                    # orders so a dead local row cannot keep holding funds back.
+                    self.db.mark_venue_open(truth.get('open_order_ids'))
                     self.revision+=1
                 except Exception as e:
                     self.error=f'venue truth: {type(e).__name__}'

@@ -203,7 +203,8 @@ class Journal:
         ''')
         self._add_columns('orders',{
             'error_json':'TEXT','timing_json':'TEXT','request_reached':'INTEGER DEFAULT 0',
-            'reconcile_count':'INTEGER DEFAULT 0','last_reconcile':'REAL','venue_live':'INTEGER DEFAULT 0'
+            'reconcile_count':'INTEGER DEFAULT 0','last_reconcile':'REAL','venue_live':'INTEGER DEFAULT 0',
+            'venue_absent':'INTEGER DEFAULT 0','venue_checked':'REAL'
         })
         # Money as Polymarket reports it, kept beside the local figure rather than
         # replacing it, so the two can be compared and any divergence surfaced.
@@ -344,9 +345,64 @@ class Journal:
     def metrics(self):
         n,w,l,pnl=self.sql('SELECT count(*),coalesce(sum(pnl>0),0),coalesce(sum(pnl<0),0),coalesce(sum(pnl),0) FROM results')[0]
         return dict(n=n,wins=w,losses=l,pnl=pnl,accuracy=w/n if n else None)
-    def live_reserve(self):
-        # UNKNOWN remains reserved only while unresolved. Explicitly rejected/no-fill/expired orders never reserve.
-        return float(self.sql("SELECT coalesce(sum(json_extract(plan,'$.budget')),0) FROM orders WHERE status IN ('SUBMITTING','UNKNOWN','PENDING')")[0][0] or 0)
+    ABSENT_GRACE_S=5.0
+    ABSENT_CONFIRMATIONS=2
+    def mark_venue_open(self,open_ids,now=None):
+        """Cross-check every unresolved local order against the venue's open orders.
+
+        The local reserve is the only number on the dashboard that the venue does
+        not publish, so it is the one that can drift. An order we recorded as
+        PENDING that the venue does not list, and that produced no trade, is not
+        holding venue funds - it is a local row outliving the thing it described.
+
+        A single absence proves nothing: there is a real race between our submit
+        and the order appearing in the listing. Release requires the order to be
+        older than the grace period AND absent on consecutive checks, the same
+        standard the reconciler applies before declaring a no-fill.
+        """
+        if open_ids is None: return 0
+        now=time.time() if now is None else now
+        ids=set(str(x) for x in open_ids)
+        rows=self.sql("SELECT id,ts FROM orders WHERE status IN ('SUBMITTING','UNKNOWN','PENDING')")
+        touched=0
+        for r in rows:
+            if str(r['id']) in ids:
+                self.sql('UPDATE orders SET venue_absent=0,venue_live=1,venue_checked=? WHERE id=?',(now,r['id']))
+            elif (now-float(r['ts'] or 0))>=self.ABSENT_GRACE_S:
+                self.sql('UPDATE orders SET venue_absent=venue_absent+1,venue_live=0,venue_checked=? WHERE id=?',(now,r['id']))
+            touched+=1
+        return touched
+    def reserve_detail(self):
+        """The reserve split by what the venue can actually confirm.
+
+        confirmed  the venue lists this order as open
+        unverified we have not yet proved it either way (inside the grace period)
+        phantom    repeatedly absent from the venue with no fill; not real money
+        """
+        rows=self.sql('''SELECT id,status,venue_live,coalesce(venue_absent,0) absent,venue_checked,ts,
+                         coalesce(json_extract(plan,'$.budget'),0) budget,
+                         (SELECT count(*) FROM fills f WHERE f.order_id=orders.id) fills
+                         FROM orders WHERE status IN ('SUBMITTING','UNKNOWN','PENDING')''')
+        out=dict(confirmed=0.0,unverified=0.0,phantom=0.0,rows=len(rows),phantom_ids=[])
+        for r in rows:
+            b=float(r['budget'] or 0)
+            if r['venue_checked'] is None: out['unverified']+=b
+            elif r['venue_live']: out['confirmed']+=b
+            elif r['absent']>=self.ABSENT_CONFIRMATIONS and not r['fills']:
+                out['phantom']+=b; out['phantom_ids'].append(r['id'])
+            else: out['unverified']+=b
+        out['total']=out['confirmed']+out['unverified']+out['phantom']
+        out['effective']=out['confirmed']+out['unverified']
+        return out
+    def live_reserve(self,venue_verified=True):
+        """Funds to hold back before sizing the next order.
+
+        With venue_verified, an order the venue has repeatedly denied holding is
+        excluded, so a dead local row cannot shrink what you are able to trade.
+        """
+        if not venue_verified:
+            return float(self.sql("SELECT coalesce(sum(json_extract(plan,'$.budget')),0) FROM orders WHERE status IN ('SUBMITTING','UNKNOWN','PENDING')")[0][0] or 0)
+        return self.reserve_detail()['effective']
     def halt_check(self):
         # Measured against the ask that was on the book immediately before submit,
         # which is the price the fill can fairly be judged against. The signal

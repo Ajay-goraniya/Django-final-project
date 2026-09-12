@@ -1,20 +1,20 @@
-Polymarket v12.2 test results  (2026-09-12T14:34:47Z)
+Polymarket v12.2 test results  (2026-09-12T14:38:39Z)
 
 == test_polymarket.py
 ----------------------------------------------------------------------
-Ran 45 tests in 0.713s
+Ran 45 tests in 0.706s
 
 OK
 
 == test_lanes.py
 ----------------------------------------------------------------------
-Ran 14 tests in 0.240s
+Ran 14 tests in 0.248s
 
 OK
 
 == test_v122.py
 ----------------------------------------------------------------------
-Ran 16 tests in 0.276s
+Ran 23 tests in 1.496s
 
 OK
 

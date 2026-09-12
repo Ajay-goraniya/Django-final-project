@@ -345,7 +345,7 @@ class DashboardTests(unittest.TestCase):
         snap=self.ui.snapshot(); cap=snap['capital']
         self.assertAlmostEqual(cap['wallet'],13.73); self.assertAlmostEqual(cap['free'],13.73)
         self.assertAlmostEqual(cap['reserved'],6.0); self.assertAlmostEqual(cap['funding_headroom'],7.73)
-        self.assertEqual(cap['truth']['source'],'Polymarket API (balance, positions, account PnL)')
+        self.assertEqual(cap['truth']['source'],'Polymarket API (balance, positions, open orders, account PnL)')
     def test_slippage_uses_raw_signal_ask_presubmit_and_fill(self):
         db=self.r.db; db.reserve(101,decision(),'up','c')
         plan=dict(quote=.40,signal_quote=.39,pre_submit_quote=.40,cap=.42,budget=3.,age_ms=1,amount=2.9,rate=.07,exponent=1,seq=1)

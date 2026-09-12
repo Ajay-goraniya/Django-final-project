@@ -188,5 +188,86 @@ class SignalMigration(unittest.TestCase):
         db.c.close(); os.unlink(path)
 
 
+
+
+class VenueVerifiedReserve(unittest.TestCase):
+    """The pending/reserve figure is the only balance number the venue does not
+    publish, so it is the one that drifts. These cover the drift."""
+
+    def setUp(self):
+        self.path = tempfile.mktemp(suffix='.sqlite3')
+        self.db = C.Journal(self.path, 'LIVE', 'hash')
+
+    def tearDown(self):
+        try: self.db.c.close(); os.unlink(self.path)
+        except Exception: pass
+
+    def _pending(self, oid, epoch, budget, age_s=0.0):
+        self.db.reserve(epoch, dict(side='UP'), 'tok', 'cond', 'EF')
+        self.db.order(oid, epoch, 1, dict(budget=budget), kind='EF')
+        self.db.sql('UPDATE orders SET status=?,ts=? WHERE id=?',
+                    ('PENDING', time.time() - age_s, oid))
+
+    def test_unchecked_order_still_holds_funds(self):
+        self._pending('o1', 100, 3.0)
+        d = self.db.reserve_detail()
+        self.assertAlmostEqual(d['unverified'], 3.0)
+        self.assertAlmostEqual(self.db.live_reserve(), 3.0,
+                               msg='before the venue is asked, hold the funds back')
+
+    def test_order_the_venue_lists_is_confirmed(self):
+        self._pending('o1', 100, 3.0, age_s=30)
+        self.db.mark_venue_open({'o1'})
+        d = self.db.reserve_detail()
+        self.assertAlmostEqual(d['confirmed'], 3.0)
+        self.assertAlmostEqual(d['phantom'], 0.0)
+        self.assertAlmostEqual(self.db.live_reserve(), 3.0)
+
+    def test_single_absence_does_not_release_funds(self):
+        # There is a real race between submitting and the order being listed.
+        self._pending('o1', 100, 3.0, age_s=30)
+        self.db.mark_venue_open(set())
+        self.assertAlmostEqual(self.db.live_reserve(), 3.0,
+                               msg='one absence is not proof')
+
+    def test_repeated_absence_releases_a_phantom_reserve(self):
+        # This is the case in the live screenshot: $3.00 held by an order the
+        # venue never had, shrinking what can be traded for the rest of the run.
+        self._pending('o1', 100, 3.0, age_s=30)
+        self.db.mark_venue_open(set())
+        self.db.mark_venue_open(set())
+        d = self.db.reserve_detail()
+        self.assertAlmostEqual(d['phantom'], 3.0)
+        self.assertAlmostEqual(d['effective'], 0.0)
+        self.assertAlmostEqual(self.db.live_reserve(), 0.0)
+        self.assertEqual(d['phantom_ids'], ['o1'])
+        self.assertAlmostEqual(self.db.live_reserve(venue_verified=False), 3.0,
+                               msg='the raw local figure is still available for comparison')
+
+    def test_a_fresh_order_is_protected_by_the_grace_period(self):
+        self._pending('o1', 100, 3.0, age_s=0.0)
+        self.db.mark_venue_open(set()); self.db.mark_venue_open(set())
+        self.assertAlmostEqual(self.db.live_reserve(), 3.0,
+                               msg='an order younger than the grace period is never released')
+
+    def test_an_order_with_a_fill_is_never_phantom(self):
+        self._pending('o1', 100, 3.0, age_s=30)
+        self.db.fill('o1', 100, 't1', dict(shares=1.0, spent=0.5, fees=0.0, price=0.5), 'b')
+        self.db.mark_venue_open(set()); self.db.mark_venue_open(set())
+        d = self.db.reserve_detail()
+        self.assertAlmostEqual(d['phantom'], 0.0, msg='it traded; it is not phantom')
+
+    def test_available_is_venue_cash_not_cash_minus_reserve(self):
+        # Build 12.0 showed AVAILABLE as wallet minus the local reserve, so a
+        # phantom row reduced the figure the operator reads as spendable.
+        self._pending('o1', 100, 3.0, age_s=30)
+        cash = 16.42
+        self.db.mark_venue_open(set()); self.db.mark_venue_open(set())
+        reserve = self.db.live_reserve()
+        self.assertAlmostEqual(cash, 16.42, msg='the venue balance is reported as-is')
+        self.assertAlmostEqual(max(0, cash - reserve), 16.42,
+                               msg='a phantom reserve no longer reduces fundable')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=1)

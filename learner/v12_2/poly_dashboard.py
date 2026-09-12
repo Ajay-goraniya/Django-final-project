@@ -245,7 +245,12 @@ class Dashboard:
         # Available funds: the authenticated Polymarket collateral balance, never a
         # locally reconstructed figure. The unresolved local reserve is reported
         # beside it as concurrency headroom and is not subtracted from it.
-        cash=(vt.get('cash') if vt.get('cash') is not None else r.cash) or 0.; reserve=self.db.live_reserve()
+        cash=(vt.get('cash') if vt.get('cash') is not None else r.cash) or 0.
+        # The reserve is the one number on this panel the venue does not publish,
+        # so it is reported by how far it has been verified rather than as a
+        # single figure. A phantom row - repeatedly absent from the venue's open
+        # orders with no fill - is excluded from what it holds back.
+        rd=self.db.reserve_detail(); reserve=rd['effective']
         fills=self.orders('EF',0,1)['rows']; last=fills[0] if fills else None
         if last: last.update(slippage=last.get('quote_to_fill'),attempts=last['ef_attempt_seq'],order_status=last['status'])
         current=dict(r.current_candle)
@@ -254,7 +259,10 @@ class Dashboard:
         venue_positions=list(getattr(r,'account_positions',[]) or [])
         position_value=sum(float(x.get('current_value') or 0) for x in venue_positions if isinstance(x,dict))
         sizing_bankroll=self.equity()
-        self.cache=dict(feature_names=FEATURES,open_positions=positions,economics=self.pnl(),model=dict(version=10),learning=dict(status='Fixed v10 weights'),candle=current,feature=d.get('features',{}),feed=self.feed_state(),metrics=dict(main={},reversal={},ef=metric,combined=metric),main=(self.r.lane_decision or {}).get('main'),reversal=(self.r.lane_decision or {}).get('reversal'),lanes=(self.r.lane_decision or {}),main_block=(self.r.lane_decision or {}).get('main_block',''),ef=ef,ef_monitor=dict(status=d.get('reason') or f"v10 pnl · p {d.get('p','--')} · EV {d.get('ev','--')}"),book=book,last_fill=last,controls=ctr,capital=dict(balance=sizing_bankroll,sizing_bankroll=sizing_bankroll,wallet=cash,pending_payout=pending,open_position_value=position_value,free=cash,wallet_free=cash,funding_headroom=max(0,cash-reserve),fresh=age<15,balance_age_sec=age,realised=metrics['pnl'],reserved=reserve,next_stake=self.db.get('next_stake',1),truth=dict(source='Polymarket API (balance, positions, account PnL)',venue_positions=venue_positions,
+        self.cache=dict(feature_names=FEATURES,open_positions=positions,economics=self.pnl(),model=dict(version=10),learning=dict(status='Fixed v10 weights'),candle=current,feature=d.get('features',{}),feed=self.feed_state(),metrics=dict(main={},reversal={},ef=metric,combined=metric),main=(self.r.lane_decision or {}).get('main'),reversal=(self.r.lane_decision or {}).get('reversal'),lanes=(self.r.lane_decision or {}),main_block=(self.r.lane_decision or {}).get('main_block',''),ef=ef,ef_monitor=dict(status=d.get('reason') or f"v10 pnl · p {d.get('p','--')} · EV {d.get('ev','--')}"),book=book,last_fill=last,controls=ctr,capital=dict(balance=sizing_bankroll,sizing_bankroll=sizing_bankroll,wallet=cash,pending_payout=pending,open_position_value=position_value,free=cash,wallet_free=cash,funding_headroom=max(0,cash-reserve),reserve_detail=rd,fresh=age<15,balance_age_sec=age,realised=metrics['pnl'],reserved=reserve,next_stake=self.db.get('next_stake',1),truth=dict(source='Polymarket API (balance, positions, open orders, account PnL)',venue_positions=venue_positions,
+                        reserve_confirmed=rd['confirmed'],reserve_unverified=rd['unverified'],
+                        reserve_phantom=rd['phantom'],reserve_total_local=rd['total'],
+                        reserve_phantom_ids=rd['phantom_ids'],
                         portfolio_value=vt.get('portfolio_value'),open_value=vt.get('open_value'),
                         venue_realized_pnl=vt.get('realized_pnl'),venue_unrealized_pnl=vt.get('unrealized_pnl'),
                         venue_fees_paid=vt.get('fees_paid'),account_pnl=vt.get('account_pnl'),

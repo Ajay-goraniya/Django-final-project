@@ -72,6 +72,47 @@ back-filled from local math.
 Outcome resolution was already correct and is untouched: it reads Polymarket's
 own `umaResolutionStatus` and `outcomePrices`, never Binance.
 
+## 2b. Account, pending and fundable — the three numbers in your screenshot
+
+Your dashboard shows `AVAILABLE $13.42` against a wallet of `$16.42`, with
+`pending order reserve $3.00` and `fundable now $13.42`. Two separate problems
+produce that, and the second one is the important one.
+
+**The order that created the reserve was misclassified.** `LAST LIVE ORDER` reads
+`UNKNOWN · RequestRejectedError`. A RequestRejectedError with a 4xx status is the
+venue explicitly refusing the order, which is not ambiguous at all. Build 12.0
+put every post exception through one handler and called them all UNKNOWN, and an
+UNKNOWN holds its budget in reserve. So a rejected order kept $3.00 locked.
+v12.1 already fixed the classification; v12.2 keeps it.
+
+**The reserve was never checked against the venue.** This is the part v12.1 did
+not fix. The reserve is the only figure on that panel Polymarket does not
+publish — it is a local sum over rows we wrote ourselves — so it is the one that
+drifts. v12.1 fetched the venue's open-order list and then did nothing with it.
+
+v12.2 cross-checks every unresolved local order against that list on each venue
+poll and reports the reserve by how far it has been verified:
+
+| | meaning | holds funds |
+|---|---|---|
+| confirmed | the venue lists this order as open | yes |
+| unverified | not yet proved either way, inside the grace period | yes |
+| phantom | repeatedly absent from the venue with no fill | **no** |
+
+Release is deliberately conservative, because there is a real race between
+submitting an order and it appearing in the listing: the order must be older
+than 5 seconds **and** absent on two consecutive checks **and** have produced no
+fill. An order that traded is never phantom. The raw local figure stays
+available through `live_reserve(venue_verified=False)` so the two can be
+compared.
+
+**And AVAILABLE stops being wallet minus reserve.** Build 12.0 subtracted the
+local reserve from the venue balance and presented the result as what you have.
+A phantom row therefore reduced the number you read as spendable, and with FAK
+orders — which cannot rest — such a row is almost always phantom within seconds.
+v12.2 reports the venue balance as-is, with the reserve shown beside it as
+concurrency headroom.
+
 ## 3. Feed staleness was being measured wrong
 
 **The bug.** v12.1 recorded feed age as *time since we last received a message*.

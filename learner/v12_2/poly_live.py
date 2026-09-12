@@ -169,13 +169,14 @@ class LiveBroker:
         Cash, portfolio value, per-position PnL and account PnL all come from
         Polymarket. Nothing in here is derived from the local journal.
         """
-        cash,value,pos,pnl=await asyncio.gather(
+        cash,value,pos,pnl,snap=await asyncio.gather(
             self.cash(),self.portfolio_value(),self.positions(),self.account_pnl(),
-            return_exceptions=True)
+            self.account_snapshot(),return_exceptions=True)
         err=lambda x: None if isinstance(x,BaseException) else x
         pos=err(pos) or []
+        snap=err(snap) or {}
         return dict(cash=err(cash),portfolio_value=err(value),positions=pos,
-                    account_pnl=err(pnl),
+                    account_pnl=err(pnl),open_order_ids=snap.get('open_order_ids'),
                     open_value=sum(p['current_value'] for p in pos if p['size']>0),
                     realized_pnl=sum(p['realized_pnl'] for p in pos) if pos else None,
                     unrealized_pnl=sum(p['unrealized_pnl'] for p in pos) if pos else None,
