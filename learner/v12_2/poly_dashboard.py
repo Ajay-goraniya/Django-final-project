@@ -21,7 +21,20 @@ def _json_safe(obj):
         return [_json_safe(v) for v in obj]
     if isinstance(obj,set):
         return sorted(str(v) for v in obj)
-    return obj
+    if isinstance(obj,(dt.datetime,dt.date,dt.time)):
+        return obj.isoformat()
+    if isinstance(obj,(bytes,bytearray)):
+        return obj.decode('utf-8','replace')
+    if isinstance(obj,(str,int,bool)) or obj is None:
+        return obj
+    try:
+        json.dumps(obj)
+        return obj
+    except TypeError:
+        # A value the encoder cannot take must not cost the whole response.
+        # The live box lost its dashboard to exactly one of these: the SDK's
+        # account-PnL point carries a datetime.
+        return str(obj)
 
 
 class Dashboard:
@@ -297,7 +310,7 @@ class Dashboard:
                         local_vs_venue=divergence)),trades=self.pnl(),latency=r.executor.latency_stats(),chart_revision=r.revision,error=r.error,dashboard_errors=list(getattr(self,'errors',[])),lane='LIVE' if r.a.live else 'PAPER',model_hash=r.hash,fee_basis=r.broker.basis,halt=self.db.get('halt'))
         self.cache_at=time.monotonic(); return self.cache
     def page(self,name):
-        text=(ROOT/name).read_text().replace('__VERSION__','12 Polymarket').replace('__BUILD__','12.2.2 · v10 PnL · '+('LIVE' if self.r.a.live else 'PAPER')).replace('__UPTIME_SEC__',str(time.time()-self.r.started))
+        text=(ROOT/name).read_text().replace('__VERSION__','12 Polymarket').replace('__BUILD__','12.2.3 · v10 PnL · '+('LIVE' if self.r.a.live else 'PAPER')).replace('__UPTIME_SEC__',str(time.time()-self.r.started))
         return text
     def make_server(self):
         ui=self

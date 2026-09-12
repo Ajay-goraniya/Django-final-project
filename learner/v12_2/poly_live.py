@@ -178,7 +178,12 @@ class LiveBroker:
         if not pts: return None
         p=pts[-1]
         g=lambda n: (float(getattr(p,n)) if getattr(p,n,None) is not None else None)
-        return dict(ts=getattr(p,'timestamp',None),realized_pnl=g('realized_pnl'),
+        # The SDK returns a datetime here. Anything leaving this layer has to be
+        # JSON-native, because it lands in the dashboard payload and in SQLite.
+        ts=getattr(p,'timestamp',None)
+        if hasattr(ts,'isoformat'): ts=ts.isoformat()
+        elif ts is not None and not isinstance(ts,(str,int,float)): ts=str(ts)
+        return dict(ts=ts,realized_pnl=g('realized_pnl'),
                     unrealized_pnl=g('unrealized_pnl'),settled_pnl=g('settled_pnl'),
                     economic_pnl=g('economic_pnl'),trade_pnl=g('trade_pnl'),
                     fees_paid=g('fees_paid'),volume=g('volume_usdc'),

@@ -242,3 +242,37 @@ state I could construct, and your later paste returned HTTP 200 with a complete
 payload, so I am recording it as transient during startup rather than inventing
 a cause for it. If it returns, the message itself is written into the page under
 the header — send me that line.
+
+---
+
+# 12.2.3 — the dashboard API error, root cause found
+
+Your box reported it exactly as the hardening intended:
+
+    {"ok": false, "error": "Object of type datetime is not JSON serializable",
+     "endpoint": "/api/state"}
+
+**Cause.** Polymarket's account-PnL point carries `timestamp` as a Python
+`datetime`. It went straight into the dashboard payload, and `json.dumps`
+cannot encode one. In 12.2.1 that exception escaped the handler, the page got an
+HTML traceback it could not parse, and the panel went dark with no reason. This
+is the original error from the first screenshot, and it was mine: I added the
+field that carried the datetime.
+
+**It broke a second thing quietly.** The same value made `venue_snapshot()` raise
+inside the venue loop's exception handler, so every venue snapshot was discarded
+and the reported PnL silently stayed on the local basis. That is part of why
+`pnl_basis` read `LOCAL_FROM_FILLS` with rows awaiting the venue.
+
+**Fixed in three places**, deliberately more than one:
+
+1. At the source — `account_pnl()` converts the timestamp to an ISO string, so
+   nothing leaves the venue layer that is not JSON-native.
+2. At the encoder — the response sanitiser now handles datetime, date, time,
+   bytes and any other unencodable value, falling back to `str()` rather than
+   failing the whole response. One bad field can no longer cost the dashboard.
+3. At the database write — the snapshot uses `default=str`, so a future SDK type
+   cannot silently discard venue truth.
+
+Regression tests cover all three, including the exact payload shape from your
+box: the raw encode fails as it did live, and the server's encoder succeeds.

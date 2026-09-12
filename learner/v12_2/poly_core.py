@@ -222,10 +222,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.2.2')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.2.3')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -304,7 +304,12 @@ class Journal:
         self.sql('INSERT OR REPLACE INTO venue_state VALUES(?,?,?,?,?,?,?,?)',(
             float(truth.get('ts') or time.time()),truth.get('cash'),truth.get('portfolio_value'),
             truth.get('open_value'),truth.get('realized_pnl'),truth.get('unrealized_pnl'),
-            truth.get('fees_paid'),json.dumps(truth.get('account_pnl') or {},ensure_ascii=False)))
+            truth.get('fees_paid'),
+            # default=str so an unserialisable SDK value cannot abort the write.
+            # When this raised, the whole venue snapshot was lost inside the
+            # loop's exception handler and the reported PnL silently stayed on
+            # the local basis.
+            json.dumps(truth.get('account_pnl') or {},ensure_ascii=False,default=str)))
     def apply_venue_pnl(self,positions):
         """Write Polymarket's own per-position PnL onto the settled rows.
 

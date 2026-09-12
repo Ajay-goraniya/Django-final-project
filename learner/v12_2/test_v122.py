@@ -384,6 +384,50 @@ class DashboardNeverGoesDark(unittest.TestCase):
         finally:
             srv.shutdown(); srv.server_close()
 
+class DatetimeFromTheSdk(unittest.TestCase):
+    """The live box lost its dashboard to exactly this: the SDK's account-PnL
+    point carries a datetime, which json.dumps cannot encode. It broke two
+    things at once - the dashboard response, and the venue snapshot write, which
+    failed inside its loop's exception handler and left PnL on the local basis.
+    """
+
+    def test_account_pnl_timestamp_is_normalised_at_the_source(self):
+        import asyncio, datetime as dt, poly_live
+        class P:
+            timestamp = dt.datetime(2026, 9, 12, 14, 0, tzinfo=dt.timezone.utc)
+            realized_pnl = -0.034927; unrealized_pnl = 0.0; settled_pnl = -0.034927
+            economic_pnl = -0.034927; trade_pnl = 0.154553; fees_paid = -0.18948
+            volume_usdc = 5.299999; trade_count = 2
+        class Series:
+            points = [P()]
+        class Client:
+            async def get_user_pnl(self, **kw): return Series()
+        b = poly_live.LiveBroker.__new__(poly_live.LiveBroker)
+        b.client = Client()
+        out = asyncio.run(b.account_pnl())
+        self.assertIsInstance(out['ts'], str)
+        json.dumps(out, allow_nan=False)      # must not raise
+
+    def test_encoder_survives_a_datetime_anywhere(self):
+        import datetime as dt, poly_dashboard as D
+        body = {'truth': {'account_pnl': {'ts': dt.datetime(2026, 9, 12, 14, 0)}}}
+        out = json.dumps(D._json_safe(body), allow_nan=False)
+        self.assertIn('2026-09-12T14:00:00', out)
+
+    def test_venue_snapshot_write_survives_an_unserialisable_value(self):
+        import datetime as dt
+        path = tempfile.mktemp(suffix='.sqlite3')
+        db = C.Journal(path, 'LIVE', 'hash')
+        try:
+            db.venue_snapshot(dict(ts=time.time(), cash=18.4, portfolio_value=0.0, open_value=0.0,
+                                   realized_pnl=-0.2, unrealized_pnl=0.0, fees_paid=0.2,
+                                   account_pnl=dict(ts=dt.datetime(2026, 9, 12, 14, 0), realized_pnl=-0.03)))
+            r = db.sql('SELECT cash FROM venue_state')
+            self.assertEqual(len(r), 1, 'the snapshot must be written, not lost to an encoder error')
+            self.assertAlmostEqual(r[0]['cash'], 18.4)
+        finally:
+            db.c.close(); os.unlink(path)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=1)
