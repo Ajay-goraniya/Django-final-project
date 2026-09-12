@@ -2354,6 +2354,30 @@ MAIN fired live on their box (DOWN, 60 reads, p 0.272). Two things flagged to th
    query now includes CLOSED positions, that sum spans their whole history, not this run. The per-candle
    attribution is the number that drives reporting and it is the one matching to four decimals.
 
+## 16:20 UTC check-in (Sat 09-12) - trigger still negative; both windows now at dead even
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 10W/10L -0.074 | 20W/20L +0.021 |
+Both windows are now exactly 50/50 on wins - 10W/10L and 20W/20L - with the last-20 at -0.074 and the last-40
+barely positive at +0.021. The 40-fire window has fallen from +0.164 at 05:20 to +0.021 over eleven hours.
+Not arming.
+
+Tokyo: master ON, all three kinds false, equity 15.02, nothing open, uptime 33.9 h. No silent flag revert.
+The first health call returned nothing and the second succeeded, which is the documented intermittent 502 -
+noted, not treated as an outage. 13 processes, 12 G free.
+
+Fair table (window opens with the newest run, Polymarket paper v10 at 09-11 15:15 UTC, 25.1 h):
+| run | W/L | acc | open | PnL @$10 |
+|---|---|---|---|---|
+| Predict.fun paper (v10) | 63/58 | 52% | 1 | +92.9 |
+| Polymarket paper (v10) | 82/75 | 52% | 1 | +159.0 |
+| Polymarket v12 lane (paper exec) | 85/68 | 56% | 1 | +290.3 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 15.02, equity 15.02) |
+
+Quiet hour: Predict.fun +15.4, Polymarket v10 +4.2, v12 lane +2.4. Runner gap 131.3, its widest yet, and the
+v12 lane has now held a higher accuracy than the v10 runner (56% vs 52%) for six consecutive hours on the same
+venue and signal. That persistence is worth the Sunday reproduction task - it is no longer plausibly jitter.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
