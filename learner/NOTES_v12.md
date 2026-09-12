@@ -1912,6 +1912,42 @@ The two-Polymarket-runner gap narrowed from 111 to 111.1 points only because bot
 apart, which is the shape of a constant offset rather than drifting divergence. That is a useful clue for the
 Sunday review: a constant offset points at execution accounting, not at decision timing.
 
+## 06:20 UTC check-in (Sat 09-12) - the trigger flipped negative after five positive hours
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 9W/11L -0.140 | 23W/17L +0.142 |
+It flipped. Five consecutive positive hours (+0.134, +0.418, +0.148, +0.137, +0.118) then -0.140 on the sixth.
+No lane was armed, so nothing to re-pause and no money was exposed to the flip.
+
+This is the point of the hold, and it is worth writing down plainly while the evidence is fresh. Under the old
+criterion REVERSAL would have armed at 02:20 on the second consecutive positive reading and run for about four
+hours into this flip. The rule was refuted at 22:12 for exactly this behaviour - arming on a short positive
+run, then holding through the reversal - and the five good hours that followed were the strongest case yet for
+reinstating it. They were also wrong. Count this as an out-of-sample confirmation of the 22:12 refutation, not
+merely a lucky abstention.
+
+It also tells us something about the dead-zone candidate: a band of +/-0.05 would NOT have helped here. The
+readings that would have armed it were +0.134 and +0.418, both far outside the band, and the flip to -0.140 is
+outside the other side. The problem is not that the signal hovers near zero; it is that a 20-fire window is
+too short to carry any signal at all at this hit rate. The redesign has to address the window length, not just
+add hysteresis around it. Recording that now so the Sunday redesign starts from the right question.
+
+Tokyo: master ON, all three kinds false, equity 15.02, nothing open, stake $1 matching the ladder, uptime
+23.9 h. No silent flag revert. 12 processes, 12 G free.
+
+Fair table (window opens with the newest run, Polymarket paper v10 at 09-11 15:15 UTC, 15.1 h):
+| run | W/L | acc | open | PnL @$10 |
+|---|---|---|---|---|
+| Predict.fun paper (v10) | 40/38 | 51% | 1 | +53.9 |
+| Polymarket paper (v10) | 50/54 | 48% | 3 | -1.6 |
+| Polymarket v12 lane (paper exec) | 51/48 | 52% | 3 | +110.4 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 15.02, equity 15.02) |
+
+Runner gap 112 points, and the constant-offset reading from 05:20 survives another hour: both Polymarket
+runners moved UP together this time (-11.8 -> -1.6 and +99.3 -> +110.4) having moved down together last hour,
+with the gap steady at 111-112 throughout. Two hours of co-movement at a fixed offset is now the better
+supported explanation than drifting timing jitter.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
