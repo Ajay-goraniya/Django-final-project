@@ -1859,6 +1859,32 @@ suggested, or something structural differs between the two runners. Do not read 
 edge until that is resolved - and note the v12 lane is the zero-slippage one, so its number is the optimistic
 side of the pair by construction.
 
+## 04:20 UTC check-in (Sat 09-12) - fourth consecutive positive trigger, still held
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 11W/9L +0.137 | 20W/20L +0.033 |
+Fourth positive hour in a row (01:20 +0.134, 02:20 +0.418, 03:20 +0.148, 04:20 +0.137). The 40-fire window
+gave back most of its rise (+0.092 -> +0.033) while the 20-fire window held, i.e. the older half of the
+window is what weakened; the last 40 is now exactly 20W/20L. Not arming. The criterion was refuted at 22:12
+under its own pre-committed review condition (4 flips, cumulative ~-1.35), and the commitment was that a
+redesigned rule is written down BEFORE it is used again. Four good readings do not reinstate a refuted rule -
+that is the same fit-to-recent-noise the refutation was about. Candidate replacement (not in use, not tested):
+dead zone with arm > +0.05, disarm < -0.05, minimum 2 h dwell either side. To be specified and tested after
+the limit reset, not now.
+
+Tokyo: master ON, all kinds false, equity 15.02, nothing open. 12 processes, 12 G free.
+
+Fair table (window from the newest run's start):
+| run | W/L | acc | open | pnl |
+|---|---|---|---|---|
+| Predict.fun paper (v10) | 33/33 | 50% | 1 | +42.9 |
+| Polymarket paper (v10) | 45/48 | 48% | 1 | -3.8 |
+| Polymarket v12 lane (paper exec) | 47/43 | 52% | 1 | +107.3 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 15.02, equity 15.02) |
+
+The 109-point gap between the two Polymarket runners flagged at 03:20 is now 111 points and still unexplained.
+Both added fires this hour and both moved in their own direction, so it is not a single stale outcome.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
