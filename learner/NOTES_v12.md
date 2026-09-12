@@ -2434,6 +2434,37 @@ unchanged and getting more worthwhile: reproduce one shared candle in both runne
 the numbers part. Two runs on the same venue and the same signal should not hold a four-point accuracy gap for
 seven hours, and until that is explained neither number should be read as the venue's edge.
 
+## 18:20 UTC check-in (Sat 09-12) - give-back hour, both trigger windows negative together
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 9W/11L -0.151 | 19W/21L -0.105 |
+Both windows negative at the same time for the first time since 06:20, and the last-20 is its worst reading of
+the day. One hour ago it was +0.019. Not arming, and had a lane been armed the symmetric re-pause would have
+fired now - worth noting as the case the rule handles correctly, even though the rule as a whole is refuted.
+
+Tokyo: master ON, all three kinds false, equity 15.02, nothing open, uptime 35.9 h. No silent flag revert.
+13 processes, 12 G free. Watcher silent.
+
+Fair table (window opens with the newest run, Polymarket paper v10 at 09-11 15:15 UTC, 27.1 h):
+| run | W/L | acc | open | PnL @$10 |
+|---|---|---|---|---|
+| Predict.fun paper (v10) | 69/67 | 51% | 0 | +59.8 |
+| Polymarket paper (v10) | 90/80 | 53% | 2 | +181.2 |
+| Polymarket v12 lane (paper exec) | 93/73 | 56% | 2 | +316.9 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 15.02, equity 15.02) |
+
+Everything gave back: Predict.fun -35.9 on 1W/5L, Polymarket v10 -18.7, the v12 lane -18.1. Predict.fun's
+worst hour of the run, and it has now surrendered more than a third of the +95.7 it held at 17:20.
+
+Runner gap 135.7, effectively unchanged, eighth consecutive hour with the v12 lane ahead. The two moved
+together again this hour, which is the pattern all day: same direction, different level.
+
+Recording the shape of the day plainly, because tomorrow's review should not read the 26-hour totals as
+evidence of an edge. Predict.fun has gone +49 -> +119 -> +60 and Polymarket +155 -> +200 -> +181 within the
+last four hours alone. On a few hundred graded fires these swings are what a coin flip at this stake looks
+like; the only numbers that have held steady all day are the accuracy figures near 52%, which is close enough
+to chance that the PnL is being driven by price paid, not by being right.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
