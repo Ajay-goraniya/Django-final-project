@@ -1,5 +1,5 @@
 {
- "last_epoch": 1789170900,
+ "last_epoch": 1789178100,
  "fires": [
   {
    "epoch": 1789079400,
@@ -682,6 +682,114 @@
    "side": "UP",
    "ask": 0.47,
    "bi": 1,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789172700,
+   "day": "2026-09-12",
+   "hour": 0,
+   "wknd": true,
+   "S": 15,
+   "side": "UP",
+   "ask": 0.47,
+   "bi": 0,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789173000,
+   "day": "2026-09-12",
+   "hour": 0,
+   "wknd": true,
+   "S": 15,
+   "side": "UP",
+   "ask": 0.44,
+   "bi": 0,
+   "hit": true,
+   "pnl": 1.2272727272727275
+  },
+  {
+   "epoch": 1789173300,
+   "day": "2026-09-12",
+   "hour": 0,
+   "wknd": true,
+   "S": 120,
+   "side": "DOWN",
+   "ask": 0.52,
+   "bi": 1,
+   "hit": true,
+   "pnl": 0.8846153846153844
+  },
+  {
+   "epoch": 1789173900,
+   "day": "2026-09-12",
+   "hour": 0,
+   "wknd": true,
+   "S": 120,
+   "side": "UP",
+   "ask": 0.39,
+   "bi": 0,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789174200,
+   "day": "2026-09-12",
+   "hour": 0,
+   "wknd": true,
+   "S": 90,
+   "side": "DOWN",
+   "ask": 0.37,
+   "bi": 1,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789174500,
+   "day": "2026-09-12",
+   "hour": 0,
+   "wknd": true,
+   "S": 15,
+   "side": "DOWN",
+   "ask": 0.45,
+   "bi": 0,
+   "hit": true,
+   "pnl": 1.177777777777778
+  },
+  {
+   "epoch": 1789176300,
+   "day": "2026-09-12",
+   "hour": 1,
+   "wknd": true,
+   "S": 15,
+   "side": "DOWN",
+   "ask": 0.34,
+   "bi": 0,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789176600,
+   "day": "2026-09-12",
+   "hour": 1,
+   "wknd": true,
+   "S": 20,
+   "side": "UP",
+   "ask": 0.44,
+   "bi": 0,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789177500,
+   "day": "2026-09-12",
+   "hour": 1,
+   "wknd": true,
+   "S": 60,
+   "side": "DOWN",
+   "ask": 0.5,
+   "bi": 0,
    "hit": false,
    "pnl": -1.0
   }
