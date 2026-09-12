@@ -1729,6 +1729,35 @@ H1 reported "all 70 v12 lane trades" - correct for the weekend paper DB, but the
 separate live smoke DB (2 SKIPPED, 1 AMBIGUOUS) plus 1 attempt. Those are the only real orders ever sent to
 Polymarket, none filled. H1's paper stats otherwise match what I see.
 
+## 00:20 UTC check-in (Sat 09-12) - quiet, trigger negative, lanes off
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 9W/11L -0.071 | 18W/22L -0.035 |
+Negative; criterion refuted anyway. Lanes stay off. Tokyo master ON, all kinds false, equity 15.02, nothing
+open. 12 processes, feeds fresh, snapshots pushed.
+
+Fair table (window from 15:04:25 09-11): PF paper 22/24 +15.5; Poly paper 32/35 -17.8; v12 lane 33/31 +67.9;
+Tokyo 5/10 -7.06 real. Overnight the two venues have swapped: Predict.fun paper is now AHEAD of Polymarket
+paper over the shared window for the first time today (+15.5 vs -17.8). Noted, not read - 9 h is not a regime.
+
+## 00:25 UTC - "l2 full.zip" request from the other session (user forwarded)
+Astra asked the user to re-upload `l2 full.zip` for a depth replay. Checked this container: **no file by that
+name exists anywhere.** What DOES exist, in the repo working tree:
+- `week_data/depth/l2/` - 3.5 GB, 192 Binance BTCUSDT orderbook parquet files, 2026-08-29 to 2026-09-06,
+  hourly. Per day: 08-29 360M, 08-30 443M, 08-31 565M, 09-02 507M, 09-03 580M, 09-04 494M, 09-05 299M,
+  09-06 323M.
+- `week_data/predictfun/polymarket_l2/` - 1.3 GB, 442 per-candle zips from 09-02 on.
+- `week_data/deliver/` - already-packaged splits, which is presumably how this was handed over before:
+  `depth20_week.tar.part00..15` (~15 x 25 MB + a 3 MB tail), `polymarket_1s_quotes.zip.part00/01`,
+  `polymarket_1s_quotes_2026-08-31_to_09-06.zip` (47 MB), `polymarket_l2_2026-09-04.tar.gz` (14 MB).
+
+**RISK, and it is the important part: none of this is in git.** `.gitignore:30` excludes `week_data/depth/`,
+and `git ls-files` returns 0 for all three directories. It exists ONLY in this ephemeral container. A recycle
+loses 4.8 GB of order-book history that cannot be re-downloaded for Polymarket at all (no historical book
+endpoint) and only partially for Binance. This is a bigger exposure than anything in tonight's trading.
+
+Did NOT reassemble the split archive - the user interrupted that and I left it alone.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |

@@ -91,3 +91,10 @@ Running list. Not explanations for the user - working notes. Newest first. Statu
     exceeds 300 s OR if either 1 Hz logger's newest row is over 300 s old. Lesson generalises - a liveness
     check must measure the OUTPUT, not the existence of the thing producing it. The same flaw would hide a
     wedged live lane, which is the version that costs money.
+
+20. OPEN, HIGH - **4.8 GB of L2 order-book history exists only in this ephemeral container.**
+    week_data/depth/l2 (3.5 GB Binance, 08-29..09-06) and week_data/predictfun/polymarket_l2 (1.3 GB) are
+    excluded by .gitignore:30 and untracked, as is week_data/deliver/ with its pre-split archives. A container
+    recycle loses all of it. Polymarket depth cannot be re-downloaded at any price (no historical book
+    endpoint); Binance depth only partly. Decide a destination (object storage, or split parts committed to a
+    data branch) and move it before the weekend test. This outranks every trading item on this list.
