@@ -56,3 +56,28 @@ and the next weekend supplies the second block. Nothing is proposed for v12 from
 - Parent (11.2 overall): **REFUTED**, unchanged.
 - Weekend cell: **passes the gate at n=62 on one weekend — recorded, not a finding, not a rule.**
 - Weekday cell: n=57, insufficient, not read.
+
+---
+
+# Two hours later: the weekend cell has already failed. 2026-09-12 16:50 UTC.
+
+| weekend cell | n | per-fire | halves | verify.py |
+|---|---|---|---|---|
+| 14:50 | 62 | +0.073 | +0.025 / +0.121 | **all four PASS** |
+| **16:50** | **71** | **+0.004** | **+0.032 / −0.024** | **FAILS both halves and beats-the-null** |
+
+**Nine added fires moved it from "passes every check" to "fails two of them."** It is now flat
+(+0.004 against a +0.018 null) with halves of opposite sign.
+
+This is the cleanest vindication of the bar this project has produced. Two hours ago the weekend cell
+had 62 fires — over the 60 threshold — a positive level, both halves positive, a clean quote rule and
+a `verify.py` verdict of True. Everything a finding is supposed to look like. Had it been shipped on
+that basis, it would have been shipped on nine fires' worth of noise.
+
+The four objections registered at 14:50 all still stand, and objection 2 turned out to be the
+operative one: the halves were morning-vs-afternoon of one Saturday, which is not a real
+out-of-sample split, and it broke the moment the afternoon extended.
+
+**Status: the weekend cell is not a candidate.** The registered test is unchanged — ≥100 weekend fires
+across ≥2 separate weekends, halves split by weekend, `verify.py` True, full grid reported — and
+nothing that happened today counts toward passing it. The parent verdict (11.2 REFUTED) is untouched.

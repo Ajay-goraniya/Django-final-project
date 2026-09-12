@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-12 14:50 UTC. Update this file at the end of every check.
+Last updated: 2026-09-12 16:50 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -479,19 +479,22 @@ diverges from the Binance leader in near-zero candles" vs (b) "noise at n=77".
   PnL-by-regime remains unanswered and only the forward test can settle it.
 - Deliverable: `task17_3_regime_grid.md`. Repro: `task17_3_regime_grid.py`.
 
-## 14:50 — the WEEKEND CELL now passes the gate. It is STILL NOT A RULE. `task17_weekend_cell.md`
+## WEEKEND CELL: passed at 14:50, **FAILED at 16:50 on nine more fires**. `task17_weekend_cell.md`
 Buckets were defined before any weekend data existed, and I pre-committed: if it clears 60 positive on
 its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that.
-- **Full grid (both cells, not the best one): weekend n=62 51.6% +0.073 halves +0.025/+0.121 ·
-  weekday n=57 43.9% −0.177 (UNDER THE BAR, NOT READ) · all n=119 −0.047.**
-- verify.py on the weekend cell: quote age / sample / both halves / beats-the-null **all PASS**.
+- **14:50: n=62, +0.073, halves +0.025/+0.121, verify.py ALL FOUR PASS.**
+- **16:50: n=71, +0.004, halves +0.032/−0.024, verify.py FAILS both halves AND beats-the-null.**
+  **Nine added fires turned "passes every check" into "fails two."** Had it shipped at 14:50 it would
+  have shipped on nine fires of noise. Objection 2 was the operative one: the halves were
+  morning-vs-afternoon of ONE Saturday, not a real out-of-sample split, and it broke as the afternoon
+  extended. **The cleanest vindication of the 60/100 bars this project has produced.**
+- Full grid now: weekend n=71 +0.004 · weekday n=57 −0.177 (UNDER THE BAR, NOT READ) · all n=128 −0.076.
 - **Why it is still not a finding:** (1) it is ONE Saturday — 62 fires from one day is one draw of the
   regime; (2) its halves are morning-vs-afternoon of the SAME continuous day, the weakest form of the
   check (the 09-11 flat bucket looked identical to three decimals and died at McNemar p=0.341);
   (3) shipping it = a gate on a score refuted two checks ago, the exact banned shape, four such
   attempts already failed 09-10; (4) no mechanism — a calendar split with no reason is a label.
-- **Honest statement is "the weekend cell passes", NOT "weekend beats weekday"** — the weekday cell is
-  under the bar, so that comparison is not available yet.
+- Status: **the weekend cell is NOT a candidate.** Nothing today counts toward the registered test.
 - **REGISTERED NOW for the new test:** >=100 weekend fires across **>=2 SEPARATE weekends**, positive
   in both halves **split by weekend not by fire index**, verify.py True, and the weekday cell reported
   alongside at whatever n it has. Until all four hold: marked, not actionable. Nothing proposed for v12.
