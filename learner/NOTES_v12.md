@@ -1885,6 +1885,33 @@ Fair table (window from the newest run's start):
 The 109-point gap between the two Polymarket runners flagged at 03:20 is now 111 points and still unexplained.
 Both added fires this hour and both moved in their own direction, so it is not a single stale outcome.
 
+## 05:20 UTC check-in (Sat 09-12) - fifth consecutive positive trigger, still held
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 11W/9L +0.118 | 23W/17L +0.164 |
+Fifth positive hour (01:20 +0.134, 02:20 +0.418, 03:20 +0.148, 04:20 +0.137, 05:20 +0.118). The last-40
+recovered from the +0.033 dip to +0.164, its best reading of the run, and the 40-fire window is now 23W/17L.
+Still not arming, for the same reason as the last four hours: the criterion was refuted at 22:12 under its own
+pre-committed review condition, and a replacement must be written down before it is used. Five good hours is
+what a refuted rule looks like right before it flips - that is exactly the pattern the dead zone is meant to
+absorb. Redesign after the limit reset.
+
+Tokyo: master ON, all three kinds false, equity 15.02, nothing open, stake $1 matching the ladder, uptime
+22.9 h. No silent flag revert. 12 processes, 12 G free.
+
+Fair table (window opens with the newest run, Polymarket paper v10 at 09-11 15:15 UTC, 14.1 h):
+| run | W/L | acc | open | PnL @$10 |
+|---|---|---|---|---|
+| Predict.fun paper (v10) | 37/36 | 51% | 0 | +49.1 |
+| Polymarket paper (v10) | 47/51 | 48% | 0 | -11.8 |
+| Polymarket v12 lane (paper exec) | 49/46 | 52% | 0 | +99.3 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 15.02, equity 15.02) |
+
+The two-Polymarket-runner gap narrowed from 111 to 111.1 points only because both moved down together
+(-4.5 -> -11.8 and +107.3 -> +99.3). They are still tracking each other's direction while sitting 111 points
+apart, which is the shape of a constant offset rather than drifting divergence. That is a useful clue for the
+Sunday review: a constant offset points at execution accounting, not at decision timing.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
