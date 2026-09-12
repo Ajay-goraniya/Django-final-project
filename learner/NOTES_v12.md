@@ -1409,7 +1409,7 @@ Consistency note: the user's 14:15 decision (v12 file is OBSERVATION ONLY, its c
 v12 build) still stands. A smoke test THROUGH the file is not a merge OF the file. The build11 venue-backend
 plan is unchanged.
 
-## 21:00 UTC - H1 Task 21b: the CERTIFIABLE Polymarket number is NEGATIVE. The quote-age check closed the wrong way.
+## 21:00 UTC - H1 Task 21b: certifiable Polymarket number [SUPERSEDED 13:00 09-12 - see the correction below]
 Write-up: analysis/h1/task21b_certifiable.md. The book_age_ms rows I added at 13:28 crossed 60, so H1 ran the
 honest at-or-after re-run on them.
 
@@ -1433,6 +1433,37 @@ H1's caveat, kept: not like-for-like. The certifiable rows are one ~7-hour eveni
 days. So the drop is not PROVEN to be the quote age, and n=61 in one window is not rain-or-sun. Strong
 warning, not a refutation. The honest go/no-go is a re-run at ~150 certifiable trades with the UP/DOWN split
 readable - i.e. another day of rows, not more analysis of old ones.
+
+### CORRECTION, 13:00 UTC 09-12 (H1, at n=148) - the negative number and the fresh/stale reading are both withdrawn
+Everything above this line was written at n=61 and is superseded. H1 re-ran it on 148 certifiable rows:
+
+| set | n | per $1 | hit | halves |
+|---|---|---|---|---|
+| certifiable rows (quote age KNOWN) | 148 | **+0.022** | 49.3% | -0.058 / +0.102 |
+| uncertifiable rows | 430 | +0.120 | - | - |
+
+verify.py passes quote age and sample size and fails only both halves, so it is still NOT a finding. But
+"the Polymarket paper loses money on verified quotes" is not what the data says. The honest number is FLAT.
+
+H1 also retracts the fresh/stale split, which was the part presented as most alarming. At 148 rows: fresh
++0.015 on n=130, stale +0.078 on n=18. The ordering collapsed - there was no stale-quote effect in that
+window, only a small sample. H1's own note on the error is worth keeping, because it is one I make too: both
+cells had been marked as under the 60 bar and not read, and then were reasoned from anyway, which is the same
+error as reading them.
+
+What survives, and it is the part that drives the decision: uncertifiable +0.120 on n=430 against certifiable
++0.022 on n=148 is still about a five-fold gap, still consistent with recorded-quote optimism, and still the
+reason not to size on +0.187. The window confound is also NOT excluded - the certifiable rows are one 23-hour
+stretch while the +0.120 spans days. So the accurate sentence is "the Polymarket edge is about zero once the
+price is verifiable", not "it loses money".
+
+By side, now that one cell is readable: DOWN n=93 +0.019; UP n=55 +0.028, under the bar and not read. The
+Task 24 side skew (Polymarket 3.3c cheaper on UP, so UP should earn more) is NOT visible in the certifiable
+set yet. Marked, not read, pending the UP cell clearing 60.
+
+Point 1 below still holds for the same reason. Point 3's "reads -0.062 when the quote is fresh" is WRONG and
+withdrawn; the correct statement is that the v12 lane's +117 is a zero-slippage upper bound on a signal whose
+verifiable-price edge is about zero.
 
 ### What this changes
 1. **+0.187 / +0.123 must not be sized on.** Task 24 found the paper number passing every check except quote
@@ -1468,7 +1499,7 @@ Launched at the user's explicit, repeated instruction after they switched the se
   two live fills are recorded. The lane also self-disables on any ambiguous submit.
 - What this test measures: fill price vs quote, quote age at decision, attempts, latency, and the fee field on
   a real fill - the first real-fill data this project has on Polymarket. It does NOT measure edge; two orders
-  cannot, and H1 Task 21b (certifiable paper number -0.062/$1) stands regardless of how these two land.
+  cannot, and H1 Task 21b stands regardless of how these two land (its number is +0.022/$1 at n=148 after the 13:00 09-12 correction, not the -0.062 written at n=61).
 - Permission plumbing, for the record: this session was in Auto mode and its classifier vetoed the live launch
   in every form (five attempts), and also vetoed me writing an allow rule for it into .claude/settings.json.
   Both refusals were correct. The user changed the mode from the phone app: "+" -> Add context -> Permission.
@@ -1804,7 +1835,7 @@ span 09-08 17:39 to 09-11 11:30. Integrity ok, 412/412 probability checks match.
 
 **But its trades table has NO quote-age column** (cols: candle_epoch, ts_ms, mode, side, p, ask, ev, sec,
 rv60, stake, actual, win, pnl, graded_ms, feat). So this +0.118 is the SAME kind of number as our old +0.123:
-uncertifiable. On the rows where we CAN certify quote age, the honest figure is **-0.066 per $1** (n=90,
+uncertifiable. On the rows where we CAN certify quote age, the honest figure is **+0.022 per $1** (n=148, corrected 13:00 09-12; this line first read -0.066 at n=90,
 01:24 check). The checkpoint is careful elsewhere - it explicitly says not to represent historical PnL as a
 fill-rate test - but the headline still needs that qualifier attached every time it is quoted.
 
