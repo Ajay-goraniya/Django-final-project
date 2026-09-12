@@ -1,5 +1,5 @@
 {
- "last_epoch": 1789228500,
+ "last_epoch": 1789235700,
  "fires": [
   {
    "epoch": 1789079400,
@@ -1533,6 +1533,126 @@
    "S": 15,
    "side": "UP",
    "ask": 0.48,
+   "bi": 0,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789229100,
+   "day": "2026-09-12",
+   "hour": 16,
+   "wknd": true,
+   "S": 30,
+   "side": "UP",
+   "ask": 0.3,
+   "bi": 0,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789229700,
+   "day": "2026-09-12",
+   "hour": 16,
+   "wknd": true,
+   "S": 30,
+   "side": "DOWN",
+   "ask": 0.45,
+   "bi": 0,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789230600,
+   "day": "2026-09-12",
+   "hour": 16,
+   "wknd": true,
+   "S": 30,
+   "side": "DOWN",
+   "ask": 0.44,
+   "bi": 0,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789231500,
+   "day": "2026-09-12",
+   "hour": 16,
+   "wknd": true,
+   "S": 60,
+   "side": "UP",
+   "ask": 0.49,
+   "bi": 0,
+   "hit": true,
+   "pnl": 1.0
+  },
+  {
+   "epoch": 1789232400,
+   "day": "2026-09-12",
+   "hour": 17,
+   "wknd": true,
+   "S": 15,
+   "side": "UP",
+   "ask": 0.48,
+   "bi": 0,
+   "hit": true,
+   "pnl": 1.041666666666667
+  },
+  {
+   "epoch": 1789232700,
+   "day": "2026-09-12",
+   "hour": 17,
+   "wknd": true,
+   "S": 30,
+   "side": "UP",
+   "ask": 0.5,
+   "bi": 0,
+   "hit": true,
+   "pnl": 0.96
+  },
+  {
+   "epoch": 1789233600,
+   "day": "2026-09-12",
+   "hour": 17,
+   "wknd": true,
+   "S": 30,
+   "side": "UP",
+   "ask": 0.49,
+   "bi": 0,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789233900,
+   "day": "2026-09-12",
+   "hour": 17,
+   "wknd": true,
+   "S": 20,
+   "side": "DOWN",
+   "ask": 0.49,
+   "bi": 0,
+   "hit": true,
+   "pnl": 1.0
+  },
+  {
+   "epoch": 1789235400,
+   "day": "2026-09-12",
+   "hour": 17,
+   "wknd": true,
+   "S": 45,
+   "side": "UP",
+   "ask": 0.47,
+   "bi": 0,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789235700,
+   "day": "2026-09-12",
+   "hour": 17,
+   "wknd": true,
+   "S": 30,
+   "side": "DOWN",
+   "ask": 0.44,
    "bi": 0,
    "hit": false,
    "pnl": -1.0
