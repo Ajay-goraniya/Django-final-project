@@ -2496,6 +2496,44 @@ This hour is the direct illustration of the point recorded at 18:20. Nothing abo
 between 18:20 and 19:20, yet Predict.fun moved -35.9 then +27.6. Reading either hour as signal would have been
 wrong in opposite directions.
 
+## 20:20 UTC check-in (Sat 09-12) - Polymarket paper crosses 100 wins; both trigger windows negative
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 9W/11L -0.056 | 20W/20L -0.017 |
+Both negative again, the long window at an even 20W/20L. Not arming.
+
+Tokyo: master ON, all three kinds false, equity 15.02, nothing open, uptime 37.8 h. No silent flag revert.
+13 processes, 12 G free. Watcher silent.
+
+Fair table (window opens with the newest run, Polymarket paper v10 at 09-11 15:15 UTC, 29.1 h):
+| run | W/L | acc | open | PnL @$10 |
+|---|---|---|---|---|
+| Predict.fun paper (v10) | 76/71 | 52% | 0 | +96.8 |
+| Polymarket paper (v10) | 100/88 | 53% | 2 | +204.2 |
+| Polymarket v12 lane (paper exec) | 103/82 | 56% | 2 | +329.6 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 15.02, equity 15.02) |
+
+Mixed hour: Predict.fun +9.4 on 4W/3L while both Polymarket runners gave back (v10 -7.3, v12 lane -17.5).
+The Polymarket v10 runner has now passed 100 wins on 188 graded fires.
+
+USER DIRECTION 19:35: "pollymarket does better as always, once the fable is available we will work on that,
+the execution and everything." Recorded so tomorrow's session has it: the next block of work is the Polymarket
+executor, and the user reads Polymarket as the better venue.
+
+The calibration I gave back, recorded here so it is not lost between sessions and not softened later:
+Polymarket leads on this window, but all three paper runs sit at 51-56% accuracy, close enough to chance that
+the PnL is driven by price paid rather than by being right. The certifiable Polymarket number - the rows where
+quote age can actually be verified - is about ZERO (+0.022 at n=148), against the +0.120 headline on
+uncertifiable rows. And the v12 lane's +329.6 is a zero-slippage upper bound by construction. So "Polymarket
+does better" is consistent with it being CHEAPER TO ENTER, not more accurate, and the executor work should be
+designed around entry cost rather than around an assumed edge.
+
+Queue for the next session, unchanged: reproduce a shared candle in both Polymarket runners (the gap held to a
+decimal today through a 30-point common move, so it looks like a fixed pricing offset); the MAIN entry-timing
+question in the v12.2.4 port; count how many MAIN signals clear the EV bar in paper before funding it, two so
+far and both refused; redesign the re-arm criterion on a longer window, its two windows disagreed at nine of
+today's checks.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
