@@ -1758,6 +1758,27 @@ endpoint) and only partially for Binance. This is a bigger exposure than anythin
 
 Did NOT reassemble the split archive - the user interrupted that and I left it alone.
 
+## 01:20 UTC check-in (Sat 09-12) - trigger positive, but NOT arming: the criterion is refuted
+| re-arm check | last 20 | last 40 |
+|---|---|---|
+| Predict.fun paper (trigger) | 11W/9L **+0.134** | 19W/21L +0.015 |
+
+Under the ORIGINAL rule this would be a first sighting, and a second positive reading at 02:20 would arm
+REVERSAL. **It will not.** The criterion was refuted at 22:12 under its own pre-committed review condition
+(4 flips, cumulative real about -1.35), and the commitment was that it gets redesigned with a dead zone and a
+minimum dwell, WRITTEN DOWN BEFORE being applied. Acting on it again now - on the first positive hour since
+it was refuted - would be exactly the cherry-picking the whole pre-commitment exists to stop.
+
+So: lanes stay off until a redesigned rule is written and agreed. I am not designing it tonight; the user is
+limit-constrained until Sunday and there is no cost to waiting - the account is flat at 15.02 with nothing at
+risk. The readings keep being recorded every hour either way, which is what makes the redesign testable.
+
+Tokyo: master ON, all three kinds false, equity 15.02, nothing open. 12 processes, feeds fresh, 12 G free.
+Fair table (window from 15:04:25 09-11): PF paper 24/25 +26.6; Poly paper 36/38 +4.3; v12 lane 37/34 +87.7;
+Tokyo 5/10 -7.06 real. Polymarket paper recovered 25 points this hour (-21.3 -> +4.3), so last hour's
+"Predict.fun has overtaken Polymarket" reading was itself an hour of noise - worth remembering before anyone
+builds a story on a single hour.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
