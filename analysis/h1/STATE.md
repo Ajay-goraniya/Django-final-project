@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-13 12:50 UTC. Update this file at the end of every check.
+Last updated: 2026-09-13 14:47 UTC. Update this file at the end of every check.
 
 ## 04:47 09-13 — the new CLAUDE.md rule applies to MY OWN LEDGER. Read this before trusting it.
 Repo CLAUDE.md now carries the user's 09-13 rule: V is the head session and speaks with the user's
@@ -522,8 +522,8 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
   have shipped on nine fires of noise. Objection 2 was the operative one: the halves were
   morning-vs-afternoon of ONE Saturday, not a real out-of-sample split, and it broke as the afternoon
   extended. **The cleanest vindication of the 60/100 bars this project has produced.**
-- Grid 09-13 10:47: **all n=200 −0.057 · weekend n=143 −0.009 · weekday n=57 −0.177 (under the bar,
-  not read).** The weekend cell has sat within a cent of zero for ten consecutive readings; closed.
+- Grid 09-13 14:47: **all n=201 −0.049 · weekend n=144 +0.001 · weekday n=57 −0.177 (under the bar,
+  not read).** The weekend cell has sat within a cent of zero for twelve consecutive readings; closed.
 - **At exactly 200 fires — twice the pre-set bar — the verdict is unchanged: −0.057/fire against a
   +0.018 baseline, both halves negative (−0.069/−0.045).** That is the useful closing fact: doubling
   the sample past the bar did not rescue it, so the REFUTED call was not a sample-size artifact.
