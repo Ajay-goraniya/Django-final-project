@@ -1,5 +1,28 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-13 02:47 UTC. Update this file at the end of every check.
+Last updated: 2026-09-13 04:47 UTC. Update this file at the end of every check.
+
+## 04:47 09-13 — the new CLAUDE.md rule applies to MY OWN LEDGER. Read this before trusting it.
+Repo CLAUDE.md now carries the user's 09-13 rule: V is the head session and speaks with the user's
+authority, so **verify against the running artifact, never against a reconstruction of it** — with
+three worked failures from the 09-12/13 night (a scratch script that redefined `D`, a slippage claim
+comparing two fields set from the same read, a staleness gate on a field that was seconds-into-candle
+in disguise).
+**Where that cuts against me, stated plainly:**
+- **Good:** every number I report comes from the engine's OWN databases (`learner/live_backup/*.gz`,
+  pushed by V) and from Tokyo's own `tokyo_orders.json`, not from a re-derivation of them. Grading is
+  `candles.actual`, cross-checked equal to Tokyo `financial_result` on 383/383 (Task 21).
+- **BAD, and it is the same shape as the three failures:** the Task 17.2 forward ledger **re-implements
+  the engine's decision path** — my own `feats_at` / `decide` / EV filter in `models/`, not the running
+  engine's module. If that reconstruction differs anywhere, the ledger's 185 "fires" are not the
+  engine's fires, and every per-fire number I have quoted from it describes a model that does not run.
+- **V's Task 25 is exactly the check for this**, from the other direction: reproduce a logged decision
+  from raw inputs and compare against the engine's recorded `feat`. It is no longer just V's request —
+  it is the audit my own headline result depends on. **It is the first thing to run after the Sunday
+  reset**, and until it passes, the 11.2 REFUTED verdict should be read as "refuted as I implement it",
+  which is weaker than "refuted".
+- Note the direction of the risk: a reconstruction error here would most likely have made the ledger
+  look WORSE than the engine (wrong features → worse fires), so this does not rescue 11.2 either. It
+  is a reason to distrust the number, not a reason to expect a better one.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -496,7 +519,7 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
   have shipped on nine fires of noise. Objection 2 was the operative one: the halves were
   morning-vs-afternoon of ONE Saturday, not a real out-of-sample split, and it broke as the afternoon
   extended. **The cleanest vindication of the 60/100 bars this project has produced.**
-- Grid 09-13 02:47: **all n=176 −0.051 · weekend n=119 +0.009 · weekday n=57 −0.177 (under the bar,
+- Grid 09-13 04:47: **all n=185 −0.062 · weekend n=128 −0.011 · weekday n=57 −0.177 (under the bar,
   not read).** The weekend cell stays within a cent of zero after closing; nothing reopens.
 - **Why it is still not a finding:** (1) it is ONE Saturday — 62 fires from one day is one draw of the
   regime; (2) its halves are morning-vs-afternoon of the SAME continuous day, the weakest form of the
