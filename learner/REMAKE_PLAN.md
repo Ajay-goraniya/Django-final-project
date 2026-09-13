@@ -133,6 +133,64 @@ those are affected by it."* Binding on every step.
 | **5** | after 4 | wire the adaptive layer (11.4 autopilot §E2: regime cells self-verdicted from live outcomes) | same standard: twin first, then live |
 | **MAIN/REV** | after 5 | rebuild from the Build 11 source **only if** a paper twin of them earns. Paper wins without them. **Not a precondition for beating paper.** | twin, 60+ graded, both halves |
 
+### 3a. Step 2, candidate (ii) — DESIGNED 09-13 23:5x. The paper-parity attempt loop. Not built.
+
+Read side by side (`scratchpad/v12/engine/...:477-520` vs `learner/v12_2/poly_core.py:875-990`), the two
+attempt loops differ in exactly three places, and together they are the fill-rate mechanism:
+
+| step | paper | live (12.8.4) | effect |
+|---|---|---|---|
+| before each attempt | take the **current** fresh quote | `while …: if q and q['seq']!=seq: break` (`:880`) — **wait for the book to TICK** since the last attempt | on a quiet book the retry waits out the 2 s budget → **DEADLINE** |
+| after signing | n/a — sign+post is one call | `if not latest or latest['seq']!=seq: continue` (`:928`) — **abandon the signed order if the book ticked during the ~10 ms sign**, go back to waiting for another tick | a moving book cannot be posted against |
+| after a retryable reject | `sleep 75 ms`, loop | `continue` straight into the tick-wait | second shot only if the book happens to tick |
+
+**Live does retry** (`RETRYABLE` substring path, `:983`) — the 12.4.8 fix is real. **But every retry
+waits for a tick inside a 2.0 s budget**, so 82 orders produced 4 second attempts and 10 DEADLINEs.
+Paper gets three shots at the current book inside a second. **That is the 31 rejects.** It is consistent
+with AWS's "gate selects quiet books" reading (the tick-wait literally selects a just-ticked book, then
+abandons on the next tick) and needs no slow feed.
+
+**The change — three edits in `Executor.fire`, nothing else:**
+
+```
+:880   if q and q['seq']!=seq: break          →   if q: break
+:928   if not latest or latest['seq']!=seq: continue   →   if not latest: continue
+:983   continue   (after RETRYABLE)           →   await asyncio.sleep(0.075); continue
+```
+
+- `:880`: attempt 1 already breaks immediately (`seq=-1`); this makes attempts ≥2 do the same. The
+  freshness filter `self.age` still applies — a stale book still waits.
+- `:928`: the guard that matters is already there and stays — `order_plan(latest, …)` at `:932` re-checks
+  EV and depth on the moved book and releases `EV_CHANGED` if it fails. The signed order's cap is from `q`;
+  if the ask moved up past it the FAK rejects cheaply, if down it fills better. Exactly paper's behaviour.
+- `:983`: paper's `retry_delay_ms=75`. Four attempts × (~140 ms RTT + 10 ms sign + 75 ms) ≈ 0.9 s fits the
+  2.0 s budget; the budget is a launch flag if Monday says otherwise.
+
+`seq` stays recorded in `timing` for the diff. **The signal, EV, threshold, reference price, band cap,
+kill rules and audit are untouched.**
+
+**Tests (rule: inverted not deleted; each new one shown failing against 12.8.6's files):**
+1. NEW `test_retry_on_a_book_that_did_not_move`: broker rejects once with `fak_not_filled` and does NOT
+   move the book → **2 orders**. Old code: 1 order then DEADLINE/EXHAUSTED. **Fails on old.**
+2. NEW `test_a_tick_during_signing_does_not_abandon_the_order`: `prepare()` mock applies a snapshot with
+   the same ask → order posts. Old code: 0 orders. **Fails on old.**
+3. NEW `test_a_tick_during_signing_that_breaks_ev_still_releases`: snapshot during `prepare()` with an ask
+   that fails EV → `EV_CHANGED`, 0 orders. Pins that the `:932` guard is doing the work now.
+4. KEPT `test_retry_only_on_fresh_quote` — still passes (the book moved; the retry uses it).
+5. KEPT `test_model_changed_before_post_abandons` — SIGNAL_CHANGED untouched.
+6. NEW `test_retry_waits_75ms`: two attempts ≥ 70 ms apart.
+
+**Downstream rechecked after the change (§7 row 7 list, written now so it cannot be skipped later):**
+`timing['quote_wait_ms']` no longer means "waited for a tick" — dashboard latency panel reads it;
+`_sample()` stats; `candle_attempts`; DEADLINE rate (should fall); attempt histogram (should widen);
+Task 73's submit-time `age_ms` distribution (will shift — that is the point, and 12.8.6's `AMBIENT_AGE`
+is the control); per-fill paid−ask (may rise slightly; band cap bounds it; **measure on the twin**).
+
+**What qualifies it (step 3, Monday, paper twin beside live, same candles):** fill rate up from 49%;
+DEADLINEs down; **PnL/$1 on filled ≥ live's AND the twin's decided-and-filled set ≥ 56.4% on
+`candles.actual`**; both halves; ≥60 graded or "insufficient". `verify.py` by H1. If paid−ask rises
+more than the fill-rate gain is worth, the twin says so and it does not ship.
+
 **Frozen while this runs:** no further execution-mechanism builds. **12.8.5 (master-arming audit) and
 12.8.6 (halt flip-flop fix + ambient book-age sampling) are built, tested and HELD**; both ship at the
 next natural restart. 12.8.6's sampling is what resolves the gate-vs-feed question (Task 75) - it needs a

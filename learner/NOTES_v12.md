@@ -4456,6 +4456,15 @@ that drove it no longer holds and I am withdrawing the recommendation as urgent*
 (untested Monday tape, no automatic stop for 10 more) still stand as facts the user has. Their call,
 unchanged; nothing touched. `DEPLOYED.md` at 4a0fb2f pulled clean on the box.
 
+## 23:5x UTC (Sun 09-13) - step 2 candidate (ii) DESIGNED. The fill-rate mechanism, read from both loops.
+
+`REMAKE_PLAN.md` §3a. Live retries a venue reject but **every retry waits for the book to tick** inside a
+2 s budget (`poly_core.py:880`), and **abandons a signed order if the book ticks during the 10 ms sign**
+(`:928`). Paper takes the current book, sleeps 75 ms, and fires again - three shots in a second. **82
+live orders -> 4 second attempts, 10 DEADLINEs.** That is the 31 rejects. Three edits, the signal and EV
+untouched, six tests (three new, shown failing on old), the downstream list written in advance, the
+twin's pass criteria fixed before it runs. **Not built** - Monday, per the sequence.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
