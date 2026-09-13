@@ -3702,3 +3702,74 @@ as instructed - no operator action needed.
 candle nine seconds apart for $9.61 of exposure against a $5 nominal stake.** Nothing in the engine
 stops that. MAIN's one-shot has made it moot for now; it will not be moot the next time MAIN is armed.
 **Recorded, not fixed** - the freeze holds and this is not urgent while MAIN is off.
+
+## 18:41:10 UTC (Sun 09-13) - THE WIPEOUT GUARD FIRED. Master OFF, engine stopped itself.
+
+The rule the user set - *"master off when account run out of money for stack"* - executed on its own.
+AWS read it from the live journal and has cleared nothing.
+
+```
+halt = "Account wiped out: spendable 2.06 below stake 5.00 on 3 consecutive balance reads"
+master: True -> False   btc_model_v12_polymarket.py:469 _wipeout_check   18:41:10
+halt:   None -> "..."   btc_model_v12_polymarket.py:470 _wipeout_check   18:41:10
+```
+
+**Two independent stops now hold: `halt` blocks every lane through `allowed()`, and master is off.**
+The three-consecutive-reads design waited out the dip instead of tripping on one balance read with an
+order in flight. `WIPEOUT_CONFIRMATIONS=3` earned itself.
+
+**"Wiped out" names the inability to fund a new $5 trade, not a zero balance.** Spendable **$2.065**;
+**$9.79 of open position value** is still outstanding on the venue and grades out over the coming
+candles, so some of it returns. State it that way to the user and do not let the word do the work.
+
+### The 8 results since the 16:12:30 clear - and this is the real number of the day
+
+| time | actual | pnl | cumulative |
+|---|---|---|---|
+| 16:44:29 | UP | **+5.42** | +5.42 |
+| 17:08:57 | UP | **+3.96** | +9.38 |
+| 17:12:57 | UP | **+3.38** | **+12.76** peak |
+| 17:28:37 | DOWN | -4.83 | +7.93 |
+| 18:05:45 | DOWN | -4.85 | +3.08 |
+| 18:14:05 | DOWN | -4.84 | -1.76 |
+| 18:24:05 | UP | -4.79 | -6.55 |
+| 18:30:46 | DOWN | **-9.61** | **-16.16** |
+
+**Three wins +12.76, then five straight losses -28.92. Net -16.16, a 28.92-point swing in 78 minutes**
+at a $5 stake. Four of the five losses are a near-full stake each (mean -4.827); the fifth is the
+double-lane candle, EF and MAIN on the same outcome for -9.61.
+
+### RETRACTED: my own per-era PnL table from the 18:44 entry
+
+The table above it - *"before my first deploy 7 trades -0.18, after 5 trades -8.89"* - **is withdrawn.**
+It was cut on the `settled` counter 11 -> 23, and the journal now holds **34 results**. That window
+**ended hours ago and does not contain the last two and a half hours at all** - the period that
+actually lost the money. I presented a stale window as the verdict on my deploys. Differencing my own
+check-in summaries produced it and reading the journal killed it, which is the whole reason Task 65
+exists.
+
+**What the real window says is not the simple story either way.** All 8 of these are post-deploy. They
+contain **the best three trades of the day and the worst five**. My changes are on both sides of the
+ledger, so the honest statement to the user is that the engine swung violently in both directions
+after my deploys, **not** that the deploys are cleared and **not** that they are convicted. Task 65b -
+paid minus ask per fill - is still the only test that can separate them, and it now runs on the **36
+fills that exist**, because no more are coming while the engine is stopped.
+
+### The kill rule never got the chance, exactly as flagged when we cleared
+
+The fresh window from the 16:12:30 clear reached **8 of 20**; `unit_return_sum` still null, `armed:
+false`. **The lane lost 16 points inside a window where its own per-lane rule could not yet stop it,
+and the wipeout guard caught it instead** - the second safety net doing the first one's job. When I
+cleared the halt at 16:12 I said the reset buys up to 20 more trades of rope before the kill rule can
+bite. That was not theoretical. **It is the strongest argument on the branch that clearing a halt
+should not zero the window**, and it is a design change, so it is **recorded and not built** - the
+freeze holds and nothing can trade anyway.
+
+### State, unchanged by anyone
+
+`master=false`, `halt` set, `ef_enabled=true`, `main_enabled=false` (engine-disarmed 18:20:54),
+`reversal_enabled=false`, `next_stake=5.0`, build **12.8.1**, calibration **off**. 75 orders / 36
+fills / 34 results. **Restarting needs funding and is the user's call alone.**
+
+**63a is frozen** at 24 MAIN rows, 17 carrying `ask_up`/`ask_dn`, 7 candles - short of the
+within-candle correlation. The instrumentation is in place for whenever the engine runs again.

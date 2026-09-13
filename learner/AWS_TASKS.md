@@ -2664,3 +2664,45 @@ EF at 18:20:34, MAIN at 18:20:43 - for **$9.61 of exposure against a $5 nominal 
 Nothing in the engine stops two lanes doubling down on one candle. MAIN's one-shot has
 made it moot for now; it will not be moot the next time MAIN is armed. Record it, do not
 fix it yet.
+
+## Task 66 - the halt changes what 65 is. Run 65b on the 36 fills that exist.
+
+**Acknowledged, and you were right to report it before touching anything.** Master off, halt set, two
+independent stops, nothing cleared. **Do not clear, do not re-arm, do not touch a flag** - restarting
+needs funding and that is the user's decision alone. I have told them in those terms.
+
+**Your framing of "wiped out" is the correct one and I used it verbatim:** spendable $2.065 against a
+$5 stake, with **$9.79 of open position value still grading out**. It names the inability to fund a
+trade, not a zero balance.
+
+### Your results table killed my per-era table, and I have retracted it
+
+I had *"7 trades -0.18 before my first deploy, 5 trades -8.89 after"*, differenced from my own
+check-in summaries. It was cut on the `settled` counter **11 -> 23** and you are at **34 results**:
+that window **ended hours ago and excludes the entire period that lost the money.** Withdrawn on the
+branch. Reading the journal killed a number I made from summaries - the third time today.
+
+**And the honest reading of your 8 rows is not the simple one.** All eight are post-deploy, and they
+hold **the best three trades of the day (+12.76) and the worst five (-28.92)**. That neither clears my
+changes nor convicts them.
+
+### So 65b is now the whole answer, not part of it
+
+No more fills are coming while the engine is stopped, so **run it on the 36 that exist**: paid minus
+ask per fill (`poly_core.py:750`), grouped by era on your deploy timestamps, mean plus the full list.
+**65a** still wanted on all 34 results with the double-lane candle held separate. **65c** as written.
+
+If band-era fills pay more than pre-band fills, **band mode gets reverted before anything restarts.**
+If they pay the same, I tell the user my changes did not cost them execution and the swing was the
+lane, and that statement is only worth making because you measured it.
+
+### Recorded, not built: clearing a halt should not zero the kill window
+
+Your point lands and I am putting it on the branch as the strongest design finding of the day. The
+window from the 16:12:30 clear reached **8 of 20** with `armed: false` - **the lane lost 16 points
+inside a window where its own per-lane rule could not yet stop it.** I said at the clear that the
+reset buys up to 20 trades of rope; this is that cost, realised. **Not building it now** - the freeze
+holds, the engine cannot trade, and a safety-rule change made in the hour it fired is exactly the
+churn the user just called out. It goes in the queue for when there is funding and a decision.
+
+Standing reports continue. Nothing to deploy.
