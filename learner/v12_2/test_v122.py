@@ -1,6 +1,6 @@
 """Tests for the v12.2 changes: venue-sourced money, honest feed staleness,
 clock-skew tolerance and per-attempt latency."""
-import json, os, sqlite3, tempfile, time, unittest
+import json, os, pathlib, sqlite3, tempfile, time, unittest
 import poly_core as C
 import poly_feeds as F
 
@@ -598,8 +598,56 @@ class SnapshotAgeTracking(unittest.TestCase):
         self.bc.apply(self.book())
         self.assertLess(self.bc.quote('t1', 5.0)['snapshot_age_s'], 1.0)
 
-    def test_limit_is_set(self):
-        self.assertTrue(0 < C.MAX_SNAPSHOT_AGE_S <= 300)
+    def test_snapshot_age_is_recorded_not_gated(self):
+        """12.3.2 refused orders on snapshot age. That was wrong.
+
+        venue() subscribes once per cycle and clears the cache, so snapshot age
+        is very nearly seconds-into-candle with a 300 s cliff at the rollover -
+        a disguised time-of-candle gate, which the standing no-gates rule
+        forbids. On 28 live orders it refused a higher share of FILLS than of
+        rejects at every limit from 30 s to 300 s. The field stays as telemetry;
+        nothing in the module may gate on it.
+        """
+        self.assertFalse(hasattr(C,'MAX_SNAPSHOT_AGE_S'),
+                         'snapshot age must not come back as a threshold')
+        src=(pathlib.Path(C.__file__).read_text() if hasattr(C,'__file__') else '')
+        self.assertNotIn('BOOK_UNSYNCED',src,
+                         'the snapshot-age refusal must stay removed')
+
+
+class BookPruneKeepsSubscribedTokens(unittest.TestCase):
+    """A resubscribe must not start from an empty cache.
+
+    venue() cleared the whole cache on every cycle and again on every reconnect,
+    so a token's only full snapshot was the one its subscribe delivered. A fire
+    early in a candle then priced off a book snapshotted a cycle earlier and
+    patched only by deltas with no continuity check - the phantom-level
+    mechanism, with a cause rather than a symptom.
+    """
+    def setUp(self):
+        self.bc = C.BookCache()
+        for t in ('a', 'b', 'c'):
+            self.bc.apply(dict(event_type='book', asset_id=t,
+                               timestamp=str(int(time.time()*1000)),
+                               asks=[{'price':'0.55','size':'100'}],
+                               bids=[{'price':'0.53','size':'100'}]))
+
+    def test_prune_keeps_the_tokens_still_subscribed(self):
+        self.bc.prune(['a', 'b'])
+        self.assertEqual(set(self.bc.books), {'a', 'b'})
+
+    def test_prune_drops_the_rest(self):
+        self.bc.prune(['a'])
+        self.assertNotIn('b', self.bc.books)
+        self.assertNotIn('c', self.bc.books)
+
+    def test_prune_with_everything_kept_is_a_no_op(self):
+        self.bc.prune(['a', 'b', 'c'])
+        self.assertEqual(set(self.bc.books), {'a', 'b', 'c'})
+
+    def test_prune_accepts_non_string_tokens(self):
+        self.bc.prune([1, 'a'])          # market tuples are not always str
+        self.assertIn('a', self.bc.books)
 
 
 class TickGridRounding(unittest.TestCase):

@@ -86,7 +86,13 @@ class PolyRunner(Runner):
             cur,nxt=await asyncio.gather(self.resolve_market(ep),self.resolve_market(ep+300))
             toks=[t for pair in (cur,nxt) if pair for t in pair]
             if not toks: await asyncio.sleep(2); continue
-            self.books.clear()
+            # Drop only tokens we are no longer subscribed to. Clearing the whole
+            # cache here (and again in the finally below) meant every token was
+            # re-snapshotted at subscribe and never again, so a fire early in a
+            # candle priced off a book snapshotted ~5 minutes earlier and patched
+            # only by deltas we cannot verify we received in full. That is the
+            # phantom-level mechanism with a cause, not a symptom.
+            self.books.prune(toks)
             try:
                 async with websockets.connect(POLY_WS,ping_interval=None,max_size=2**23) as w:
                     await w.send(json.dumps({'assets_ids':toks,'type':'market'}))
@@ -94,7 +100,12 @@ class PolyRunner(Runner):
                         while True: await asyncio.sleep(5); await w.send('PING')
                     task=asyncio.create_task(ping())
                     try:
-                        while time.time()<ep+330:
+                        # ep+345 keeps the rollover clear of the 15-240 s
+                        # decision window of the next candle: the teardown and
+                        # resubscribe now land at sec 45, after the window opens
+                        # at 15 but while the next candle's token is already
+                        # subscribed from this cycle.
+                        while time.time()<ep+345:
                             msg=await asyncio.wait_for(w.recv(),15)
                             if msg=='PONG': continue
                             data=json.loads(msg)
@@ -104,7 +115,7 @@ class PolyRunner(Runner):
                     finally: task.cancel(); await asyncio.gather(task,return_exceptions=True)
             except Exception as e: self.error='Venue reconnect: '+type(e).__name__; await asyncio.sleep(1)
             finally:
-                self.books.clear(); self.publish()
+                self.books.prune(toks); self.publish()
                 for old in list(self.market):
                     if old<ep-600:
                         for t in self.market.pop(old): self.books.terms.pop(t,None); self.terms_age.pop(t,None)

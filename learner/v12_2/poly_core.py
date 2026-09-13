@@ -105,6 +105,17 @@ class BookCache:
         self.clock_offset=0.0; self._offset_seeded=False
         self.dropped_future=0; self.dropped_stale=0; self.applied=0
     def clear(self): self.books.clear()
+    def prune(self,keep):
+        """Drop books for tokens we are no longer subscribed to, keep the rest.
+
+        The venue loop used to clear() on every cycle and again on every
+        reconnect, so a token's only full snapshot was the one the subscribe
+        delivered. A fire early in a candle then priced off a book snapshotted a
+        cycle earlier, patched only by deltas with no continuity check. Keeping
+        the book across a resubscribe means the fresh snapshot replaces it
+        rather than the cache starting empty."""
+        keep=set(map(str,keep))
+        for t in [t for t in self.books if t not in keep]: self.books.pop(t,None)
     def health(self):
         return dict(clock_offset_s=round(self.clock_offset,3),applied=self.applied,
                     dropped_future=self.dropped_future,dropped_stale=self.dropped_stale,
@@ -236,10 +247,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.3.3')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.3.4')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -463,13 +474,6 @@ class PaperBroker:
     async def account_snapshot(self): return dict(cash=None,open_order_ids=set(),positions=[])
 
 
-# How long a book may run on deltas alone before we stop trusting it. The venue
-# sends no per-token sequence number, so a dropped price_change cannot be
-# detected - only aged out. Generous enough not to starve the lane, short enough
-# that a phantom level does not survive many candles.
-MAX_SNAPSHOT_AGE_S=90.0
-
-
 class Executor:
     def __init__(self,db,books,broker,age=.75,pad=1,budget_s=2.0,post_timeout_s=1.2,attempts=3):
         self.db=db; self.books=books; self.broker=broker; self.age=age; self.pad=pad
@@ -511,18 +515,15 @@ class Executor:
                 await asyncio.sleep(.005)
             else: self.db.status(ep,'DEADLINE',kind); return
             timing['quote_wait_ms']=1000*(time.monotonic()-t); timing['quote_read_ms']=timing['quote_wait_ms']; timing['book_age_ms']=q['age_ms']; seq=q['seq']
-            # A book built from deltas since the last full snapshot may carry a
-            # phantom level: there is no per-token venue sequence, so a dropped
-            # price_change is undetectable and persists until the next snapshot.
-            # Pricing a FAK against a phantom top-of-book is exactly the "no
-            # orders found to match" reject. Refuse rather than guess.
+            # Recorded, never gated on. 12.3.2 refused orders above a snapshot-age
+            # limit; the AWS session showed that is a seconds-into-candle
+            # threshold in disguise - venue() subscribes once per cycle and
+            # clears the cache, so snapshot age is ~sec-30 after the rollover and
+            # ~300+sec before it. On 28 live orders it refused a HIGHER share of
+            # fills than rejects at every limit from 30 s to 300 s (at 90 s: 73%
+            # of fills, 53% of rejects), because fills cluster at both ends of
+            # the candle. Instrument, do not gate.
             timing['snapshot_age_s']=q.get('snapshot_age_s')
-            if (q.get('snapshot_age_s') or 0)>MAX_SNAPSHOT_AGE_S:
-                self.db.status(ep,'BOOK_UNSYNCED',kind)
-                self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(dict(
-                    reason='book_unsynced',kind=kind,snapshot_age_s=round(q['snapshot_age_s'],1),
-                    limit_s=MAX_SNAPSHOT_AGE_S))))
-                return
             t=time.monotonic(); new=reassess(); timing['decision_ms']=1000*(time.monotonic()-t)
             if not new.get('fire') or new['side']!=d['side']: self.db.status(ep,'SIGNAL_CHANGED',kind); return
             try: plan=order_plan(q,self.books.terms[token],stake,new,self.pad)

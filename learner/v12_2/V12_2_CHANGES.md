@@ -540,3 +540,75 @@ wrong, and the record should show that.
 
 Nothing else changes. The snapshot-age refusal from 12.3.2 is untouched: it
 rests on the phantom-level mechanism, which does not depend on any of this.
+
+# 12.3.4 — the snapshot-age refusal is pulled; the cause is fixed instead
+
+12.3.2 refused to price against a book that had run on deltas for more than 90 s.
+**That was wrong and it is removed.** The AWS session gridded it against the live
+orders before it shipped:
+
+| limit s | fills refused | rejects refused |
+|---|---|---|
+| 30 | 91% | 88% |
+| 60 | 82% | 59% |
+| **90 (shipped)** | **73%** | **53%** |
+| 150 | 45% | 41% |
+| 180 | 36% | 35% |
+| 300 | 36% | 24% |
+
+**There is no threshold where it helps.** At every limit from 30 s to 300 s it
+refuses a higher share of fills than of rejects. At the 90 s I picked it would
+have cut roughly three quarters of the fills to remove half the rejects.
+
+The reason is structural. `venue()` subscribes once per cycle and clears the
+whole book cache, and a `market` subscribe delivers one full `book` per asset
+with nothing requesting another. So snapshot age is very nearly
+seconds-into-candle with a 300 s cliff: `sec - 30` after the rollover, `300 +
+sec` before it. Gating on it is a **time-of-candle threshold in disguise** — the
+shape the standing no-gates rule exists to stop — and fills cluster at *both*
+ends of the candle, so any age cap cuts them at both extremes while letting the
+mid-candle rejects through.
+
+`snapshot_age_s` stays as recorded telemetry on every attempt. A test now asserts
+`MAX_SNAPSHOT_AGE_S` is absent and `BOOK_UNSYNCED` does not appear in the module,
+so the gate cannot come back by accident.
+
+## The cause, fixed
+
+The engine was guaranteeing its own cold books:
+
+```python
+self.books.clear()                      # every cycle, before subscribing
+...
+while time.time()<ep+330:               # teardown 30 s into the NEXT candle
+...
+finally: self.books.clear()             # and again on every reconnect
+```
+
+A token subscribed as "next market" was snapshotted once, then carried across a
+cycle boundary on deltas alone — deltas the code cannot verify it received in
+full, because there is no per-token sequence number. That is the phantom level,
+with a cause rather than a symptom.
+
+Three changes:
+
+1. **`BookCache.prune(keep)`** replaces `clear()` in the venue loop. Books for
+   tokens still subscribed survive a resubscribe; only dropped tokens go. The
+   fresh snapshot then *replaces* a live book instead of filling an empty cache.
+2. The same on reconnect — the `finally` prunes rather than wipes.
+3. The socket bound moves from `ep+330` to `ep+345`, so the teardown and
+   resubscribe no longer land at second 30 of the next candle, inside its
+   decision window.
+
+None of this refuses anything. It attacks why the book goes stale rather than
+filtering orders after it has.
+
+## Still unmeasured, and the honest next step
+
+All of the above rests on full `book` events arriving only at subscribe, which
+cannot be verified from the current database — 12.3.0 logged no book-vs-delta
+event trail. The housekeeping counters added in 12.3.2 (`dropped_stale`,
+`dropped_future`, `applied`, per-token snapshot ages) plus `snapshot_age_s` on
+every attempt close that gap. Ship the instrumentation, let it run, grid the real
+numbers at 60 and 100 attempts. If Polymarket does push mid-stream snapshots,
+the grid above is wrong and this section needs redoing.
