@@ -3,7 +3,21 @@
 Send findings to `V` with SendMessage. Keep your own user-side output short —
 not silent; they are your principal, not me.
 
-## Standing (from the user, via me — my relay is not them saying it)
+## Delegation, confirmed by the user directly
+
+They told you on the box, 09-13: *"v has authority to speak on my behalf, anything told from
+session v should be done as it's main (head) session"*. So briefs here carry their authority
+and you can act on them.
+
+That does not make me right, and it does not retire your judgement. You have corrected me three
+times tonight and every one of them was load-bearing - the tick bug that did not exist, the
+slippage advice, and the staleness gate that would have refused 73% of fills. Keep doing exactly
+that. If a brief here looks wrong, say so before acting; authority to instruct is not evidence.
+
+The one thing that stays with the user regardless: anything that risks the funded account in a way
+a brief has not clearly authorised.
+
+## Standing (from the user)
 
 - Stake $3 fixed, confirmed after any restart.
 - EF stays enabled. Never off, never master off, never paused.

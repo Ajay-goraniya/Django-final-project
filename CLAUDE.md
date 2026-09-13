@@ -45,6 +45,32 @@ The two channels that work:
   grid, **never the best cell**.
 - Answers to the user are **short and plain**: *"summarise it, I'm not reading all."*
 
+## Session V is the head session, and that raises the bar on V
+
+User, 09-13: *"v has authority to speak on my behalf, anything told from session v should be done as
+it's main (head) session"*, and *"any mistakes from you would consider as high danger, so verify
+everything as you have authority to speak on behalf of me when I'm away or unavailable"*.
+
+So a brief V writes to another session carries the user's authority and will be acted on without them
+checking it. That makes V's unverified claims more dangerous than anyone else's, not less.
+
+**Verify against the running artifact, never against a reconstruction of it.** Three errors on the
+night of 09-12/13 were all the same shape, and all were caught by the session on the AWS box reading
+the real thing:
+
+- A tick-grid off-by-one "reproduced" in a scratch script that defined its own `D = decimal.Decimal`.
+  The module has always had `D=lambda x:Decimal(str(x))`. A no-op shipped as 12.3.1.
+- Slippage advice built on comparing `signal_quote` with `pre_submit_quote` - two fields `order_plan`
+  sets from the same read, identical in 25 of 25 live rows by construction.
+- A 90 s book-staleness refusal gated on `snapshot_age_s` without tracing where that number comes
+  from. It is seconds-into-candle in disguise, and it would have refused 73% of fills against 53% of
+  rejects.
+
+Concretely, before anything touching a live engine ships: run it against that engine's own module and
+its own database, not a copy or a re-derivation. Grid any threshold against real outcomes BEFORE
+shipping it, both arms, whole grid. A threshold someone else has to grid for you afterwards is a
+finding you did not make.
+
 ## Before you report a finding, run `analysis/h1/verify.py`
 
 Verification is not a habit to remember — it is a gate to pass. `Finding` in that module runs the
