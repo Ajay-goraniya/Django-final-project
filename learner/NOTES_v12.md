@@ -4398,6 +4398,28 @@ the same as paper minus half the fills, so it will not beat paper on Monday by b
 **The decision is the user's. Nobody touches a flag.** If they say stay on, it stays on and I report
 every result.
 
+## 23:25 UTC (Sun 09-13) - `DEPLOYED.md` for 12.8.4 is on the branch. Every §7 row, with evidence or "cannot".
+
+Authored by AWS on the box (its local commit 04b6560), sent verbatim, committed here **unedited** with a
+provenance line. **The build trading the user's money is now held to the full bar:** hashes = commit
+(Task 78); **225 tests on the box**; 12.8.4's and 12.8.3's new tests **shown failing against the previous
+tree** (which was **12.8.2**, not 12.8.3 - the user stopped the 12.8.3 deploy and 12.8.4 carried both;
+recorded); state after restart; the 19:32:58 clear-halt audit row with its `do_POST` stack and the 20:21:53
+`LOW_BALANCE acted:false` row quoted; AWS's reading of the diff (no disagreement; it named 12.8.5's and
+12.8.6's gaps itself); downstream paths rechecked.
+
+**Two honest gaps, both written into the document rather than skipped:**
+1. **The box cannot push** - no git credentials. §7 amended: AWS commits locally and sends verbatim, V
+   commits unedited. A deploy key on the user's server would close it; **that is their decision**, raised.
+2. **AWS cannot exercise the dashboard endpoints** - 401 without `DASHBOARD_PASSWORD`, which it correctly
+   refuses to use. Evidence for those paths is the user's own audited clicks (`apply:294` at 19:32:58,
+   `apply:270` at 20:22-20:23). Stated, not inferred.
+
+**Venue 23:17:** cash **33.959**, open_value **4.341** (one position, epoch 1789341300, ungraded). Hand rule
+**-2.9274** on n=9, unchanged; **that open position is the one that decides whether it crosses -3.00.**
+AWS reports each result as it lands. Recommendation to the user (master off overnight) stands; no flag
+touched.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |

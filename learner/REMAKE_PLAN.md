@@ -197,7 +197,15 @@ evidence, and committed to the branch.** V verifies the commit; nothing is taken
 | 7 | **downstream rechecked**: every path the change touches (journal, kill rules, dashboard rows, audit, `rolling()`, the reconcile loop) exercised once after restart | the user's rule — "after every change everything should be rechecked, its effects, and all the other things affected" | one line per path with what was seen |
 
 **Rows 1–3 and 6 happen BEFORE the restart. Rows 4, 5, 7 after.** A row that cannot be checked is
-written as "cannot check, because …", never skipped. **V does not mark a build deployed until
+written as "cannot check, because …", never skipped.
+
+**Push path (found 23:2x on the first use):** the AWS box has **no git credentials** — `git push` fails
+there. So "committed by AWS" means: AWS commits locally and sends the section **verbatim**; V commits it
+to the branch **unedited**, with a provenance line naming AWS's local commit. Every future section arrives
+the same way until the box has a push path — **a deploy key on the user's server is the user's decision**,
+raised and not made. Two rows AWS structurally cannot do from the box: exercising the dashboard endpoints
+(401 without `DASHBOARD_PASSWORD`, which it correctly will not use) — evidence for those is the user's own
+audited clicks, and the row says so. **V does not mark a build deployed until
 `DEPLOYED.md` for it is on the branch and V has read every row.** Deploys stay AWS's job; verifying the
 deploy is now a document, not a message.
 
