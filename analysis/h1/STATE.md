@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-13 18:47 UTC. Update this file at the end of every check.
+Last updated: 2026-09-13 20:47 UTC. Update this file at the end of every check.
 
 ## 04:47 09-13 — the new CLAUDE.md rule applies to MY OWN LEDGER. Read this before trusting it.
 Repo CLAUDE.md now carries the user's 09-13 rule: V is the head session and speaks with the user's
@@ -522,8 +522,12 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
   have shipped on nine fires of noise. Objection 2 was the operative one: the halves were
   morning-vs-afternoon of ONE Saturday, not a real out-of-sample split, and it broke as the afternoon
   extended. **The cleanest vindication of the 60/100 bars this project has produced.**
-- Grid 09-13 14:47: **all n=201 −0.049 · weekend n=144 +0.001 · weekday n=57 −0.177 (under the bar,
-  not read).** The weekend cell has sat within a cent of zero for twelve consecutive readings; closed.
+- Grid 09-13 20:47 after a 23-fire burst: **all n=224 −0.084 · weekend n=167 −0.052 · weekday n=57
+  −0.177 (under the bar, not read).** Halves −0.021 / −0.147.
+- The burst moved the overall number from −0.049 to −0.084 and the weekend cell from +0.001 to −0.052
+  in one check. Both move AWAY from zero and away from any rescue, so nothing reopens — but note the
+  size of the move: 23 fires shifted the weekend cell by 5 points at n=167. That is the same
+  volatility that made the n=62 reading worthless, now visible at a much larger n.
 - **At exactly 200 fires — twice the pre-set bar — the verdict is unchanged: −0.057/fire against a
   +0.018 baseline, both halves negative (−0.069/−0.045).** That is the useful closing fact: doubling
   the sample past the bar did not rescue it, so the REFUTED call was not a sample-size artifact.
@@ -560,7 +564,7 @@ HALVES, verify.py True.
   do the distance premise (72,863+ candles) and its regime stability. Sixth candidate to die at the
   recorded→honest→live ladder. The market prices the model's side about fairly in real time.
 - Ledger keeps accruing for the weekend cell only. No new candidate proposed from it.
-- Kline set extended through 09-13 18:35 (73,655 candles) via the REST mirror.
+- Kline set extended through 09-13 20:35 (73,679 candles) via the REST mirror.
 
 ## Task 20 DONE 03:55 — MY BIGGEST RETRACTION. The 11.2 PnL was a stale-quote artifact.
 V's charge was right. The replay read the price path at second S but paid an ask forward-filled from
