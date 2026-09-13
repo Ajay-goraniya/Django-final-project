@@ -3678,6 +3678,50 @@ form. Not acting on it; recorded so the next episode is recognised rather than r
 
 12.8.5 still held. Next natural restart takes it.
 
+## 20:16 UTC (Sun 09-13) - it traded. One fill, one loss, and ONE funded trade of runway left.
+
+**The question "will it take trades" is answered with evidence rather than inference: it was
+armed-and-waiting, found a price it liked at 20:05:16, took it, and lost.**
+
+| time | status | quote | cap | outcome |
+|---|---|---|---|---|
+| **20:05:16** | **FILLED** | 0.50 | 0.55 (5 ticks) | **filled 0.5000, paid-ask +0.0000** |
+| 20:11:03 | REJECTED | 0.48 | 0.53 | `no orders found to match with FAK order` |
+| 20:15:32 | REJECTED | 0.40 | 0.44 | same |
+| 20:15:32 | REJECTED | 0.44 | 0.49 | same |
+
+Settled: epoch 1789329900, actual **DOWN**, lanes `['EF']`, **pnl -4.8300, unit -1.0000**, single lane so
+no splitting needed. **The fill again paid exactly the quoted ask with a 5-tick cap it never used** - a
+third independent data point against the band-mode execution story. The two rejects at 20:15:32 are **one
+candle retried**, not two chances missed.
+
+**79 orders / 37 fills / 36 results.** Kill window **1 of 20**, `armed: false`, `unit_return_sum` still
+null. No `LOW_BALANCE` row yet.
+
+### THE NUMBER THAT MATTERS: cash 11.9017 -> 6.9027, so there is ONE funded trade left
+
+At a $5 stake: `6.90 // 5 = 1`. After the next filled trade spendable is **~$2.07**, which **cannot fund
+another $5 order** - the venue will simply reject it. If that trade **wins** at a ~0.50 entry it returns to
+**~$11.73** and buys two more.
+
+**So the next trade is close to decisive, and this is arithmetic, not a prediction.** Raised with the user
+now, because being the brake is the job they gave me when they took the guard out of the code. **Stake
+stays 5.0** - *"i did stack 5 keep it 5"* - and I am not touching it; the choice between riding it, adding
+funds, or lowering the stake is theirs and they have the number.
+
+### The feed is degrading and it is the leading suspect for the rejects
+
+`dropped_stale` **14,855 -> 42,531** since 19:57; quote `stale` **96,988 -> 229,494** against `ok`
+1,081,107 - **~21% of quote attempts now refused as stale, cumulatively.**
+
+`no orders found to match` is the reject mode established as pricing against a book that has moved, and a
+feed discarding a fifth of its quotes is exactly the condition that produces it. **Three rejects is not a
+finding and AWS did not claim one** - but the two observations sit together and the feed is the more likely
+half. **Requested as Task 73: the time correlation between stale-drop episodes and reject timestamps**,
+which is cheap and decides it.
+
+**Nothing built.** A deploy restarts the engine and forces master OFF, and they are live. 12.8.5 still held.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |

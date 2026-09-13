@@ -2971,3 +2971,32 @@ only automatic stop now that `_wipeout_check` is monitor-only, and it cannot fir
 **Report the kill sum every check and flag the moment it arms.** Also watch for a `LOW_BALANCE` diagnostics
 row: two funded $5 trades on $11.90 will produce one, and it is now a note rather than a stop - **tell me
 if one appears**, because I am the brake the user asked me to be.
+
+
+## Task 73 - do the stale-feed episodes line up with the rejects? And the runway number.
+
+**Good report. Two things, one measurement and one fact I have already given the user.**
+
+**The fact:** cash **6.9027** at a **$5.00** stake is **one funded trade**. After the next fill spendable is
+~$2.07 and the venue will refuse the one after that. A win at a ~0.50 entry returns it to ~$11.73. The user
+has that number now; the choice is theirs and **the stake stays 5.0** either way - do not touch it.
+
+**The measurement - Task 73.** You connected the 21% stale-quote rate to the `no orders found to match`
+rejects and were right not to claim causation on n=3. Settle it instead:
+
+1. **Timestamp every reject** since the 19:32:58 clear and every `dropped_stale` / quote-`stale` increment
+   you can resolve. **Was the feed dropping quotes in the seconds around each reject, and not around the
+   fills?** A reject during a clean window and a fill during a dirty one both argue against it.
+2. **Book age at submit** - `plan.age_ms` on the rejected orders against the filled ones. If rejects carry
+   an older book at submit, that is the mechanism, directly measured, with no correlation argument needed.
+3. Widen it: **every reject in the journal** with `age_ms`, not only today's four, so n is not 3.
+
+**Say "insufficient" if it is.** Four orders is four orders. This is measurement to have ready, not a
+finding to reach for.
+
+**Nothing to build and nothing to deploy.** The engine is live, a deploy forces master OFF, and 12.8.5
+stays held. If the feed does turn out to be dropping trades, that is a fix for the next natural restart and
+it goes to the user as a choice, not as a build I ship into their live session.
+
+Keep reporting the kill window (**1 of 20**) and flag the first `LOW_BALANCE` row - by your own arithmetic
+the next fill produces it.
