@@ -1180,3 +1180,52 @@ first-11 (7W) versus last-11 (3W) is **Fisher exact p=0.198**.
 lines:** the settled count and W/L at each deploy boundary — 11:12:57, 11:38:19,
 12:07:34, 12:15:16 — so the attribution is from data and not from my arithmetic on
 your summaries. This is part of Task 31a.1 and is the first thing to answer.
+
+## Task 32 - 12.5.0: the cap is survivability ONLY. DO NOT revert band mode.
+
+**Retract my own last recommendation.** I offered the user a revert to tick mode.
+That was wrong and they said so:
+
+> *"once the order is in execution it should be filled... after ev check or whatever
+> and order is sent to polymarket keep the slippage and whatever it is to be
+> filled... why are you removing slippage once the order is placed? stupid logic
+> isn't it?"*
+
+They are right. Narrowing the cap to fix an EV problem is backwards. **Do not
+switch `slippage_mode` back to `ticks`.** Band stays on.
+
+**The actual bug was that I bundled two things into one switch.** `_px = ask if
+band else cap` tied the EV reference price to the slippage dial, so widening
+survivability changed which trades qualified — loosening it in band mode by +0.019
+to +0.028, and tightening it in tick mode as the pad grew. A survivability
+parameter must not be a second opinion on the trade, in **either** direction.
+
+**12.5.0 separates them permanently.**
+- New `EV_REFERENCE_PAD=1`. EV is **always** judged at `ask + 1 tick`, regardless of
+  `slippage_mode` and regardless of `pad_ticks`. That is exactly 12.3.4's bar, so
+  the EV loosening I introduced is undone **without touching the cap.**
+- The cap stays as wide as the band wants. At ask 0.47 the cap is still 0.52 while
+  EV is judged at 0.48 — decided strictly, executed generously.
+- A band cap above the top tick now **clamps to `1 - tick` instead of raising**.
+  Previously `price cap outside market` refused the trade before EV was even
+  reached, so at ask 0.91 a wide band rejected a candle tick mode would have taken.
+  That was the same bug wearing a different hat.
+
+| ask | tick cap | band cap | EV judged at (both) |
+|---|---|---|---|
+| 0.42 | 0.43 | **0.47** | 0.43 |
+| 0.47 | 0.48 | **0.52** | 0.48 |
+| 0.52 | 0.53 | **0.58** | 0.53 |
+| 0.55 | 0.56 | **0.58** | 0.56 |
+
+**Tests pin the invariant across every price on both tick grids and three
+thresholds:** tick mode and band mode accept and refuse exactly the same candles,
+and where both accept, band's cap is never narrower. The old test asserting that
+`pad=5` should refuse where band accepts has been **rewritten** — it encoded the
+coupling that was the bug.
+
+**179 tests pass (52 + 21 + 106). SHA256SUMS 30/30.** Build `12.5.0`.
+
+Deploy it. Keep `slippage_mode: band`, keep EF on, master on, stake $3. Task 31a's
+measurement still stands and gets more useful now: after this, any surviving
+difference between eras is not the EV bar moving.

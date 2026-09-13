@@ -858,6 +858,43 @@ class BookDepthIsCheckedBeforeSending(unittest.TestCase):
         self.assertIn("p.add_argument('--max-attempts',type=int,default=4)", src)
         self.assertIn("attempts=getattr(a,'max_attempts',4))", src)
 
+    def test_slippage_mode_never_changes_which_trades_qualify(self):
+        """The cap is survivability. It must not be a second opinion on the trade.
+
+        `_px = ask if band else cap` made the EV bar move with the slippage dial:
+        band mode judged EV at the ask instead of ask+1 tick, loosening the test
+        by +0.019 to +0.028 and admitting marginal trades 12.3.4 refused. The
+        operator's point stands - once a trade is decided the cap's only job is
+        to get it filled, and a taker pays the maker's price anyway.
+
+        So across the whole price range and both tick grids, tick mode and band
+        mode must accept and reject exactly the same candles.
+        """
+        terms_for = lambda tick: (tick, 5.0, 0.07, 1.0)
+        for tick in (0.01, 0.001):
+            for i in range(1, int(1 / tick)):
+                ask = round(i * tick, 4)
+                if not 0 < ask < 1:
+                    continue
+                q = dict(ask=ask, asks=[(ask, 10000.0)], age_ms=0, seq=1)
+                for p_, thr in ((0.55, 0.15), (0.60, 0.20), (0.50, 0.05)):
+                    d = dict(p=p_, threshold=thr)
+                    out = {}
+                    for band in (False, True):
+                        try:
+                            out[band] = C.order_plan(q, terms_for(tick), 3.0, d,
+                                                     pad=1, band=band, require_depth=False)
+                        except ValueError as e:
+                            out[band] = str(e)
+                    ev_fail = lambda r: isinstance(r, str) and 'model EV' in r
+                    self.assertEqual(ev_fail(out[False]), ev_fail(out[True]),
+                                     f'EV verdict differs by mode at ask {ask}, '
+                                     f'tick {tick}, p {p_}, thr {thr}')
+                    # And when both qualify, band must give the WIDER cap.
+                    if isinstance(out[False], dict) and isinstance(out[True], dict):
+                        self.assertGreaterEqual(out[True]['cap'] + 1e-9, out[False]['cap'],
+                                                f'band cap narrower at ask {ask}')
+
     def test_band_is_clamped_to_clear_the_five_share_minimum(self):
         """A wider cap signs FEWER shares, so the band can trip the floor.
 
@@ -946,18 +983,37 @@ class SlippageBands(unittest.TestCase):
         self.assertGreater(band, ticks)
         self.assertAlmostEqual(band, 0.42, places=6)   # 0.28 * 1.5, on the grid
 
-    def test_band_mode_judges_ev_at_the_ask_not_the_ceiling(self):
-        """Widening survivability must not refuse more trades.
+    def test_widening_survivability_changes_no_verdict_in_either_direction(self):
+        """The cap is not a second opinion on the trade.
 
-        Judging EV at the cap is what made a wider allowance refuse MORE - the
-        opposite of what an execution parameter should do, and why build 36 kept
-        the two apart.
+        This test used to assert that pad=5 REFUSED where band accepted, which
+        encoded the very coupling that was the bug: EV moved with the slippage
+        dial, so widening it refused trades in tick mode and admitted marginal
+        ones in band mode. EV is now judged at a fixed reference and a marginal
+        candle gets the same verdict at every setting - only the cap changes.
         """
         q = dict(ask=0.50, asks=[(0.50, 1000.0)], age_ms=0, seq=1)
-        d = dict(p=0.56, threshold=0.10)          # clears at 0.50, fails at 0.55
-        C.order_plan(q, self.terms, 3.0, d, band=True)
-        with self.assertRaises(ValueError):
-            C.order_plan(q, self.terms, 3.0, d, pad=5)
+        settings = (dict(pad=1), dict(pad=5), dict(band=True))
+
+        # A candle that clears: every setting must take it.
+        good = dict(p=0.60, threshold=0.10)
+        caps = [C.order_plan(q, self.terms, 3.0, good, **kw)['cap'] for kw in settings]
+        self.assertLess(caps[0], caps[1], 'a bigger pad must still widen the cap')
+
+        # A candle that does not clear: every setting must refuse it.
+        bad = dict(p=0.56, threshold=0.10)
+        for kw in settings:
+            with self.assertRaises(ValueError, msg=f'{kw} must refuse it too'):
+                C.order_plan(q, self.terms, 3.0, bad, **kw)
+
+    def test_a_cap_above_the_top_tick_clamps_rather_than_refusing(self):
+        """A wide band on an expensive ask must not reject the trade."""
+        q = dict(ask=0.91, asks=[(0.91, 10000.0)], age_ms=0, seq=1)
+        d = dict(p=0.99, threshold=-1.0)
+        plan = C.order_plan(q, (0.01, 1.0, 0.07, 1.0), 3.0, d, band=True,
+                            require_depth=False)
+        self.assertLess(plan['cap'], 1.0)
+        self.assertGreaterEqual(plan['cap'], 0.91)
 
 
 class RefusedCandleIsRearmed(unittest.TestCase):

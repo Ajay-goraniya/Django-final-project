@@ -225,6 +225,10 @@ class BookCache:
 # survivability only: no EF eligibility/share-price gate is added here". EV is
 # decided once, on the signal, at the price we expect to pay - see
 # _gate_on_padded_ev in the runner. This only governs how far a fill may walk.
+# Ticks above the ask at which EV is judged, fixed and independent of both
+# pad_ticks and slippage_mode. 1 reproduces 12.3.4's bar exactly, so widening
+# the execution cap can never loosen or tighten which trades qualify.
+EV_REFERENCE_PAD=1
 SLIPPAGE_BANDS=((0.10,1.00),(0.20,0.70),(0.30,0.50),(0.40,0.20))
 SLIPPAGE_FALLBACK=0.10
 
@@ -259,14 +263,33 @@ def order_plan(q,terms,stake,d,pad=1,band=False,require_depth=True):
         cap=float((raw/D(tick)).to_integral_value(rounding=ROUND_CEILING)*D(tick))
     else:
         cap=float(((D(q['ask'])/D(tick)).to_integral_value(rounding=ROUND_CEILING)+pad)*D(tick))
+    # Clamp, do not refuse. A band cap above the top tick must not reject a trade
+    # the EV test would have taken - that would make the survivability parameter
+    # a second opinion again, which is the whole bug. The highest valid price is
+    # still marketable and still fills.
+    cap=min(cap,float((D(1)-D(tick))))
     if not 0<cap<1: raise ValueError('price cap outside market')
-    # EV is judged at the price we EXPECT to pay, not at the ceiling we would
-    # tolerate. Judging it at the cap is what made a wider allowance refuse more
-    # trades - the opposite of what a survivability parameter should do, and the
-    # reason build 36 kept the two apart. In band mode the expected price is the
-    # ask; in tick mode the cap is close enough to the ask to keep the old
-    # behaviour unchanged.
-    _px=q['ask'] if band else cap
+    # THE EV PRICE IS INDEPENDENT OF THE EXECUTION CAP. They are two different
+    # questions and tying them together was a real error.
+    #
+    # "Once the order is in execution it should be filled... why are you removing
+    # slippage once the order is placed?" - the operator, and they are right. The
+    # cap is not a second opinion on the trade; the trade was already decided.
+    # Its only job is to survive the flight to the venue, and a taker pays the
+    # resting maker's price regardless (20 of 20 fills at or better than the
+    # quoted ask, cap never reached), so a wide cap is free.
+    #
+    # But `_px = ask if band else cap` made the EV bar move with the slippage
+    # dial: switching to band mode judged EV at the ask instead of ask+1 tick and
+    # silently loosened the test by +0.019 to +0.028, admitting marginal trades
+    # 12.3.4 refused. Widening a survivability parameter must not change which
+    # trades qualify - in EITHER direction.
+    #
+    # So EV is always judged at the same reference, ask + EV_REFERENCE_PAD ticks,
+    # which is exactly what 12.3.4 used. The cap is then free to be as wide as
+    # the band wants without touching the decision.
+    _px=float(((D(q['ask'])/D(tick)).to_integral_value(rounding=ROUND_CEILING)+EV_REFERENCE_PAD)*D(tick))
+    _px=min(_px,float(D(1)-D(tick)))
     f=rate*(_px*(1-_px))**exp
     cost=max(_px+f,_px/(1-f/_px))
     if d['p']/cost-1<d['threshold']: raise ValueError('price fails model EV')
@@ -367,10 +390,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.4.11')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.5.0')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
