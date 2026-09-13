@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-13 06:47 UTC. Update this file at the end of every check.
+Last updated: 2026-09-13 08:47 UTC. Update this file at the end of every check.
 
 ## 04:47 09-13 — the new CLAUDE.md rule applies to MY OWN LEDGER. Read this before trusting it.
 Repo CLAUDE.md now carries the user's 09-13 rule: V is the head session and speaks with the user's
@@ -523,8 +523,10 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
   have shipped on nine fires of noise. Objection 2 was the operative one: the halves were
   morning-vs-afternoon of ONE Saturday, not a real out-of-sample split, and it broke as the afternoon
   extended. **The cleanest vindication of the 60/100 bars this project has produced.**
-- Grid 09-13 06:47: **all n=191 −0.052 · weekend n=134 +0.001 · weekday n=57 −0.177 (under the bar,
-  not read).** The weekend cell is within a cent of zero across eight readings; nothing reopens.
+- Grid 09-13 08:47: **all n=199 −0.052 · weekend n=142 −0.002 · weekday n=57 −0.177 (under the bar,
+  not read).** The weekend cell has sat within a cent of zero for nine consecutive readings; closed.
+- The overall per-fire number has also settled: −0.052 / −0.062 / −0.052 over the last three checks,
+  against the +0.018 baseline. The REFUTED verdict is stable well past its 100-fire bar (now 199).
 - **Why it is still not a finding:** (1) it is ONE Saturday — 62 fires from one day is one draw of the
   regime; (2) its halves are morning-vs-afternoon of the SAME continuous day, the weakest form of the
   check (the 09-11 flat bucket looked identical to three decimals and died at McNemar p=0.341);
