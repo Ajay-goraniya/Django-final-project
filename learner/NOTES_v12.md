@@ -3998,6 +3998,72 @@ it; that boundary stands.
 12 processes up in this container - the loggers and twins are unaffected, Tokyo is a separate host.
 Polymarket v12 live is unaffected: still armed, kill window 1 of 20.
 
+## 20:50 UTC (Sun 09-13) - deposit confirmed. Unit sum -2.0000. And the kill rule CANNOT save this account at $3.
+
+### Deposit landed 20:29:15
+
+| time | cash |
+|---|---|
+| 20:28:54 | 1.9149 |
+| **20:29:15** | **40.3508** |
+| delta | **+38.4360** |
+
+**The user said $40; the venue shows +38.4360.** AWS reported the observed delta rather than assuming the
+**$1.564** difference is fees or gas, which is the right call - it is unaccounted for from the journal and
+is named rather than rounded away. Everything downstream uses the venue's own **40.3508**.
+
+### The open position settled, and it lost
+
+`20:28:50 epoch=1789330800 actual=UP lane=EF payout=0.00 pnl=-4.79 unit=-1.0000`. The $1.694 mark was a
+**losing** position, not a recoverable one.
+
+| time | pnl | staked | unit | running sum |
+|---|---|---|---|---|
+| 20:12:30 | -4.83 | 4.83 | -1.0000 | -1.0000 |
+| 20:28:50 | -4.79 | 4.79 | -1.0000 | **-2.0000** |
+
+**Two for two, both full-stake losses since the 19:32:58 clear.** n=2 is not evidence about the signal and
+I am not treating it as any.
+
+### My pre-committed marker: -2.00 REACHED. One full-stake loss from -3.00.
+
+Pre-committed at 20:30, before these readings: apply the engine's own `-3.00` cumulative unit-return
+threshold **by hand** while its window is blank. **We are at exactly -2.0000. Distance to -3.0000 is
+1.0000 - one full-stake loss.** Reporting progress toward a threshold set in advance is not moving it.
+At -3.00 it goes to the user and **the decision is theirs; I touch no flag.**
+
+The engine's own rule still reads `unit_return_sum: null`, `results_until_armed: 18`, `armed: false`.
+
+### THE STRUCTURAL FACT, and it is worse than my earlier estimate
+
+I sized the exposure at ~$57. **AWS is right that it is worse than that, and the honest form is not a
+dollar figure - it is a race.** Worst case, every trade a full-stake loss:
+
+| stake | trades $40.35 funds | kill rule needs | which happens first |
+|---|---|---|---|
+| $5.00 | 8 | 18 | **account empties first** |
+| $4.00 | 10 | 18 | **account empties first** |
+| **$3.00 (current)** | **13** | **18** | **ACCOUNT EMPTIES FIRST** |
+| $2.50 | 16 | 18 | **account empties first** |
+| **$2.00** | **20** | 18 | kill rule can fire first |
+| $1.50 | 26 | 18 | kill rule can fire first |
+| $1.00 | 40 | 18 | kill rule can fire first |
+
+**At the current $3 stake the account can be spent to zero before the engine's own brake is even eligible
+to fire.** The empty account WAS the brake until 20:29:15; the deposit removed it and nothing replaced it.
+
+**This is arithmetic, not a prediction** - it assumes the worst case, and wins return money and extend the
+count. But a brake is judged on the worst case, which is the case it exists for.
+
+**It is not a gate and not a threshold sweep.** It changes no signal, no EV bar and no rule. It is sizing so
+that **a safety rule the user already has becomes reachable**. Put to the user as a choice with the whole
+table, not a recommended cell: at **$2 or below the existing kill rule fires before the money runs out; at
+$2.50 and above it cannot.** They cut to $3 themselves at 20:23 and said *"i changed it"*, so they are
+managing it actively - stated once, plainly, and not pressed.
+
+**Nothing touched.** `next_stake` 3.0, exactly one control write since 20:23:16 and it is theirs. 80 orders
+/ 38 fills / 37 results. master true, ef true, build 12.8.4, 12.8.5 still held.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
