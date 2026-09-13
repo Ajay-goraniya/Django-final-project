@@ -4125,6 +4125,81 @@ more, producing **more retries and DEADLINEs and fewer submissions** rather than
 predictions are on the record; Monday discriminates between them.** Told to the user as an open question,
 not as advice.
 
+## 21:20 UTC (Sun 09-13) - FULL RE-VERIFICATION at the user's request. Model switched; every claim re-checked.
+
+User: *"check everything again from the start... everything be verified first before performing any task"*.
+**Nothing built, nothing changed. Verify only.** Results, in the order checked.
+
+### VERIFIED SOLID
+
+| item | check | result |
+|---|---|---|
+| branch | `claude/your-task-3wbq8u`, clean tree, 0 ahead / 0 behind, push dry-run OK | **sound** |
+| build on branch | `12.8.5`; SHA256SUMS **30/30**; tests **152 + 59 + 21 = 232 pass** | **sound** |
+| 12.8.3 present | `'Account wiped out'` **0** occurrences; `_wipeout_check` clears **0** flags | **sound** |
+| 12.8.4 present | `controls()` returns `halt` (`:239`); controls page carries `clear-halt` | **sound** |
+| 12.8.5 present | `set_many` at `poly_core.py:464`; **0** raw meta writes left in the dashboard | **sound** |
+| `verify.py` | self-test runs, 4/4 PASS on the reference finding | **sound** |
+| `STATE.md` | exists, updated 21:14 by H1 | **read - see below** |
+| local processes | **12**, all named ones present | **sound** |
+| Tokyo | **BACK UP** - 3 clean reads; master OFF, all kinds False, wallet 0.00, settled 442 | **the 20:39 502 was transient; no flag revert** |
+| exposure race | $40.35 at $3 funds 13 vs 18 needed; at $2 funds 20 | **arithmetic re-confirmed** |
+| band-mode share | 0.0259 / 0.5785 = **4.5%** | **arithmetic re-confirmed** |
+| hand rule | -1.0000, -1.0000 -> **-2.0000**; one full loss from -3.00 | **re-confirmed** |
+| weekday vs weekend | v10 +0.086/+0.121, build11 +0.009/+0.090, build10 +0.042/+0.151 | **stable on n=500-1000+; weekend >= weekday in all three** |
+| live engine (AWS read, 21:1x) | master true, halt null, ef true, stake 3.0, cash 40.3508, kill 2 of 20, 82/38/37 | **taken from AWS; I cannot read that box** |
+
+### DOES NOT SURVIVE - correcting my 20:36 entry
+
+**The 6-hour halves contrast has already moved.** At 20:36 I reported v10 flips sign, build10 and build11
+consistent. **Forty minutes later**, same test:
+
+| run | 20:36 | 21:18 |
+|---|---|---|
+| v10 paper | +0.379 / -0.167 FLIPS | -0.036 / +0.206 **FLIPS (other way)** |
+| build11 | +0.100 / +0.139 consistent | +0.079 / +0.090 consistent |
+| build10 | +0.171 / +0.000 consistent | -0.012 / +0.063 **FLIPS** |
+
+**A 6-hour window with 3-hour halves on runs firing 5-15/hour is reading noise.** What survives: all four
+pooled last-6h numbers are positive (**"nothing is bleeding" holds**), build11 is the only run consistent
+across both reads, and **the v10 lineage is indistinguishable from zero** - that part was right; the
+*contrast* against build10 was not.
+
+**H1 wrote this exact lesson at 00:50 today** (`STATE.md` weekend cell): *"the halves were morning-vs-
+afternoon of ONE Saturday, not a real out-of-sample split, and it broke as the afternoon extended... a
+cell reading +0.073 with all four checks passing at n=62 was worth -0.001 at n=104."* **I read STATE.md's
+headings and not that section, and repeated the error 20 hours after it was written down.** That is the
+CLAUDE.md rule #2 failure in its precise form.
+
+### ALSO CORRECTED TODAY (already on the branch, listed so the record is in one place)
+
+1. Per-era PnL table (18:44) - **retracted**: stale window, differenced from summaries.
+2. "Two paper lanes sharing no code both fell" (19:0x) - **overstated**: r=+0.916, same signal twice.
+3. Entry-price-filter mechanism (Task 67) - **refuted** by the reject data.
+4. `pre_submit_book_age_ms` as a second measurement (Task 73) - **same read re-aged**; the CLAUDE.md
+   09-12 error on nearly the same fields.
+5. "The fix is in the feed layer" - **withdrawn**; mechanism unresolved.
+6. Task 75 spec cited `polybook.sqlite3` on the AWS box - **it is on this box, not theirs**; AWS correctly
+   refused to reconstruct. **My error in the task, not theirs.**
+
+### WHAT STANDS, and on what basis
+
+- **My builds did not cause the drawdown** - on the arithmetic (4.5% / 6% by two routes) and the MAIN
+  zero-execution-cost control. Not on "all models fell".
+- **Band mode raises the price paid ~6c/fill (p=0.00233) and doubled fill rate.** Kept.
+- **Rejects sit on older books (p~=0.0003), one measurement.** Mechanism - gate vs feed - **open.**
+- **MAIN closed; no weekday/weekend direction effect; wipeout guard was cash-vs-stake, not drawdown.**
+- **verify.py has not been run on any of today's findings.** They are execution measurements, which it
+  was not written for - but that is a statement of scope, not a pass.
+
+### NOT VERIFIED BY ME, by boundary
+
+The live engine, its journal and its venue reads. All of it is AWS's read. **This is the standing
+condition of this role and it is why AWS's refusals to act on relayed instructions are correct.**
+
+**Standing position after the audit: engine armed, $40.35, stake $3, unit sum -2.00, one full loss from
+the hand rule. No automatic stop for 18 results. Nothing to do until a result settles or the user speaks.**
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
