@@ -3954,3 +3954,40 @@ sense** - it was illiquid for one stake at one moment.
    must not be read as "it will come back on its own".
 
 **Nothing to build. The engine stays halted until the user decides.**
+
+## 19:0x UTC (Sun 09-13) - what the halt actually does, read from the code, and the flaw the user put their finger on.
+
+User: *"that's stupid things we know drawdowns happen and this thing just close the trades ?? when it will
+be back onn ? automatically or it needs you or me to restart and reset ?"* Answered from the source, not
+from memory.
+
+**1. It does NOT close, sell or abandon anything.** `halt` is read in exactly **one** place in the trading
+path - `poly_core.py:847`, the pre-order reserve - and it blocks **placing a new order**. `grade_loop`,
+`reconcile_loop` and `claim_loop` carry no halt gate at all, and the account has **auto-redeem enabled at
+the venue**, so winning positions are collected by Polymarket itself (`claim_loop` comment, 12.4.3). Open
+positions settle and pay exactly as they would have.
+
+**2. It never comes back on by itself.** One line clears it - `poly_dashboard.py:288`, the `clear-halt`
+endpoint. `_wipeout_check` only ever writes it, never unsets it, and the docstring says so: *"It never
+turns anything back ON."* **Manual, by the operator, always.**
+
+**3. The user is right that it is not a drawdown rule - and that is the flaw.** It does not look at losses
+at any point. `_wipeout_check` (`btc_model_v12_polymarket.py:452-458`) compares
+
+```
+spendable = self.cash - self.db.live_reserve()    against    next_stake
+```
+
+**Cash, not equity.** At 18:41:10 there was **$9.79 of open position value** that had not settled yet, so
+`self.cash` read $2.065 while the account itself was not at $2.065. The 3-read confirmation exists for an
+order **in flight** - seconds - but a POSITION takes up to five minutes to settle. **So a run of
+back-to-back trades can starve spendable cash and trip a guard named "Account wiped out" while the account
+is solvent.** That is exactly what the user means by "we know drawdowns happen".
+
+**Not building a change tonight.** The correct fix is probably to measure spendable against *cash plus
+unsettled position value* rather than cash alone, but that loosens a safety rule on a live money engine on
+the strength of one firing, and Task 69's numbers - how much of the $9.79 actually came back - decide
+whether the guard was wrong or merely early. **Measure first. Queued behind 69.**
+
+**What is fair to the guard:** it stopped a lane that had lost five in a row, and the per-lane kill rule
+could not (8 of 20 in its window). It was the only stop that worked. The name oversells what it found.
