@@ -4491,6 +4491,27 @@ control twin - same `PaperBroker` (which walks the book and CAN reject, unlike t
 fill), same $3 stake, same candles, from the Monday open. That is the clean A/B the plan's step 3 needs;
 the Sep 11 lane is not a like-for-like comparator for it.
 
+## 23:37 UTC (Sun 09-13) - STEP 3 IS RUNNING. Two paper twins launched in this container before the Monday open.
+
+| twin | build | port | pid | dir |
+|---|---|---|---|---|
+| **ctrl** | 12.8.6 | 8791 | 30945 | `scratchpad/twins/ctrl` |
+| **cand** | 12.8.7 | 8792 | 30947 | `scratchpad/twins/cand` |
+
+Both: `--db twin.sqlite3 --capital 50`, PAPER lane (no `--live`), meta seeded **`master=true`, `next_stake=3.0`**
+to match the live engine's stake. `git archive` of HEAD~1 and HEAD respectively; `diff -rq` confirms they
+differ **only** in `poly_core.py` (plus its test file and checksum manifest). Both decide loops writing
+diagnostics within 30 s of launch. **Process count in this container is now 14**; both routines updated.
+
+**Why this pair, not the Sep 11 lane:** the v12_2 `PaperBroker` walks the book and returns
+`fak_not_filled` when the ladder cannot fill at cap - it **can reject**. The Sep 11 lane books every fire
+at the ws ask, 100%. So cand-vs-the-+457-lane would be apples to oranges; **cand-vs-ctrl is the same
+broker, same candles, one variable.** Live 12.8.4's Monday per-candle series (AWS) is the second baseline.
+
+**Pass criteria fixed before a single candle:** fill rate up, DEADLINEs down, PnL/$1 on filled >= ctrl,
+decided-and-filled >= 56.4% on `candles.actual`, both halves, >= 60 graded, `verify.py` by H1. If
+paid-ask rises more than the fill gain is worth, it does not ship. Read hourly; verdict not before 60.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
