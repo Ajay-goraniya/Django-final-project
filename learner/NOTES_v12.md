@@ -3044,6 +3044,26 @@ the right outcome here.
 Lanes off, re-asserted, nothing enabled. Equity 15.02, settled 442, nothing open, ladder $1 OK. No real fill
 since 19:59:37 yesterday, now 14.4 hours. Tokyo uptime 51.8 h with no restart.
 
+## 11:22 UTC (Sun 09-13) - fourteenth reading, ninth consecutive positive. Still not arming.
+
+Re-arm reading, Predict.fun v10 paper: last-20 **+0.302** per $1, last-40 **+0.358** per $1, 532 graded.
+Fourteen readings: +0.155, -0.102, -0.001, -0.193, -0.082, +0.004, +0.347, +0.413, +0.412, +0.607, +0.630,
++0.411, +0.295, +0.302. Polymarket paper v10 last-20 **-0.000**, last-40 **+0.134**.
+
+The last-20 stopped falling this hour and the last-40 rose again, so the two windows are no longer moving
+apart. That is not a reason to arm. The criterion was refuted at 22:12 on 09-11 under its own pre-committed
+review condition and has not been replaced, and nine positives in a row do not un-refute an estimator whose
+instability is what refuted it. Arming now would be the exact failure the rule was written to prevent, run
+backwards: not inventing a criterion after a good hour, but resurrecting a dead one after nine.
+
+Tokyo unchanged: **5W/10L -70.6**, equity 15.02, settled 442, nothing open, ladder $1 OK. Master OFF and
+MAIN/REVERSAL/EF all False on inspection - no silent revert this hour. No real fill since 19:59:37 yesterday,
+now 15.4 hours. Uptime 52.9 h, no restart.
+
+Polymarket v12 (AWS box) separately: 12.4.6 deployed 11:12:57 with band mode, master re-armed. 12.4.7 (four
+attempts, build 36 parity) and 12.4.8 (dashboard header read from the journal, not a second hardcoded literal)
+are on the branch awaiting deploy. Band-mode sample is at n~2 and unreadable; the 11:12:57 cut is the boundary.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
