@@ -205,7 +205,7 @@ class PolyRunner(Runner):
     async def _decide_once(self):
         if True:
             d=self.decide_now(); ep=int(time.time()//300)*300; self.last_decision=d
-            self.executor.pad=self.pad_ticks()
+            self._sync_executor_dials()
             if d.get('fire') and self.ui.allowed() and self.cash is not None and time.monotonic()-self.cash_at<15:
                 token=self.market[ep][0 if d['side']=='UP' else 1]; stake=self.db.get('next_stake',1.)
                 reserved=self.db.live_reserve()
@@ -254,7 +254,7 @@ class PolyRunner(Runner):
         if not self.ui.allowed(kind): return
         if self.cash is None or time.monotonic()-self.cash_at>=15: return
         if ep not in self.market or ep not in self.info: return
-        self.executor.pad=self.pad_ticks()      # live slippage allowance
+        self._sync_executor_dials()             # live execution dials
         token=self.market[ep][0 if decision['side']=='UP' else 1]
         if token not in self.books.terms:
             self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(dict(
@@ -411,6 +411,23 @@ class PolyRunner(Runner):
             if v is None or not math.isfinite(v): return 'regime',None
             return 'fixed',v
         return mode,None
+    def _sync_executor_dials(self):
+        """Push meta's execution dials onto the executor. meta is the only source.
+
+        `pad` was refreshed here every pass. `band` and `age` were NOT: they were
+        set once in Executor.__init__ and thereafter only by the
+        /api/controls/ev HTTP handler. So band mode set through the panel held
+        until the next restart and then silently reverted to tick caps with meta
+        still reading "band" - and worse, decide_now()'s EV gate reads
+        slippage_mode() fresh every pass, so the gate ran in band mode while the
+        plan that actually got signed did not. Three live orders were signed at
+        exactly one tick under meta slippage_mode=band before this was caught.
+        Same failure class as master defaulting off, except master is loud and
+        re-armed on every deploy and this was silent.
+        """
+        self.executor.pad=self.pad_ticks()
+        self.executor.band=(self.slippage_mode()=='band')
+        self.executor.age=self.quote_age_s()
     def quote_age_s(self):
         """Max book age we will price against. Live control, CLI flag seeds it."""
         v=(self.db.get('ev_settings') or {}).get('quote_age_ms')

@@ -314,10 +314,12 @@ class Dashboard:
                 if cfg.get('mode')=='fixed' and cfg.get('value') is None:
                     raise ValueError('fixed mode needs a value')
                 self.db.set('ev_settings',cfg)
-                if hasattr(self.r,'executor'):
-                    if 'pad_ticks' in cfg: self.r.executor.pad=int(cfg['pad_ticks'])
-                    self.r.executor.band=(cfg.get('slippage_mode')=='band')
-                    if 'quote_age_ms' in cfg: self.r.executor.age=float(cfg['quote_age_ms'])/1000
+                # No executor writes here. meta is the single source and the
+                # decide loop syncs every dial from it each pass
+                # (_sync_executor_dials). Setting them here too gave `band` and
+                # `age` a second, restart-losing home: the panel set them, a
+                # restart reset them to the constructor defaults, and meta still
+                # read "band" while the signed order was a one-tick cap.
                 return dict(ok=True,ev=self.ev_controls())
             elif path=='/api/controls/state-x':
                 if not isinstance(p.get('manual_enabled'),bool): raise ValueError('Invalid SX toggle')

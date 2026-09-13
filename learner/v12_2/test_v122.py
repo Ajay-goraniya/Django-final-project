@@ -480,7 +480,48 @@ class EvAndSlippageControls(unittest.TestCase):
     def test_slippage_reaches_the_executor(self):
         r = self._runner()
         r.ui.apply('/api/controls/ev', dict(confirmed=True, slippage_ticks=0))
+        r._sync_executor_dials()   # what the decide loop does every pass
         self.assertEqual(r.executor.pad, 0, 'the running executor must pick it up without a restart')
+
+    def test_every_execution_dial_is_synced_from_meta_not_just_pad(self):
+        """band and age were set only by the HTTP handler, so a restart lost them.
+
+        meta kept saying slippage_mode=band while Executor.__init__ had reset
+        self.band to False, and decide_now()'s EV gate reads slippage_mode()
+        fresh - so the gate ran in band mode while the plan that got signed did
+        not. Three live orders were signed at exactly one tick under
+        meta slippage_mode=band before this was caught.
+        """
+        r = self._runner()
+        r.ui.apply('/api/controls/ev', dict(confirmed=True, slippage_mode='band',
+                                            quote_age_ms=400, slippage_ticks=2))
+        r._sync_executor_dials()
+        self.assertTrue(r.executor.band)
+        self.assertEqual(r.executor.pad, 2)
+        self.assertAlmostEqual(r.executor.age, 0.4)
+
+        # Simulate the restart: a fresh Executor comes up on the constructor
+        # defaults, and the first decide pass must restore every dial from meta.
+        r.executor.band = False
+        r.executor.pad = 1
+        r.executor.age = 0.75
+        r._sync_executor_dials()
+        self.assertTrue(r.executor.band, 'band must survive a restart via meta')
+        self.assertEqual(r.executor.pad, 2)
+        self.assertAlmostEqual(r.executor.age, 0.4)
+
+    def test_an_unrelated_ev_edit_does_not_clear_band(self):
+        """The old handler did band=(cfg.get('slippage_mode')=='band').
+
+        Any EV write that omitted slippage_mode therefore silently turned band
+        mode off while meta still carried it.
+        """
+        r = self._runner()
+        r.ui.apply('/api/controls/ev', dict(confirmed=True, slippage_mode='band'))
+        r.ui.apply('/api/controls/ev', dict(confirmed=True, slippage_ticks=1))
+        r._sync_executor_dials()
+        self.assertEqual(r.slippage_mode(), 'band')
+        self.assertTrue(r.executor.band)
 
     def test_bad_mode_and_missing_value_are_rejected(self):
         r = self._runner()

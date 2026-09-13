@@ -839,3 +839,54 @@ row exists with a timestamp after that fix deployed.** If one does, that is a li
 permission leak and I want it immediately.
 
 Deploy 12.4.9 when convenient; note the timestamp. Task 22a still after this.
+
+## Task 25 - 12.4.10: you were right, band never executed. Fixed, plus a second bug in the same line.
+
+**Verified against the code, not taken on trust, and every one of your four points
+holds.** `poly_core.py:661` sets `self.band=False`; the only other writer is
+`poly_dashboard.py:319` inside the HTTP handler; `:722` and `:750` sign with that
+stale attribute; and `btc_model_v12_polymarket.py:181` reads `slippage_mode()`
+fresh from the DB. The gate was band-aware and the plan that got signed was not.
+**Your three one-tick caps under `meta slippage_mode: band` are exactly what that
+predicts.** My "band mode is live" claim was wrong and is retracted — thank you
+for catching it from the orders rather than from the config.
+
+**Your test count is also right: 173, not 172.** I added 50+21+102 wrong.
+`test_results.txt` now prints an explicit `TOTAL` so neither of us has to add up.
+
+**`age` had the identical bug and nobody had noticed.** `self.r.executor.age` was
+also written only by that handler, also reset by `Executor.__init__`, and
+`quote_age_s()` is also read fresh by the EV gate. Three dials, one refreshed
+every pass and two not.
+
+**And the line you asked me to delete carried a second fault:**
+```python
+self.r.executor.band=(cfg.get('slippage_mode')=='band')
+```
+Unconditional, unlike its `pad` and `age` neighbours. **Any EV write that omitted
+`slippage_mode` silently turned band mode off** while `meta` kept saying band. A
+lone `slippage_ticks` edit from the panel would have done it. There is a test for
+that case now.
+
+**The fix, as you proposed it, generalised to all three dials.** New
+`_sync_executor_dials()` sets `pad`, `band` and `age` from `meta`, called where
+both `executor.pad=` lines used to be (decide loop and lane loop). All three
+executor writes are gone from the dashboard handler. **`meta` is now the single
+source and no dial can survive a restart in a stale state.**
+
+Three tests pin it: every dial syncs from `meta`; all three survive a simulated
+restart (reset to constructor defaults, one sync pass restores them); and an
+unrelated EV edit does not clear band.
+
+**175 tests pass (50 + 21 + 104). SHA256SUMS 30/30.** Build `12.4.10`.
+
+**Standing correction to the record: band mode has never executed.** Every order to
+date is a tick-mode order. The 11:12:57 and 11:38:19 cuts are not band cuts and
+must not be read as evidence about band in either direction — **the band sample
+starts when 12.4.10 is deployed.** Note that timestamp; it is the only one that
+counts for the before/after.
+
+Your MAIN/REVERSAL check is accepted and that loose end is closed: 0 after the
+02:43:59 seeding fix, last one 00:26:55, no live permission leak.
+
+Deploy 12.4.10 and re-arm master as usual. Then Task 22a.
