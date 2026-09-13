@@ -1281,12 +1281,19 @@ if __name__ == '__main__':
     unittest.main(verbosity=1)
 
 
-class WipeoutTurnsMasterOff(unittest.TestCase):
-    """User, 09-13: "if account is wiped out, turn off master".
+class LowBalanceIsWatchedNeverActedOn(unittest.TestCase):
+    """User, 09-13 19:1x: "what i said was it should be trading when no money
+    available and that was for you, to monitor not to add the code in file".
 
-    Wiped out means spendable cash cannot fund one stake - the point at which
-    the engine can only keep refusing. Confirmed over consecutive checks,
-    because the balance dips while an order is in flight.
+    Their earlier "master off when account run out of money for stack" was an
+    instruction to the operator. Compiling it into the engine was an
+    over-implementation, and on 09-13 it halted a SOLVENT account: cash read
+    2.065 at 18:41:10 with 4.38 of position still settling, and 11.90 five and a
+    half minutes later - the rise being exactly one payout.
+
+    These tests are the inverse of the ones they replace. That is deliberate:
+    the rule was removed on the owner's instruction, and the tests must fail if
+    anyone puts it back.
     """
     def setUp(self):
         import btc_model_v12_polymarket as E
@@ -1300,55 +1307,69 @@ class WipeoutTurnsMasterOff(unittest.TestCase):
 
     def tearDown(self): self.db.c.close(); self.temp.cleanup()
 
-    def test_healthy_balance_never_touches_master(self):
-        for _ in range(10): self.r._wipeout_check()
-        self.assertTrue(self.db.get('master'))
-        self.assertIsNone(self.db.get('halt'))
+    def low(self):
+        return [json.loads(x[0]) for x in
+                self.db.sql("SELECT detail FROM diagnostics WHERE detail LIKE '%LOW_BALANCE%'")]
 
-    def test_one_low_read_is_a_race_not_a_wipeout(self):
+    def test_a_sustained_low_balance_no_longer_stops_anything(self):
+        self.db.set('main_enabled',True); self.db.set('reversal_enabled',True)
+        self.r.cash=1.0
+        for _ in range(50): self.r._wipeout_check()
+        self.assertTrue(self.db.get('master'), 'the engine must keep trading; the owner watches the money')
+        self.assertIsNone(self.db.get('halt'), 'a low balance must not set a halt')
+        self.assertTrue(self.db.get('main_enabled')); self.assertTrue(self.db.get('reversal_enabled'))
+
+    def test_it_still_records_what_it_saw(self):
+        self.r.cash=1.0
+        for _ in range(self.r.WIPEOUT_CONFIRMATIONS): self.r._wipeout_check()
+        rows=self.low()
+        self.assertEqual(len(rows), 1)
+        self.assertAlmostEqual(rows[0]['spendable'], 1.0, places=4)
+        self.assertEqual(rows[0]['stake'], 5.0)
+        self.assertFalse(rows[0]['acted'])
+
+    def test_the_reading_carries_the_money_the_old_rule_could_not_see(self):
+        """open_value is settled-but-unpaid; recording without it repeats the bug."""
+        self.db.sql('INSERT INTO venue_state(ts,cash,open_value) VALUES(?,?,?)', (1., 1.0, 4.38))
+        self.r.cash=1.0
+        for _ in range(self.r.WIPEOUT_CONFIRMATIONS): self.r._wipeout_check()
+        row=self.low()[0]
+        self.assertAlmostEqual(row['open_value'], 4.38, places=4)
+        self.assertAlmostEqual(row['equity'], 5.38, places=4)
+
+    def test_one_low_read_records_nothing(self):
         self.r.cash=1.0
         self.r._wipeout_check()
-        self.assertTrue(self.db.get('master'), 'a single dip must not disarm the engine')
+        self.assertEqual(self.low(), [], 'a single dip is a race, not an episode')
 
-    def test_sustained_wipeout_turns_master_off_and_halts(self):
+    def test_it_records_once_per_episode_not_every_five_seconds(self):
+        self.r.cash=1.0
+        for _ in range(200): self.r._wipeout_check()
+        self.assertEqual(len(self.low()), 1, 'a long low spell is one episode, not 200 rows')
+        self.r.cash=100.0; self.r._wipeout_check()           # recovered
         self.r.cash=1.0
         for _ in range(self.r.WIPEOUT_CONFIRMATIONS): self.r._wipeout_check()
-        self.assertFalse(self.db.get('master'))
-        self.assertIn('wiped out', (self.db.get('halt') or '').lower())
+        self.assertEqual(len(self.low()), 2, 'a genuinely new episode records again')
 
-    def test_wipeout_also_clears_the_unvalidated_lanes(self):
-        """User: "main off if no money available to trade, not after 3 trades".
+    def test_a_healthy_balance_records_nothing_and_changes_nothing(self):
+        for _ in range(10): self.r._wipeout_check()
+        self.assertTrue(self.db.get('master')); self.assertIsNone(self.db.get('halt'))
+        self.assertEqual(self.low(), [])
 
-        The stop condition is the money, never a fill count. Clearing the lane
-        flags too means a later master re-arm cannot silently bring an
-        unvalidated lane back with it.
-        """
-        self.db.set('main_enabled',True); self.db.set('reversal_enabled',True)
-        self.db.set('ef_enabled',True)
-        self.r.cash=1.0
-        for _ in range(self.r.WIPEOUT_CONFIRMATIONS): self.r._wipeout_check()
-        self.assertFalse(self.db.get('master'))
-        self.assertFalse(self.db.get('main_enabled'))
-        self.assertFalse(self.db.get('reversal_enabled'))
-        self.assertTrue(self.db.get('ef_enabled'), 'EF is the validated lane; master gates it')
-
-    def test_recovery_resets_the_counter(self):
-        self.r.cash=1.0
-        self.r._wipeout_check(); self.r._wipeout_check()
-        self.r.cash=100.0; self.r._wipeout_check()      # balance came back
-        self.r.cash=1.0; self.r._wipeout_check()        # count restarts
-        self.assertTrue(self.db.get('master'))
-
-    def test_it_never_turns_master_back_on(self):
+    def test_it_never_turns_master_ON_either(self):
         self.db.set('master',False)
         self.r.cash=100.0
         for _ in range(10): self.r._wipeout_check()
-        self.assertFalse(self.db.get('master'), 'must never resurrect a disabled lane')
+        self.assertFalse(self.db.get('master'), 'monitoring writes no flags in either direction')
 
     def test_paper_is_untouched(self):
         self.r.a=types.SimpleNamespace(live=False); self.r.cash=0.0
         for _ in range(10): self.r._wipeout_check()
-        self.assertTrue(self.db.get('master'))
+        self.assertTrue(self.db.get('master')); self.assertEqual(self.low(), [])
+
+    def test_nothing_else_in_the_engine_halts_on_the_balance(self):
+        src = pathlib.Path(self.E.__file__).read_text()
+        self.assertNotIn('Account wiped out', src, 'the wipeout halt must not come back')
 
 
 class MainDisarmsAfterOneFill(unittest.TestCase):

@@ -432,22 +432,29 @@ class PolyRunner(Runner):
             await asyncio.sleep(5)
     WIPEOUT_CONFIRMATIONS=3
     def _wipeout_check(self):
-        """Turn master OFF when the account can no longer fund a trade.
+        """MONITOR ONLY. Records a low-balance reading and stops nothing.
 
-        User, 09-13: "if account is wiped out, turn off master".
+        User, 09-13 19:1x: "what i said was it should be trading when no money
+        available and that was for you, to monitor not to add the code in file".
+        Their earlier "master off when account run out of money for stack" was a
+        job for whoever is watching, and compiling it into the engine was my
+        over-implementation. It halted a solvent account at 18:41:10. This is the
+        correction: observe, write it down, act never.
 
-        "Wiped out" is defined as spendable cash, after deducting what live
-        orders are already holding, being unable to cover one stake - the point
-        at which the engine cannot place another trade and is only going to keep
-        refusing. The venue balance is the source of truth, as everywhere else.
+        Why it was wrong is kept here rather than deleted, because the quantity
+        it watched is the wrong quantity. `self.cash` is CASH, and a position
+        that has graded but not yet paid reads as ZERO in it. At 18:41:10 cash
+        was 2.065 with 4.38 of position still settling; five and a half minutes
+        later cash was 11.90, the rise being exactly one payout to the cent.
+        Three confirmations cover an ORDER in flight, which is seconds - a
+        POSITION takes up to five minutes, so it could never have waited enough.
 
-        Confirmed over consecutive checks rather than acted on once, because the
-        balance dips transiently while an order is in flight and a single low
-        read is a race, not a wipeout. Same standard the reconciler applies
-        before declaring a no-fill.
+        And it was never protecting the balance. The engine cannot spend money it
+        does not have: the venue rejects an order it cannot fund. What it
+        prevented was a run of failed submissions - noise, not loss.
 
-        Turns master off and halts. It never turns anything back ON, so it
-        cannot resurrect a lane the operator disabled.
+        It sets no halt, clears no flag and turns nothing off. `master` and the
+        lane flags are the operator's alone.
         """
         if not self.a.live or self.cash is None: return
         stake=float(self.db.get('next_stake',1.) or 1.)
@@ -455,20 +462,22 @@ class PolyRunner(Runner):
         if spendable+1e-9>=stake:
             self._wipeout_seen=0; return
         self._wipeout_seen=getattr(self,'_wipeout_seen',0)+1
-        if self._wipeout_seen<self.WIPEOUT_CONFIRMATIONS: return
-        why=(f'Account wiped out: spendable {spendable:.2f} below stake {stake:.2f} '
-             f'on {self._wipeout_seen} consecutive balance reads')
-        # Master AND the unvalidated lanes. User, 09-13: "main off if no money
-        # available to trade, not after 3 trades" - the stop condition is the
-        # money running out, never a fill count. Clearing the lane flags too
-        # means a later master re-arm cannot silently bring an unvalidated lane
-        # back with it; whoever re-arms has to arm the lane deliberately.
-        # Still only ever turns things OFF.
-        changed=[k for k in ('master','main_enabled','reversal_enabled') if self.db.get(k)]
-        if not changed: return
-        for k in changed: self.db.set(k,False)
-        if not self.db.get('halt'): self.db.set('halt',why)
-        print('[WIPEOUT] '+why+' - off: '+', '.join(changed),flush=True)
+        # Once per episode, at the confirmation threshold - not every 5 s for as
+        # long as the balance stays low. The counter resets on recovery, so a
+        # genuinely new episode records again.
+        if self._wipeout_seen!=self.WIPEOUT_CONFIRMATIONS: return
+        # open_value is the settled-but-unpaid money the old rule could not see.
+        # Recording spendable without it would repeat the mistake being corrected.
+        r=self.db.sql('SELECT open_value FROM venue_state ORDER BY ts DESC LIMIT 1')
+        opened=float(r[0][0]) if r and r[0][0] is not None else None
+        self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),0,json.dumps(dict(
+            kind='LOW_BALANCE',spendable=round(spendable,4),stake=stake,open_value=opened,
+            equity=(round(spendable+opened,4) if opened is not None else None),
+            reads=self._wipeout_seen,acted=False))))
+        print('[low balance] spendable %.2f below stake %.2f on %d reads; open %s'
+              ' - MONITOR ONLY, nothing stopped'
+              %(spendable,stake,self._wipeout_seen,
+                'n/a' if opened is None else '%.2f'%opened),flush=True)
     def _main_oneshot_check(self):
         """MAIN disarms itself after ONE filled order.
 

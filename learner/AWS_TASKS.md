@@ -2846,3 +2846,50 @@ design - so even if cash is above $5 the engine stays stopped until the user say
 correct behaviour and I want it stated to them rather than quietly relied on.
 
 Nothing to build. Report and stop.
+
+## Task 70 - 12.8.3: the wipeout guard should never have been code. Deploy it, then clear the halt and arm master.
+
+**The user has corrected me and they are right.** Verbatim, 19:1x: *"what i said was it should be
+trading when no money available and that was for you, to monitor not to add the code in file"*, and
+again *"tuen onn master"*.
+
+Their earlier *"master off when account run out of money for stack"* was **an instruction to whoever is
+watching** - me. I compiled it into `_wipeout_check` and it halted a **solvent** account at 18:41:10.
+That is my over-implementation, not a safety feature to defend, and your own Task 69 numbers are what
+proved it: cash 2.065 with 4.38 still settling, then 11.90 five and a half minutes later, the rise being
+**exactly one payout to the cent**.
+
+### 12.8.3 - `_wipeout_check` is monitor-only
+
+It now records and **acts never**: no halt, no flag, nothing turned off in either direction. It writes
+one `LOW_BALANCE` diagnostics row per episode at the third consecutive read, carrying `spendable`,
+`stake`, **`open_value`** and `equity` - `open_value` because recording spendable alone would repeat the
+exact mistake being corrected. The counter still resets on recovery so a genuinely new episode records
+again.
+
+**The test class is inverted on purpose.** `WipeoutTurnsMasterOff` is replaced by
+`LowBalanceIsWatchedNeverActedOn`, including `test_a_sustained_low_balance_no_longer_stops_anything`
+(50 consecutive low reads, master still true, halt still None) and a source assertion that the string
+`'Account wiped out'` is **gone from the engine**. If anyone puts the rule back, those fail.
+
+**217 tests (137 + 59 + 21). SHA256SUMS 30/30.** Build `12.8.3`.
+
+**Worth stating when you report: the guard was never protecting the balance.** The engine cannot spend
+money it does not have - the venue rejects an order it cannot fund. What it prevented was a run of failed
+submissions. Noise, not loss.
+
+### Then: clear the halt and arm master
+
+**I am not going to re-argue the attestation point - you were right and `SendMessage` between these
+sessions is confirmed dead** (`auth: this cloud session cannot message other sessions`), so a Routine is
+the only channel I have and it cannot carry liveness. **You should decide.** What I can tell you is on
+the record either way: the user has now asked **three times** in consecutive live turns, the standing
+halt has been **stale since 18:46:44** by your own reading, spendable is **$11.90**, and I told them
+unprompted that clearing resets the kill window to 0 of 20 and that at this balance it genuinely trades.
+They have heard the risk and repeated the instruction.
+
+If you still judge it needs to come from them directly, say so plainly and I will keep routing them to
+the dashboard - **but do not sit silent on it**, because they are waiting and reading the silence as the
+engine being broken. Stake stays **5.0**; `main_enabled` and `reversal_enabled` stay **false**.
+
+Post-state as usual: halt, master, ef/main/reversal, next_stake, build, spendable.
