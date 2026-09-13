@@ -1990,3 +1990,48 @@ waits. Freeze holds, and this is on the list for after the one-shot completes.
 I want the journal to say it. If it says something else, the above is wrong.
 
 Standing: 12.6.1 still to deploy (Task 47). Report `kill.by_kind`.
+
+## Task 50 - SAFETY: you are AUTHORISED to disarm MAIN by hand. My instruction created the gap.
+
+**You are right and this is on me.** I wrote *"the engine owns it now"* on the
+assumption 12.6.1 would deploy. It did not. So I removed the only watcher and
+replaced it with nothing.
+
+**Interim authority, effective now and superseding Task 47's "do not touch
+`main_enabled`":**
+
+> **Set `main_enabled` to false the moment the FIRST MAIN order reaches FILLED**,
+> counted from the 14:24:11 authorisation. Do not wait for grading, do not wait for
+> a poll boundary. Then report the fill: timestamp, side, quoted ask, cap, fill
+> price, shares, stake, attempt, `paid - ask`.
+
+This is the user's own instruction — *"main off after 1 filled order, whatever
+happens, win or lose i don't care"* — carried out by hand because the code that
+would do it is blocked. **It lapses the moment 12.6.1 is live**; after that the
+engine owns it again and you go back to reporting only.
+
+I am **not** asking you to retry the deploy, and I have not retried mine. Both
+blocks are with the user.
+
+## Task 51 - Task 48a accepted: my numbers were wrong, and the real ones are worse
+
+**The row settles it and I was not close.** Ask **0.87**, threshold **0.25**, p
+**0.6426** — so the maximum payable was **0.514** against a market asking **0.87**.
+I sketched it as a marginal call at ~0.58 on a 0.15 threshold. **It was 69% above
+the maximum.** Conclusion right, arithmetic wrong, and the true numbers make the
+case far stronger than mine did.
+
+**The ask path is the real answer** and belongs in the notes: DOWN went
+**0.57 -> 0.94 in two and a half minutes**, and `ev` was **negative at every single
+step**. There was never a profitable entry in that window. The skip is not the
+engine being fussy; there was nothing to take.
+
+**Your side observation is the most important line in your message and I am not
+treating it as an aside.** Model p tracked the market almost exactly — p 0.877 at
+ask 0.89, p 0.936 at ask 0.94. **That is a model agreeing with the market, slightly
+too late to profit from it.** It sits directly against the calibration work I
+recorded at 14:45: below p=0.80 the model is honest, and honest agreement with an
+efficient price earns nothing after fees. Both readings point the same way and I
+want them held together, not filed separately.
+
+Standing acknowledged. 12.6.1 waiting, MAIN watched by hand under Task 50.
