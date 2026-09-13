@@ -3764,6 +3764,71 @@ stale and I am dropping it from the report** rather than printing a number that 
 Traded at 20:05:16 and lost; **cash 6.9027, one funded trade of runway at the $5 stake.** Kill window
 **1 of 20**. Build 12.8.4, master true, ef true. 12.8.5 still held.
 
+## 20:30 UTC (Sun 09-13) - Task 73: the reject mechanism is MEASURED. Book age at submit, every order ever placed.
+
+**The strongest execution finding of the day, and it needs no correlation argument - it is the quantity
+itself.**
+
+| status | n | min | **median `age_ms`** | p90 | max |
+|---|---|---|---|---|---|
+| **FILLED** | 38 | 73.5 | **86.6** | 189.6 | 615.9 |
+| **REJECTED** | 40 | 75.2 | **174.8** | 391.5 | 488.7 |
+
+**Rejects priced against a book twice as old - +88.2 ms at the median.** Rank test rather than a mean:
+**P(a random reject is older than a random fill) = 0.737** against 0.5 for no difference; U 1120 vs an
+expected 760, **z ~= 3.6, p ~= 0.0003**. `pre_submit_book_age_ms` agrees: **98.2 filled vs 185.7 rejected.**
+
+**And the discriminator is `age_ms`, NOT `snapshot_age_s`** - 0.296 s filled against 0.329 s rejected,
+essentially identical. **So it is the age of the last book EVENT, not of the last full snapshot.** That
+retires the snapshot-staleness theory for good, which is the same quantity CLAUDE.md records as a near-miss
+on 09-12 (a 90 s refusal gated on `snapshot_age_s` would have refused 73% of fills against 53% of rejects).
+The sharper measurement replaces it.
+
+**Sample discipline, stated:** each arm is under 60 (38 and 40), so neither is a "sufficient" bucket by the
+standing rule. Reported anyway on the same basis as 65b at n=36 - an execution measurement over **every
+order ever placed**, not a cell chosen from a grid - and the effect is large and consistent.
+
+**The counter-example, which matters:** today's **20:21:37 order FILLED at `age_ms` 446.7** while 20:11:03
+was rejected at 487.9. **Age shifts the odds; it does not decide the outcome.**
+
+### What the fix is NOT
+
+**Not a threshold.** A refusal gate on `age_ms` is exactly the shape the standing no-gates rule forbids and
+exactly what the 09-12 near-miss would have been. The 446.7 ms fill is the counter-example that kills it.
+
+**And the engine already re-reads before submit** - `pre_submit_quote` is taken from a fresh read at
+`poly_core.py:903`. That re-read is *itself* 185.7 ms old on rejects against 98.2 on fills, so **the age is
+arriving from the feed, not from the engine holding a stale read.** Which points back at the 21% stale-drop
+rate. **The fix is in the feed layer, it is not small, and it goes in at a natural restart with the user
+choosing - not shipped into a live session.**
+
+## 20:21:53 - LOW_BALANCE fired, and acted on nothing. 12.8.3 working in production.
+
+```
+{"kind":"LOW_BALANCE","spendable":1.9149,"stake":5.0,"open_value":0.0,"equity":1.9149,"reads":3,"acted":false}
+```
+
+**Three consecutive low reads, one row recorded, master untouched, no halt, engine kept running.** The
+correction to my over-implementation doing exactly what the user asked for, on its first firing.
+
+## 20:23:16 - the user cut the stake to $3 themselves
+
+`stake_settings.fixed_stake` **5.0 -> 3.0**, `next_stake` 3.0, audit stack
+`poly_dashboard.py:150 update_stake <- :270 apply <- :585 do_POST` - **the UI path**, with two prior
+attempts at 20:22:39 and 20:22:44. They saw the low balance and lowered the stake rather than stopping.
+
+**My standing "stake stays 5.0, do not touch it" is overtaken by the user's own action.** It came from
+*"i did stack 5 keep it 5"*; they have now decided otherwise and neither I nor AWS has touched it in either
+direction. **Recorded so the old instruction is not applied against them later.**
+
+### Runway at the new stake
+
+Cash **1.9149**, open position value **1.694**. **It cannot fund a $3 trade right now.** Once the open
+settles: **~3.61, which is exactly one $3 trade**, leaving ~0.61 and no second. **So the engine stops
+itself on funding after one more trade unless that trade wins.** Told to the user.
+
+Kill window **1 of 20**, not armed. 80 orders / 38 fills / 36 results. 12.8.5 still held.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
