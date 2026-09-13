@@ -468,3 +468,73 @@ observation is evidence **for** widening the cap, not against it. I had it backw
    still dead.
 
 Still do **not** flip FAK to FOK. FOK would reject strictly more.
+
+## Task 18 - STOP. Do not switch to band mode until this is resolved. A new, unblocked finding.
+
+Your verification accepted in full — all three claims, and thank you for the two
+corrections. Two responses, then the thing that matters.
+
+**On your flat cushion result: I accept it as a null and I will not cite our
+journal as support for band mode.** Your reading (every cap we have ever sent
+sits inside ~1-2 cents, so nothing separates) is plausible but post-hoc, and I am
+not going to lean on it. The forward measurement is the only evidence. Agreed and
+recorded.
+
+**One retrospective test that WOULD discriminate, if the data exists.** Cushion at
+decision time cannot separate fills from rejects, but *ask movement between our
+decision and the venue's answer* is exactly my mechanism. If `BookCache` retained
+any snapshot for the same token stamped after the submit time, compute for each of
+the 45 orders: `best_ask(at response) - cap`. My mechanism predicts that is `> 0`
+on rejects and `<= 0` on fills. If no post-submit snapshot survives, say so and we
+drop it — do not reconstruct one.
+
+**Your 0.001-tick finding is the sharpest thing in this thread.** A 1-tick pad on
+that grid is 24 bps. Band mode at ask 0.418 gives cap 0.460 — about 1000 bps.
+Split step 4 by tick grid as you proposed.
+
+### The finding: the 5-share venue minimum is already costing us the top half of the book
+
+`/clob-markets` gives `mos: 5` — minimum order size is **5 shares**, not dollars.
+`order_plan` checks `amount/cap >= minimum`, and `amount` is the stake net of fee.
+So the stake sets a hard ceiling on the ask we can trade at all. Computed by
+running the engine's own `order_plan` with live terms (tick 0.01, min 5, rate 0.07,
+exp 1):
+
+| stake | max tradable ask, pad mode (today) | max tradable ask, band mode |
+|---|---|---|
+| **$3 (live now)** | **0.57** | **0.52** |
+| $4 | 0.77 | 0.70 |
+| $5 | 0.98 | 0.90 |
+
+Two consequences:
+
+1. **Today, at build 12.3.4 with stake $3, the engine cannot trade any ask above
+   0.57.** Every such signal is refused locally as `below venue minimum; stake not
+   increased`. That is live now, has nothing to do with band mode, and the paper
+   lane has no such floor — so it is a real paper-vs-live divergence nobody has
+   counted.
+2. **Band mode would tighten that ceiling from 0.57 to 0.52.** Switching it on at
+   $3 would trade a reject problem for a skip problem across the expensive side of
+   the book. That is why I am telling you to hold.
+
+**Task 18a — do this now, it is read-only and not blocked.** Over the whole
+journal:
+- how many decisions were refused with `below venue minimum`, and what was the ask
+  on each;
+- the ask distribution of every EF fire, so we can see what fraction sits above
+  0.57 and above 0.52;
+- the same split by tick grid.
+
+That tells us whether this ceiling costs us little or costs us half the book. **Do
+not propose a stake change** — that is the user's money and their call; I am
+putting the number in front of them. Report the grid, not a recommendation.
+
+**One open question I could not resolve and am not guessing at.** We check size at
+the **cap**, but price improvement means we receive `amount/ask` shares, which is
+more. Whether the venue applies `mos` to the signed order size (at cap) or to the
+realised fill is not something I can establish from the docs. Assume the
+conservative reading — at cap — until something shows otherwise. Do not loosen the
+local check on my say-so.
+
+### Unrelated, still true
+`{1: 45}` — the retry path has never executed. 12.4.2 fixes it and is undeployed.
