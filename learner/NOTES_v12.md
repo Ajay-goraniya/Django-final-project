@@ -3223,6 +3223,38 @@ Fresh <=1 s n=252 +0.033; stale >1 s n=28 +0.257 - under the bar, not read, not 
 One line for the ledger: **the Polymarket paper is positive on one unbroken window and has not yet been
 tested across a break.**
 
+## 13:21 UTC (Sun 09-13) - fifteenth reading, tenth consecutive positive. Still not arming.
+
+Re-arm reading, Predict.fun v10 paper: last-20 **+0.203** per $1, last-40 **+0.350** per $1, **535 graded**
+(up from 532, so this is a real new reading, unlike 12:21's which was the outage repeating 11:22's).
+Fifteen readings: +0.155, -0.102, -0.001, -0.193, -0.082, +0.004, +0.347, +0.413, +0.412, +0.607, +0.630,
++0.411, +0.295, +0.302, +0.203. Polymarket paper v10 last-20 **-0.010**, last-40 **+0.148**.
+
+Tenth consecutive positive and the last-20 has fallen again while the last-40 rose. Not arming: the criterion
+was refuted at 22:12 on 09-11 under its own review condition and has not been replaced.
+
+All **12** processes verified individually by command line, one of each, no duplicates after the 12:21
+relaunch. Tokyo unchanged: **5W/10L -70.6**, equity 15.02, settled 442, nothing open, ladder $1 OK, master OFF
+and MAIN/REVERSAL/EF all False. Uptime 54.9 h.
+
+**Polymarket v12 live (AWS box) - the hour's real work, summarised here because it is where the money is.**
+- **12.5.0 deployed 13:13:04** and verified against the running module. The execution cap and the EV test are
+  now independent: EV is judged at `ask + 1 tick` regardless of `slippage_mode` and `pad_ticks`, while band
+  keeps the wide cap (ask 0.47 -> cap 0.52, EV judged at 0.48). Marginal candles on the 0.15 line now return
+  the identical verdict in both modes.
+- **My own error, disclosed and now closed by construction:** band mode had been judging EV at the ask, which
+  loosened the bar by +0.019 to +0.028 and admitted marginal trades 12.3.4 refused. I had described band mode
+  as execution-only. It was not.
+- **The user was right about the principle and I was wrong to offer a revert:** once a trade has passed EV the
+  slippage allowance should only help it fill, never re-litigate whether to take it. Band stays on.
+- **Live PnL +1.94 over 23 settled, from +11.01 at 11 settled.** AWS confirmed from `results` that 19 of 23
+  settled before band mode ever executed and the 63.6% -> 55.6% fall happened entirely inside 12.3.4, before
+  any change of mine. Post-band is 4 settled, 1W/3L, per $1 -0.5188 - **n=4, a count, not a rate.**
+- The retry path executed for the first time tonight: attempts `{1: 53, 2: 1}`.
+- Outstanding and requested: `rolling()['kill']['unit_return_sum']` against the -3.00 auto-halt. My estimate
+  from AWS's milestones is roughly +2.6 of headroom, but that is arithmetic on summaries and must come from
+  the journal.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
