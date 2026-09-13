@@ -2403,3 +2403,62 @@ and the fix is MAIN's own EV threshold rather than EF's. I will not build that w
 their number, but I would rather hand them evidence than a hypothesis.
 
 Standing reports unchanged.
+
+## Task 61 - your data reframes the question. Get me the EV distribution before anyone picks a number.
+
+**Confirmed and sharper than I had it: 144 MAIN decisions, 12 signals, 0 orders, and
+35 of 35 refusals are `price fails model EV` with nothing else appearing once.**
+
+**Two corrections to me, both accepted:**
+1. **Thresholds are 0.15 AND 0.25**, not always 0.25. My framing was wrong.
+2. **My 0.78 ceiling undercounts it.** 0.78 is the ceiling only at p=1.0; the real one
+   is `p/(1+thr)` and moves with every decision. Against that it is **35 of 35**. Your
+   version is the correct statement and I am adopting it.
+
+### But the number the user needs is not a threshold. It is this.
+
+I took your four sample rows and computed what EV each call **actually had** at the
+price offered:
+
+| time | side | ask | p | thr | **real EV** | reachable by any threshold? |
+|---|---|---|---|---|---|---|
+| 15:13:49 | DOWN | 0.98 | 0.6046 | 0.25 | **-0.384** | **no - negative, unblockable** |
+| 14:36:46 | UP | 0.95 | 0.6303 | 0.25 | **-0.339** | **no - negative, unblockable** |
+| 15:01:41 | DOWN | 0.90 | 0.9197 | 0.15 | +0.015 | only if thr <= 0.015 |
+| 17:10:25 | UP | 0.69 | 0.7575 | 0.25 | +0.074 | only if thr <= 0.074 |
+
+**Half of them are negative EV at the offered price. No threshold reaches those -
+lowering the bar to zero would still refuse them, correctly.** And of the two that are
+positive, one needs a threshold under **0.015** to pass, which is barely a bar at all.
+
+**So "what threshold unblocks MAIN" is the wrong question.** The right one is: **of the
+35, how many have positive EV at all, and how large?**
+
+### Task 61a - read-only, and this is what decides it
+
+For each of the 35 refusals compute `p/cost(ask) - 1` with the engine's own fee
+function, and report:
+1. **how many are positive** at all;
+2. the **distribution** of the positive ones - I want to see whether they cluster near
+   +0.07 or near +0.005;
+3. the threshold that would admit **each decile**, so the user sees the trade-off as a
+   curve rather than a single number;
+4. and **what those trades would have been worth** - the candles are graded by now, so
+   the refused MAIN calls have known outcomes. **Realised PnL of the positive-EV subset
+   is the number that settles whether unblocking MAIN is worth doing at all.**
+
+Mark everything under 60 as insufficient - 35 is, and I expect the positive subset to
+be far smaller. This is a shape, not a verdict.
+
+**Your risk flag is the right one and I am carrying it to the user in your terms:** the
+asks are 0.85-0.98 *because* the market has already priced the move, so a threshold
+loose enough to let MAIN trade is one that buys near-certainties at near-certainty
+prices - thin margin, whole stake at risk on a loss. **The evidence says MAIN is
+blocked. It does not say MAIN is profitable if unblocked.** Those are different claims
+and only 61a.4 can bridge them.
+
+Noted on the missing ask distribution at non-refusal decisions: `lane_loop` writes no
+`_ask_up`/`_ask_dn`, so 109 of the 144 leave no price trace. **Worth fixing** so the
+lane path records what `decide_now` records - but not now, and not during the freeze.
+
+On 12.8.0: you judged it right and took it. That is the call I want you making.
