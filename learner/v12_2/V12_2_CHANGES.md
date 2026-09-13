@@ -891,3 +891,71 @@ pad 2 before that. Any comparison of fills, rejects or PnL across tonight spans
 three different pad values, and the changeover times are known only to the
 minute. Treat the whole night's execution numbers as three small unpooled
 samples, not one series.
+
+# 12.4.0 — EV is a gate on the decision, and a refused candle re-arms
+
+Two defects the user named directly, both real, both in the design rather than
+in a line of code.
+
+## 1. EV gates the signal, instead of judging it afterwards
+
+> *"ev should be used as a gate inside the signal logics not after the signal is
+> fired, because it's used after the signal it misleading because the signal
+> appears triggered and inside the chart but it is not traded"*
+
+Correct, and it is the most misleading thing this build did. The model decided
+against the **raw ask**; the padded-price EV check ran later inside `order_plan`
+at execution time. So a signal was recorded and drawn on the chart as fired, and
+only then refused. Everything downstream inherited that lie — the fire count, the
+chart, and every comparison against paper.
+
+`decide_now()` now runs the same arithmetic at the price we would really pay,
+before returning. A signal that cannot clear EV at the padded cap comes back
+`fire: False` with the reason, so it never claims to have fired. The gate can
+only ever narrow a fire, never widen one, and it records `ev_gate`,
+`ev_gate_pad`, `ev_gate_ask` and `ev_gate_cap` so the refusal is visible rather
+than silent.
+
+This also removes the double standard against the paper lane: both now decide on
+the same basis.
+
+## 2. A refused attempt no longer consumes the candle
+
+> *"as the signal appears triggered it does not fire again inside the same candle
+> thus we will miss the second oppertunities when the odds will align again"*
+
+Also correct. The reservation is `PRIMARY KEY(epoch,kind)` with `INSERT OR
+IGNORE`, so the first attempt owned the whole five minutes. If it was refused —
+EV changed, signal changed, deadline, missing terms — the candle was finished,
+even though nothing had been sent and the odds might realign twice more inside
+it.
+
+`Journal.release()` now marks the attempt and frees the candle whenever **nothing
+reached the venue**: `SKIPPED`, `DEADLINE`, `SIGNAL_CHANGED`, `EV_CHANGED`,
+`PREPARE_FAILED`. Anything that did reach the venue — `FILLED`, `REJECTED`,
+`UNKNOWN`, `PENDING` — still consumes the candle, because re-firing after an
+order may have landed is how you end up holding two positions on one candle.
+
+Bounded at `MAX_ATTEMPTS_PER_CANDLE = 4`. The count lives in its own
+`candle_attempts` table, not on the signals row — the row is deleted to re-arm,
+so a counter stored there would reset every time and the candle would spin. Each
+re-arm writes a `candle_rearmed` diagnostics row.
+
+Six tests pin the behaviour, including that a sent order never re-fires and that
+the cap actually stops it.
+
+## Not fixed, and not pretended otherwise
+
+The user's list was longer than this. Still open, in their words:
+
+- **MAIN and REV "still not proper"** — 12.2.4 separated signal from position and
+  added a retry cap, but neither lane has been validated with money and the user
+  is not satisfied. Needs its own pass.
+- **"claim, fundable and available amount is still misleading"** — the venue-truth
+  work in 12.2 changed where the numbers come from, not how they are presented.
+- **"many things are not adjustable from trade control panel"** — no list yet of
+  what is missing; that is the first thing to get.
+- **"build 36's slippage rules are not applied"** — build 36's rules have not been
+  read into this build. They should be, rather than reinvented.
+
+Recorded here so they are not lost between sessions.

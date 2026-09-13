@@ -252,6 +252,7 @@ class Journal:
         CREATE TABLE IF NOT EXISTS fills(id TEXT PRIMARY KEY,order_id TEXT,epoch INTEGER,shares REAL,spent REAL,fees REAL,price REAL,basis TEXT);
         CREATE TABLE IF NOT EXISTS results(id INTEGER PRIMARY KEY AUTOINCREMENT,epoch INTEGER UNIQUE,actual TEXT,payout REAL,pnl REAL,ts REAL,claim_status TEXT DEFAULT 'PENDING',claim_id TEXT);
         CREATE TABLE IF NOT EXISTS diagnostics(ts REAL,epoch INTEGER,detail TEXT);
+        CREATE TABLE IF NOT EXISTS candle_attempts(epoch INTEGER,kind TEXT,n INTEGER,PRIMARY KEY(epoch,kind));
         CREATE TABLE IF NOT EXISTS candles(epoch INTEGER PRIMARY KEY,open REAL,high REAL,low REAL,close REAL,volume REAL);
         ''')
         self._add_columns('orders',{
@@ -269,16 +270,20 @@ class Journal:
         self._add_columns('signals',{'kind':"TEXT DEFAULT 'EF'"})
         self._add_columns('orders',{'kind':"TEXT DEFAULT 'EF'"})
         self._migrate_signals_multilane()
+        # After the multilane rebuild, not before: that rebuild recreates the
+        # table from an explicit column list and would drop anything added
+        # ahead of it.
+        self._add_columns('signals',{'attempts':'INTEGER DEFAULT 0'})
         self.c.executescript('''
         CREATE TABLE IF NOT EXISTS venue_state(ts REAL PRIMARY KEY,cash REAL,portfolio_value REAL,
             open_value REAL,realized_pnl REAL,unrealized_pnl REAL,fees_paid REAL,detail TEXT);
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.3.8')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.4.0')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -344,6 +349,36 @@ class Journal:
                                      VALUES(?,?,?,?,?,?,?,?)''',
                 (ep,time.time(),d['side'],token,condition,json.dumps(d),'RESERVED',kind)).rowcount==1
     def status(self,ep,status,kind='EF'): self.sql('UPDATE signals SET status=? WHERE epoch=? AND kind=?',(status,ep,kind))
+    # Outcomes where nothing was ever sent to the venue. A candle that ends in
+    # one of these has NOT been traded, so holding the reservation until the
+    # candle closes throws away every later chance in it.
+    NO_ORDER_SENT={'SKIPPED','DEADLINE','SIGNAL_CHANGED','EV_CHANGED','PREPARE_FAILED'}
+    MAX_ATTEMPTS_PER_CANDLE=4
+    def release(self,ep,status,kind='EF'):
+        """Mark the attempt and free the candle if nothing was sent.
+
+        The reservation is a PRIMARY KEY(epoch,kind) row, so one refused attempt
+        used to consume the whole candle: the signal showed as fired, no trade
+        happened, and a later realignment inside the same five minutes could not
+        fire again. Bounded at MAX_ATTEMPTS_PER_CANDLE so a repeatedly refused
+        candle cannot spin.
+        """
+        self.status(ep,status,kind)
+        if status not in self.NO_ORDER_SENT: return False
+        with self.lock,self.c:
+            # The count cannot live on the signals row: re-arming deletes it, so
+            # the counter would reset every time and the candle would spin.
+            row=self.c.execute('SELECT n FROM candle_attempts WHERE epoch=? AND kind=?',(ep,kind)).fetchone()
+            n=(row[0] if row else 0)+1
+            self.c.execute('INSERT OR REPLACE INTO candle_attempts VALUES(?,?,?)',(ep,kind,n))
+            if n>=self.MAX_ATTEMPTS_PER_CANDLE:
+                self.c.execute('UPDATE signals SET attempts=? WHERE epoch=? AND kind=?',(n,ep,kind))
+                return False
+            self.c.execute('UPDATE signals SET attempts=? WHERE epoch=? AND kind=?',(n,ep,kind))
+            self.c.execute('DELETE FROM signals WHERE epoch=? AND kind=?',(ep,kind))
+            self.c.execute('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(dict(
+                reason='candle_rearmed',kind=kind,after=status,attempt=n))))
+        return True
     def order(self,oid,ep,n,plan,timing=None,kind='EF'):
         self.sql('''INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,reason,timing_json,request_reached,reconcile_count,venue_live,kind)
                     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)''',(oid,ep,n,'SUBMITTING',json.dumps(plan),time.time(),None,None,json.dumps(timing or {}),0,0,0,kind))
@@ -565,7 +600,7 @@ class Executor:
                 q=self.books.quote(token,self.age)
                 if q and q['seq']!=seq: break
                 await asyncio.sleep(.005)
-            else: self.db.status(ep,'DEADLINE',kind); return
+            else: self.db.release(ep,'DEADLINE',kind); return
             timing['quote_wait_ms']=1000*(time.monotonic()-t); timing['quote_read_ms']=timing['quote_wait_ms']; timing['book_age_ms']=q['age_ms']; seq=q['seq']
             # Recorded, never gated on. 12.3.2 refused orders above a snapshot-age
             # limit; the AWS session showed that is a seconds-into-candle
@@ -577,7 +612,7 @@ class Executor:
             # the candle. Instrument, do not gate.
             timing['snapshot_age_s']=q.get('snapshot_age_s')
             t=time.monotonic(); new=reassess(); timing['decision_ms']=1000*(time.monotonic()-t)
-            if not new.get('fire') or new['side']!=d['side']: self.db.status(ep,'SIGNAL_CHANGED',kind); return
+            if not new.get('fire') or new['side']!=d['side']: self.db.release(ep,'SIGNAL_CHANGED',kind); return
             # What tick we believed, and how long since a tick_size_change on
             # this token. If the engine prices on a grid the venue has just moved
             # off, "no orders found to match" follows - this makes that decidable
@@ -589,23 +624,23 @@ class Executor:
             timing['last_tick_change']=(_tc.get('new') if _tc else None)
             try: plan=order_plan(q,_terms,stake,new,self.pad)
             except (ValueError,KeyError) as e:
-                self.db.status(ep,'SKIPPED',kind); self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,str(e))); return
+                self.db.release(ep,'SKIPPED',kind); self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,str(e))); return
             timing['signal_quote']=float(d.get('ask',plan['quote'])) if d.get('ask') is not None else plan['quote']
             t=time.monotonic()
             try: signed,oid=await asyncio.wait_for(self.broker.prepare(token,plan),max(.001,deadline-time.monotonic()))
             except Exception as e:
                 info=error_info(e,phase='prepare',request_reached=False)
-                self.db.status(ep,'PREPARE_FAILED',kind); self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(info)))
+                self.db.release(ep,'PREPARE_FAILED',kind); self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(info)))
                 print('[order prepare failed]',compact_error(info),flush=True); return
             timing['sign_ms']=1000*(time.monotonic()-t)
-            if time.monotonic()>=deadline: self.db.status(ep,'DEADLINE',kind); return
+            if time.monotonic()>=deadline: self.db.release(ep,'DEADLINE',kind); return
             latest=self.books.quote(token,self.age)
             if not latest or latest['seq']!=seq: continue
             plan['pre_submit_quote']=latest['ask']; plan['signal_quote']=timing['signal_quote']
             t=time.monotonic(); final=reassess(); timing['final_recheck_ms']=1000*(time.monotonic()-t)
-            if not final.get('fire') or final.get('side')!=d['side']: self.db.status(ep,'SIGNAL_CHANGED',kind); return
+            if not final.get('fire') or final.get('side')!=d['side']: self.db.release(ep,'SIGNAL_CHANGED',kind); return
             try: order_plan(latest,self.books.terms[token],stake,final,self.pad)
-            except (KeyError,ValueError): self.db.status(ep,'EV_CHANGED',kind); return
+            except (KeyError,ValueError): self.db.release(ep,'EV_CHANGED',kind); return
             timing['pre_submit_book_age_ms']=latest['age_ms']; timing['fire_to_submit_ms']=1000*(time.monotonic()-fire_start)
             self.db.order(oid,ep,n,plan,timing,kind); start=time.monotonic()
             try:

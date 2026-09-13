@@ -4,7 +4,7 @@ import argparse, asyncio, datetime, hashlib, json, math, pathlib, threading, tim
 from btc_model_v10 import Model, FeatureState, FEATURES
 from btc_model_v10_runner import Runner, http_json, GAMMA, CLOB, POLY_WS, US
 import poly_feeds, poly_lanes
-from poly_core import BookCache, Journal, Executor, PaperBroker
+from poly_core import BookCache, Journal, Executor, PaperBroker, order_plan
 from poly_live import LiveBroker
 
 
@@ -157,7 +157,33 @@ class PolyRunner(Runner):
         f=self.st.features(ep*US,int(now*US)) or {}
         d['features']={k:float(v) for k,v in f.items() if isinstance(v,(int,float)) and math.isfinite(v)}
         d['features']['ts_ms']=int(now*1000)
+        # EV is a GATE ON THE DECISION, not a post-mortem on a signal already
+        # shown as fired. Until 12.4.0 the model decided against the raw ask and
+        # the padded-price EV check ran later inside order_plan, so the dashboard
+        # and the chart showed a fire that was never going to trade. That is the
+        # single most misleading thing this build did. The same arithmetic now
+        # runs here, at the price we would actually pay, and a signal that cannot
+        # clear it never claims to have fired.
+        if d.get('fire'): d=self._gate_on_padded_ev(ep,d)
         return d
+    def _gate_on_padded_ev(self,ep,d):
+        """Re-decide against the price we would really pay. Never widens a fire."""
+        toks=self.market.get(ep)
+        if not toks: return dict(d,fire=False,reason='Market not resolved yet')
+        token=toks[0 if d['side']=='UP' else 1]
+        terms=self.books.terms.get(token)
+        if terms is None:
+            return dict(d,fire=False,reason='No venue terms for this token yet')
+        q=self.books.quote(token,self.a.quote_age_ms/1000)
+        if not q: return dict(d,fire=False,reason='No fresh quote to price against')
+        pad=self.pad_ticks(); stake=self.db.get('next_stake',1.)
+        try:
+            plan=order_plan(q,terms,stake,d,pad)
+        except ValueError as e:
+            out=dict(d,fire=False,reason=f'EV at padded price: {e}',ev_gate=str(e),
+                     ev_gate_pad=pad,ev_gate_ask=q['ask'])
+            return out
+        return dict(d,ev_gate='pass',ev_gate_pad=pad,ev_gate_ask=q['ask'],ev_gate_cap=plan['cap'])
     async def decide_loop(self):
         last=0
         while True:

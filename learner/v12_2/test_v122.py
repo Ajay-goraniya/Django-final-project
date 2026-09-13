@@ -615,6 +615,65 @@ class SnapshotAgeTracking(unittest.TestCase):
                          'the snapshot-age refusal must stay removed')
 
 
+class RefusedCandleIsRearmed(unittest.TestCase):
+    """A refused attempt must not consume the candle.
+
+    User, 09-13: "as the signal appears triggered it does not fire again inside
+    the same candle thus we will miss the second opportunities when the odds
+    will align again". The reservation is PRIMARY KEY(epoch,kind), so one
+    refusal used to burn all five minutes. Bounded so a repeatedly refused
+    candle cannot spin.
+    """
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.db = C.Journal(str(pathlib.Path(self.temp.name)/'a.db'), 'PAPER', 'h')
+        self.d = dict(side='UP', fire=True)
+
+    def tearDown(self):
+        self.db.c.close(); self.temp.cleanup()
+
+    def test_a_refused_candle_can_fire_again(self):
+        self.assertTrue(self.db.reserve(100, self.d, 'tok', 'cond'))
+        self.assertFalse(self.db.reserve(100, self.d, 'tok', 'cond'), 'held while in flight')
+        self.db.release(100, 'SKIPPED')
+        self.assertTrue(self.db.reserve(100, self.d, 'tok', 'cond'), 'must re-arm after a refusal')
+
+    def test_a_sent_order_still_consumes_the_candle(self):
+        self.db.reserve(100, self.d, 'tok', 'cond')
+        self.db.release(100, 'REJECTED')      # reached the venue
+        self.assertFalse(self.db.reserve(100, self.d, 'tok', 'cond'),
+                         'an order that was sent must never re-fire')
+
+    def test_filled_never_rearms(self):
+        self.db.reserve(100, self.d, 'tok', 'cond')
+        self.db.release(100, 'FILLED')
+        self.assertFalse(self.db.reserve(100, self.d, 'tok', 'cond'))
+
+    def test_attempts_are_capped(self):
+        n = 0
+        for _ in range(12):
+            if not self.db.reserve(100, self.d, 'tok', 'cond'): break
+            n += 1
+            self.db.release(100, 'SKIPPED')
+        self.assertEqual(n, C.Journal.MAX_ATTEMPTS_PER_CANDLE,
+                         'a repeatedly refused candle must stop, not spin')
+
+    def test_each_no_order_status_rearms(self):
+        for st in ('SKIPPED','DEADLINE','SIGNAL_CHANGED','EV_CHANGED','PREPARE_FAILED'):
+            with self.subTest(status=st):
+                db = C.Journal(str(pathlib.Path(self.temp.name)/f'{st}.db'), 'PAPER', 'h')
+                db.reserve(1, self.d, 't', 'c')
+                db.release(1, st)
+                self.assertTrue(db.reserve(1, self.d, 't', 'c'))
+                db.c.close()
+
+    def test_a_rearm_is_recorded(self):
+        self.db.reserve(100, self.d, 'tok', 'cond')
+        self.db.release(100, 'SKIPPED')
+        rows = [r[2] for r in self.db.sql('SELECT * FROM diagnostics')]
+        self.assertTrue(any('candle_rearmed' in (r or '') for r in rows))
+
+
 class ControlWritesAreAudited(unittest.TestCase):
     """Every change to a money-moving control leaves a named trace.
 

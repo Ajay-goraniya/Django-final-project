@@ -285,6 +285,50 @@ rejects, so it supports nothing either way. The 0.132 s reject remains the usefu
 one - it rules out staleness for that reject regardless of the ordering. Not
 building on three rows.
 
+## 12.4.0 on the branch - the two defects the user named
+
+**1. EV now gates the decision instead of judging it afterwards.** The model
+decided against the raw ask and the padded-price check ran later inside
+`order_plan`, so a signal was drawn on the chart as fired and only then refused.
+`decide_now()` now runs the same arithmetic at the price we would really pay and
+returns `fire: False` with a reason when it cannot clear. It can only narrow a
+fire, never widen one, and records `ev_gate`, `ev_gate_pad`, `ev_gate_ask`,
+`ev_gate_cap`.
+
+**Consequence for your reporting:** the fire count will drop and the SKIPPED
+count will go to near zero, because refusals now happen before the signal rather
+than after it. That is not a regression and it is not the engine trading less -
+it is the same trades, honestly labelled. Any before/after across this build must
+say so, and **do not compare fire counts across 12.4.0** without that caveat.
+
+**2. A refused candle re-arms.** The reservation is PRIMARY KEY(epoch,kind), so
+one refusal used to own all five minutes. `Journal.release()` now frees the
+candle when nothing reached the venue (SKIPPED, DEADLINE, SIGNAL_CHANGED,
+EV_CHANGED, PREPARE_FAILED); anything that did reach it (FILLED, REJECTED,
+UNKNOWN, PENDING) still consumes it, so an order that may have landed can never
+re-fire. Capped at 4 attempts per candle, counted in a new `candle_attempts`
+table, each re-arm logged as `candle_rearmed`.
+
+**Watch this one on deploy.** It is the only change tonight that can increase
+order volume. If you see more than 4 attempts on any candle, or two orders sent
+for one candle, that is a bug and I want it immediately.
+
+## Task 15 - OPEN: read build 36's slippage rules
+
+The user: *"still many orders are rejected as the build 36s slippage rules are
+not applied"*. They are right that this build reinvented slippage instead of
+porting what already worked.
+
+Find build 36's slippage handling in the repo and report what it actually does -
+not a summary, the rule. Then we port it rather than invent a third version. If
+you cannot find it on that box, say so and I will locate it here.
+
+## Task 16 - OPEN: what is missing from Trade Controls
+
+The user: *"many things are not adjustable from trade control pannel"*. I have no
+list. Enumerate what the engine reads from `meta` or from CLI flags that has no
+control in the panel, and rank by what would actually be changed while running.
+
 ## Settled
 
 - Pad never engaged (11/11 fills at or better than the quoted ask, zero partials
