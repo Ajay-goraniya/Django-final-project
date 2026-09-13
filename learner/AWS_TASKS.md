@@ -1102,3 +1102,60 @@ same asymmetry you just flagged on `venue_realized_pnl`, so I would not reconcil
 against them at all. **Close the flag unless a settled row contradicts it.**
 
 Nothing to deploy. Task 22a is now unblocked and is next.
+
+## Task 31 - PRIORITY. The user says my changes are a downgrade. Two of them plausibly are. Measure now.
+
+User: *"before it was skipping, and now it's firing wrong trades... that means your
+edited programs are not updates it's downgrade."* Taking it seriously rather than
+defending. **Two changes of mine can produce exactly that, and one I failed to
+disclose.**
+
+### 1. Band mode loosened the EV bar. I described it as execution-only. It is not.
+
+`poly_core.py`: `_px = q['ask'] if band else cap`. In tick mode EV is judged at
+**ask + 1 tick**; in band mode at **the ask**. Same signal, same book, different
+verdict:
+
+| ask | EV judged at (tick) | EV | EV judged at (band) | EV | **looser by** |
+|---|---|---|---|---|---|
+| 0.42 | 0.43 | +0.2280 | 0.42 | +0.2564 | **+0.0284** |
+| 0.47 | 0.48 | +0.1041 | 0.47 | +0.1268 | **+0.0227** |
+| 0.52 | 0.53 | +0.0036 | 0.52 | +0.0222 | **+0.0186** |
+
+Against a 0.15 threshold that is a real relaxation: a candle scoring 0.13 under
+tick mode scores 0.15 under band mode **and now fires**. **Marginal trades that
+12.3.4 refused are being taken.** I sold band mode as "survivability only, cannot
+widen a fire" — the cap cannot, but the EV test it carries does. That was wrong and
+is corrected here.
+
+### 2. The 12.4.0 candle re-arm permits a later, worse entry in the same candle
+
+A refused candle now re-arms up to 4 times. The second attempt is by definition
+later in the candle against a book that has moved. **We may be taking entries we
+previously skipped precisely because they were late.**
+
+### Task 31a - measure both, read-only, ahead of everything else
+
+1. **Outcome by deploy era**, full grid, every era listed including zeros:
+   pre-11:12:57 (12.3.4 tick) / 11:12:57-12:15:16 (12.4.6-12.4.9, tick caps as we
+   now know) / post-12:15:16 (12.4.10, band live). n, accuracy, per $1 each. **All
+   of these are under 60 — report them as counts and mark every one INSUFFICIENT.**
+2. **`ev_gate` at fire versus outcome.** For every fired candle, the recorded
+   `ev_gate_ask` and the EV it cleared. Do trades clearing between **0.15 and 0.18**
+   — the band that only band mode admits — lose more than those clearing above
+   0.18? That is the direct test of mechanism 1.
+3. **Attempt number versus outcome.** Of fired candles, how many were `attempt` 2,
+   3 or 4 from the re-arm, and how did those do against attempt 1? Direct test of
+   mechanism 2.
+4. **`sec` into candle at fire versus outcome**, which is Task 22a and now clearly
+   the same question.
+
+**Do not change any control on your own.** I am putting the revert to the user, not
+taking it. If they say revert, it is one write — `slippage_mode` back to `ticks`,
+no deploy — which restores 12.3.4's exact EV strictness while keeping the retry
+fix, the dial sync, the diagnostics and rolling observation.
+
+**And note what is NOT in question:** the retry whitelist fix, `_sync_executor_dials`,
+the JSON diagnostics, `rolling()`, the header fix and the four-attempt parity are
+all either pure instrumentation or repairs of things that were plainly broken.
+The user's complaint lands on band mode and the re-arm, and those two only.
