@@ -371,8 +371,41 @@ class PolyRunner(Runner):
         for k in changed: self.db.set(k,False)
         if not self.db.get('halt'): self.db.set('halt',why)
         print('[WIPEOUT] '+why+' - off: '+', '.join(changed),flush=True)
+    def _main_oneshot_check(self):
+        """MAIN disarms itself after ONE filled order.
+
+        User, 09-13: "main off after 1 filled order, whatever happens, win or
+        lose i don't care". So the trigger is the FILL, not the outcome - it
+        fires without waiting for the candle to grade.
+
+        "One" counts from the moment MAIN was armed, taken from the control-write
+        audit trail, not from all time. MAIN already has one historical fill from
+        the 09-12 seeding bug; counting that would disarm the lane before the
+        operator's test ever ran.
+
+        In code rather than in an operator poll, because a poll can miss the
+        window and let a second order through, and the instruction is
+        unconditional.
+        """
+        if not self.db.get('main_enabled'): return
+        armed=None
+        for r in self.db.sql("SELECT ts,detail FROM diagnostics WHERE detail LIKE "
+                             "'%control_write%' AND detail LIKE '%main_enabled%' ORDER BY ts DESC"):
+            try: d=json.loads(r['detail'])
+            except (ValueError,TypeError): continue
+            if d.get('key')=='main_enabled' and d.get('new') is True: armed=r['ts']; break
+        if armed is None: return          # armed before auditing existed; do not guess
+        n=self.db.sql("SELECT count(*) FROM orders WHERE kind='MAIN' AND status='FILLED' AND ts>?",
+                      (armed,))[0][0]
+        if not n: return
+        self.db.set('main_enabled',False)
+        print(f'[MAIN ONE-SHOT] {n} filled MAIN order(s) since arming - main_enabled OFF',flush=True)
     async def reconcile_loop(self):
-        while True: await self.executor.reconcile(); await asyncio.sleep(1)
+        while True:
+            await self.executor.reconcile()
+            try: self._main_oneshot_check()
+            except Exception as e: self.error='main one-shot: '+type(e).__name__
+            await asyncio.sleep(1)
     async def grade_loop(self):
         while True:
             rows=self.db.sql('SELECT DISTINCT epoch FROM fills WHERE epoch<? AND epoch NOT IN (SELECT epoch FROM results)',(time.time()-390,))

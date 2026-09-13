@@ -1850,3 +1850,50 @@ fill-count stop is gone. So report **every MAIN fill as it happens** — timesta
 side, quoted ask, cap, fill price, shares, stake, attempt, `paid - ask` — and the
 spendable balance alongside. **Flag immediately if spendable falls below two
 stakes ($10),** so the user sees the approach rather than only the arrival.
+
+## Task 47 - FINAL rule, supersedes 41 and 46. MAIN off after ONE fill, in code. DEPLOY 12.6.1.
+
+User: *"nooo, main off after 1 filled order, whatever happens, win or lose i don't
+care, and master off when account run out of money for stack"*
+
+**Two separate rules. Both are in code in 12.6.1. You change nothing by hand.**
+
+### Rule 1 - MAIN disarms after ONE fill
+
+`_main_oneshot_check()` runs in the **reconcile loop (1 s)**, so it fires within a
+second of the fill being confirmed.
+
+- **The trigger is the FILL, not the outcome.** It does not wait for the candle to
+  grade — *"win or lose i don't care"* — and there is a test asserting it disarms
+  with zero rows in `results`.
+- **"One" counts from when MAIN was armed**, read from the control-write audit
+  trail. MAIN already has a fill from the 09-12 seeding bug; counting that would
+  disarm the lane before the user's test ever ran. Tested.
+- **Only `FILLED` counts.** REJECTED, UNKNOWN, NO_FILL and PENDING do not. Tested.
+- **Only MAIN.** An EF fill does not disarm it. Tested.
+- If no audit row exists it does nothing rather than guessing.
+
+**In code, not in your poll, deliberately** — a poll can miss the window and let a
+second order through, and this instruction is unconditional.
+
+### Rule 2 - master off when the account cannot fund the stake
+
+Unchanged from 12.6.0: `_wipeout_check()` on the balance loop, three reads (~15 s)
+to avoid tripping on the dip while an order is in flight, clears master and the
+unvalidated lanes, halts with the numbers, never re-arms anything.
+
+### Your instructions
+
+**Do not touch `main_enabled`.** Not to disarm it, not to count fills. The engine
+owns it now. Your job is to report what happened.
+
+**195 tests (55 + 21 + 119). SHA256SUMS 30/30.** Build `12.6.1`.
+
+Deploy, timestamp, re-arm **master**, and confirm after the restart:
+`next_stake` **5.0**, `main_enabled` **true**, `ef_enabled` true, `reversal_enabled`
+false. If `main_enabled` comes back **false**, check whether a MAIN fill landed
+during the swap before assuming a fault.
+
+Then report the one MAIN fill when it happens — timestamp, side, quoted ask, cap,
+fill price, shares, stake, attempt, `paid - ask` — and confirm `main_enabled` went
+false by itself. Execution is what the user asked to see.

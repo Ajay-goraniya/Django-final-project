@@ -1349,3 +1349,65 @@ class WipeoutTurnsMasterOff(unittest.TestCase):
         self.r.a=types.SimpleNamespace(live=False); self.r.cash=0.0
         for _ in range(10): self.r._wipeout_check()
         self.assertTrue(self.db.get('master'))
+
+
+class MainDisarmsAfterOneFill(unittest.TestCase):
+    """User, 09-13: "main off after 1 filled order, whatever happens,
+    win or lose i don't care". The trigger is the FILL, not the outcome."""
+    def setUp(self):
+        import btc_model_v12_polymarket as E
+        self.temp=tempfile.TemporaryDirectory()
+        self.db=C.Journal(str(pathlib.Path(self.temp.name)/'m.db'),'LIVE','h')
+        r=E.PolyRunner.__new__(E.PolyRunner); r.db=self.db
+        r.a=types.SimpleNamespace(live=True); r.error=''
+        self.r=r
+
+    def tearDown(self): self.db.c.close(); self.temp.cleanup()
+
+    def order(self,oid,kind,status,ts):
+        self.db.sql('INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,reason,kind)'
+                    " VALUES(?,?,1,?,'{}',?,0,'',?)",(oid,int(ts),status,ts,kind))
+
+    def test_the_historical_fill_does_not_count(self):
+        """MAIN has one fill from the 09-12 seeding bug. Counting it would
+        disarm the lane before the operator's test ever ran."""
+        self.order('old','MAIN','FILLED',100.0)      # predates arming
+        self.db.set('main_enabled',True)             # audit row written here
+        self.r._main_oneshot_check()
+        self.assertTrue(self.db.get('main_enabled'))
+
+    def test_one_fill_after_arming_disarms_it(self):
+        self.db.set('main_enabled',True)
+        ts=self.db.sql("SELECT max(ts) FROM diagnostics")[0][0]+1
+        self.order('new','MAIN','FILLED',ts)
+        self.r._main_oneshot_check()
+        self.assertFalse(self.db.get('main_enabled'))
+
+    def test_a_reject_is_not_a_fill(self):
+        self.db.set('main_enabled',True)
+        ts=self.db.sql("SELECT max(ts) FROM diagnostics")[0][0]+1
+        for st in ('REJECTED','UNKNOWN','NO_FILL','PENDING'):
+            self.order('o'+st,'MAIN',st,ts)
+        self.r._main_oneshot_check()
+        self.assertTrue(self.db.get('main_enabled'),'only a FILLED order counts')
+
+    def test_an_ef_fill_does_not_disarm_main(self):
+        self.db.set('main_enabled',True)
+        ts=self.db.sql("SELECT max(ts) FROM diagnostics")[0][0]+1
+        self.order('ef','EF','FILLED',ts)
+        self.r._main_oneshot_check()
+        self.assertTrue(self.db.get('main_enabled'))
+
+    def test_it_does_not_wait_for_the_candle_to_grade(self):
+        """win or lose, i do not care - no results row is needed."""
+        self.db.set('main_enabled',True)
+        ts=self.db.sql("SELECT max(ts) FROM diagnostics")[0][0]+1
+        self.order('new','MAIN','FILLED',ts)
+        self.assertEqual(self.db.sql('SELECT count(*) FROM results')[0][0],0)
+        self.r._main_oneshot_check()
+        self.assertFalse(self.db.get('main_enabled'))
+
+    def test_it_is_a_no_op_when_main_is_already_off(self):
+        self.db.set('main_enabled',False)
+        self.r._main_oneshot_check()
+        self.assertFalse(self.db.get('main_enabled'))
