@@ -1610,3 +1610,81 @@ class MainHasAnEntryTheUserCanSee(unittest.TestCase):
     def test_the_empty_page_guard_still_holds(self):
         self.assertEqual(self.ui.orders('NOPE', 0, 10)['rows'], [])
         self.assertEqual(self.ui.history(500, 10)['rows'], [])
+
+
+class TheHaltCanBeClearedFromTheControlsPage(unittest.TestCase):
+    """User, 09-13 19:2x: "I'm not even able to turn onn master it's not turning onn".
+
+    Three things met to make the engine unrecoverable from its own UI:
+
+    1. `/api/controls/apply` refuses `manual_enabled=True` while `halt` is set.
+    2. `controls()` never returned `halt`, so the page could not even show WHY.
+    3. `controls_html.html` had no control that called `/api/controls/clear-halt`,
+       which had existed since 12.4.1 and was only ever reachable by hand.
+
+    So the master toggle bounced with no visible cause and the only recovery was
+    an HTTP call the operator had no way to make. A kill switch whose reset is
+    not on the page is an outage, which is the same lesson 12.4.1 wrote down and
+    this is the half of it that was missed.
+    """
+    HALT = 'Account wiped out: spendable 2.06 below stake 5.00 on 3 consecutive balance reads'
+
+    def setUp(self):
+        import poly_dashboard as D
+        self.temp = tempfile.TemporaryDirectory()
+        self.db = C.Journal(str(pathlib.Path(self.temp.name)/'h.db'), 'LIVE', 'h')
+        self.db.set('master', False); self.db.set('next_stake', 5.0)
+        class Bare(D.Dashboard):
+            def __init__(self): pass
+        self.ui = Bare(); self.ui.db = self.db; self.ui.cache_at = 0
+        self.ui.r = types.SimpleNamespace(a=types.SimpleNamespace(live=True), cash=11.90,
+                                          cash_at=time.monotonic(), revision=1)
+
+    def tearDown(self): self.db.c.close(); self.temp.cleanup()
+
+    def arm(self):
+        return self.ui.apply('/api/controls/apply', dict(confirmed=True, system=dict(manual_enabled=True)))
+
+    def test_the_page_is_told_the_halt_exists(self):
+        self.db.set('halt', self.HALT)
+        self.assertEqual(self.ui.controls()['halt'], self.HALT)
+
+    def test_no_halt_reads_as_none_not_missing(self):
+        self.assertIn('halt', self.ui.controls())
+        self.assertIsNone(self.ui.controls()['halt'])
+
+    def test_arming_master_under_a_halt_fails_with_the_reason(self):
+        self.db.set('halt', self.HALT)
+        with self.assertRaises(ValueError) as cm: self.arm()
+        self.assertIn('wiped out', str(cm.exception))
+        self.assertFalse(self.db.get('master'))
+
+    def test_clear_then_arm_is_the_recovery_path_and_it_works(self):
+        self.db.set('halt', self.HALT)
+        out = self.ui.apply('/api/controls/clear-halt', dict(confirmed=True, acknowledge=self.HALT))
+        self.assertTrue(out['ok']); self.assertIsNone(self.db.get('halt'))
+        self.arm()
+        self.assertTrue(self.db.get('master'), 'master must arm once the kill is cleared')
+
+    def test_clearing_does_not_arm_master_by_itself(self):
+        self.db.set('halt', self.HALT)
+        self.ui.apply('/api/controls/clear-halt', dict(confirmed=True, acknowledge=self.HALT))
+        self.assertFalse(self.db.get('master'), 'two deliberate acts, not one')
+
+    def test_a_wrong_acknowledgement_clears_nothing(self):
+        self.db.set('halt', self.HALT)
+        with self.assertRaises(ValueError):
+            self.ui.apply('/api/controls/clear-halt', dict(confirmed=True, acknowledge='yes'))
+        self.assertEqual(self.db.get('halt'), self.HALT)
+
+    def test_clearing_restarts_the_kill_window(self):
+        self.db.set('halt', self.HALT)
+        out = self.ui.apply('/api/controls/clear-halt', dict(confirmed=True, acknowledge=self.HALT))
+        self.assertAlmostEqual(self.db.get('halt_cleared_at'), out['window_restarts_at'], places=6)
+
+    def test_the_page_actually_carries_the_control(self):
+        page = pathlib.Path(__file__).with_name('controls_html.html').read_text()
+        self.assertIn('/api/controls/clear-halt', page, 'the reset must be reachable from the UI')
+        self.assertIn('clearHalt', page)
+        self.assertIn('acknowledge:state.halt', page, 'the exact reason must be echoed, never retyped')
+        self.assertIn('haltBox', page)

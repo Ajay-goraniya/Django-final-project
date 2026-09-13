@@ -231,7 +231,13 @@ class Dashboard:
                     'REVERSAL':'Build 11 hedge lane (ported; 53 live fills on Predict.fun)'}[k]
             kinds[k]=dict(manual_enabled=self.db.get(key,True),effective_enabled=self.allowed(k),
                           source_available=True,status=status)
-        return dict(master_enabled=self.db.get('master'),clock=now.strftime('%H:%M:%S'),timezone='Europe/London',
+        # `halt` blocks every lane through allowed() AND makes /api/controls/apply
+        # refuse to arm master. It was never sent to the controls page, so the
+        # operator saw a master toggle that bounced with no visible cause and had
+        # no control to clear the thing causing it. Reported by the user on 09-13:
+        # "I'm not even able to turn onn master it's not turning onn".
+        return dict(master_enabled=self.db.get('master'),halt=self.db.get('halt'),
+          clock=now.strftime('%H:%M:%S'),timezone='Europe/London',
           execution=dict(ready=ready,missing=[] if ready else ['waiting for feed / balance readiness']),
           kinds=kinds,
           state_x=dict(enabled=self.db.get('sx_enabled'),active=self.db.get('sx_enabled') and time.time()<self.db.get('sx_until',0),loss_streak=self.db.get('sx_losses',0),resume_time=dt.datetime.fromtimestamp(self.db.get('sx_until',0),LONDON).strftime('%H:%M'),trigger_reason='2 consecutive settled losses'),

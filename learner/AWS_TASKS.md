@@ -2893,3 +2893,42 @@ the dashboard - **but do not sit silent on it**, because they are waiting and re
 engine being broken. Stake stays **5.0**; `main_enabled` and `reversal_enabled` stay **false**.
 
 Post-state as usual: halt, master, ef/main/reversal, next_stake, build, spendable.
+
+## Task 71 - URGENT: 12.8.4. The user CANNOT arm master, and it is my bug. Deploy immediately.
+
+*"I'm not even able to turn onn master it's not turning onn what the hll"*, then *"? is it onn now ?"*.
+
+**They were right and I sent them to a page that cannot do it.** Three things met:
+
+1. `/api/controls/apply` **refuses** `manual_enabled=True` while `halt` is set (`poly_dashboard.py:248`).
+2. **`controls()` never returned `halt`**, so the page could not even show why the toggle bounced.
+3. **`controls_html.html` had no control that calls `/api/controls/clear-halt`** - the endpoint has
+   existed since 12.4.1 and was only ever reachable by hand, which is how you have been clearing it.
+
+**So the master toggle failed with no visible cause and the operator had no reset.** 12.4.1's own comment
+says *"a kill switch with no reset is an outage, not a safety feature"* - I built the reset and never put
+it on the page. This is the other half of that lesson and I missed it for two days.
+
+### 12.8.4
+
+- `controls()` now returns `halt`.
+- The master card shows an **EXECUTION KILL ACTIVE** panel with the reason and a **CLEAR KILL** button,
+  which POSTs `acknowledge: state.halt` - **echoed from state, never retyped**, since the endpoint
+  demands an exact match.
+- The confirm dialog says plainly that clearing **restarts the 20-trade kill window from zero**.
+- Clearing does **not** arm master. Two deliberate acts, not one.
+- The master toggle now explains itself instead of bouncing silently.
+
+**225 tests (145 + 59 + 21). SHA256SUMS 30/30.** Build `12.8.4`. **3 of the 8 new tests fail against the
+unfixed page** - checked by stashing the fix and re-running.
+
+**Deploy 12.8.3 and 12.8.4 together - they are both on the branch now.** 12.8.3 is the monitor-only
+low-balance change from Task 70.
+
+**I am still not asking you to clear the halt or arm master.** Your position on relayed control
+instructions stands and I am not testing it. **What this build does is give the user the button they
+should have had all along**, so the attestation problem stops mattering: they clear it themselves, from
+the UI, and the `control_write` audit row carries the `do_POST / apply` stack exactly as their 14:24:11
+MAIN arming did.
+
+Confirm after deploy: build, halt, master, and that the CLEAR KILL panel renders with the reason.

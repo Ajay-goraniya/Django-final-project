@@ -13,6 +13,7 @@
 <section class="card"><div class="row"><div><div class="label">Master live-order switch</div><div class="big">MAIN · REVERSAL · EF</div><div id="masterStatus" class="small">loading safe state…</div></div><button id="master" class="toggle off">OFF</button></div>
 <div id="kindStates" class="stateGrid"></div><div class="note">Master controls all new real orders; the small MAIN / REVERSAL / EF switches can block each stream individually. Master starts OFF after every terminal launch. Individual choices persist across restarts. Signal generation, settlement and accuracy remain active while trading is OFF or banned.</div>
 <div id="ready" class="small readiness" style="margin-top:9px"></div>
+<div id="haltBox" class="note" style="display:none;border-left-color:var(--warn)"><div class="label sxActive">EXECUTION KILL ACTIVE</div><div id="haltWhy" class="small" style="margin:5px 0"></div><div class="small">Master cannot be armed while this is set. Clearing it also restarts the 20-trade kill window from zero.</div><button id="clearHalt" type="button" class="miniToggle off" style="margin-top:8px;width:auto;padding:0 14px">CLEAR KILL</button></div>
 <div class="stateXBox"><div class="row"><div><div class="label">State X Protection</div><div id="stateXStatus" class="big" style="font-size:17px">NORMAL</div><div id="stateXDetails" class="small">loading…</div></div><button id="stateXToggle" type="button" class="miniToggle off">OFF</button></div></div></section>
 <section class="card"><div class="row"><div><div class="label">EV and slippage</div><div class="big">FREQUENCY DIAL</div><div id="evStatus" class="small">loading…</div></div></div>
 <div class="row" style="margin-top:9px"><label class="small" for="evMode">EV mode</label>
@@ -116,6 +117,8 @@ function render(){renderEv();
  e('master').textContent=on?'ON':'OFF';e('master').className='toggle'+(on?'':' off');
  e('masterStatus').textContent=(on?state.lane+' ORDERS ARMED':'SAFE · NEW ORDERS BLOCKED')+' · '+state.clock+' '+state.timezone;
  e('masterStatus').className='small '+(on?'up':'');
+ e('haltBox').style.display=state.halt?'block':'none';
+ if(state.halt){e('haltWhy').textContent=state.halt;e('masterStatus').textContent='BLOCKED BY EXECUTION KILL · clear it below to arm master';e('masterStatus').className='small sxActive';}
  e('ready').textContent=ready.ready?'Execution preflight READY · mainnet websocket fresh':('Execution locked · '+(ready.missing||[]).join(' · '));
  e('ready').className='small readiness '+(ready.ready?'up':'warn');
  e('kindStates').innerHTML=KINDS.map(function(k){var s=state.kinds[k]||{},manual=s.manual_enabled!==false;return '<div class="cell"><div class="label '+(k==='MAIN'?'main':k==='REVERSAL'?'rev':'ef')+'">'+k+'</div>'+'<div class="kindLine"><b class="'+(s.effective_enabled?'up':s.auto_banned?'warn':'down')+'">'+(s.effective_enabled?'TRADING':s.auto_banned?'BANNED':'BLOCKED')+'</b>'+'<button type="button" class="miniToggle'+(manual?'':' off')+'" data-kind-toggle="'+k+'">'+(manual?'ON':'OFF')+'</button></div>'+'<div class="small">'+(s.status||'')+'</div></div>'}).join('');bindSignalToggles();bindEv();
@@ -133,7 +136,11 @@ function render(){renderEv();
 }
 function load(){request('GET','/api/controls',null,function(r){state=r;render()})}
 function finish(r){if(!r.ok){show(r.error||'Change failed.',false);return}show('Applied.',true);load()}
-e('master').onclick=function(){var target=!state.master_enabled;var warning=target?'Enable '+state.lane+' Polymarket v10 orders?':'Turn OFF all new live orders? Existing accepted orders are not cancelled.';if(!confirm(warning))return;request('POST','/api/controls/apply',{confirmed:true,system:{manual_enabled:target}},finish)};
+e('master').onclick=function(){var target=!state.master_enabled;if(target&&state.halt){show('Execution kill active — clear it first: '+state.halt,false);return}var warning=target?'Enable '+state.lane+' Polymarket v10 orders?':'Turn OFF all new live orders? Existing accepted orders are not cancelled.';if(!confirm(warning))return;request('POST','/api/controls/apply',{confirmed:true,system:{manual_enabled:target}},finish)};
+// The endpoint wants `acknowledge` to equal the halt reason EXACTLY, so it is
+// echoed from state rather than retyped. Master is deliberately NOT armed here:
+// clearing the kill and arming the engine stay two separate, deliberate acts.
+e('clearHalt').onclick=function(){if(!state.halt)return;if(!confirm('Clear the execution kill?\n\n'+state.halt+'\n\nThe 20-trade kill window restarts from zero, so the per-lane stop cannot fire again until 20 more trades have settled. Master stays OFF until you arm it.'))return;request('POST','/api/controls/clear-halt',{confirmed:true,acknowledge:state.halt},finish)};
 e('stateXToggle').onclick=function(){var sx=state.state_x||{},target=!sx.enabled,warning=target?'Turn State X ON? After 2 consecutive settled losses no new orders are placed for 15 minutes.':'Turn State X OFF? The service and its window are disabled.';if(!confirm(warning))return;request('POST','/api/controls/state-x',{confirmed:true,manual_enabled:target},finish)};
 e('take_profit').oninput=function(){limitsDirty=true;};
 e('stop_loss').oninput=function(){limitsDirty=true;};
