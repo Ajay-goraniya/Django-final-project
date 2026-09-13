@@ -1626,3 +1626,47 @@ the stack is useless, that is a defect to fix before we need it in anger.
 
 Standing, unchanged: blended -0.4042 · EF -0.7161, armed, headroom 2.2839.
 Freeze otherwise holds; the 60-result clock has still not started.
+
+## Task 42 - "why isn't it placing any orders recently" - distinguish quiet from broken. Read-only.
+
+User asks why there have been no orders. Last order was ~14:00; it is now ~14:31,
+so **about 6 candles**. At the historical base rates from your own counts (a signal
+on 24.3% of candles, an order on 9.7%):
+
+| window | candles | P(no order) | P(no signal) |
+|---|---|---|---|
+| 25 min | 5 | 0.60 | 0.25 |
+| **31 min** | **6** | **~0.55** | **~0.19** |
+| 45 min | 9 | 0.40 | 0.08 |
+| 60 min | 12 | 0.30 | 0.04 |
+
+**So a quiet half hour is roughly a coin flip and is not evidence of anything.**
+And the expected rate is now **lower** than that 9.7%, because 12.5.0 restored the
+stricter EV bar at 13:13:04 — undoing the loosening band mode had introduced. Fewer
+marginal fires is the intended effect of the fix, not a fault.
+
+**But "probably normal" is not "verified", and there is a check that separates
+quiet from broken. Run it now:**
+
+1. **Is the engine still deciding?** Count `diagnostics` rows written since
+   14:00, and specifically `order_plan_refused` rows from 12.4.9's JSON.
+   **Refusals accumulating = the engine is evaluating candles and declining them,
+   which is healthy.** Zero rows of any kind = it has stopped deciding, and that is
+   a real fault.
+2. **Of those refusals, the `error` breakdown**, and for the EV ones the recorded
+   `ask`, `p` and `threshold`. That tells us whether it is declining because the
+   book is expensive right now or because the model has stopped producing fires.
+3. **Feed health:** `applied` counter still climbing, `dropped_stale`,
+   `dropped_future`, book age, and the decide loop's last pass.
+4. **Confirm the obvious ones are not it:** halt is still None, master still true,
+   ef_enabled still true, and cash is sufficient for a $3 stake
+   (`cash - live_reserve >= 3`). A silently insufficient balance would look exactly
+   like this.
+
+**Report the counts, and say plainly which of "quiet" or "broken" the data
+supports.** If it is broken, that is freeze exit condition 1 and I want it at once.
+
+This does not break the freeze — it is read-only.
+
+Standing: blended -0.4042 · EF -0.7161, armed, headroom 2.2839 · MAIN armed by the
+user, off after 2 FILLED MAIN orders per Task 41.
