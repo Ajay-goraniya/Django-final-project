@@ -437,7 +437,13 @@ class Dashboard:
                         local_vs_venue=divergence)),trades=self.pnl(),latency=r.executor.latency_stats(),chart_revision=r.revision,error=r.error,dashboard_errors=list(getattr(self,'errors',[])),lane='LIVE' if r.a.live else 'PAPER',model_hash=r.hash,fee_basis=r.broker.basis,halt=self.db.get('halt'))
         self.cache_at=time.monotonic(); return self.cache
     def page(self,name):
-        text=(ROOT/name).read_text().replace('__VERSION__','12 Polymarket').replace('__BUILD__','12.4.4 · v10 PnL · '+('LIVE' if self.r.a.live else 'PAPER')).replace('__UPTIME_SEC__',str(time.time()-self.r.started))
+        # The build shown to the operator is READ FROM THE JOURNAL, never
+        # written here. This literal was hardcoded and went stale: the header
+        # still read 12.4.4 while 12.4.6 was live, so the one screen the user
+        # checks to see what is running was the one thing lying about it. Two
+        # places to bump means one of them is eventually wrong; there is now one.
+        build=self.db.get('build') or 'unknown'
+        text=(ROOT/name).read_text().replace('__VERSION__','12 Polymarket').replace('__BUILD__',build+' · v10 PnL · '+('LIVE' if self.r.a.live else 'PAPER')).replace('__UPTIME_SEC__',str(time.time()-self.r.started))
         return text
     def make_server(self):
         ui=self

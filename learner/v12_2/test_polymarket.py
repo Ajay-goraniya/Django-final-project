@@ -207,7 +207,7 @@ class Tests(unittest.TestCase):
     def test_v120_database_migrates_additively(self):
         self.db.reserve(123,decision(),'up','condition')
         self.db.set('build','12.0'); self.db.c.close(); self.db=Journal(self.path,'PAPER','abc')
-        self.assertEqual(self.db.get('build'),'12.4.7')
+        self.assertEqual(self.db.get('build'),'12.4.8')
         self.assertEqual(self.db.sql('SELECT count(*) FROM signals WHERE epoch=123')[0][0],1)
         cols={r[1] for r in self.db.c.execute('PRAGMA table_info(orders)')}
         self.assertTrue({'error_json','timing_json','request_reached','reconcile_count','venue_live'}<=cols)
@@ -293,6 +293,25 @@ class DashboardTests(unittest.TestCase):
         page=self.ui.page('dashboard_html.html')
         for name in ['id="lwchart"','id="history"','id="pnlCanvas"','Trade Controls','sideTiles']: self.assertIn(name,page)
         self.assertNotIn('Predict.fun',page);self.assertNotIn('__VERSION__',page)
+
+    def test_header_build_is_read_from_the_journal(self):
+        """The screen the operator checks must not lie about what is running.
+
+        This literal was hardcoded and went stale: the header read 12.4.4 while
+        12.4.6 was live. Two places to bump means one is eventually wrong.
+        """
+        page=self.ui.page('controls_html.html')
+        self.assertIn(self.r.db.get('build'),page)
+        self.assertNotIn('__BUILD__',page)
+        self.r.db.set('build','99.9.9')
+        self.assertIn('99.9.9',self.ui.page('controls_html.html'))
+
+    def test_no_version_literal_is_hardcoded_in_the_dashboard(self):
+        """poly_core's meta build is the single source; nothing else states one."""
+        import pathlib,re
+        src=pathlib.Path(__file__).with_name('poly_dashboard.py').read_text()
+        src=re.sub(r'#[^\n]*','',src)          # comments may name past builds
+        self.assertEqual(re.findall(r"['\"]12\.\d+\.\d+",src),[])
     def test_ladder_two_checks_up_immediate_down(self):
         self.ui.update_stake();self.assertEqual(self.r.db.get('next_stake'),1)
         self.ui.update_stake();self.assertEqual(self.r.db.get('next_stake'),4)

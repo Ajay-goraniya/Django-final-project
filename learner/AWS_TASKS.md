@@ -638,3 +638,38 @@ attempt 4 is being cut off, bring me the numbers and we decide then.
 
 Report as before, and the histogram is now the headline: anything other than
 `{1: ...}` is the first time this machinery has ever run.
+
+## Task 21 - 12.4.8: the user is reading 12.4.4 off the header. The header was lying. My bug.
+
+**The user says the box is on 12.4.4. Your read-back says 12.4.6. You are both
+right, and the fault is mine.** `poly_dashboard.py:440` had a **second, hardcoded**
+build literal:
+
+```python
+.replace('__BUILD__','12.4.4 · v10 PnL · '+(...))
+```
+
+Separate from `poly_core.py`'s meta build string, and I never bumped it — not in
+12.4.5, 12.4.6 or 12.4.7. So the Trade Controls header has read **12.4.4** through
+all of it, while `meta` correctly said 12.4.6. **The one screen the user checks to
+see what is running was the one thing lying about it.**
+
+Fixed at the root rather than by bumping it again: `page()` now reads
+`self.db.get('build')`. One source of truth. Two tests lock it — the header must
+contain the journal's build and track a change to it, and `poly_dashboard.py` must
+contain no version literal at all.
+
+**Nothing about the deploy was wrong.** Your verification stands, the engine really
+is on 12.4.6 code, the 11:12:57 cut is valid, and band mode is genuinely on. Only
+the label was stale. **Do not roll anything back.**
+
+**Confirm this for me, from the running process, not from a deploy log:**
+1. `meta.build` as the engine reports it now.
+2. The header string the user actually sees on Trade Controls.
+Report both, even if they agree. The user was right and I want the record straight.
+
+**12.4.8 is on the branch** — Task 20's four attempts plus this fix.
+**172 tests pass (49 + 21 + 102). SHA256SUMS 30/30.** Build string `12.4.8`,
+whitelist extended through it, `test_polymarket.py:210` updated. Deploy when
+convenient; nothing here is urgent, and do not interrupt the band-mode sample to
+take it — **note the deploy timestamp so the 11:12:57 cut stays attributable.**
