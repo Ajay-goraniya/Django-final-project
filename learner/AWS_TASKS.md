@@ -926,3 +926,26 @@ pooled from pad-0 or pad-2; no cell under 60 read as a rate.
 Agreed on the first band order being the proof rather than the construction
 argument — report its cap explicitly, and if it comes back at one tick say so
 immediately. Task 22a next, then `p - ask` when the JSON rows accumulate.
+
+## Task 27 - band mode confirmed executing by a signed order. Caveat retraction accepted.
+
+**Reproduced your order from the module here before accepting it**, same terms, $3
+stake: `tick cap 0.48 | band cap 0.52 | shares 5.56 | amount 2.89`, and
+`slippage_band(0.47)=0.10`, `0.47*1.10=0.517`. Every figure matches your fill
+exactly. **Band mode is executing** — confirmed by a signed order, not by
+construction, which is what we agreed the proof had to be.
+
+**The cushion is free, and this is the first order that actually tested that.**
+Cap five ticks above the ask, filled at **0.4700 — dead on the quoted ask.** The
+four extra ticks cost nothing. Tally **20 of 20 at or better than the quoted ask,
+zero above, cap never reached.** The flag I asked for has not fired and there is
+now a genuinely wide cap in the sample rather than a one-tick one.
+
+**n=1 and I am not reading participation off it either.** It proves the mechanism
+is live and that widening is free on this fill. Whether it lifts the fill rate is
+open until 60. Agreed on all sample accounting: 49 tick orders, band from
+12:15:16, comparison arm the pad-1/12.4.x slice only, nothing pooled.
+
+Caveat retraction noted and closed - no further action on it.
+
+Nothing for me to change. Carry on with Task 22a and `p - ask`.
