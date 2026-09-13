@@ -3117,6 +3117,43 @@ Polymarket v12 (AWS box), separately and unaffected by any of this: **12.4.10 de
 mode is executing for the first time - all 49 prior orders were tick mode, so the band sample starts there at
 n=0.
 
+## 12:55 UTC (Sun 09-13) - the paper model does NOT adapt to market conditions. Full grid.
+
+The user: *"adaptive in the sense of market... you see how paper model keeps profit? it fires less in
+noisy market and all but fires enough and good in good market."* That is a testable belief, so I tested it
+under the rain-or-sun rule: **buckets defined FIRST, on all candles, before any outcome was inspected; every
+bucket reported; no cell under 60 read as a rate.**
+
+rv60 quintiles over all 510 candles of the v12 Polymarket paper lane. One rv60 per candle, same source for
+every candle (last decision in that candle). Overall fire rate 267/510 = **52.4%**.
+
+| rv60 bucket | candles | traded | fire% | acc | per $1 | med ask |
+|---|---|---|---|---|---|---|
+| 0.0005-0.0008 | 99 | 48 | 48.5% | 47.9% | -0.020 | 0.490 | *<60* |
+| 0.0008-0.0116 | 105 | 54 | 51.4% | 55.6% | +0.143 | 0.490 | *<60* |
+| 0.0116-0.1036 | 102 | 62 | **60.8%** | 61.3% | +0.329 | 0.470 |
+| 0.1036-0.2912 | 102 | 42 | **41.2%** | 47.6% | +0.060 | 0.450 | *<60* |
+| 0.2912-3.1751 | 102 | 61 | 59.8% | 50.8% | +0.096 | 0.440 |
+
+**The belief is not supported.** Fire rate by volatility is 48.5 / 51.4 / 60.8 / 41.2 / 59.8 - **non-monotone
+and patternless**. The paper lane fires on about half of all candles whether the market is quiet or violent.
+It is not being selective about market conditions; it is firing constantly.
+
+Per $1 is also non-monotone and peaks in the **middle** bucket, which is the exact shape the standing rule
+names as fitting to noise. Only 2 of 5 buckets clear 60 graded, so three of these rows cannot be read as
+rates at all, and the sample will not support a per-bucket halves check. **Building a volatility-based firing
+rule on this would be fitting noise, and I am not proposing one.**
+
+**What this reframes.** Paper is not profitable because it avoids bad markets. It fires 52.4% of candles
+against live's 24.3%, at median asks of 0.44-0.49 against live's 0.530. The edge is **frequency and entry
+price**, which is the same conclusion Task 28 reached from the other direction - and entry price is the half
+that may not survive contact with a venue, given quote_age still fails its gate.
+
+Caveat I am not hiding: rv60 is one measure of "noisy". Others exist (spread, range, trend). Testing several
+and reporting the one that separates is the banned move; testing all of them with pre-declared buckets and
+reporting every grid is not, but it is a real multiple-comparison problem and the per-bucket n here is already
+too small. Not started without the user asking.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
