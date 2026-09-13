@@ -658,6 +658,67 @@ class MultiLaneCandleIsNotDoubleCounted(unittest.TestCase):
         self.assertNotIn('JOIN fills f USING(epoch)', src)
 
 
+class FailedRedeemStaysReachable(unittest.TestCase):
+    """A redeem that raised must not put the row where no query can see it.
+
+    Verified on the live box 09-13: six winning candles worth $39.12 were stuck
+    at claim_status=REVIEW with claim_id NULL - excluded from the PENDING redeem
+    path and from the recovery poll, which needs claim_id NOT NULL. Three of the
+    six accrued after the first count, so it was an active leak. The money is
+    not lost; the rows are unreachable BY THE ENGINE and need redeeming by hand.
+    """
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.db = C.Journal(str(pathlib.Path(self.temp.name)/'a.db'), 'PAPER', 'h')
+        self.db.sql("INSERT INTO results(epoch,actual,payout,pnl,ts,claim_status) "
+                    "VALUES(100,'UP',6.85,3.97,0,'PENDING')")
+
+    def tearDown(self):
+        self.db.c.close(); self.temp.cleanup()
+
+    def status(self):
+        r = self.db.sql('SELECT claim_status,claim_id,coalesce(claim_tries,0) FROM results WHERE epoch=100')[0]
+        return r[0], r[1], r[2]
+
+    def fail_once(self):
+        """What the exception handler now does when redeem() raised."""
+        n = self.status()[2] + 1
+        self.db.sql("UPDATE results SET claim_status=?,claim_tries=? WHERE epoch=?",
+                    ('PENDING' if n < 5 else 'REVIEW', n, 100))
+
+    def test_a_failed_redeem_returns_to_pending(self):
+        self.fail_once()
+        self.assertEqual(self.status()[0], 'PENDING')
+        self.assertIsNone(self.status()[1], 'nothing was submitted, so there is no claim id')
+
+    def test_it_is_still_selected_by_the_redeem_path(self):
+        self.fail_once()
+        rows = self.db.sql("SELECT epoch FROM results WHERE claim_status='PENDING'")
+        self.assertEqual([r[0] for r in rows], [100], 'the row must stay reachable')
+
+    def test_retries_are_bounded(self):
+        for _ in range(6):
+            self.fail_once()
+        self.assertEqual(self.status()[0], 'REVIEW')
+        self.assertGreaterEqual(self.status()[2], 5)
+
+    def test_an_exhausted_row_is_visible_to_a_human(self):
+        for _ in range(6):
+            self.fail_once()
+        stuck = self.db.sql("SELECT epoch,payout FROM results "
+                            "WHERE claim_status='REVIEW' AND claim_id IS NULL")
+        self.assertEqual(len(stuck), 1, 'REVIEW must mean "look at this", not "lost"')
+
+    def test_the_old_behaviour_was_unreachable(self):
+        # what the handler used to do
+        self.db.sql("UPDATE results SET claim_status='REVIEW' WHERE epoch=100")
+        pending = self.db.sql("SELECT epoch FROM results WHERE claim_status='PENDING'")
+        recover = self.db.sql("SELECT epoch FROM results WHERE "
+                              "claim_status IN ('REVIEW','SUBMITTING') AND claim_id IS NOT NULL")
+        self.assertEqual(pending, [], 'excluded from the redeem path')
+        self.assertEqual(recover, [], 'and from the recovery poll - no path back')
+
+
 class UnfilledFakIsRetryable(unittest.TestCase):
     """The venue sends a sentence; the whitelist compared it for equality.
 

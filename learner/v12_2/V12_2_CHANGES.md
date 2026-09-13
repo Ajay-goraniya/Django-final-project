@@ -1152,3 +1152,51 @@ inside the loop.
   markets; dormant under fixed sizing, live under ladder or percent.
 - The clock-drift guard only corrects a clock that is *behind* the venue.
 - Ladder mode ignores the configured `max_stake`.
+
+# 12.4.3 — the stranded payouts are worse than reported, and fixed at source
+
+The AWS session re-counted against the live database rather than taking the code
+review on trust. **It is 6 rows and $39.12, not 4 and $25.24 — and three of the
+six accrued after the first count, so it was an active leak.**
+
+| claim_status | n | payout | claim_id NULL |
+|---|---|---|---|
+| CONFIRMED | 4 | 24.05 | 0 |
+| NO_PAYOUT | 7 | 0.00 | 7 |
+| **REVIEW** | **6** | **39.12** | **6** |
+
+Six of ten winning candles, the newest under an hour old when counted.
+
+## Why no code could reach them
+
+- the redeem path selects `claim_status='PENDING'`, sets `'SUBMITTING'`, calls
+  `redeem()`, then writes `claim_id`;
+- if `redeem()` **raises**, the claim_id write never runs and the handler set
+  `'REVIEW'` — with `claim_id` still NULL;
+- the recovery poll selects `claim_status IN ('REVIEW','SUBMITTING') AND
+  claim_id IS NOT NULL`.
+
+So the row is excluded from the redeem path (not PENDING) and from the recovery
+poll (claim_id is NULL), and the only route back to PENDING lives *inside* the
+poll that already requires a non-NULL claim id. There was no path back.
+
+12.4.2 added a sweep that moves such rows to PENDING, which works. 12.4.3 fixes
+the state at source instead, which is truer: **REVIEW meant "submitted, outcome
+unclear", and a `redeem()` that raised never submitted anything.** The handler
+now records a spent try and returns the row to `PENDING`; only after five
+failures does it become `REVIEW`, which is now a state a human is meant to look
+at rather than a black hole.
+
+Five tests pin it, including one that reproduces the old behaviour and asserts
+both queries miss it.
+
+## The money is not lost
+
+Those positions won and the payouts are redeemable at the venue. What failed is
+our on-chain redemption call. **They can be redeemed by hand, and until they are,
+the engine's wallet and its reported PnL diverge from reality by $39.12.** The
+fix stops the leak; it does not reach back for what is already stranded.
+
+Also confirmed independently: **all 45 live orders are `attempt=1`**. The
+three-attempt FAK retry has still never executed on the deployed build, matching
+the dead whitelist 12.4.2 fixed but which is not yet deployed.

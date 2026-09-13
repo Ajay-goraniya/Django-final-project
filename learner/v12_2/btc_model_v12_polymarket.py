@@ -374,7 +374,21 @@ class PolyRunner(Runner):
                     # The SDK terminal state must confirm success; no result guessed.
                     state='CONFIRMED' if getattr(outcome,'transaction_hash',None) else 'REVIEW'
                     self.db.sql('UPDATE results SET claim_status=? WHERE epoch=?',('CONFIRMED' if state in ('CONFIRMED','STATE_CONFIRMED','STATE_MINED','MINED') else 'REVIEW',row['epoch']))
-                except Exception: self.db.sql("UPDATE results SET claim_status='REVIEW' WHERE epoch=?",(row['epoch'],))
+                except Exception:
+                    # REVIEW meant "submitted, outcome unclear". A redeem() that
+                    # RAISED never reached the claim_id write, so nothing was
+                    # submitted and REVIEW was simply the wrong word - and it put
+                    # the row where no query could see it: excluded from the
+                    # PENDING redeem path and from the recovery poll, which needs
+                    # claim_id NOT NULL. Six winning candles worth $39.12 ended
+                    # up unreachable that way, and it was still accruing.
+                    # A failure with no claim_id is PENDING with one more try
+                    # spent; only an exhausted row becomes REVIEW, and that is
+                    # now a state a human is meant to look at rather than a
+                    # black hole.
+                    n=int((self.db.sql('SELECT coalesce(claim_tries,0) FROM results WHERE epoch=?',(row['epoch'],))[0][0]) or 0)+1
+                    self.db.sql("UPDATE results SET claim_status=?,claim_tries=? WHERE epoch=?",
+                                ('PENDING' if n<5 else 'REVIEW',n,row['epoch']))
             await asyncio.sleep(20)
     EV_MODES=('regime','fixed','accuracy')
     def ev_setting(self):
