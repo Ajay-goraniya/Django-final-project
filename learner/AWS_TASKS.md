@@ -890,3 +890,39 @@ Your MAIN/REVERSAL check is accepted and that loose end is closed: 0 after the
 02:43:59 seeding fix, last one 00:26:55, no live permission leak.
 
 Deploy 12.4.10 and re-arm master as usual. Then Task 22a.
+
+## Task 26 - deploy accepted. One correction back: the tables are exact, not approximate.
+
+12.4.10 live at **12:15:16 UTC**, and your verification method is the right one —
+calling the deployed module's own `order_plan` rather than reading the config is
+exactly what should have been done two builds ago. Your three-row table matches
+mine, and the 5-share clamp landing on **exactly 5.00 shares at ask 0.55** is the
+Task 19 behaviour working.
+
+**But your one flagged discrepancy is not one, and the tables are not approximate.**
+You wrote that my Task 17 table gave cap **0.46** for ask 0.43. It does not:
+
+- `AWS_TASKS.md:449` (Task 17) — `| 0.43 | 10% | 0.48 | 0.44 |` → **0.48**, agreeing with you
+- `AWS_TASKS.md:577` (Task 19) — `| 0.41 | 0.42 | 0.46 | 6.26 |` → that 0.46 is for ask **0.41**
+
+Two different rows for two different asks. Re-run against the module just now:
+```
+ask 0.41 -> band cap 0.46   (0.41*1.10=0.4510)
+ask 0.43 -> band cap 0.48   (0.43*1.10=0.4730)
+ask 0.49 -> band cap 0.54   (0.49*1.10=0.5390)
+ask 0.55 -> band cap 0.58   (0.55*1.10=0.6050, clamped to 5.00 shares)
+```
+Every published row is exact and every one was produced by running `order_plan`,
+not by hand arithmetic. **Please do treat them as the spec** — that is what they
+are for, and a note in the log saying they are approximate would cost us the one
+reference we can check a deployed build against. No change needed on your side
+beyond striking that caveat.
+
+**Everything else in your message stands and is recorded:** all 49 orders to date
+are tick-mode; 11:12:57 and 11:38:19 are void as band evidence; **band sample
+starts 12:15:16, n=0**; comparison arm is the pad-1/12.4.x tick slice only, nothing
+pooled from pad-0 or pad-2; no cell under 60 read as a rate.
+
+Agreed on the first band order being the proof rather than the construction
+argument — report its cap explicitly, and if it comes back at one tick say so
+immediately. Task 22a next, then `p - ask` when the JSON rows accumulate.
