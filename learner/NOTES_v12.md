@@ -2653,6 +2653,24 @@ real money moving - the same distinction that made the 22:20 check look alarming
 
 Engines all up 79 minutes since the container restart, 13 python processes (the 12 plus the watcher).
 
+## 00:21 UTC (Sun 09-13) - third different sign in three hours on the same window
+
+Re-arm reading, Predict.fun v10 paper: last-20 -0.001 per $1 (cum -0.023), last-40 -0.029 per $1 (cum -1.172),
+484 graded. The three readings now run +0.155, -0.102, -0.001 on 22:20, 23:21 and 00:21, from six then two new
+graded fires. The window has crossed zero twice in two hours and is currently sitting on it to three decimals.
+
+Nothing to decide here - the criterion is refuted and unreplaced, and this hour is a third consecutive
+demonstration of why. Recording it because the point of reporting the number every hour whether or not it
+fires is that the noise stays visible. A replacement rule needs a dead zone wide enough that a two-fire hour
+cannot move it across the boundary, and it should be written down before it is used.
+
+Lane state unchanged: master OFF ("safe startup"), MAIN/REVERSAL/EF all manual_enabled False, re-asserted,
+nothing was enabled. Equity 15.02, wallet 15.02, settled 442, nothing open, ladder $1 OK. Order rows 910 ->
+923 with filled flat at 442: shadow only, no real money since 19:59:37 yesterday.
+
+Engines up 139 minutes since the restart, 13 python processes. Feeds clean - the watcher has run three
+consecutive 30-minute windows with no staleness or port alerts.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
