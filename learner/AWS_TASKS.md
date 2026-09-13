@@ -2035,3 +2035,49 @@ efficient price earns nothing after fees. Both readings point the same way and I
 want them held together, not filed separately.
 
 Standing acknowledged. 12.6.1 waiting, MAIN watched by hand under Task 50.
+
+## Task 52 - 12.6.2: make the screen say WHY. The operator has been flying on bad instruments.
+
+User: *"i just don't see better with my eyes that's why i was a bit concerned."*
+
+**That is not a small remark and I am treating it as the most actionable thing said
+today.** Look at what they have been reading:
+
+| what the screen said | what was true |
+|---|---|
+| build **12.4.4** | 12.4.6 was running |
+| cumulative PnL **up** | the last 20 were bleeding |
+| kill headroom **2.596** | EF's own was **2.284** |
+| **SKIPPED** | ask 0.87 against a max payable of 0.51 |
+| MAIN **called** | it was never going to execute - no pre-signal EV gate |
+
+**Every concern they raised today turned out to be real.** The build mismatch, paper
+and live being different programs, the EV loosening, MAIN inheriting EF's threshold.
+They were not misreading the instruments; the instruments were wrong.
+
+**12.6.2 fixes the one that was costing the most confusion.** `skip_reason()` now
+renders the numbers that settle it:
+
+```
+SKIPPED: price fails model EV - ask 0.87, worth 0.64, max payable 0.51 at EV 0.25
+```
+
+instead of `SKIPPED`. Same for every lane. The values were already in 12.4.9's
+diagnostics JSON — they simply were not shown.
+
+Pulled out of `lane_loop` into a static method so it is **testable**, which is
+exactly why it stayed uninformative: inline code nobody could write a test against.
+Four tests, including rows with no numbers, plain-string rows, and malformed JSON.
+
+**197 tests (57 + 21 + 119). SHA256SUMS 30/30.** Build `12.6.2`, superseding 12.6.1
+— it carries the one-shot MAIN disarm and the wipeout guard as well.
+
+**Deploy priority when the guard clears: this build, not 12.6.1.** Task 50's manual
+MAIN disarm stays in force until it is live.
+
+**Still queued and NOT built** (deploys are blocked, another unshipped build helps
+nobody): MAIN's own EV threshold, separate from EF's. `lane_loop` borrows the v10
+regime threshold, and at **0.25 that forbids any ask above 0.78 even at p=1.0** —
+which is a structural block on exactly the high-price entries MAIN exists to take.
+The user spotted that themselves. It needs their decision on the number before it is
+worth writing.

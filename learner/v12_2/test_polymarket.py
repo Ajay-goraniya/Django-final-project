@@ -217,6 +217,31 @@ class Tests(unittest.TestCase):
         self.db.halt_check()
         self.assertIsNone(self.db.get('halt'))
 
+    def test_a_skip_is_explained_in_numbers_not_just_named(self):
+        """User: "i just don't see better with my eyes that's why i was concerned".
+
+        SKIPPED alone reads as a fault. With the numbers it is obviously the
+        engine declining to overpay - the difference between a screen you can
+        trust and one you cannot.
+        """
+        import btc_model_v12_polymarket as E
+        r=E.PolyRunner.skip_reason
+        out=r('SKIPPED',json.dumps(dict(reason='order_plan_refused',kind='MAIN',
+              side='DOWN',error='price fails model EV',ask=0.87,p=0.6426,threshold=0.25)))
+        self.assertIn('ask 0.87',out)
+        self.assertIn('worth 0.64',out)
+        self.assertIn('max payable 0.51',out)
+        self.assertIn('price fails model EV',out)
+
+    def test_skip_reason_survives_rows_without_the_numbers(self):
+        import btc_model_v12_polymarket as E
+        r=E.PolyRunner.skip_reason
+        self.assertEqual(r('SKIPPED',None),'SKIPPED')
+        self.assertIn('below venue minimum',
+                      r('SKIPPED','below venue minimum; stake not increased'))
+        self.assertIn('boom', r('SKIPPED',json.dumps(dict(error='boom'))))
+        self.assertIn('SKIPPED', r('SKIPPED','[1,2,3]'))
+
     def test_paper_fill_survives_broker_restart(self):
         async def run():
             ep=epoch();ex=Executor(self.db,self.books,PaperBroker(self.books,self.db))
@@ -340,7 +365,7 @@ class Tests(unittest.TestCase):
     def test_v120_database_migrates_additively(self):
         self.db.reserve(123,decision(),'up','condition')
         self.db.set('build','12.0'); self.db.c.close(); self.db=Journal(self.path,'PAPER','abc')
-        self.assertEqual(self.db.get('build'),'12.6.1')
+        self.assertEqual(self.db.get('build'),'12.6.2')
         self.assertEqual(self.db.sql('SELECT count(*) FROM signals WHERE epoch=123')[0][0],1)
         cols={r[1] for r in self.db.c.execute('PRAGMA table_info(orders)')}
         self.assertTrue({'error_json','timing_json','request_reached','reconcile_count','venue_live'}<=cols)

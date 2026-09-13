@@ -227,6 +227,31 @@ class PolyRunner(Runner):
             await self.lane_loop(ep)
             if time.time()-self._decide_last>15:
                 self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(d))); self._decide_last=time.time()
+    @staticmethod
+    def skip_reason(status,detail):
+        """Say WHY in numbers, not just that it happened.
+
+        User, 09-13: "i just don't see better with my eyes that's why i was a bit
+        concerned". The screen said SKIPPED and nothing else, so "MAIN called
+        DOWN and was skipped" read as a fault when it was the engine declining
+        to pay 0.87 for something worth 0.51. The numbers that settle it were
+        already in the diagnostics row; they just were not shown.
+
+        A separate method because it was inline and therefore untestable, which
+        is how it stayed uninformative for so long.
+        """
+        if not detail: return status
+        try: d=json.loads(detail) or {}
+        except (ValueError,TypeError): d={}
+        if not isinstance(d,dict): return f'{status}: {str(detail)[:200]}'
+        why=d.get('error') or d.get('reason') or str(detail)
+        ask,p,thr=d.get('ask'),d.get('p'),d.get('threshold')
+        if None not in (ask,p,thr):
+            try:
+                why=(f'{why} - ask {float(ask):.2f}, worth {float(p):.2f}, '
+                     f'max payable {float(p)/(1.0+float(thr)):.2f} at EV {float(thr):.2f}')
+            except (TypeError,ValueError,ZeroDivisionError): pass
+        return f'{status}: {str(why)[:200]}'
     async def lane_loop(self,ep):
         """Evaluate MAIN and REVERSAL and fire whichever is ready.
 
@@ -281,12 +306,15 @@ class PolyRunner(Runner):
         reason=''
         if not placed:
             diag=self.db.sql('SELECT detail FROM diagnostics WHERE epoch=? ORDER BY ts DESC LIMIT 1',(ep,))
-            # detail is JSON for the reasons fire() records; fall back to the
-            # raw string for older rows and for anything else that writes here.
-            _d=diag[0]['detail'] if diag else ''
-            try: _d=(json.loads(_d) or {}).get('error') or json.loads(_d).get('reason') or _d
-            except (ValueError,TypeError): pass
-            reason=f"{status}: {str(_d)[:120]}" if diag else status
+            # Say WHY in numbers, not just that it happened.
+            #
+            # User, 09-13: "i just don't see better with my eyes that's why i was
+            # a bit concerned". The screen said SKIPPED and nothing else, so
+            # "MAIN called DOWN and was skipped" looked like a fault when it was
+            # the engine declining to pay 0.87 for something worth 0.51. The
+            # numbers that settle it are already in the diagnostics row - they
+            # just were not being shown.
+            reason=self.skip_reason(status,diag[0]['detail'] if diag else None)
         self.lanes.confirm(kind,placed,reason)
         self.lane_decision=self.lanes.monitor()
         if not placed:
