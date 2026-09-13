@@ -1944,3 +1944,49 @@ Two side observations, lower priority, do not chase them today:
   size at **$0**, so the pressure behind that call had no money behind it.
 
 Standing: report `kill.by_kind`. 12.6.1 is on the branch to deploy (Task 47).
+
+## Task 49 - ANSWERED: MAIN never got the pre-signal EV gate. EF did. That is the "called, not executed".
+
+Traced the whole path rather than assuming. **The plumbing is correct and there is
+no bug in it** — I checked a KeyError theory first (the lane dict has no
+`threshold` key) and it is wrong: `lane_loop` injects one with
+`d.setdefault('threshold', self.m.threshold(...))`, falling back to 0.25.
+
+**The real cause is an asymmetry between the lanes:**
+
+| | EV checked | result on failure |
+|---|---|---|
+| **EF** | **before the signal** (`_gate_on_padded_ev`, line 167, in `decide_now`) | no signal is drawn at all |
+| **MAIN / REVERSAL** | **only inside `order_plan`, after firing** | signal is drawn and announced, then `SKIPPED` |
+
+`_gate_on_padded_ev` appears exactly once and only on the EF path. **`lane_loop`
+never calls it.** So MAIN draws its arrow on the chart, announces "called", and is
+then refused by the same EV test EF applies one step earlier. That is precisely the
+"called, not executed" the user is looking at.
+
+**And this is their own complaint from 09-13, half-delivered:** *"ev should be used
+as a gate inside the signal logics not after the signal is fired."* 12.4.0 fixed it
+for EF. **MAIN and REVERSAL were never done.**
+
+**The arithmetic for their candle**, MAIN DOWN at P(up) 0.317 so P(down) 0.683:
+
+| threshold | max payable cost | DOWN ask must be |
+|---|---|---|
+| 0.15 (low vol) | 0.594 | **<= 0.57** |
+| 0.25 (mid/high vol) | 0.546 | **<= 0.52** |
+
+With the move already visible, DOWN was dearer than that. **The refusal was correct;
+only the order of operations is wrong.**
+
+### I am NOT shipping the fix, and the reason is the in-flight test
+
+Making MAIN gate EV before firing would make MAIN fire **less**, and the user has
+MAIN armed right now specifically to watch it fill once. **Changing its firing logic
+mid-test could mean the fill never comes and the test never completes.** So it
+waits. Freeze holds, and this is on the list for after the one-shot completes.
+
+**Task 48a still stands** — pull the `order_plan_refused` row for 14:51 UTC with
+`error`, `ask`, `p`, `threshold`. I have reasoned my way to `price fails model EV`;
+I want the journal to say it. If it says something else, the above is wrong.
+
+Standing: 12.6.1 still to deploy (Task 47). Report `kill.by_kind`.
