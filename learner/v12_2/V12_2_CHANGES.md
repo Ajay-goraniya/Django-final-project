@@ -771,3 +771,75 @@ p = 1.0) stands as data, but its interpretation rests on a trigger condition tha
 is still unpinned, and the observed switches at second 70 are mild evidence
 against the assumption it used. Reported rather than guessed, which is the whole
 point.
+
+# Findings 09-13 03:20 — staleness is dead, and the pad is the binding constraint
+
+No code change. Three explanations died tonight and the survivor is simple.
+
+## The number that closes the staleness story
+
+A reject arrived against a full book snapshot **0.13 seconds old**:
+
+| ts | outcome | snapshot_age_s | book_age_ms | submit_ms |
+|---|---|---|---|---|
+| 03:05:31 | **REJECTED** | **0.13** | 111.4 | 397.6 |
+| 03:12:43 | FILLED | 0.44 | 84.2 | 340.5 |
+
+Not deltas-only, not phantom, not stale. The level was published 130 ms before we
+priced on it and was gone by the time a 398 ms submit landed. n=1, marked — but
+it is the direct test, and it points one way: **a plain race for top-of-book
+liquidity, with us roughly 400 ms behind.** That retires the cold-book story
+entirely, and means the prune and rollover work in 12.3.4 is not where the fix
+lives either.
+
+## The tick switch is ruled out properly
+
+The AWS session's corrected probe read the authoritative REST book at each
+switch on the **active** pair:
+
+| token | sec | old->new | REST ask | REST bid | levels a/b |
+|---|---|---|---|---|---|
+| 1042494373 | 76 | 0.01->0.001 | 0.001 | none | 34 / 0 |
+| 3884524341 | 77 | 0.01->0.001 | none | 0.999 | 0 / 34 |
+
+The switch fires exactly when the pair reaches 0.001/0.999 — one side worthless,
+the other certain, both books one-sided. **Tick change and price-at-the-extreme
+are the same event**, which confirms the assumption its retrospective test rested
+on. Every one of our 28 orders was sent with a two-sided book at 0.30-0.56, and
+only 1 of 28 had seen the band left beforehand (fills 0/11, rejects 1/17, Fisher
+p = 1.0). Its own best lead, killed by its own probe.
+
+Kept from it: markets decide by second 76 of a 300-second candle, and from that
+moment `quote()` returns None on a one-sided book. That is where the 20.9%
+"waiting for fresh books" comes from, and it supports 12.3.7's counters.
+
+## The pad is what stops it trading — full grid, every arm
+
+75 fired signals with reconstructible inputs, recomputed with the engine's own
+`D` and fee maths. n=75 is under the graded bar, so this is a pass/refuse count
+on a deterministic re-check, **not a PnL claim**.
+
+| pad_ticks | pass | refuse | pass % | shortfall (threshold − EV@cap) med / p25 / p75 |
+|---|---|---|---|---|
+| **0** | **75** | **0** | **100%** | −0.0172 / −0.0432 / −0.0078 |
+| 1 | 32 | 43 | 43% | +0.0055 / −0.0196 / +0.0132 |
+| **2 (current)** | **18** | **57** | **24%** | +0.0259 / +0.0030 / +0.0334 |
+| 3 | 9 | 66 | 12% | +0.0456 / +0.0247 / +0.0530 |
+
+The refusals are **not near misses**: of 57 refused at the current pad, 2 are
+within 0.01 of the bar, 12 within 0.02, and 30 are beyond 0.03 — against a 0.15
+threshold, a median shortfall about a fifth of the bar.
+
+But the model is not the problem and neither is the threshold: **all 75 clear the
+bar at the raw ask.** Every refusal is created by the padding. Set beside the
+measurement that has not moved all night — **no fill has ever consumed a tick of
+pad, now 12 of 12**, with the newest filling at 0.47 against a 0.49 cap — the pad
+has no demonstrated benefit and is currently the binding constraint on whether
+the engine trades at all.
+
+Consistent with the 0.13 s reject: this is a **size** race, not a price race.
+Someone takes the liquidity; the level is gone rather than more expensive, and
+padding the price cannot buy a level that no longer exists.
+
+Neither session picks a value. That is the user's call, and the no-gates rule
+cuts against choosing a cell from a grid either way.
