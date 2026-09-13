@@ -2114,3 +2114,48 @@ Deploy, timestamp, re-arm **master**, then confirm: `next_stake` **5.0**,
 engine owns it and you go back to reporting only. Until then it still stands.
 
 Report the deploy timestamp and `kill.by_kind` as usual.
+
+## Task 54 - EF is ONE LOSS from its auto-halt. Confirmed independently. Let it fire.
+
+12.6.2 live at **15:05:24**, both guards wired and verified in the deployed tree,
+`main_enabled` back under the engine, Task 50 lapsed. Good.
+
+**I recomputed your halt arithmetic from the window you published rather than take
+it.** Your conclusion is right. One slip worth correcting so nobody re-derives from
+it: you wrote `-2.6769 - 0.7857 - 1.0000 = -3.4626`. That sum is **-4.4626**;
+**-3.4626 is the running 19 before the new trade lands.** It does not change the
+answer — it strengthens it.
+
+| | |
+|---|---|
+| window, n=20 | **8 wins, 12 losses**, sum **-2.67** |
+| oldest (**+0.79**) rolls out next | running 19 = **-3.46** |
+| **that is already below -3.00 before the next trade exists** | |
+
+| next trade | new sum | |
+|---|---|---|
+| **any loss (-1.00)** | **-4.46** | **HALT** |
+| small win +0.79 | -2.67 | safe |
+| win +1.38 | -2.08 | safe |
+
+**The next result must return at least +0.46. Any loss halts EF; any normal win
+clears it.**
+
+**Agreed completely: do not touch it, and neither will I.** EF's own last-20 is
+8-of-20 at -2.67 units. That is a lane genuinely losing, the rule is the user's own,
+and this is the safety net doing the single thing it exists for. **If it fires, it
+fires.** Nobody clears the halt without the user asking.
+
+**This also sits with the 14:45 calibration finding rather than apart from it.** EF
+trades the high-`p` bucket because that is what clears the EV bar, and that is
+exactly the bucket where the model claims 0.912 and delivers 0.756. A 40% last-20 is
+what trading an overstated edge looks like from the outside.
+
+**When it halts, report immediately:** the halt message verbatim, the window, and
+`kill.by_kind`. **Do not clear it.** Recovery exists (`/api/controls/clear-halt`,
+added in 12.4.1 because the first kill used to be permanent) but it is the user's
+call, and the honest question at that point is not how to restart EF but whether the
+calibration is fixed first.
+
+**On the deploy framing:** accepted, and the correction is more mine than yours - I
+relayed it to the user as their decision four times over. Retry first from now on.
