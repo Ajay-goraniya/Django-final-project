@@ -4200,6 +4200,63 @@ condition of this role and it is why AWS's refusals to act on relayed instructio
 **Standing position after the audit: engine armed, $40.35, stake $3, unit sum -2.00, one full loss from
 the hand rule. No automatic stop for 18 results. Nothing to do until a result settles or the user speaks.**
 
+## 21:24 UTC (Sun 09-13) - twenty-third reading. THE LABEL PROBLEM IS RESOLVED: I was reading the wrong run.
+
+**Traced from the running command lines, not the filenames**, as the 20:22 entry required:
+
+```
+pid 901  btc_model_v10_runner.py --port 8788 --db /tmp/v10_long4.sqlite3 --mode pnl
+pid 897  btc_model_build10.py    --port 8789 --db .../b10live/b10.sqlite3
+```
+
+**`/tmp/v10_long4.sqlite3` is the v10 runner on Polymarket.** `fair.py`'s label - `Polymarket paper (v10)` -
+was correct. **Mine was wrong.** The rule's *"Predict.fun v10 paper run"* is `fair.py`'s `Predict.fun paper
+(v10)` row = **build10 = `b10.sqlite3`**, and its `trades` table (not `ef_predictions`) carries `pnl` and
+`stake`, 1,815 graded.
+
+### The correct readings, both runs, as rule 7 requires
+
+| run | source (verified) | last-20 | last-40 | graded |
+|---|---|---|---|---|
+| **Predict.fun paper (v10)** - the rule's run | `b10.sqlite3` `trades` | **+0.140** | **+0.156** | 1,815 |
+| Polymarket paper (v10) | `/tmp/v10_long4.sqlite3` | -0.131 | +0.096 | 756 |
+
+**The rule's run reads POSITIVE.** Last hour I reported it as -0.225 - that was the Polymarket runner.
+
+### Rule 1 does NOT fire this hour, and here is exactly why
+
+Rule 1 needs the Predict.fun run **net positive at TWO CONSECUTIVE hourly checks.** **This is the first
+correctly-sourced reading.** Every earlier reading today came from `v10_long4` - the wrong run - so
+**none of them counts toward "consecutive"**, in either direction. This is sighting **one of two**. If
+22:21 reads positive from `b10.sqlite3`, the rule is satisfied for REVERSAL and it goes to the user under
+rules 4-6 (master ON + lane ON, ladder stake, kill rules from the moment of re-arm, symmetric re-pause).
+Rule 2 (EF's own live last-20 positive) and rule 3 (MAIN off) are unchanged.
+
+**No money was affected by the mislabel.** No lane was armed today; Tokyo's three lanes have been OFF all
+day, checked per kind every hour. The error cost nothing except the accuracy of the record.
+
+**The record is corrected, not rewritten:** the readings logged at 18:21, 19:22 and 20:22 as "Predict.fun"
+were the Polymarket runner. Earlier readings today cannot be attributed to a source from here and are
+**not** being reconstructed. Going forward the source file is named in every reading.
+
+**The methodological note from 20:36 still applies, more mildly:** build10 fires ~13.5/hour, so a last-20
+spans ~1.5 h and consecutive hourly reads share ~7 of 20 trades - better than the runner's 15 of 20, still
+not independent. Recorded, not rewritten; the rule is the user's.
+
+### Standard items
+
+```
+FAIR STATES 21:24 UTC | window opens with the NEWEST run: Polymarket paper (v10), 09-11 15:15 UTC (54.2 h)
+| run | W/L | acc | open | PnL @$10 |
+| Predict.fun paper (v10) | 143/121 | 54% | 1 | +234.8 |
+| Polymarket paper (v10) | 162/148 | 52% | 1 | +282.9 |
+| Polymarket v12 lane (paper exec) | 166/138 | 55% | 1 | +457.5 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 0.00 equity 0.00) |
+```
+
+Tokyo **up**, master OFF, `{'MAIN': False, 'REVERSAL': False, 'EF': False}`, no revert; wallet 0.00 eighth
+hour. **12** processes. Polymarket v12 live: armed, cash 40.35, stake 3, unit sum **-2.0000**, kill 2 of 20.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
