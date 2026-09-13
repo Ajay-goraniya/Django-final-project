@@ -673,3 +673,55 @@ Report both, even if they agree. The user was right and I want the record straig
 whitelist extended through it, `test_polymarket.py:210` updated. Deploy when
 convenient; nothing here is urgent, and do not interrupt the band-mode sample to
 take it — **note the deploy timestamp so the 11:12:57 cut stays attributable.**
+
+## Task 22 - EF is NOT hot. There is a 250 ms fixed poll in front of every fire.
+
+User asked whether EF is truly hot, firing as fast as possible. **It is not**, and
+the cause is ours, not the venue.
+
+`btc_model_v12_polymarket.py:204` — the decide loop ends every pass with:
+
+```python
+await asyncio.sleep(.25)
+```
+
+A fixed 250 ms tick. The signal is not evaluated when the book or the price moves,
+it is evaluated four times a second regardless. **Mean 125 ms of pure dead wait
+added to every fire, worst case 250 ms** — the same order as the entire Mumbai wire
+hop, and it sits *before* it.
+
+Full chain for one EF fire, measured or read from the code, not estimated:
+
+| stage | cost | ours? |
+|---|---|---|
+| decide-loop poll | **0-250 ms (mean 125)** | **yes — fixable** |
+| book staleness allowed at decision | **up to `quote_age_ms`, default 750 ms** | **yes — a setting** |
+| fresh-quote wait inside `fire()` | ~5 ms (`poly_core.py:699`) | already hot |
+| sign + wire to CLOB | ~140 ms | no — Mumbai |
+| taker delay (`itode: true`) | held, then re-validated | no — venue |
+
+**What is already hot, and is fine:** everything inside `fire()`. Client and signer
+are built once in `open()`, there is no REST on the hot path, and the retry loop
+waits on a new `seq` at 5 ms granularity. The execution path is not the problem.
+The decision *in front of* it is.
+
+**The fix is small.** `BookCache.seq` already increments on every applied event
+(`poly_core.py:166,182`), so the loop can wait on a book event with a timeout
+fallback instead of sleeping a flat 250 ms. Roughly fifteen lines.
+
+**I am NOT shipping it yet and neither should you.** Decision cadence determines
+*which* candles fire and *when* inside the candle, so changing it mid-sample
+changes the fill/reject mix — it would contaminate the band-mode measurement that
+started at 11:12:57 and is currently at n≈2. **Finish the band sample first.**
+That is the whole reason we took a clean cut.
+
+**Task 22a, read-only and useful now.** From `signals` and `diagnostics`, the
+distribution of `seconds_into_candle` at fire, and the gap between a fire and the
+preceding book event. If fires cluster on 250 ms boundaries that is the poll
+showing up in the data and quantifies what it costs us. Report the distribution,
+not a summary statistic.
+
+Also report `quote_age_ms` as actually set in `ev_settings` on the box — if it is
+at the 750 ms default we are allowing a book three quarters of a second old into a
+decision that then waits another 125 ms and flies 140 ms. That compounds with the
+stale-cap mechanism and may be the cheaper half of this to fix.
