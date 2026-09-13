@@ -390,10 +390,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.5.0')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.5.1')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -707,9 +707,36 @@ class Journal:
         # results, and this needs 20.
         vals=[x[0] for x in r if x[0] is not None]
         if len(vals)==20 and sum(vals)/20>.03: self.set('halt','Average slippage > $0.03 over 20 fills')
-        r=self.sql('SELECT r.pnl/sum(f.spent+f.fees) FROM results r JOIN fills f USING(epoch) GROUP BY r.epoch ORDER BY r.epoch DESC LIMIT 20')
-        vals=[x[0] for x in r if x[0] is not None]
-        if len(vals)==20 and sum(vals)<-3: self.set('halt','20 settled unit returns sum below -3')
+        # PER LANE, not blended. The rule as written is "a lane goes off if
+        # cumulative PnL over its LAST 20 FILLS is below -3.00", and this used to
+        # group by epoch alone, mixing every kind into one window.
+        #
+        # That is not academic. On 09-13 the blended sum read -0.40 (headroom
+        # 2.60) while EF alone was at roughly -1.69 (headroom 1.31): a single
+        # MAIN winner of +3.67 - from the 09-12 seeding bug, on a lane that is
+        # supposed to be off - was buying EF more than double its real margin
+        # against its own auto-halt. A safety net that counts another lane's
+        # stale win as your headroom is not a safety net.
+        #
+        # Both checks now run and either can halt, so this can only ever fire
+        # sooner than before, never later.
+        rows=[dict(x) for x in self.sql('''
+            SELECT r.epoch, r.pnl/sum(f.spent+f.fees) unit,
+                   count(DISTINCT coalesce(o.kind,'EF')) kinds,
+                   min(coalesce(o.kind,'EF')) kind
+            FROM results r JOIN fills f ON f.epoch=r.epoch
+            JOIN orders o ON o.id=f.order_id
+            GROUP BY r.epoch ORDER BY r.epoch DESC''')]
+        blended=[x['unit'] for x in rows[:20] if x['unit'] is not None]
+        if len(blended)==20 and sum(blended)<-3:
+            self.set('halt','20 settled unit returns sum below -3')
+        # An epoch traded by two lanes cannot be attributed to either, so it is
+        # left out of the per-lane windows rather than counted twice.
+        for k in sorted({x['kind'] for x in rows if (x['kinds'] or 1)==1}):
+            own=[x['unit'] for x in rows
+                 if (x['kinds'] or 1)==1 and x['kind']==k and x['unit'] is not None][:20]
+            if len(own)==20 and sum(own)<-3:
+                self.set('halt',f'{k}: 20 settled unit returns sum below -3')
 
 
 class PaperBroker:

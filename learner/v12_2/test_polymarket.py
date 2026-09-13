@@ -158,6 +158,38 @@ class Tests(unittest.TestCase):
         self.assertIsNone(r['by_kind'][20],'a mixed epoch must not be split per lane')
         self.assertEqual(r['all'][20]['n'],1,'the overall window still counts it once')
 
+    def test_kill_rule_is_per_lane_not_blended(self):
+        """Another lane's stale win must not buy EF headroom against its halt.
+
+        Reproduces 09-13 exactly: EF's last 20 sum below -3.00 while one MAIN
+        winner lifts the blended sum above it. Blended-only, this never fires.
+        """
+        f=dict(shares=10.,spent=5.,fees=0.,price=.5,fee_bps=0)
+        def settle(ep,kind,pnl):
+            self.db.sql('INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,reason,kind)'
+                        " VALUES(?,?,1,'FILLED','{}',0,0,'',?)",(f'o{ep}',ep,kind))
+            self.db.fill(f'o{ep}',ep,f't{ep}',f,'paper')
+            self.db.sql('INSERT INTO results(epoch,actual,payout,pnl,ts) VALUES(?,?,?,?,0)',
+                        (ep,'UP',0.,pnl))
+        for i in range(20): settle(3000+i,'EF',-1.0)      # EF sum = -4.00
+        settle(3100,'MAIN',+25.0)                          # one MAIN winner
+        self.db.halt_check()
+        h=self.db.get('halt')
+        self.assertTrue(h,'a lane past its limit must halt even when the blend is fine')
+        self.assertIn('EF',h)
+
+    def test_kill_rule_does_not_fire_on_a_healthy_lane(self):
+        f=dict(shares=10.,spent=5.,fees=0.,price=.5,fee_bps=0)
+        for i in range(20):
+            ep=4000+i
+            self.db.sql('INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,reason,kind)'
+                        " VALUES(?,?,1,'FILLED','{}',0,0,'',?)",(f'o{ep}',ep,'EF'))
+            self.db.fill(f'o{ep}',ep,f't{ep}',f,'paper')
+            self.db.sql('INSERT INTO results(epoch,actual,payout,pnl,ts) VALUES(?,?,?,?,0)',
+                        (ep,'UP',10.,+5.))
+        self.db.halt_check()
+        self.assertIsNone(self.db.get('halt'))
+
     def test_paper_fill_survives_broker_restart(self):
         async def run():
             ep=epoch();ex=Executor(self.db,self.books,PaperBroker(self.books,self.db))
@@ -281,7 +313,7 @@ class Tests(unittest.TestCase):
     def test_v120_database_migrates_additively(self):
         self.db.reserve(123,decision(),'up','condition')
         self.db.set('build','12.0'); self.db.c.close(); self.db=Journal(self.path,'PAPER','abc')
-        self.assertEqual(self.db.get('build'),'12.5.0')
+        self.assertEqual(self.db.get('build'),'12.5.1')
         self.assertEqual(self.db.sql('SELECT count(*) FROM signals WHERE epoch=123')[0][0],1)
         cols={r[1] for r in self.db.c.execute('PRAGMA table_info(orders)')}
         self.assertTrue({'error_json','timing_json','request_reached','reconcile_count','venue_live'}<=cols)

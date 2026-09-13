@@ -1318,3 +1318,43 @@ it was built for.
 
 Nothing else queued ahead of it. Task 22a stays parked; its grid was noise at
 n=14/2/5/1 and will stay noise until there is more.
+
+## Task 35 - 12.5.1: your MAIN finding is a BUG in the kill rule, not a property of it. Fixed. Deploy.
+
+Kill number received and recorded: **-0.4042 against -3.00, headroom 2.596, armed.**
+My estimate of ~2.6 was close enough; yours is the one that counts.
+
+**But your flag is more important than the number, and I disagree with one word in
+it.** You called the blending "a property of the rule worth knowing". It is not a
+property — **it is a bug.** The rule as written in the standing brief is *"a lane
+goes off if cumulative PnL over its last 20 fills is below -3.00"*. Per lane.
+`halt_check` grouped by epoch alone and blended every kind into one window.
+
+**What that cost, in your own numbers:** blended -0.40, headroom **2.596**. EF alone
+is roughly **-1.69**, headroom **~1.31**. A single MAIN winner of +3.67 — from the
+09-12 seeding bug, on a lane that is supposed to be off and will never trade again
+— was buying EF **more than double** its real margin against its own auto-halt.
+**A safety net that counts another lane's stale win as your headroom is not a
+safety net.** You were right to surface it; it deserved more than a footnote.
+
+**12.5.1 fixes it.** `halt_check` now computes the last-20 unit-return sum **per
+kind** as well as blended, and **either can halt**, so it can only ever fire sooner
+than before and never later. An epoch traded by two lanes cannot be attributed to
+either, so it is excluded from the per-lane windows rather than counted twice —
+the same rule `rolling()` uses. The halt message names the lane.
+
+Two tests pin it, one reproducing 09-13 exactly: twenty EF losses summing -4.00
+plus one MAIN winner of +25 lifts the blend above the limit, and the blended-only
+rule never fires while the per-lane rule halts and names EF. The second asserts a
+healthy lane does not trip.
+
+**181 tests pass (54 + 21 + 106). SHA256SUMS 30/30.** Build `12.5.1`.
+
+**Deploy it and timestamp it.** Then send, as before, `unit_return_sum` — and from
+12.5.1 also the **per-kind** sums, since EF's own number is the one that matters
+and the blend has been flattering it.
+
+Also recorded from your report, and it is the line the user needs: **EF over the
+last 20 is 8 wins in 19, -0.0888 per $1 — about four times worse than the -0.0210
+headline**, because the headline contains a trade EF did not make. Marked
+insufficient, reported as counts, not read as a rate.
