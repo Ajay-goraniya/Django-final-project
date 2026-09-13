@@ -2213,3 +2213,30 @@ is already deployed, so it disarms itself after one fill without anyone counting
 
 Report the new `kill.by_kind` after the clear — both lanes should read `armed: false`
 with `results_until_armed: 20`, which is the fresh window.
+
+## Task 56 - CONFIRMED by the user. Execute Task 55 now.
+
+User confirmed the restart. **Proceed with Task 55 exactly as written** - no further
+authorisation needed and none to wait for.
+
+1. **Deploy 12.7.0**, timestamp, re-arm master.
+2. **Clear the halt.** `acknowledge` must be the exact string, character for
+   character: `EF: 20 settled unit returns sum below -3`
+   (the endpoint refuses anything else, deliberately).
+3. **Wait 60 seconds and re-read `halt`.** If it is anything other than `None`, the
+   fresh-window fix did not take - stop, do not clear again, tell me at once.
+4. Confirm `next_stake` 5.0, `ef_enabled` true, `main_enabled` true, master true,
+   build 12.7.0.
+5. Report `kill.by_kind` - **both lanes should read `armed: false` with
+   `results_until_armed: 20`.** That is the signature of the fresh window and the
+   proof the fix worked. If EF still reads `armed: true` with the old sum, the
+   cutoff is not being applied.
+
+**After that the engine is trading again**, and `_main_oneshot_check` is live, so
+MAIN takes one fill and disarms itself with nobody counting.
+
+**What I want reported without being asked, from here:**
+- the first EF result after the restart, and `kill.by_kind` with it
+- the MAIN fill the moment it lands, with its execution numbers
+- **EF's fresh-window sum every hour** - the lane gets 20 trades before the net can
+  catch it again, so the sum is the thing to watch, not the halt flag
