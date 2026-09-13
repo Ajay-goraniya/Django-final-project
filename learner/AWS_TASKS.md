@@ -1443,3 +1443,52 @@ nothing.
 **Standing numbers recorded:** EF -0.7161 / n=20 / armed / headroom 2.2839; blended
 -0.4042; all[20] 45.0% -0.0210; all[40] (n=24, whole history) 50.0% +0.0896; EF in
 the blended 20: 8 of 19, -0.0888. All insufficient, all counts, none read as rates.
+
+## Task 38 - UNKNOWN orders: the user is seeing them again. Diagnose, read-only. Freeze holds.
+
+User: *"again hitted unknown errors bro, are you fixing or ruining my models?"*
+Investigation only — **this does not break the Task 37 freeze.** Nothing ships
+unless 38a finds money at risk.
+
+**What UNKNOWN is, from the code, so nobody guesses:** `_ambiguous()` marks an
+order UNKNOWN only on a transport failure or HTTP 408/5xx — the cases where the
+venue **may** have seen the request. Every 4xx is an explicit REJECTED. So UNKNOWN
+is the engine refusing to pretend it knows, not a fault in itself.
+
+**And it is handled safely, which I want confirmed rather than assumed:**
+- UNKNOWN is **not** in `NO_ORDER_SENT`, so the candle stays consumed and we cannot
+  fire a second order against a first that may have landed.
+- `live_reserve()` counts UNKNOWN as held capital, so the budget cannot be
+  double-spent while it is unresolved.
+- `reconcile()` resolves it against **venue truth**, not a local guess.
+
+**But there is one candidate that is mine, and it is specific.** `--post-timeout-ms`
+is **1200** and has been throughout — I did not change it. What changed underneath
+it is the venue: `itode: true` means Polymarket **holds** a taker order for its
+delay and *then* returns, and the docs say the API waits out the hold before
+answering. So our POST now blocks for `taker delay + round trip`. From Mumbai that
+is roughly 280 ms of wire plus the hold. **If that ever exceeds 1.2 s we record
+UNKNOWN on an order that actually landed** — and my retry fix means we now submit
+more often than we ever did, so the exposure is higher even at an unchanged rate.
+
+### Task 38a - answer these from the journal, read-only
+
+1. **Every UNKNOWN order: count, timestamps, and which build era.** Is the rate
+   higher after 12.4.2 (retry actually running) than before?
+2. **How did each one resolve on reconcile — FILLED or NO_FILL?** This is the
+   decisive one. **Any UNKNOWN that reconciled to FILLED is an order that landed
+   while we timed out waiting**, which means 1200 ms is too tight for a venue that
+   holds takers, and that is a real defect rather than a network fact.
+3. **The `submit_ms` / `total_attempt_ms` distribution for UNKNOWN attempts against
+   the same figures for ACCEPTED ones.** If UNKNOWNs cluster near 1200 ms we have
+   our answer; if they are scattered or instant, it is the network and not the
+   timeout.
+4. **Did any UNKNOWN ever leave an unreconciled position or cost money?** Check
+   `live_reserve` against venue truth for each.
+
+**If 38a shows UNKNOWNs reconciling to FILLED, that is Task 37 exit condition 2 —
+a defect that risks money — and we raise the timeout.** If they reconcile to
+NO_FILL, it is the venue being flaky, it is already handled correctly, and
+**nothing ships.** Bring the numbers, not a conclusion.
+
+Report the current `kill.by_kind` alongside, as standing.
