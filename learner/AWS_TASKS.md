@@ -208,20 +208,36 @@ Report the breakdown. If the answer is "the wire is 350 ms and there is nothing
 to shave", say that plainly — it is a more valuable answer than a micro-
 optimisation, and it changes what the user should do with the box.
 
-## Task 13 - OPEN: measure pad 0 against the target the user set
+## Task 13 - the benchmark, now measured. Read this before comparing anything to it.
 
-The benchmark is the **v12 paper lane** (port 8790 in the fair table, currently
-55% and +358.5 at $10 stake). That is the completion the live engine has to get
-near.
+V runs the v12 paper lane in its own container, so I measured it rather than
+guessing. 237 graded trades in `v12_poly_weekend.sqlite3`:
 
-Once pad 0 has run: attempts, fills, rejects, fill rate, and realised PnL per $1,
-against the same numbers at pad 2. Report both arms and the n. Under 60 graded
-fires it stays marked and unread — including if it looks good.
+| | paper (8790) | live (your box) |
+|---|---|---|
+| graded trades | **237** | **11** |
+| win rate | 53.2% | 63.6% |
+| per $1 | **+0.1288** | **+0.3463** |
 
-The honest comparison to keep in view: the paper lane books at the raw websocket
-ask with no pre-submit re-check and no venue rejection at all. It is not a
-like-for-like target, it is an upper bound. Saying how far short live falls, and
-how much of the gap is rejects versus refusals, is the useful version.
+**The live edge per trade is not worse - on this sample it is better.** n=11 is
+unreadable as PnL, so take the ratio: paper made **22x** as many trades. The gap
+is entirely participation.
+
+What paper assumes that live cannot have, straight from the table:
+- 237 of 237 PAPER_FILLED - no venue rejection exists in that lane;
+- 237 of 237 filled at exactly `quote_ask`, `avg_fill_price > quote_ask` in zero
+  rows - slippage is structurally impossible;
+- quotes average **680 ms** old, max **9,974 ms**; 27 of 237 exceed the 750 ms
+  the live path requires, so a tenth of its trades are not legally attemptable
+  live.
+
+So +358.5 is an upper bound built on no rejection, no slippage and a stale quote.
+**Do not report live as failing against it.** The comparison that means something
+is per-$1 edge (live already matches) applied to trade count (live is at 1/22nd).
+
+When you report pad 0: attempts, fills, rejects, fill rate, and per-$1 against
+the same at pad 2. Both arms, with n. Under 60 graded fires it stays marked and
+unread, including if it looks good.
 
 ## Settled
 

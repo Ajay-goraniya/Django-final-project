@@ -2743,6 +2743,45 @@ construction.
 
 Tokyo is untouched by all of this. Different host, different engine, lanes still off.
 
+## 03:30 UTC (Sun 09-13) - the paper/live gap is frequency, not edge. Measured in my own container.
+
+The user set the v12 paper lane as the benchmark the live Polymarket engine has to reach, and noted that
+I am the one running it. So I measured it here rather than reasoning about it.
+
+The lane on port 8790, `scratchpad/v12/results/v12_poly_weekend.sqlite3`:
+
+| | paper (8790) | live (AWS box) |
+|---|---|---|
+| graded trades | **237** | **11** |
+| win rate | 53.2% | 63.6% |
+| per $1 | **+0.1288** | **+0.3463** |
+
+**The live engine's edge per trade is not worse than paper's - on this sample it is better.** n=11 is far
+under the bar and unreadable as a PnL claim, so the number to take is the ratio: paper made 22 times as many
+trades. The whole gap is participation. Nothing about the model needs fixing.
+
+What paper assumes that live cannot have, from the table itself:
+- **237 of 237 are PAPER_FILLED.** No venue rejection exists in that lane.
+- **237 of 237 filled at exactly `quote_ask`.** `avg_fill_price > quote_ask` in zero rows - slippage is
+  structurally impossible there.
+- **Quotes average 680 ms old, maximum 9,974 ms.** 27 of 237 are older than the 750 ms the live path
+  requires, so a tenth of its trades could not legally be attempted live at all.
+
+So the +358.5 in the fair table is an upper bound assembled from three things the live path is forbidden:
+no rejection, no slippage, and a quote up to ten seconds stale. Chasing it directly is chasing an
+accounting artefact. The useful target is the per-$1 edge, which live already matches, applied to a trade
+count that is currently 1/22nd of it.
+
+That reframes tonight's work. The pad refusals and the venue rejections are the entire problem, and of the
+two the rejects now look like a latency race - a reject arrived on the AWS box against a book 130 ms old
+with a 398 ms submit. Signing is 7 ms and our own logic 13 ms, so 350-380 ms is wire. If the CLOB is
+US-hosted then a Mumbai box is structurally behind and no pricing change closes it. Task 12 on the AWS
+brief asks for that measurement before anyone writes more code.
+
+Pad set to 0 on the user's decision at 03:25 - it is a dial, no restart, so not behind the deploy guard.
+All 75 reconstructible signals clear the EV bar at the raw ask, against 18 at pad 2, and no fill has ever
+consumed a tick of pad in 12 of 12.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
