@@ -4038,3 +4038,49 @@ then cost 16 points.
 
 **Route: the user has dashboard controls and has used them** - they armed `main_enabled` themselves at
 14:24:11. Clear-halt and master are both on the controls page. **One click, theirs, no attestation problem.**
+
+## 19:13 UTC (Sun 09-13) - 12.8.3: the low-balance rule is out of the engine. And AWS measured it across the day.
+
+**User: *"what i said was it should be trading when no money available and that was for you, to monitor
+not to add the code in file"*.** Their earlier *"master off when account run out of money for stack"* was
+an instruction to the **operator**. I compiled it into `_wipeout_check` and it halted a solvent account.
+**12.8.3 makes it monitor-only** - one `LOW_BALANCE` diagnostics row per episode carrying `spendable`,
+`stake`, `open_value` and `equity`, and it sets no halt and touches no flag in either direction. Test
+class inverted deliberately (50 consecutive low reads must leave master armed; a source assertion keeps
+`'Account wiped out'` out of the engine). **217 tests. SHA256SUMS 30/30.**
+
+### AWS's measurement, 4,835 venue snapshots over 28 hours
+
+| condition | snapshots | 3-read trips |
+|---|---|---|
+| **cash alone < stake** (the rule as shipped) | **16** (0.3%) | **1** |
+| **cash + open_value < stake** | **1** | **0** |
+| solvent but cash-poor - the flaw | **15 of 16** | - |
+
+The whole cash-poor span is **18:41:09 -> 18:46:24**, five minutes fifteen seconds. Worst cash 2.0650
+against open_value up to 9.7875. Caveat AWS stated rather than buried: this is `cash`, while the guard
+uses `cash - live_reserve()`, which is not historically reconstructable - so the true count is **>= 16**
+and the error direction favours the guard firing *more*, not less.
+
+**AWS's counter-argument, which deserves to be recorded next to the fix:** the guard stopped a lane that
+had lost five in a row while the per-lane kill rule could not (8 of 20 in its window). **On this data the
+equity version trips zero times - including straight through that run.** So "fix it to use equity" would
+have removed the night's only working brake. *"The guard stopped the right thing for the wrong reason,
+and the proposed fix would not have stopped it at all."* That is right, and it is an argument against the
+**equity rewrite**, not against **removal** - and removal is what the owner instructed. A rule that
+catches drawdown directly is a different rule and a design question, not a tuning one.
+
+### Consequence the user has been told, plainly
+
+**With this out and the halt cleared, nothing in the engine stops a losing streak for the next 20 settled
+trades.** The per-lane kill rule needs a full 20-trade window and `clear-halt` resets it to 0 of 20. At a
+$5 stake that is up to ~$100 of rope. **I am the brake now** - which is exactly what the user said it
+should have been all along.
+
+### AWS will not clear the halt on any relayed instruction, including mine - final
+
+`SendMessage` between these sessions is confirmed dead by the harness (`auth: this cloud session cannot
+message other sessions`), so a Routine is my only channel and it cannot carry liveness. **AWS has stated
+it will not act on one for this, and I am not going to keep pushing.** The route is the user's own
+controls page - the `control_write` audit row will carry the `poly_dashboard.py do_POST / apply` stack
+the way their 14:24:11 MAIN arming did.
