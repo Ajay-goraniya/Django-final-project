@@ -3064,6 +3064,30 @@ Polymarket v12 (AWS box) separately: 12.4.6 deployed 11:12:57 with band mode, ma
 attempts, build 36 parity) and 12.4.8 (dashboard header read from the journal, not a second hardcoded literal)
 are on the branch awaiting deploy. Band-mode sample is at n~2 and unreadable; the 11:12:57 cut is the boundary.
 
+## 11:40 UTC (Sun 09-13) - "is the recent losing because of EV?" No. It is win rate, and it is uniform.
+
+**EV cannot be the cause.** In a binary market a wrong side loses 100% of stake whatever EV was paid; EV only
+sets the payoff when right. The recent damage is a **win-rate** collapse, which EV does not touch.
+
+**EV is also not selecting badly.** v12 paper lane, n=267 graded, per $1 by EV at fire - monotone the right
+way: 0.15-0.20 n=127 **-0.001** | 0.20-0.30 n=79 **+0.069** | 0.30-0.50 n=43 +0.488 | 0.50+ n=18 +0.511.
+The top two cells are under 60 and are not read. The two readable cells still rise.
+
+**What actually happened.** Tokyo live, 442 real graded fills: lifetime 55% win, -0.018 per $1.
+Last 60: **37% win, -0.447 per $1** (EF-only last 60: 37%, -0.464).
+
+**Not expensive entries either.** Median fill price is identical before and after (0.530 vs 0.530) and the
+share paying above 0.50 is 61% vs 62%. In the last 60 **every** price bucket is negative - 0.30-0.40 -0.548,
+0.40-0.45 -0.753, 0.45-0.50 -0.314, 0.50-0.55 -0.384, 0.55-0.60 -0.944, 0.60+ -0.225. Uniform, not
+concentrated. So it is not price selection and it is not the fee/EV arithmetic.
+
+**Marking my own result, because it needs it.** I chose the 60-window *after* noticing it looked bad.
+Unadjusted two-sided binomial vs 50% is p=0.052 at n=60 and p=0.041 at n=20; adjusted for having scanned for
+the worst window, neither is significant. A strategy sitting at -0.018 per $1 over 442 produces stretches like
+this. **I cannot say the model has broken, only that EV is not what did it.**
+
+Context: these fills ended 19:59:37 on 09-12. Tokyo's lanes are all OFF and have been. Nothing is losing now.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
