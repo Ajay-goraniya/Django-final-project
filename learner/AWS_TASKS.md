@@ -2159,3 +2159,57 @@ calibration is fixed first.
 
 **On the deploy framing:** accepted, and the correction is more mine than yours - I
 relayed it to the user as their decision four times over. Retry first from now on.
+
+## Task 55 - USER SAYS RESTART. But clearing the halt does NOTHING. Deploy 12.7.0 first, then clear.
+
+**User: "start it again".** That is their decision and I put the calibration concern
+to them before they made it, so we carry it out.
+
+**But do not just clear the halt - it will not work.** I tested it against the real
+`halt_check`:
+
+```
+20 losses        -> 'EF: 20 settled unit returns sum below -3'
+operator clears  -> None
+next halt_check  -> 'EF: 20 settled unit returns sum below -3'
+```
+
+**The window is the last 20 settled results. Clearing `halt` does not change those
+results, and no new result can arrive while every lane is blocked.** So the rule
+re-fires on the next reconcile pass, about a second later, forever. **12.4.1 added
+clear-halt because "a kill switch with no reset is an outage" - the reset was still
+an outage.** Nobody noticed because this is the first kill that has ever fired.
+
+### 12.7.0 makes the reset actually reset
+
+`halt_check` now counts only results and fills **after the last manual clear**, and
+`/api/controls/clear-halt` stamps `halt_cleared_at`. So a clear starts a **fresh
+20-result window** and the rule cannot fire again until 20 have settled after it.
+
+Proved in a test that walks the whole sequence: halt, clear, stays clear, 19 fresh
+losses still clear, **20th fresh loss halts again**.
+
+**State plainly what this costs, because it is a real weakening:** after a clear the
+lane can lose up to 20 more trades before it can stop itself. That is the price of
+having a working reset, and the operator takes it knowingly each time they clear.
+
+One fix inside the fix: the cutoff defaults to **-1**, not 0, so a row with `ts=0`
+still counts toward a kill rule. Dropping a settled result from a *safety* check is
+the wrong failure direction.
+
+**198 tests (58 + 21 + 119). SHA256SUMS 30/30.** Build `12.7.0`.
+
+### Do it in this order
+
+1. **Deploy 12.7.0.** Timestamp it. Re-arm master.
+2. **Then clear the halt** — `/api/controls/clear-halt` with `acknowledge` set to the
+   exact string `EF: 20 settled unit returns sum below -3`.
+3. **Confirm `halt` is still None one minute later.** If it re-fired, the fix did not
+   take and I want that immediately.
+4. Confirm `next_stake` 5.0, `ef_enabled` true, `main_enabled` true, master true.
+
+MAIN's one-shot becomes live again the moment the halt lifts, and `_main_oneshot_check`
+is already deployed, so it disarms itself after one fill without anyone counting.
+
+Report the new `kill.by_kind` after the clear — both lanes should read `armed: false`
+with `results_until_armed: 20`, which is the fresh window.

@@ -390,10 +390,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.6.2')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.7.0')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -430,7 +430,7 @@ class Journal:
         r=self.sql('SELECT v FROM meta WHERE k=?',(k,)); return json.loads(r[0][0]) if r else default
     # Controls whose value decides whether, and how, real money moves. Every
     # write to one is audited below.
-    AUDITED={'master','main_enabled','reversal_enabled','ef_enabled','ev_settings',
+    AUDITED={'master','main_enabled','reversal_enabled','ef_enabled','ev_settings','halt_cleared_at',
              'stake_settings','next_stake','halt','sx_enabled','tp','sl','rules'}
     def set(self,k,v):
         """Set a meta key, recording who changed a control and from what.
@@ -707,12 +707,31 @@ class Journal:
             return float(self.sql("SELECT coalesce(sum(json_extract(plan,'$.budget')),0) FROM orders WHERE status IN ('SUBMITTING','UNKNOWN','PENDING')")[0][0] or 0)
         return self.reserve_detail()['effective']
     def halt_check(self):
+        # Only what has happened SINCE the operator last cleared a kill.
+        #
+        # Without this the reset does not reset. The window is the last 20
+        # settled results, clearing `halt` does not change those results, and no
+        # new result can arrive while every lane is blocked - so halt_check
+        # re-fires on the very next reconcile pass, about a second later. Proved
+        # on 09-13: clear -> None -> 'EF: 20 settled unit returns sum below -3'.
+        # 12.4.1 added clear-halt because "a kill switch with no reset is an
+        # outage"; the reset itself was still an outage.
+        #
+        # So a clear starts a FRESH window and the rule cannot fire again until
+        # 20 results have settled after it. That is deliberately weaker: the lane
+        # gets up to 20 more trades before it can stop itself. It is the price of
+        # having a reset at all, and the operator takes it knowingly when they
+        # clear.
         # Measured against the ask that was on the book immediately before submit,
         # which is the price the fill can fairly be judged against. The signal
         # quote can be hundreds of milliseconds older and flatters the number.
+        # -1 rather than 0: a row with ts=0 must still count toward a KILL rule.
+        # Silently dropping any settled result from a safety check is the wrong
+        # failure direction, and `> 0` would have excluded exactly those rows.
+        since=float(self.get('halt_cleared_at') or -1.0)
         r=self.sql('''SELECT sum(f.spent)/sum(f.shares)-min(coalesce(json_extract(o.plan,'$.pre_submit_quote'),
                       json_extract(o.plan,'$.quote'))) FROM fills f JOIN orders o ON o.id=f.order_id
-                      GROUP BY f.epoch ORDER BY f.epoch DESC LIMIT 20''')
+                      WHERE o.ts>? GROUP BY f.epoch ORDER BY f.epoch DESC LIMIT 20''',(since,))
         # A NULL group makes sum() raise TypeError, which is unguarded all the
         # way up through reconcile_loop and gather() and would exit the process
         # holding open positions. Currently armed and unfired: the live DB has 13
@@ -747,7 +766,7 @@ class Journal:
                    min(coalesce(o.kind,'EF')) kind
             FROM results r JOIN fills f ON f.epoch=r.epoch
             JOIN orders o ON o.id=f.order_id
-            GROUP BY r.epoch ORDER BY r.epoch DESC''')]
+            WHERE r.ts>? GROUP BY r.epoch ORDER BY r.epoch DESC''',(since,))]
         blended=[x['unit'] for x in rows[:20] if x['unit'] is not None]
         if len(blended)==20 and sum(blended)<-3:
             self.set('halt','20 settled unit returns sum below -3')

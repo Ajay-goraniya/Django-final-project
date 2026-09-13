@@ -279,10 +279,17 @@ class Dashboard:
                 was=self.db.get('halt')
                 if p.get('acknowledge')!=was:
                     raise ValueError('Send acknowledge set to the exact halt reason to clear it: '+str(was))
+                # Start a FRESH window, or the clear does nothing: the same 20
+                # results re-trip the rule on the next reconcile pass about a
+                # second later. Proved on 09-13 - clear -> None -> halted again.
+                # The rule re-arms once 20 results have settled after this point.
+                now=time.time()
+                self.db.set('halt_cleared_at',now)
                 self.db.set('halt',None)
-                self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),0,json.dumps(dict(
-                    reason='halt_cleared',was=was))))
-                return dict(ok=True,cleared=was)
+                self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(now,0,json.dumps(dict(
+                    reason='halt_cleared',was=was,window_restarts_at=now))))
+                return dict(ok=True,cleared=was,window_restarts_at=now,
+                            note='kill rules re-arm after 20 results settled from now')
             elif path=='/api/controls/ev':
                 # Changes what the engine will pay and how often it fires, so it
                 # is confirmed like every other trading control and bounded here.

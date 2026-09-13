@@ -242,6 +242,35 @@ class Tests(unittest.TestCase):
         self.assertIn('boom', r('SKIPPED',json.dumps(dict(error='boom'))))
         self.assertIn('SKIPPED', r('SKIPPED','[1,2,3]'))
 
+    def test_clearing_a_halt_actually_restarts_trading(self):
+        """Without a fresh window the reset does not reset.
+
+        The window is the last 20 settled results; clearing `halt` does not
+        change them, and no new result can arrive while every lane is blocked.
+        So halt_check re-fired about a second later and the engine never
+        restarted. Proved on 09-13 after EF's kill.
+        """
+        f=dict(shares=10.,spent=5.,fees=0.,price=.5,fee_bps=0)
+        def loss(ep,ts):
+            self.db.sql("INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,reason,kind)"
+                        " VALUES(?,?,1,'FILLED','{}',?,0,'','EF')",(f'o{ep}',ep,ts))
+            self.db.fill(f'o{ep}',ep,f't{ep}',f,'paper')
+            self.db.sql('INSERT INTO results(epoch,actual,payout,pnl,ts) VALUES(?,?,?,?,?)',
+                        (ep,'UP',0.,-5.,ts))
+        for i in range(20): loss(1000+i,100.0+i)
+        self.db.halt_check()
+        self.assertTrue(self.db.get('halt'))
+
+        self.db.set('halt',None); self.db.set('halt_cleared_at',500.0)
+        self.db.halt_check()
+        self.assertIsNone(self.db.get('halt'),'the clear must survive the next check')
+
+        for i in range(19): loss(2000+i,600.0+i)
+        self.db.halt_check()
+        self.assertIsNone(self.db.get('halt'),'19 fresh results must not re-arm it')
+        loss(2100,700.0); self.db.halt_check()
+        self.assertTrue(self.db.get('halt'),'20 fresh bad results must halt it again')
+
     def test_paper_fill_survives_broker_restart(self):
         async def run():
             ep=epoch();ex=Executor(self.db,self.books,PaperBroker(self.books,self.db))
@@ -365,7 +394,7 @@ class Tests(unittest.TestCase):
     def test_v120_database_migrates_additively(self):
         self.db.reserve(123,decision(),'up','condition')
         self.db.set('build','12.0'); self.db.c.close(); self.db=Journal(self.path,'PAPER','abc')
-        self.assertEqual(self.db.get('build'),'12.6.2')
+        self.assertEqual(self.db.get('build'),'12.7.0')
         self.assertEqual(self.db.sql('SELECT count(*) FROM signals WHERE epoch=123')[0][0],1)
         cols={r[1] for r in self.db.c.execute('PRAGMA table_info(orders)')}
         self.assertTrue({'error_json','timing_json','request_reached','reconcile_count','venue_live'}<=cols)
