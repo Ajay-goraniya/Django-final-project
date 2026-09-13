@@ -2782,6 +2782,19 @@ Pad set to 0 on the user's decision at 03:25 - it is a dial, no restart, so not 
 All 75 reconstructible signals clear the EV bar at the raw ask, against 18 at pad 2, and no fill has ever
 consumed a tick of pad in 12 of 12.
 
+## 03:21 UTC (Sun 09-13) - both windows back above zero, and still not arming
+
+Re-arm reading, Predict.fun v10 paper: last-20 +0.004 per $1, last-40 +0.020 per $1, 498 graded. Six hourly
+readings now: +0.155, -0.102, -0.001, -0.193, -0.082, +0.004. Both windows positive together for the first
+time since 22:20, and the last-20 is sitting on zero to three decimals.
+
+Not arming, and the reason is unchanged: the criterion was refuted at 22:12 on 09-11 and nothing has replaced
+it. This is also the reading that most tempts a person to arm - a positive last-20 after a bad stretch, which
+is the exact shape the rule used to fire on and the exact shape the four-hour swing showed to be noise.
+
+Lanes off, re-asserted, nothing enabled. Equity 15.02, settled 442, nothing open, ladder $1 OK. No real fill
+since 19:59:37 yesterday, now 7.4 hours. Engines up 4.3 h, 13 processes.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
