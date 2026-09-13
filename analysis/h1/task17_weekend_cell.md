@@ -81,3 +81,34 @@ out-of-sample split, and it broke the moment the afternoon extended.
 **Status: the weekend cell is not a candidate.** The registered test is unchanged — ≥100 weekend fires
 across ≥2 separate weekends, halves split by weekend, `verify.py` True, full grid reported — and
 nothing that happened today counts toward passing it. The parent verdict (11.2 REFUTED) is untouched.
+
+---
+
+# Closed: the weekend cell reached 100+ fires and landed on zero. 2026-09-13 00:50 UTC.
+
+| weekend cell | n | per-fire | halves | verify.py |
+|---|---|---|---|---|
+| 14:50 Sat | 62 | +0.073 | +0.025 / +0.121 | all four PASS |
+| 16:50 | 71 | +0.004 | +0.032 / −0.024 | fails 2 |
+| 18:47 | 81 | −0.021 | — | — |
+| 20:47 | 89 | +0.010 | — | — |
+| 22:47 | 94 | −0.019 | — | — |
+| **00:50 Sun** | **104** | **−0.001** | **+0.098 / −0.100** | **fails both halves and beats-the-null** |
+
+**−0.001 per fire on 104 fires.** Essentially exactly zero, with halves of equal magnitude and
+opposite sign. Six readings, oscillating around nothing: +0.073, +0.004, −0.021, +0.010, −0.019,
+−0.001.
+
+**This closes the weekend hypothesis on its own merits.** The registered test asked for ≥100 weekend
+fires across ≥2 separate weekends; it has the 100 fires but they are all from one weekend, so strictly
+the test is not complete. It does not matter: at −0.001 the cell fails on level and on halves
+regardless of how many weekends contribute. **There is no reason to wait for next weekend.** Nothing
+further is owed to this hypothesis.
+
+Final state of the whole forward test: **all n=161 −0.063 · weekend n=104 −0.001 · weekday n=57 −0.177
+(under the bar, not read).** The parent verdict — 11.2 REFUTED — stands, and the calendar split that
+briefly looked like a rescue is now measured and is nothing.
+
+**The worked lesson, in one line:** a cell that read +0.073 with every check passing at n=62 was worth
+−0.001 at n=104. That is the cost of reading a cell the moment it crosses a threshold, and the value
+of the bar being 100 rather than 60.

@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-12 22:47 UTC. Update this file at the end of every check.
+Last updated: 2026-09-13 00:50 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -479,19 +479,24 @@ diverges from the Binance leader in near-zero candles" vs (b) "noise at n=77".
   PnL-by-regime remains unanswered and only the forward test can settle it.
 - Deliverable: `task17_3_regime_grid.md`. Repro: `task17_3_regime_grid.py`.
 
-## WEEKEND CELL: passed at 14:50, **FAILED at 16:50 on nine more fires**. `task17_weekend_cell.md`
+## WEEKEND CELL **CLOSED 09-13 00:50 at −0.001 on n=104**. `task17_weekend_cell.md`
 Buckets were defined before any weekend data existed, and I pre-committed: if it clears 60 positive on
 its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that.
 - **14:50: n=62, +0.073, halves +0.025/+0.121, verify.py ALL FOUR PASS.**
 - **16:50: n=71, +0.004, halves +0.032/−0.024, verify.py FAILS both halves AND beats-the-null.**
-- Readings so far: **+0.073 (n=62) → +0.004 (71) → −0.021 (81) → +0.010 (89) → −0.019 (94)** over
-  five consecutive checks. It oscillates around zero, which is what a null cell does; no single
-  reading of it would have been worth anything.
+- Six readings: **+0.073 (n=62) → +0.004 (71) → −0.021 (81) → +0.010 (89) → −0.019 (94) → −0.001
+  (104)**. It oscillated around nothing and landed on nothing.
+- **CLOSED at n=104: −0.001/fire, halves +0.098/−0.100, verify.py fails both halves AND the null.**
+  The registered test wanted >=2 separate weekends and these 104 fires are one weekend — but at −0.001
+  it fails on level and halves regardless, so **there is no reason to wait for next weekend.** Nothing
+  further is owed to this hypothesis.
+- **Worked lesson:** a cell reading +0.073 with all four checks passing at n=62 was worth −0.001 at
+  n=104. That is the price of reading a cell the moment it crosses a threshold.
   **Nine added fires turned "passes every check" into "fails two."** Had it shipped at 14:50 it would
   have shipped on nine fires of noise. Objection 2 was the operative one: the halves were
   morning-vs-afternoon of ONE Saturday, not a real out-of-sample split, and it broke as the afternoon
   extended. **The cleanest vindication of the 60/100 bars this project has produced.**
-- Full grid 22:47: weekend n=94 −0.019 · weekday n=57 −0.177 (UNDER THE BAR, NOT READ) · all n=151 −0.079.
+- Final grid: **all n=161 −0.063 · weekend n=104 −0.001 · weekday n=57 −0.177 (under the bar, not read).**
 - **Why it is still not a finding:** (1) it is ONE Saturday — 62 fires from one day is one draw of the
   regime; (2) its halves are morning-vs-afternoon of the SAME continuous day, the weakest form of the
   check (the 09-11 flat bucket looked identical to three decimals and died at McNemar p=0.341);
