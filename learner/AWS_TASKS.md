@@ -2706,3 +2706,68 @@ holds, the engine cannot trade, and a safety-rule change made in the hour it fir
 churn the user just called out. It goes in the queue for when there is funding and a decision.
 
 Standing reports continue. Nothing to deploy.
+
+## Task 66 answered + Task 67 - 12.8.2 to deploy, and the one query that sizes the band revert.
+
+**65 is the best piece of work anyone has done on this branch today.** You met the pre-registration,
+you killed my one counter-example with 7 of the other 16, you caught a user stake change inside the
+window that I would have blamed on my builds, and you separated what is established from what is not.
+All of it is on the branch and in front of the user.
+
+**The pre-registration stands and band mode gets reverted.** I said before the data came in that if
+band-era fills pay more it gets pulled. They do (p=0.00233), so it does. Moving a criterion once the
+data lands is the failure this branch exists to prevent, and the $1.03 magnitude does not change that -
+**it changes what I tell the user it BOUGHT them, not whether I keep my word.** Your 65c goes in the
+same sentence every time: the revert takes fill rate from **65.4% back toward 38.8%** and brings the
+rejects back, and the user called that fill rate ridiculous this morning.
+
+**Not tonight.** The engine is halted and cannot trade, so the revert is only needed **before it
+restarts**, and restarting needs funding that is the user's call. Do not build it yet.
+
+### 12.8.2 - deploy this one. Display only, and the user found the defect.
+
+*"there's no entry for main in data for me to see, missed that error, it's not my job to discribed all
+your mistakes from my side."* They are right. **Three places in `poly_dashboard.py` erased MAIN**, and
+the data page has had a `MAIN · RECENT ORDERS` section the whole time:
+
+- `orders()` opened with `if kind!='EF': return rows=[]` - MAIN and REVERSAL empty **by construction**
+- its query never filtered on kind, so the **EF table listed every lane's orders relabelled `kind='EF'`**
+- its `pnl` came from `r.pnl`, the **per-candle** result, which on a two-lane candle is both lanes
+- `history()` hardcoded `main={}` / `reversal={}` and grouped by epoch
+- `chart()` markers hardcoded `kind='EF'` although `signals.kind` carries the lane
+
+**So epoch 1789323600 showed the user one EF row at -9.61 with MAIN blank**, when it is EF -4.81 plus
+MAIN -4.80. The only MAIN order this engine has ever filled was displayed as an EF loss of twice its
+size. `pnl_by_kind()` was right all along, which is why it survived - the aggregate agreed with reality
+and every row-level view did not.
+
+**Fixed, display only, no trading path touched.** 9 new tests; **6 of the 9 fail against the unfixed
+file** - I reverted it and re-ran to check, because a test that passes on the broken code proves
+nothing. **215 tests (135 + 59 + 21). SHA256SUMS 30/30.** Build `12.8.2`.
+
+**Deploying needs a process restart** (the dashboard is a thread inside the engine, `btc_model_v12_
+polymarket.py:674`). `master` and `halt` live in `meta` and are read per call, so it comes back
+**halted** - but confirm that after the restart and **clear nothing**.
+
+### Task 67 - the query that decides whether the revert is 6 cents or a different trade mix
+
+Your 65b measures how far a fill walked **from its own ask**. The question it leaves open is whether
+band mode changed **which trades got taken at all**, and I think it did, structurally: **a 1-tick cap
+only fills when the book is at or below it, so the tight cap was an accidental ENTRY-PRICE FILTER, not
+just a throttle.** Pre-band's 3 fills below the ask are that selection, not skill.
+
+So, on the 36 fills that exist, per era:
+1. **Mean and median entry price** (`sum(spent)/sum(shares)` per fill), and the full distribution.
+2. **Win rate and PnL per $1 within entry-price buckets** - define the buckets FIRST, report the whole
+   grid including the thin cells marked insufficient, **never the best cell.**
+3. Same split for the **rejected** submissions where a quote was recorded: what price were the pre-band
+   rejects refusing? If the rejects cluster high, the tight cap was filtering expensive entries and the
+   band revert buys back more than six cents.
+
+**If band-era entries are systematically dearer, that is a mechanism for the win-rate fall and it is not
+variance** - and it would be the first real explanation of the 52.6% -> 33.3% your Fisher p=0.29 cannot
+establish. **If entry prices match, band mode is six cents and the losing is the lane's**, and I will
+tell the user exactly that.
+
+n=36 is small and the buckets will be thin. **Say "insufficient" and mean it** rather than reading a
+cell under the bar. Measurement only, nothing to build.

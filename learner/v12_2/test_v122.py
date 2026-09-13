@@ -1489,3 +1489,103 @@ class LaneDecisionsRecordThePriceTheySaw(unittest.TestCase):
         head=src[:src.index('INSERT INTO diagnostics')]
         self.assertIn('except Exception: pass',head,
                       'the price lookup must not be able to raise into lane_loop')
+
+
+class MainHasAnEntryTheUserCanSee(unittest.TestCase):
+    """The user: "there's no entry for main in data for me to see".
+
+    Three places in the dashboard erased MAIN, and the data page has had a
+    "MAIN - RECENT ORDERS" section the whole time:
+
+    1. `orders()` opened with `if kind!='EF': return rows=[]`, so the MAIN and
+       REVERSAL tables were empty BY CONSTRUCTION.
+    2. Its query never filtered on kind, so the EF table listed every lane's
+       orders - each one relabelled `kind='EF'` in the row dict. MAIN's fill of
+       09-13 18:20:43 was not merely missing, it was displayed as EF.
+    3. `history()` hardcoded `main={}` / `reversal={}` and grouped by epoch, so a
+       two-lane candle charged the whole combined loss to EF.
+
+    Epoch 1789323600 is the real one: EF -4.81 at 18:20:34 and MAIN -4.80 at
+    18:20:43, nine seconds apart, a -9.61 result row that is two lanes and not
+    one trade.
+    """
+    EPOCH, WIN = 1789323600, 1789323300
+
+    def setUp(self):
+        import poly_dashboard as D
+        self.temp = tempfile.TemporaryDirectory()
+        self.db = C.Journal(str(pathlib.Path(self.temp.name)/'a.db'), 'LIVE', 'h')
+        plan = json.dumps(dict(quote=.43, pre_submit_quote=.43, cap=.48, age_ms=12, budget=5.))
+        dec = json.dumps(dict(sec=34., signal_price=77000.))
+        # the real double-lane candle: both lanes UP, the candle went DOWN
+        for kind, oid, spent, shares, ts in (('EF','oEF',4.81,8.00,100.),('MAIN','oMAIN',4.80,11.16,109.)):
+            self.db.reserve(self.EPOCH, dict(side='UP', fire=True), 'tok', 'cond', kind=kind)
+            self.db.sql("INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,kind,decision) "
+                        "VALUES(?,?,1,'FILLED',?,?,50,?,?)" if 'decision' in
+                        {r[1] for r in self.db.c.execute('PRAGMA table_info(orders)')} else
+                        "INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,kind) VALUES(?,?,1,'FILLED',?,?,50,?)",
+                        (oid, self.EPOCH, plan, ts, kind))
+            self.db.sql("INSERT INTO fills(id,order_id,epoch,shares,spent,fees,price,basis) VALUES(?,?,?,?,?,0,?,'T')",
+                        ('f'+oid, oid, self.EPOCH, shares, spent, spent/shares))
+        self.db.sql("INSERT INTO results(epoch,actual,payout,pnl,ts) VALUES(?,'DOWN',0,-9.61,120)", (self.EPOCH,))
+        # and an EF-only winner, so the single-lane path is covered too
+        self.db.reserve(self.WIN, dict(side='UP', fire=True), 'tok', 'cond', kind='EF')
+        self.db.sql("INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,kind) "
+                    "VALUES('oW',?,1,'FILLED',?,90,50,'EF')", (self.WIN, plan))
+        self.db.sql("INSERT INTO fills(id,order_id,epoch,shares,spent,fees,price,basis) "
+                    "VALUES('fW','oW',?,10.42,5.00,0,0.48,'T')", (self.WIN,))
+        self.db.sql("INSERT INTO results(epoch,actual,payout,pnl,ts) VALUES(?,'UP',10.42,5.42,95)", (self.WIN,))
+        class Bare(D.Dashboard):
+            def __init__(self): pass
+        self.ui = Bare(); self.ui.db = self.db
+        self.ui.r = types.SimpleNamespace(a=types.SimpleNamespace(live=True), revision=1)
+
+    def tearDown(self):
+        self.db.c.close(); self.temp.cleanup()
+
+    def test_main_orders_are_served_at_all(self):
+        out = self.ui.orders('MAIN', 0, 10)
+        self.assertEqual(len(out['rows']), 1, 'MAIN asked for its orders and got an empty page')
+        self.assertEqual(out['rows'][0]['kind'], 'MAIN')
+        self.assertEqual(out['rows'][0]['order_id'], 'oMAIN')
+
+    def test_the_ef_table_no_longer_shows_mains_order(self):
+        rows = self.ui.orders('EF', 0, 10)['rows']
+        self.assertEqual({r['order_id'] for r in rows}, {'oEF', 'oW'})
+        self.assertTrue(all(r['kind'] == 'EF' for r in rows))
+
+    def test_each_lanes_pager_counts_only_its_own(self):
+        self.assertEqual(self.ui.orders('MAIN', 0, 10)['total'], 1)
+        self.assertEqual(self.ui.orders('EF', 0, 10)['total'], 2)
+
+    def test_an_order_row_carries_its_own_lane_pnl_not_the_candles(self):
+        # the result row is -9.61 for the candle; neither lane lost that
+        self.assertAlmostEqual(self.ui.orders('MAIN', 0, 10)['rows'][0]['pnl'], -4.80, places=2)
+        ef = [r for r in self.ui.orders('EF', 0, 10)['rows'] if r['order_id'] == 'oEF'][0]
+        self.assertAlmostEqual(ef['pnl'], -4.81, places=2)
+
+    def test_history_splits_the_double_lane_candle(self):
+        row = [r for r in self.ui.history(0, 10)['rows'] if r['candle_id'] == self.EPOCH*1000][0]
+        self.assertTrue(row['main'], 'MAIN traded this candle and the row shows it blank')
+        self.assertAlmostEqual(row['main']['pnl'], -4.80, places=2)
+        self.assertAlmostEqual(row['ef']['pnl'], -4.81, places=2)
+        self.assertAlmostEqual(row['combined_financial_pnl'], -9.61, places=2)
+        self.assertEqual(sorted(row['lanes']), ['EF', 'MAIN'])
+
+    def test_a_two_lane_candle_is_still_one_row_and_paging_counts_candles(self):
+        rows = self.ui.history(0, 10)['rows']
+        self.assertEqual(len(rows), 2, 'two candles, one of them two-lane')
+        self.assertEqual(len(self.ui.history(0, 1)['rows']), 1, 'limit must mean candles, not lane rows')
+
+    def test_the_single_lane_winner_is_unchanged(self):
+        row = [r for r in self.ui.history(0, 10)['rows'] if r['candle_id'] == self.WIN*1000][0]
+        self.assertEqual(row['main'], {}); self.assertEqual(row['reversal'], {})
+        self.assertAlmostEqual(row['ef']['pnl'], 5.42, places=2)
+        self.assertEqual(row['combined_financial_result'], 'WIN')
+
+    def test_chart_markers_carry_the_real_lane(self):
+        self.assertEqual({m['kind'] for m in self.ui.chart()['markers']}, {'EF', 'MAIN'})
+
+    def test_the_empty_page_guard_still_holds(self):
+        self.assertEqual(self.ui.orders('NOPE', 0, 10)['rows'], [])
+        self.assertEqual(self.ui.history(500, 10)['rows'], [])

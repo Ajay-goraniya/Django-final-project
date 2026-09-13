@@ -372,27 +372,78 @@ class Dashboard:
         r.actual,r.pnl,r.payout,r.claim_status FROM signals s LEFT JOIN orders o ON o.epoch=s.epoch AND o.kind=s.kind
         LEFT JOIN fills f ON f.order_id=o.id LEFT JOIN results r ON r.epoch=s.epoch
         GROUP BY s.epoch ORDER BY s.epoch DESC''')
+    KINDS=('EF','MAIN','REVERSAL')
     def orders(self,kind='EF',offset=0,limit=10):
-        if kind!='EF': return dict(rows=[],offset=offset,total=0)
-        rows=self.db.sql('''SELECT o.*,s.side,s.token,s.condition_id,s.decision,sum(f.shares) shares,sum(f.spent) spent,sum(f.fees) fees,CASE WHEN sum(f.shares)>0 THEN r.pnl ELSE NULL END pnl
+        """Recent orders for ONE lane.
+
+        This used to answer `rows=[]` for anything but EF, so the MAIN and
+        REVERSAL tables on the data page were empty by construction - and the EF
+        table was not filtered at all, so it listed every lane's orders relabelled
+        `kind='EF'`. MAIN's fill of 09-13 18:20:43 was therefore invisible as MAIN
+        and shown as EF, which is worse than missing it.
+
+        `r.pnl` is the RESULT row, and a result is per CANDLE, not per lane. When
+        two lanes trade one candle (EF and MAIN did, nine seconds apart, on epoch
+        1789323600) it is their COMBINED -9.61, so attaching it to each order
+        double-counts and credits each lane with the other's loss. PnL is computed
+        per lane here from that lane's own fills, by the same formula as
+        `pnl_by_kind`: winning shares pay 1 each, minus what this lane spent."""
+        if kind not in self.KINDS: return dict(rows=[],offset=offset,total=0)
+        rows=self.db.sql('''SELECT o.*,s.side,s.token,s.condition_id,s.decision,sum(f.shares) shares,sum(f.spent) spent,sum(f.fees) fees,
+        CASE WHEN sum(f.shares)>0 AND r.actual IS NOT NULL
+             THEN (CASE WHEN s.side=r.actual THEN sum(f.shares) ELSE 0 END)-sum(f.spent+f.fees)
+             ELSE NULL END pnl
         FROM orders o JOIN signals s ON s.epoch=o.epoch AND s.kind=o.kind LEFT JOIN fills f ON f.order_id=o.id LEFT JOIN results r ON r.epoch=o.epoch
-        GROUP BY o.id ORDER BY o.ts DESC LIMIT ? OFFSET ?''',(limit,offset))
+        WHERE coalesce(o.kind,'EF')=? GROUP BY o.id ORDER BY o.ts DESC LIMIT ? OFFSET ?''',(kind,limit,offset))
         out=[]
         for r in rows:
             p=json.loads(r['plan']); d=json.loads(r['decision']); price=r['spent']/r['shares'] if r['shares'] else None
             timing=json.loads(r['timing_json'] or '{}') if 'timing_json' in r.keys() else {}
             err=json.loads(r['error_json'] or 'null') if 'error_json' in r.keys() else None
-            out.append(dict(utc=dt.datetime.fromtimestamp(r['ts'],LONDON).isoformat(),candle_id=r['epoch']*1000,seconds_into_candle=d.get('sec'),direction=r['side'],kind='EF',ef_attempt_seq=r['attempt'],signal_price=d.get('signal_price'),quoted_price=p.get('signal_quote',p['quote']),pre_submit_quote=p.get('pre_submit_quote',p['quote']),price_cap=p.get('cap'),fill_price=price,shares=r['shares'],delay_ms=timing.get('total_attempt_ms',r['latency']),last_attempt_ms=r['latency'],book_age_ms=p['age_ms'],fee_collateral=r['fees'],market_id=r['condition_id'],order_id=r['id'],status=r['status'],filled=bool(r['shares']),failure_reason=r['reason'],error=err,timing=timing,request_reached=(err.get('request_reached') if isinstance(err,dict) and 'request_reached' in err else (bool(r['request_reached']) if 'request_reached' in r.keys() else None)),stake=(r['spent'] or 0)+(r['fees'] or 0) if r['shares'] else p['budget'],pnl=r['pnl'],correct=r['pnl']>0 if r['pnl'] is not None else None,financial_is_shadow=not self.r.a.live,quote_to_fill=(price-p.get('signal_quote',p['quote'])) if price is not None else None,ask_to_fill=(price-p.get('pre_submit_quote',p['quote'])) if price is not None else None,cap_to_fill=((p.get('cap')-price) if (price is not None and p.get('cap') is not None) else None)))
-        return dict(rows=out,total=self.db.sql('SELECT count(*) FROM orders')[0][0],offset=offset)
+            out.append(dict(utc=dt.datetime.fromtimestamp(r['ts'],LONDON).isoformat(),candle_id=r['epoch']*1000,seconds_into_candle=d.get('sec'),direction=r['side'],kind=(r['kind'] if 'kind' in r.keys() else None) or 'EF',ef_attempt_seq=r['attempt'],signal_price=d.get('signal_price'),quoted_price=p.get('signal_quote',p['quote']),pre_submit_quote=p.get('pre_submit_quote',p['quote']),price_cap=p.get('cap'),fill_price=price,shares=r['shares'],delay_ms=timing.get('total_attempt_ms',r['latency']),last_attempt_ms=r['latency'],book_age_ms=p['age_ms'],fee_collateral=r['fees'],market_id=r['condition_id'],order_id=r['id'],status=r['status'],filled=bool(r['shares']),failure_reason=r['reason'],error=err,timing=timing,request_reached=(err.get('request_reached') if isinstance(err,dict) and 'request_reached' in err else (bool(r['request_reached']) if 'request_reached' in r.keys() else None)),stake=(r['spent'] or 0)+(r['fees'] or 0) if r['shares'] else p['budget'],pnl=r['pnl'],correct=r['pnl']>0 if r['pnl'] is not None else None,financial_is_shadow=not self.r.a.live,quote_to_fill=(price-p.get('signal_quote',p['quote'])) if price is not None else None,ask_to_fill=(price-p.get('pre_submit_quote',p['quote'])) if price is not None else None,cap_to_fill=((p.get('cap')-price) if (price is not None and p.get('cap') is not None) else None)))
+        return dict(rows=out,total=self.db.sql("SELECT count(*) FROM orders WHERE coalesce(kind,'EF')=?",(kind,))[0][0],offset=offset)
     def history(self,offset,limit):
+        """Settled candles, split by lane.
+
+        This used to `GROUP BY s.epoch` and hand the whole row to a single `ef`
+        dict with `main={}` and `reversal={}` hardcoded empty - so a candle MAIN
+        traded showed MAIN as blank and charged EF with MAIN's money. On epoch
+        1789323600 that renders EF at -9.61 when EF lost -4.81 and MAIN lost -4.80.
+        The page has always had MAIN and REVERSAL columns; the backend emptied them.
+
+        Paged on CANDLES, then every lane on that page's candles is fetched, so a
+        two-lane candle stays one row and the page size still means what it says.
+        Lane PnL is that lane's own fills by `pnl_by_kind`'s formula, never the
+        per-candle result row, which is the SUM of the lanes that traded it."""
         rows=[]
-        ps=self.db.sql('''SELECT s.*,sum(f.shares) shares,sum(f.spent) spent,sum(f.fees) fees,r.actual,r.pnl
+        eps=[x[0] for x in self.db.sql("""SELECT DISTINCT r.epoch FROM results r JOIN signals s ON s.epoch=r.epoch
+        JOIN orders o ON o.epoch=s.epoch AND o.kind=s.kind JOIN fills f ON f.order_id=o.id
+        ORDER BY r.epoch DESC LIMIT ? OFFSET ?""",(limit,offset))]
+        if not eps: return dict(rows=[],offset=offset,total=self.db.metrics()['n'])
+        ph=','.join('?'*len(eps))
+        ls=self.db.sql(f"""SELECT s.epoch,coalesce(s.kind,'EF') kind,s.side,s.decision,r.actual,
+        sum(f.shares) shares,sum(f.spent) spent,sum(f.fees) fees
         FROM results r JOIN signals s ON s.epoch=r.epoch
-        JOIN orders o ON o.epoch=s.epoch AND o.kind=s.kind JOIN fills f ON f.order_id=o.id GROUP BY s.epoch ORDER BY s.epoch DESC LIMIT ? OFFSET ?''',(limit,offset))
-        for r in ps:
-            d=json.loads(r['decision']); result='WIN' if r['pnl']>0 else 'LOSS' if r['pnl']<0 else 'FLAT'
-            ef=dict(direction=r['side'],at=d.get('sec'),filled=True,fill_price=r['spent']/r['shares'],stake=r['spent']+r['fees'],pnl=r['pnl'],correct=r['pnl']>0,financial_result=result,financial_is_shadow=not self.r.a.live)
-            rows.append(dict(candle_id=r['epoch']*1000,actual=r['actual'],main={},reversal={},ef=ef,combined_financial_result=result,combined_financial_pnl=r['pnl']))
+        JOIN orders o ON o.epoch=s.epoch AND o.kind=s.kind JOIN fills f ON f.order_id=o.id
+        WHERE r.epoch IN ({ph}) GROUP BY s.epoch,coalesce(s.kind,'EF')""",eps)
+        by={}
+        for r in ls: by.setdefault(r['epoch'],[]).append(r)
+        for ep in eps:
+            lanes={}; total=0.; actual=None
+            for r in by.get(ep,[]):
+                actual=r['actual']; shares=r['shares'] or 0.; cost=(r['spent'] or 0.)+(r['fees'] or 0.)
+                pnl=((shares if r['side']==actual else 0.)-cost) if actual is not None else None
+                if pnl is not None: total+=pnl
+                d=json.loads(r['decision'])
+                lanes[r['kind']]=dict(direction=r['side'],at=d.get('sec'),filled=True,
+                    fill_price=(r['spent']/shares if shares else None),stake=cost,pnl=pnl,
+                    correct=(pnl>0 if pnl is not None else None),
+                    financial_result=(None if pnl is None else 'WIN' if pnl>0 else 'LOSS' if pnl<0 else 'FLAT'),
+                    financial_is_shadow=not self.r.a.live)
+            result='WIN' if total>0 else 'LOSS' if total<0 else 'FLAT'
+            rows.append(dict(candle_id=ep*1000,actual=actual,main=lanes.get('MAIN',{}),
+                reversal=lanes.get('REVERSAL',{}),ef=lanes.get('EF',{}),lanes=sorted(lanes),
+                combined_financial_result=result,combined_financial_pnl=total))
         return dict(rows=rows,offset=offset,total=self.db.metrics()['n'])
     def pnl(self,range_key='1D'):
         cutoff=time.time()-({'1D':86400,'1W':7*86400}.get(range_key,1e12))
@@ -411,7 +462,7 @@ class Dashboard:
         candles=[dict(time=r['epoch']*1000,open=r['open'],high=r['high'],low=r['low'],close=r['close'],volume=r['volume']) for r in reversed(self.db.sql('SELECT * FROM candles ORDER BY epoch DESC LIMIT 500'))]
         markers=[]
         for r in self.db.sql('SELECT * FROM signals ORDER BY epoch DESC LIMIT 500'):
-            d=json.loads(r['decision']); markers.append(dict(candle_id=r['epoch']*1000,ts_ms=int(r['ts']*1000),time=r['epoch']*1000,kind='EF',direction=r['side'],price=d.get('signal_price'),financial_is_shadow=not self.r.a.live))
+            d=json.loads(r['decision']); markers.append(dict(candle_id=r['epoch']*1000,ts_ms=int(r['ts']*1000),time=r['epoch']*1000,kind=(r['kind'] if 'kind' in r.keys() else None) or 'EF',direction=r['side'],price=d.get('signal_price'),financial_is_shadow=not self.r.a.live))
         return dict(candles=candles,markers=markers,history=[],revision=self.r.revision)
     def snapshot(self):
         if self.cache is not None and time.monotonic()-self.cache_at<.5: return self.cache

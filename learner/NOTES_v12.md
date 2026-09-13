@@ -3773,3 +3773,82 @@ fills / 34 results. **Restarting needs funding and is the user's call alone.**
 
 **63a is frozen** at 24 MAIN rows, 17 carrying `ask_up`/`ask_dn`, 7 candles - short of the
 within-candle correlation. The instrumentation is in place for whenever the engine runs again.
+
+## 18:5x UTC (Sun 09-13) - the user found a defect I should have found: MAIN has no entry in the data page.
+
+User: *"there's no entry for main in data for me to see, missed that error, it's not my job to discribed
+all your mistakes from my side."* They are right on both counts. **Fourth instance of act/display drift**,
+and the worst of the four, because it does not merely hide MAIN - **it charges MAIN's money to EF.**
+
+**The data page has always had three sections** - `MAIN · RECENT ORDERS`, `REVERSAL · RECENT ORDERS`,
+`EF · RECENT ORDERS` (`data_html.html:6,28`) - and the history table has always had MAIN and REVERSAL
+columns (`dashboard_html.html:447`). **The UI was never the problem. The backend emptied them.**
+
+Three separate places, all in `poly_dashboard.py`:
+
+| where | what it did |
+|---|---|
+| `orders()` first line | `if kind!='EF': return rows=[]` - **MAIN and REVERSAL tables empty by construction** |
+| `orders()` row dict | query never filtered on kind, so the **EF table listed every lane's orders, relabelled `kind='EF'`** |
+| `orders()` pnl column | `r.pnl` is the **per-candle** result; on a two-lane candle it is BOTH lanes, attached to each |
+| `history()` | `main={}` / `reversal={}` **hardcoded**, `GROUP BY s.epoch` collapses lanes, EF gets the combined PnL |
+| `chart()` markers | `kind='EF'` hardcoded although `signals.kind` carries the real lane |
+
+**What the user was actually shown for epoch 1789323600:** one EF row at **-9.61**, and MAIN blank. The
+truth is **EF -4.81 and MAIN -4.80**, two lanes nine seconds apart. So the only MAIN order this engine
+has ever filled was displayed as an EF loss of twice its size.
+
+`pnl_by_kind()` was **correct all along** - it recomputes per lane from that lane's own fills - so the
+summary card's by-kind number was right while every row-level view was wrong. That is why this survived:
+the aggregate agreed with reality and nothing else did.
+
+**Fixed in 12.8.2, display only.** `orders()` filters by lane, labels the true lane, pages per lane and
+computes PnL per lane by `pnl_by_kind`'s formula; `history()` pages on **candles** then splits every lane
+on them, so a two-lane candle is one row with `main`, `reversal` and `ef` each carrying their own money;
+markers carry `signals.kind`. **No trading behaviour touched.** 9 new tests, and **6 of the 9 fail against
+the unfixed file** - checked by reverting it and re-running, because a test that passes on the broken code
+proves nothing. **215 tests (135 + 59 + 21), SHA256SUMS 30/30.**
+
+## Task 65 answered: band mode is guilty on execution, and it is ~6% of the money.
+
+AWS ran all three from the journal. **My suspect was right and my pre-registered criterion is met.**
+
+**65b, the decisive one** - `paid - ask` per fill, n=36:
+
+| | pre-band | band era |
+|---|---|---|
+| n | 19 | 17 |
+| mean paid - ask | **-0.0042** | **+0.0071** |
+| fills **above** the ask | **0** | **7** |
+| fills **below** the ask | 3 | **0** |
+| mean cap width | 1.0 tick | 5.5 ticks |
+
+**Fisher two-sided p = 0.00233.** Wider caps let the fill walk up the book, exactly as feared, and the
+price improvement that ran all day stopped dead. **My single counter-example - MAIN at +0.0000 - was
+the misleading one.** Cost: **$1.03 total, about $0.06 a fill, against -$16.16. Execution is ~6%.**
+
+**65c reverses nothing I told the user, and cuts the other way:** fill rate **38.8% (19/49) -> 65.4%
+(17/26)**, rejects 29 -> 8. **Band mode did what it was built to do.** Reverting it brings back the 39%
+fill rate the user called ridiculous this morning. That trade must be stated whenever the revert ships.
+
+**65a, per era on AWS's deploy stamps:** pre-band 19 settled 10W/9L **+7.93**; band era 15 settled 5W/10L
+**-25.56**. Win rate 52.6% -> 33.3%, **Fisher p = 0.2922 - NOT established.** At n=19 vs 15 a fall that
+size happens about three times in ten.
+
+**The confound that is not mine:** `next_stake` went **$3 -> $5 at 14:38:48**, set by the user, inside the
+window. Per $1 staked: pre-band **+0.1436**, band at $3 **-0.2640**, band at $5 **-0.4349**. Band is worse
+per dollar too, so the stake is not the whole story, but it amplified every band-era loss by two thirds.
+
+**The honest split: execution established (p=0.002), win rate not (p=0.29). ~94% of what the user is
+reacting to is losing trades at a win rate this sample cannot separate from a bad run.**
+
+**Standing on the pre-registration: band mode gets reverted.** I said before the data came in that if
+band-era fills pay more it gets pulled; they do, so it does. Moving a criterion after the data arrives is
+the failure this branch exists to prevent. **Not shipped tonight** - the engine is halted and cannot trade,
+so the revert is only needed before it restarts, and it should go with the fill-rate trade stated.
+
+**Open, and it decides how big the revert really is:** the tight cap only filled when the book was at or
+below it, so it was **an accidental entry-price filter**, not just a throttle. If band-era entries are at
+systematically higher prices, band mode changed **which** trades get taken and not merely the 6 cents -
+which would be a mechanism for the win-rate fall rather than variance. **Entry price by era, requested as
+Task 67. One query on data that already exists.**
