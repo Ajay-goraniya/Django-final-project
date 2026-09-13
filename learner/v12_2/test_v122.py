@@ -1463,3 +1463,29 @@ class CalibrationIsOffUntilTurnedOn(unittest.TestCase):
         self.db.set('calibration',dict(enabled=True,cut=0.80,to=0.784))
         self.assertEqual(self.r._calibrate(dict(fire=True)),dict(fire=True))
         self.assertEqual(self.r._calibrate(dict(p=None))['p'],None)
+
+
+class LaneDecisionsRecordThePriceTheySaw(unittest.TestCase):
+    """Without the ask on every lane decision, MAIN's question is unanswerable.
+
+    On 09-13 the journal held 145 non-refusal MAIN rows carrying `p` and zero
+    carrying an ask, so "would firing earlier have helped" could not be tested -
+    the only priced rows were four retries inside one second. The book is venue
+    data, not a lane's opinion, so recording it commits to nothing.
+    """
+    def test_the_writer_records_both_asks_from_the_book(self):
+        import btc_model_v12_polymarket as E, inspect
+        src=inspect.getsource(E.PolyRunner.lane_loop)
+        self.assertIn("'ask_up'",src)
+        self.assertIn("'ask_dn'",src)
+        self.assertIn('self.books.quote',src)
+        # it must go in the SAME row as the decision, not a separate write
+        self.assertIn('dict(decision,lane=kind,**_px)',src)
+
+    def test_it_cannot_break_the_decision_path(self):
+        """A missing market or a cold book must not stop the lane recording."""
+        import btc_model_v12_polymarket as E, inspect
+        src=inspect.getsource(E.PolyRunner.lane_loop)
+        head=src[:src.index('INSERT INTO diagnostics')]
+        self.assertIn('except Exception: pass',head,
+                      'the price lookup must not be able to raise into lane_loop')

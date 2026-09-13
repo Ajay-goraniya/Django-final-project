@@ -320,7 +320,32 @@ class PolyRunner(Runner):
         self.lane_decision=self.lanes.monitor()
         if not decision: return
         kind=decision['kind']
-        self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(now,ep,json.dumps(dict(decision,lane=kind))))
+        # RECORD THE PRICE THE LANE SAW, on every decision and not only on the
+        # ones that reach order_plan.
+        #
+        # Without this the most important question about MAIN is unanswerable.
+        # It has fired 0 orders in three hours; the candidate fix is that it
+        # waits 60 aligned reads (~15 s) and the side it wants reprices in that
+        # time - one candle shows EV +0.2306 at ask 0.68 earlier in the streak
+        # against +0.0307 at the refusal. Testing that needs the ask THROUGHOUT
+        # the streak, and on 09-13 the journal had 145 non-refusal MAIN rows
+        # carrying `p` and ZERO carrying an ask. The refusal rows exist but span
+        # under a second each - four retries, not a time series.
+        #
+        # The book is venue data, not a lane's opinion, so recording it here
+        # costs nothing and commits to nothing. One field, and the question
+        # becomes answerable from a few hours of live data instead of inferred
+        # from 8-second-stale pairings.
+        _px={}
+        try:
+            _t=self.market.get(ep)
+            if _t:
+                for _k,_tok in (('ask_up',_t[0]),('ask_dn',_t[1])):
+                    _q=self.books.quote(_tok,self.quote_age_s())
+                    _px[_k]=(_q or {}).get('ask')
+        except Exception: pass
+        self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',
+                    (now,ep,json.dumps(dict(decision,lane=kind,**_px))))
         if not self.ui.allowed(kind): return
         if self.cash is None or time.monotonic()-self.cash_at>=15: return
         if ep not in self.market or ep not in self.info: return

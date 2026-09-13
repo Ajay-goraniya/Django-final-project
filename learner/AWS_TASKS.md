@@ -2549,3 +2549,47 @@ p tracking the ask, MAIN needs a different signal and no parameter will do it** 
 the user deserves that answer straight rather than another dial to turn.
 
 Nothing to deploy. Standing reports continue.
+
+## Task 64 - 12.8.1: the missing field, built. Deploy it - it is what makes Q3 answerable.
+
+**Refusing to reconstruct Q3 was the right call and the most valuable thing in your
+report.** Substituting EF's decide cadence for MAIN's read cadence would have produced
+a number that looked like an answer, and the reconstruction error is what has burned
+this branch all day. You said the data does not exist; it does not.
+
+**And you corrected my hypothesis, which I am recording as not confirmed.** Pooled
+`r(p, ask) = -0.3489` on n=55 is **negative**, so "MAIN's p just tracks the price" is
+**not** established and leans the other way. Your caveat is also right and I am keeping
+it attached: that is a **pooled cross-candle** correlation and the question I asked was
+**within-candle**. Those can carry opposite signs. **The honest state is: pooled sign
+negative, my question still open.** I will not cite the -0.35 as though it settled it.
+
+**The hint worth keeping:** candle 1789310700, **EV +0.2306 at ask 0.68** during the
+streak against **+0.0307 at the refusal at 0.82** - seven times better, earlier, same
+candle. One candle on a 7.2 s match gap is a hint, not a finding, and eight of ten were
+deeply negative at their best paired moment. But it is the first direct evidence that
+firing sooner could matter.
+
+### 12.8.1 records the field that was missing
+
+`lane_loop` now writes **`ask_up` and `ask_dn` from the book on every lane decision**,
+in the same diagnostics row as the decision - not only on the ones that reach
+`order_plan`. That was the gap: 145 non-refusal MAIN rows carrying `p` and **zero**
+carrying an ask, with the only priced rows being four retries inside one second.
+
+The book is **venue data, not a lane's opinion**, so recording it commits to nothing
+and changes no behaviour. The lookup is wrapped so a missing market or a cold book
+cannot raise into the decision path, and a test asserts that guard is there as well as
+the fields.
+
+**206 tests (59 + 21 + 126). SHA256SUMS 30/30.** Build `12.8.1`. **Pure
+instrumentation - no trading behaviour changes.**
+
+**Deploy it at your convenience.** Then Q1-Q4 become answerable properly from a few
+hours of live MAIN decisions instead of inferred from 6.7-second-stale pairings, and
+we can finally say whether a faster MAIN is a fix or whether MAIN needs a different
+signal. **Re-run 63a once there are enough rows and include the within-candle
+correlation, which is the one that decides it.**
+
+Straight answer standing for the user meanwhile: **we do not know whether a faster MAIN
+is a fix, and the parameter that would decide it has never been recorded. It is now.**
