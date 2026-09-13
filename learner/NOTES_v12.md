@@ -2975,6 +2975,27 @@ decisions table, not the trades table.
 Lanes off, re-asserted, nothing enabled. Equity 15.02, settled 442, nothing open, ladder $1 OK. No real fill
 since 19:59:37 yesterday, now 11.4 hours. Engines up 8.3 h, 13 processes, Tokyo uptime 48.8 h.
 
+## 08:21 UTC (Sun 09-13) - the "frozen" runs resumed, confirming last hour's read
+
+Re-arm reading, Predict.fun v10 paper: last-20 **+0.630** per $1, last-40 **+0.275** per $1, 521 graded.
+Eleven readings: +0.155, -0.102, -0.001, -0.193, -0.082, +0.004, +0.347, +0.413, +0.412, +0.607, +0.630.
+Sixth consecutive positive, new high on both windows. Not arming; unchanged reason.
+
+Both Polymarket runs moved again this hour - Polymarket paper 128/117 -> 132/119, the v12 lane 131/107 ->
+134/109. So last hour's diagnosis holds: they were not stalled, the model had simply seen nothing worth taking
+on that book for 77 minutes. Worth closing the loop explicitly, because the cheap conclusion at 07:20 would
+have been to restart them, and restarting a healthy engine costs the warm-up and teaches nothing.
+
+The watcher now carries a decisions-freshness check for exactly this, so the next occurrence is answered
+without a manual investigation: a stalled engine stops deciding, a quiet one does not.
+
+All three paper runs continue strong: +198.9, +265.0, +430.6 at $10, and the v12 lane is 55% on 243 graded.
+
+Lanes off, re-asserted, nothing enabled. Equity 15.02, settled 442, nothing open, ladder $1 OK. No real fill
+since 19:59:37 yesterday, now 12.4 hours. Tokyo uptime 49.9 h with no restart. 14 python processes - the 12
+plus the watcher and one leftover probe from the 07:20 investigation; benign, noted so the count is not read
+as a duplicate engine.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
