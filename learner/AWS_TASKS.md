@@ -155,6 +155,74 @@ not proposing to lower it, and the standing no-gates rule applies to the EV bar
 as much as anything else. If the answer is "not close", that is a statement about
 the model, not the bar.
 
+## USER DECISION 09-13 03:25 — SET pad_ticks TO 0 NOW
+
+Verbatim: *"Set 0 but what matters is if its getting rejected or filled? We need
+to fix rejections and frequency, v12 paper is the completion you guys have and
+that's what you need to beat or atleast achieve close near it's pnl"*.
+
+**Set `pad_ticks` to 0 immediately** via `/api/controls/ev` — it applies to the
+running executor with no restart and no deploy, so the guard does not block it.
+Confirm the setting reads back 0 and report it.
+
+Their point is the one that matters and it is not the one my grid answered.
+Clearing the EV check is not the same as filling. On the historical splits,
+n=5 and n=22 and both far under the bar:
+
+| pad | fills | rejects | fill rate | signals passing EV |
+|---|---|---|---|---|
+| 0 | 1 | 4 | 20% | 100% |
+| 1 | 10 | 12 | 45% | 43% |
+| 2 | 0 | 1 | — | 24% |
+
+Naively 100% x 20% beats 24% x 45%, roughly double the fills per signal — but
+every one of those fill rates is unreadable at this n, and the pad-0 rate is
+1 of 5. **Do not present pad 0 as established.** It is a change made on the one
+thing that IS established: the pad has never been consumed in 12 of 12 fills, so
+it is buying nothing while refusing three quarters of participation.
+
+## Task 12 - OPEN (priority): the 400 ms, and whether it is the reject cause
+
+Your 0.13 s reject is the most useful number of the night. The book was 130 ms
+old and the level was gone when a 398 ms submit landed. Within our own orders
+latency does NOT separate fills from rejects (submit_ms 350 fills vs 322
+rejects) — but that is consistent with being **uniformly too slow**: we lose
+races we would win at 50 ms, and being slightly slower among the slow changes
+nothing.
+
+So break the 400 ms down and say where it goes:
+
+1. `sign_ms` and `fire_to_submit_ms` are ~7 and ~13 ms, so roughly 350-380 ms is
+   network and venue. Measure the raw round trip from that box to the CLOB
+   endpoint directly — TCP connect, TLS handshake, and a trivial authenticated
+   request — and report the distribution, not one ping.
+2. Where is the CLOB actually served from? If it is US-hosted, a Mumbai box is
+   structurally 200-300 ms behind anyone co-located, and **no amount of pricing
+   logic closes that.** That would make the venue-side location the reject cause
+   and the fix a move, not a code change.
+3. Does anything in the submit path add avoidable latency — a fresh connection
+   per order, DNS, a retry, a REST call in the hot path? The client is supposed
+   to be warm; confirm it is.
+
+Report the breakdown. If the answer is "the wire is 350 ms and there is nothing
+to shave", say that plainly — it is a more valuable answer than a micro-
+optimisation, and it changes what the user should do with the box.
+
+## Task 13 - OPEN: measure pad 0 against the target the user set
+
+The benchmark is the **v12 paper lane** (port 8790 in the fair table, currently
+55% and +358.5 at $10 stake). That is the completion the live engine has to get
+near.
+
+Once pad 0 has run: attempts, fills, rejects, fill rate, and realised PnL per $1,
+against the same numbers at pad 2. Report both arms and the n. Under 60 graded
+fires it stays marked and unread — including if it looks good.
+
+The honest comparison to keep in view: the paper lane books at the raw websocket
+ask with no pre-submit re-check and no venue rejection at all. It is not a
+like-for-like target, it is an upper bound. Saying how far short live falls, and
+how much of the gap is rejects versus refusals, is the useful version.
+
 ## Settled
 
 - Pad never engaged (11/11 fills at or better than the quoted ask, zero partials
