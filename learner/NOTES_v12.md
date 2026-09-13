@@ -3088,6 +3088,35 @@ this. **I cannot say the model has broken, only that EV is not what did it.**
 
 Context: these fills ended 19:59:37 on 09-12. Tokyo's lanes are all OFF and have been. Nothing is losing now.
 
+## 12:21 UTC (Sun 09-13) - OUTAGE: all 12 processes were dead. Relaunched. ~50 min of 1 Hz book data lost.
+
+**Found at 12:21 with zero python3 processes running.** They were all alive at the 11:22 check (12 listed,
+PIDs 1004-13767); at 12:21 the count was 0 and the new PIDs after relaunch are 897-952, so the container
+restarted and took everything with it. Tokyo is a different host and was unaffected.
+
+**Data loss, stated because it is unrecoverable.** Last write to `polybook.sqlite3` was **11:32:33**; back up
+at **12:23**. So roughly **50 minutes of 1 Hz Polymarket order-book capture is gone** and cannot be refetched -
+Polymarket publishes no historical book. `b10.sqlite3-wal` and `/tmp/v10_long4.sqlite3` last wrote 10:55:20.
+
+**`restart_all.sh` restored 11 of 12.** It never covered the v12 Polymarket observation lane on 8790, which
+lived only in `restart_v12_lane.sh`. Fixed: `restart_all.sh` now launches it too, guarded by the same `alive`
+check, and re-running the script is a no-op when everything is up. One script has to restore everything, or
+the gap gets found by noticing a stale number an hour later - which is exactly how it was found this time.
+
+**The re-arm reading is NOT a new reading and must not be counted as one.** Predict.fun last-20 **+0.302**,
+last-40 **+0.358**, 532 graded - byte-identical to 11:22 because the engine was down and graded nothing in
+between. Polymarket last-20 **-0.000**, last-40 **+0.134**, also unchanged. This is the same observation
+sampled twice, not a fifteenth consecutive positive, and the streak count stays at nine. Not arming; the
+criterion remains refuted from 22:12 on 09-11 and unreplaced.
+
+**The fair table is likewise unchanged in all four rows** for the same reason. Tokyo **5W/10L -70.6**, equity
+15.02, settled 442, nothing open, ladder $1 OK; master OFF and MAIN/REVERSAL/EF all False on inspection - no
+silent revert. Backup refreshed at 12:26:52.
+
+Polymarket v12 (AWS box), separately and unaffected by any of this: **12.4.10 deployed 12:15:16** and band
+mode is executing for the first time - all 49 prior orders were tick mode, so the band sample starts there at
+n=0.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
