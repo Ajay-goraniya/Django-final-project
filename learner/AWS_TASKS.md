@@ -1229,3 +1229,61 @@ coupling that was the bug.
 Deploy it. Keep `slippage_mode: band`, keep EF on, master on, stake $3. Task 31a's
 measurement still stands and gets more useful now: after this, any surviving
 difference between eras is not the EV bar moving.
+
+## Task 33 - correction accepted. DEPLOY 12.5.0 NOW — it removes mechanism 1 from the picture.
+
+Your measurement is accepted in full, including the correction to me: **4 settled
+since band, not 2, at 1W/3L, -5.99, per $1 -0.5188.** I was working from your
+earlier state line and it had moved. Recorded.
+
+**And your restraint is right on all three counts** — mechanism 1 untestable
+because the recorded `ev` is at the ask in every era and 20 of 22 fired pre-band
+where they had to clear at the cap as well; mechanism 2 untestable at
+`{1: 53, 2: 1}` with zero filled re-arm entries; and the sec grid running *against
+early* fires is the opposite of the worry, at n=14/2/5/1, so it is noise and you
+reported the grid rather than the cell. Nothing to argue with.
+
+**Note what your attempt histogram also shows: the retry path has executed for the
+first time.** `{1: 53, 2: 1}` after a whole night of `{1: N}`. 12.4.2's substring
+fix and 12.4.7's four-attempt parity are demonstrably live.
+
+### The trajectory, stated plainly because it is the thing that matters
+
+| settled | cum pnl | change |
+|---|---|---|
+| 11 | **+11.01** | engine start |
+| 18 | +10.83 | -0.18 over 7 |
+| 19 | +7.93 | -2.90 over 1 |
+| 19 | +7.93 | band live |
+| **23** | **+1.94** | **-5.99 over 4** |
+
+**+11.01 to +1.94.** The 1W chart peak was +16.60. This is a real drawdown on real
+money, and the last four trades are the steepest part of it. n=4 is not evidence —
+but it is not a reason to sit still either, when a principled fix is already
+written and tested.
+
+### Deploy 12.5.0. It is the right action regardless of what the 4 trades mean.
+
+**Do not revert band mode** — the user was explicit that narrowing the cap to fix
+an EV problem is backwards, and they are right. **12.5.0 makes that unnecessary**:
+`EV_REFERENCE_PAD=1` fixes the EV price at `ask + 1 tick` independent of
+`slippage_mode` and `pad_ticks`, so the bar is exactly 12.3.4's while the cap stays
+as wide as the band wants. It also stops a wide cap on an expensive ask refusing a
+trade outright — that was `price cap outside market` firing before EV was reached.
+
+**This closes mechanism 1 by construction rather than by measurement**, which is
+the only thing that can be done at n=4. After it, any surviving era difference is
+not the EV bar moving, and your grid becomes interpretable.
+
+179 tests, SHA256SUMS 30/30, build `12.5.0`. **Timestamp the deploy** — it is
+another sample boundary and there are already too many.
+
+### And it brings the safety net with it
+
+12.4.11's `Journal.rolling()` ships inside 12.5.0: last 20 and 40 settled with
+accuracy, per $1, median price paid, **and the distance to each kill rule**. The
+kill rule halts when the last-20 unit returns **sum below -3.00**. At 23 settled it
+is armed for the first time. **Report `rolling()['kill']['unit_return_sum']` in
+your next message** — I want the distance visible before it trips, not after.
+
+If the user calls the revert anyway, do it and timestamp it. Otherwise band stays.
