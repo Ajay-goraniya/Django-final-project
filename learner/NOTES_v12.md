@@ -3960,6 +3960,44 @@ wider and faster.** Two consequences, both already measured on this branch:
 reject rate and book age at submit rather than day-of-week PnL. Nothing to change tonight; the engine's
 settings were last exercised on thin weekend candles and Monday is the first test of them on a wide tape.
 
+## 20:39 UTC (Sun 09-13) - safety-net check (short mode). TOKYO'S DASHBOARD IS DOWN: HTTP 502.
+
+Hourly fired 17 min earlier, so short mode per the trigger: `tokyo_health.py` + per-kind flags + fair table.
+
+```
+FAIR STATES 20:39 UTC | window opens with the NEWEST run: Polymarket paper (v10), 09-11 15:15 UTC (53.4 h)
+| run | W/L | acc | open | PnL @$10 |
+| Predict.fun paper (v10) | 141/120 | 54% | 0 | +224.3 |
+| Polymarket paper (v10) | 160/148 | 52% | 0 | +262.8 |
+| Polymarket v12 lane (paper exec) | 164/138 | 54% | 0 | +437.3 |
+| Tokyo live (v11) | 0/0 | - | 0 | +0.0 (real +0.00 at $1; wallet nan equity nan) |
+```
+
+**The Tokyo row is a READ FAILURE, not a flat day.** `0/0`, `wallet nan`, `equity nan` are what the table
+prints when the endpoint does not answer. **It must not be read as "Tokyo did nothing today"** - at 20:22
+it read `realised -8.04, settled 442`.
+
+**`HTTP Error 502: Bad Gateway`, four attempts over ~20 s.** The standing note says Tokyo 502s
+intermittently and to retry two or three times; I retried four. **It is down, not flaky, as of 20:39.**
+
+**No money is at risk there and that is why this is a note rather than an alarm:** at 20:22 Tokyo read
+`master OFF`, `{'MAIN': False, 'REVERSAL': False, 'EF': False}`, `open 0`, and the wallet has read **0.00
+for seven consecutive hours**. Nothing to lose and nothing running.
+
+**What it does cost is the flag check.** The lane flags silently reverted once before (09-11 14:40, all
+three back to True with no restart, cause never found), and the whole point of checking `manual_enabled`
+per kind every hour is to catch that. **While the dashboard is down I cannot verify them.** Recorded as a
+monitoring gap.
+
+**Hypothesis, marked as one:** the wallet reading **0.00 for seven hours while `realised` and `settled`
+stayed frozen** may have been the first symptom of the same unhealthy process that is now returning 502,
+rather than a withdrawal or a misreporting endpoint. **Not established** - it fits, and a 502 now is
+consistent with a process that has been degrading since ~13:00. **Do not touch the Tokyo host** to test
+it; that boundary stands.
+
+12 processes up in this container - the loggers and twins are unaffected, Tokyo is a separate host.
+Polymarket v12 live is unaffected: still armed, kill window 1 of 20.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |

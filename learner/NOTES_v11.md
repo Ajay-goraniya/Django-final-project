@@ -688,3 +688,5 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 19:22 UTC 09-13: Tokyo master OFF, all three kinds False, no silent revert; wallet 0.00 sixth hour; re-arm rule does not fire (Predict.fun last-20 -0.054, second consecutive negative).
 
 20:22 UTC 09-13: Tokyo master OFF, all kinds False, no revert; wallet 0.00 seventh hour; rule does not fire (-0.225, third consecutive negative). Label problem raised: the per-$1 source file is the one fair.py calls Polymarket, not Predict.fun - unresolved.
+
+20:39 UTC 09-13: Tokyo dashboard returning HTTP 502 on four attempts - DOWN, not flaky. Lanes were all OFF and wallet 0.00 at the 20:22 read, so nothing at risk, but the per-kind flag check cannot be performed while it is down. Possible same root cause as the seven-hour 0.00 wallet.
