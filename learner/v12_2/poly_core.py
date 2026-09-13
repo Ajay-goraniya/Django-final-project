@@ -390,10 +390,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.8.6')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.8.7')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -844,6 +844,9 @@ class PaperBroker:
 
 
 class Executor:
+    # Paper's retry_delay_ms=75: after a retryable reject, wait this long and
+    # fire at the current book, rather than waiting for the book to tick.
+    RETRY_DELAY_S=0.075
     def __init__(self,db,books,broker,age=.75,pad=1,budget_s=2.0,post_timeout_s=1.2,attempts=4):
         self.db=db; self.books=books; self.broker=broker; self.age=age; self.pad=pad; self.band=False
         # A venue that fills partially does not need the pre-send depth check.
@@ -880,9 +883,17 @@ class Executor:
         for n in range(1,self.max_attempts+1):
             timing={'attempt':n,'signal_ts_ms':d.get('features',{}).get('ts_ms')}
             t=time.monotonic()
+            # Take the CURRENT fresh book. Until 12.8.7 attempts >= 2 waited here
+            # for q['seq'] to change - for the book to TICK since the last
+            # attempt - inside a 2 s budget. On a quiet book that wait ran the
+            # budget out: 82 live orders produced 4 second attempts and 10
+            # DEADLINEs, while the paper engine (which takes whatever the book
+            # is, sleeps 75 ms and fires again) got three shots inside a second.
+            # Task 76 priced the difference at 31 venue rejects worth +0.25/$1.
+            # `self.age` still applies: a stale book still waits.
             while time.monotonic()<deadline:
                 q=self.books.quote(token,self.age)
-                if q and q['seq']!=seq: break
+                if q: break
                 await asyncio.sleep(.005)
             else: self.db.release(ep,'DEADLINE',kind); return
             timing['quote_wait_ms']=1000*(time.monotonic()-t); timing['quote_read_ms']=timing['quote_wait_ms']; timing['book_age_ms']=q['age_ms']; seq=q['seq']
@@ -929,8 +940,16 @@ class Executor:
                 print('[order prepare failed]',compact_error(info),flush=True); return
             timing['sign_ms']=1000*(time.monotonic()-t)
             if time.monotonic()>=deadline: self.db.release(ep,'DEADLINE',kind); return
+            # A tick during the ~10 ms sign no longer abandons the signed order.
+            # The guard that matters is the order_plan(latest, ...) re-check a
+            # few lines down: it re-judges EV and depth on the moved book and
+            # releases EV_CHANGED if they fail. The signed cap is from q; if the
+            # ask moved above it the FAK rejects cheaply, if below it fills
+            # better - which is exactly what paper does, and what the old
+            # `latest['seq']!=seq: continue` denied: it sent the attempt back to
+            # wait for yet another tick.
             latest=self.books.quote(token,self.age)
-            if not latest or latest['seq']!=seq: continue
+            if not latest: continue
             plan['pre_submit_quote']=latest['ask']; plan['signal_quote']=timing['signal_quote']
             t=time.monotonic(); final=reassess(); timing['final_recheck_ms']=1000*(time.monotonic()-t)
             if not final.get('fire') or final.get('side')!=d['side']: self.db.release(ep,'SIGNAL_CHANGED',kind); return
@@ -982,6 +1001,9 @@ class Executor:
                            'no orders found to match','partially filled or killed')
                 if not any(x in code for x in RETRYABLE):
                     self.db.status(ep,'REJECTED',kind); return
+                # Paper's retry_delay_ms. Gives the book a beat to refill the
+                # level the FAK just found empty, without waiting for a tick.
+                await asyncio.sleep(self.RETRY_DELAY_S)
                 continue
             if r.get('id')!=oid:
                 info={'class':'OrderIdentityMismatch','message':f'signed={oid} response={r.get("id")}', 'request_reached':True}

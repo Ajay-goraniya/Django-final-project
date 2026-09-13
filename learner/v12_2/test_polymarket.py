@@ -428,7 +428,7 @@ class Tests(unittest.TestCase):
     def test_v120_database_migrates_additively(self):
         self.db.reserve(123,decision(),'up','condition')
         self.db.set('build','12.0'); self.db.c.close(); self.db=Journal(self.path,'PAPER','abc')
-        self.assertEqual(self.db.get('build'),'12.8.6')
+        self.assertEqual(self.db.get('build'),'12.8.7')
         self.assertEqual(self.db.sql('SELECT count(*) FROM signals WHERE epoch=123')[0][0],1)
         cols={r[1] for r in self.db.c.execute('PRAGMA table_info(orders)')}
         self.assertTrue({'error_json','timing_json','request_reached','reconcile_count','venue_live'}<=cols)
@@ -665,3 +665,75 @@ class HaltKeepsItsFirstReason(unittest.TestCase):
         self.db.set('halt_cleared_at',-1.0)       # keep the window open so the rule still trips
         self.db.halt_check()
         self.assertTrue(self.db.get('halt'),'the guard is against overwriting, not against halting')
+
+
+class AttemptLoopIsPaperParity(unittest.TestCase):
+    """REMAKE_PLAN §3a, 09-13. Live retried a venue reject but every retry first
+    waited for the book's seq to CHANGE (poly_core.py:880) inside a 2 s budget,
+    and a signed order was abandoned if the book ticked during the ~10 ms sign
+    (:928). Paper takes the current book, sleeps 75 ms and fires again. 82 live
+    orders produced 4 second attempts and 10 DEADLINEs; Task 76 priced the gap
+    at 31 venue rejects worth +0.25/$1. Three edits; the signal and EV untouched.
+    The order_plan(latest) re-check at :932 is now the only guard on a moved
+    book, and test 3 pins that it still does its job.
+    """
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory(); self.path=str(pathlib.Path(self.temp.name)/'t.db')
+        self.db=Journal(self.path,'PAPER','abc'); self.books=BookCache(); self.books.apply(snapshot()); self.books.terms['up']=(.01,1,.07,1)
+    def tearDown(self): self.db.c.close(); self.temp.cleanup()
+
+    def test_retry_on_a_book_that_did_not_move(self):
+        """The book does NOT tick between attempts. Old code: 1 order, then DEADLINE."""
+        class RejectOnce(PaperBroker):
+            calls=0
+            async def post(self,s):
+                self.calls+=1
+                if self.calls==1: return {'rejected':'fak_not_filled'}
+                return await super().post(s)
+        async def run():
+            ex=Executor(self.db,self.books,RejectOnce(self.books),budget_s=1.0)
+            await ex.fire(epoch(),decision(),'up','c',10,decision)
+            self.assertEqual(len(self.db.sql('SELECT * FROM orders')),2,'a second attempt must not need the book to tick')
+        asyncio.run(run())
+
+    def test_a_tick_during_signing_does_not_abandon_the_order(self):
+        """Same ask re-applied during prepare(): seq changes, EV does not. Old code: 0 orders."""
+        books=self.books
+        class TickWhileSigning(PaperBroker):
+            async def prepare(self,token,plan):
+                books.apply(snapshot(ask=.4)); return await super().prepare(token,plan)
+        async def run():
+            ex=Executor(self.db,books,TickWhileSigning(books),budget_s=1.0)
+            await ex.fire(epoch(),decision(),'up','c',10,decision)
+            self.assertEqual(len(self.db.sql('SELECT * FROM orders')),1,'a tick during the sign must not throw the attempt away')
+        asyncio.run(run())
+
+    def test_a_tick_during_signing_that_breaks_ev_still_releases(self):
+        """Ask jumps to .9 during prepare(): the :932 re-check must catch it as EV_CHANGED."""
+        books=self.books
+        class JumpWhileSigning(PaperBroker):
+            async def prepare(self,token,plan):
+                books.apply(snapshot(ask=.9)); return await super().prepare(token,plan)
+        async def run():
+            ex=Executor(self.db,books,JumpWhileSigning(books),budget_s=1.0)
+            await ex.fire(epoch(),decision(),'up','c',10,decision)
+            self.assertEqual(len(self.db.sql('SELECT * FROM orders')),0)
+            # release() deletes the signals row so the candle can re-fire, and
+            # records why in diagnostics - that is where the reason lives.
+            rel=[json.loads(r[0]) for r in self.db.sql("SELECT detail FROM diagnostics WHERE detail LIKE '%candle_rearmed%'")]
+            self.assertEqual([r['after'] for r in rel],['EV_CHANGED'],'the moved-book guard is the EV re-check, not the seq gate')
+        asyncio.run(run())
+
+    def test_retry_waits_at_least_the_delay(self):
+        ts=[]
+        class RejectOnce(PaperBroker):
+            async def post(self,s):
+                ts.append(time.monotonic())
+                if len(ts)==1: return {'rejected':'no orders found to match with FAK order'}
+                return await super().post(s)
+        async def run():
+            ex=Executor(self.db,self.books,RejectOnce(self.books),budget_s=1.0)
+            await ex.fire(epoch(),decision(),'up','c',10,decision)
+            self.assertEqual(len(ts),2)
+            self.assertGreaterEqual(ts[1]-ts[0],0.07,'paper waits 75 ms before the second shot')
+        asyncio.run(run())

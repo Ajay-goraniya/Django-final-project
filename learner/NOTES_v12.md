@@ -4465,6 +4465,32 @@ live orders -> 4 second attempts, 10 DEADLINEs.** That is the 31 rejects. Three 
 untouched, six tests (three new, shown failing on old), the downstream list written in advance, the
 twin's pass criteria fixed before it runs. **Not built** - Monday, per the sequence.
 
+## 00:0x UTC (Mon 09-14) - 12.8.7 BUILT: the paper-parity attempt loop. HELD. And a pyc trap, recorded.
+
+`REMAKE_PLAN.md` §3a built exactly as designed - three edits in `Executor.fire`: take the current fresh
+book before every attempt (`:880`, no more waiting for a tick), keep a signed order on a tick during the
+sign and let the `order_plan(latest)` re-check at `:932` be the guard (`:928`), and sleep paper's 75 ms
+after a retryable reject (`RETRY_DELAY_S`). **Signal, EV, threshold, reference price, band cap, kill rules,
+audit: untouched.**
+
+**Four new tests, all four FAIL against 12.8.6's `poly_core.py`** (stash-verified): retry on a book that
+did not move (old: 1 order then DEADLINE); a tick during signing does not abandon the order (old: 0);
+a tick that breaks EV still releases `EV_CHANGED` via the `:932` guard - pinned so the guard is known to
+be doing the work; the retry waits >= 70 ms. `test_retry_only_on_fresh_quote` and
+`test_model_changed_before_post_abandons` kept and still pass. **244 tests (157 + 66 + 21). SHA256SUMS
+30/30.** Build `12.8.7`. **HELD** - live is armed; a deploy forces master off.
+
+**A trap worth writing down:** `'12.8.6'` -> `'12.8.7'` is the same byte length, and the test-fix edit and
+the bump edit landed in the same second, so `test_polymarket.cpython-311.pyc`'s header (mtime-seconds +
+size) still matched and Python ran **stale bytecode with the old literal compiled in** - a phantom failure
+that `-B` does not prevent (it stops writing pyc, not reading). Cleared `__pycache__`, green. **§7 row 1's
+pyc-header check on the box is exactly the deploy-side guard against this, and it earned its place tonight.**
+
+**Next, and not waiting for morning:** run 12.8.7 as a **paper twin in this container** beside a 12.8.6
+control twin - same `PaperBroker` (which walks the book and CAN reject, unlike the Sep 11 lane's 100%
+fill), same $3 stake, same candles, from the Monday open. That is the clean A/B the plan's step 3 needs;
+the Sep 11 lane is not a like-for-like comparator for it.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
