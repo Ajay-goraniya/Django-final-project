@@ -1688,3 +1688,78 @@ class TheHaltCanBeClearedFromTheControlsPage(unittest.TestCase):
         self.assertIn('clearHalt', page)
         self.assertIn('acknowledge:state.halt', page, 'the exact reason must be echoed, never retyped')
         self.assertIn('haltBox', page)
+
+
+class ArmingMasterIsAudited(unittest.TestCase):
+    """AWS, 09-13 19:35: master reads true and there is NO control_write row.
+
+    `/api/controls/apply` wrote its updates with a bare INSERT OR REPLACE to keep
+    master and the stake bundle atomic. Only `Journal.set()` carries the audit, so
+    that path bypassed it: every `master` row in the journal was `True -> False`
+    (twelve safe-startup writes plus the wipeout), and there had never been a
+    single `False -> True` - not the operator's arming, not any re-arm.
+
+    The audit exists because the lane flags reverted twice on Tokyo with no known
+    cause. One that can only record things being turned OFF is backwards for the
+    question it was built to answer.
+    """
+    def setUp(self):
+        import poly_dashboard as D
+        self.temp = tempfile.TemporaryDirectory()
+        self.db = C.Journal(str(pathlib.Path(self.temp.name)/'a.db'), 'LIVE', 'h')
+        self.db.set('master', False)
+        class Bare(D.Dashboard):
+            def __init__(self): pass
+        self.ui = Bare(); self.ui.db = self.db; self.ui.cache_at = 0
+        self.ui.r = types.SimpleNamespace(a=types.SimpleNamespace(live=True), cash=11.90,
+                                          cash_at=time.monotonic(), revision=1)
+        # setUp's own seeding writes an audit row; the tests measure what the
+        # ENDPOINT records, so start them from a clean diagnostics table.
+        self.db.sql('DELETE FROM diagnostics')
+
+    def tearDown(self): self.db.c.close(); self.temp.cleanup()
+
+    def writes(self, key):
+        return [json.loads(x[0]) for x in
+                self.db.sql("SELECT detail FROM diagnostics WHERE detail LIKE '%control_write%'")
+                if json.loads(x[0]).get('key') == key]
+
+    def test_arming_master_leaves_an_audit_row(self):
+        self.ui.apply('/api/controls/apply', dict(confirmed=True, system=dict(manual_enabled=True)))
+        rows = self.writes('master')
+        self.assertEqual(len(rows), 1, 'the one direction that matters must be recorded')
+        self.assertIs(rows[0]['old'], False); self.assertIs(rows[0]['new'], True)
+
+    def test_the_row_names_the_caller_not_the_journal(self):
+        self.ui.apply('/api/controls/apply', dict(confirmed=True, system=dict(manual_enabled=True)))
+        stack = self.writes('master')[0]['stack']
+        self.assertTrue(any('poly_dashboard.py' in f for f in stack), stack)
+        self.assertFalse(any(f.endswith('set_many') or f.endswith('_audit') for f in stack),
+                         'the audit must name who asked, not the journal plumbing')
+
+    def test_disarming_is_still_audited(self):
+        self.db.set('master', True)
+        self.ui.apply('/api/controls/apply', dict(confirmed=True, system=dict(manual_enabled=False)))
+        rows = self.writes('master')
+        self.assertIs(rows[-1]['new'], False)
+
+    def test_a_no_op_write_records_nothing(self):
+        self.ui.apply('/api/controls/apply', dict(confirmed=True, system=dict(manual_enabled=False)))
+        self.assertEqual(self.writes('master'), [], 'False -> False is not a control change')
+
+    def test_the_single_key_path_still_names_its_caller(self):
+        """set() was refactored through _audit; its stack must not regress."""
+        self.db.set('ef_enabled', False)
+        stack = self.writes('ef_enabled')[0]['stack']
+        self.assertFalse(any(f.endswith(' set') or f.endswith('_audit') for f in stack), stack)
+
+    def test_the_bundle_is_still_written_atomically(self):
+        before = self.db.get('next_stake')
+        with self.assertRaises(Exception):
+            self.db.set_many({'next_stake': 7.0, 'bad': object()})
+        self.assertEqual(self.db.get('next_stake'), before, 'a failed bundle must write nothing')
+
+    def test_no_raw_meta_writes_are_left_in_the_dashboard(self):
+        src = pathlib.Path(C.__file__).parent.joinpath('poly_dashboard.py').read_text()
+        self.assertNotIn('INSERT OR REPLACE INTO meta', src,
+                         'control writes go through the journal so they are audited')

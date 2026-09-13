@@ -390,10 +390,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.8.4')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.8.5')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -442,17 +442,43 @@ class Journal:
         record old value, new value and the calling frame, which turns "something
         changed it" into a name.
         """
-        if k in self.AUDITED:
-            try:
-                old=self.get(k)
-                if old!=v:
-                    import traceback
-                    where=[f'{f.filename.rsplit("/",1)[-1]}:{f.lineno} {f.name}'
-                           for f in traceback.extract_stack()[:-1][-4:]]
-                    self.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),0,json.dumps(dict(
-                        reason='control_write',key=k,old=old,new=v,stack=where))))
-            except Exception: pass
+        self._audit(k,v)
         self.sql('INSERT OR REPLACE INTO meta VALUES(?,?)',(k,json.dumps(v)))
+    def _audit(self,k,v):
+        """Record old value, new value and the calling frame for a control.
+
+        [:-2] drops this frame AND its caller (`set` or `set_many`), so the last
+        entry is the code that actually asked for the change - the same frame the
+        single-key path recorded before this was factored out.
+        """
+        if k not in self.AUDITED: return
+        try:
+            old=self.get(k)
+            if old!=v:
+                import traceback
+                where=[f'{f.filename.rsplit("/",1)[-1]}:{f.lineno} {f.name}'
+                       for f in traceback.extract_stack()[:-2][-4:]]
+                self.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),0,json.dumps(dict(
+                    reason='control_write',key=k,old=old,new=v,stack=where))))
+        except Exception: pass
+    def set_many(self,updates):
+        """Several controls in ONE transaction, each one audited.
+
+        `/api/controls/apply` wrote its updates with a bare INSERT OR REPLACE so
+        that master and the stake bundle land together. That kept them atomic and
+        also bypassed `set()`, which is where the audit lives.
+
+        Found 09-13: every `master` row in the journal is True -> False - twelve
+        safe-startup writes and one wipeout - and there has never been a single
+        False -> True, not the operator's arming and not any re-arm after a
+        deploy. An audit built to answer "who turned this on", after the lane
+        flags reverted twice with no known cause, had never once recorded
+        anything being turned ON. This keeps the atomicity and closes that.
+        """
+        for k,v in updates.items(): self._audit(k,v)
+        with self.lock,self.c:
+            for k,v in updates.items():
+                self.c.execute('INSERT OR REPLACE INTO meta VALUES(?,?)',(k,json.dumps(v)))
     def reserve(self,ep,d,token,condition,kind='EF'):
         with self.lock,self.c:
             return self.c.execute('''INSERT OR IGNORE INTO signals(epoch,ts,side,token,condition_id,decision,status,kind)

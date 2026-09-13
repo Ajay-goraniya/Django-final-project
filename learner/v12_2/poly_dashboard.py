@@ -265,8 +265,10 @@ class Dashboard:
                         if int(s[k])!=s[k]: raise ValueError('Streak triggers must be integers')
                     if not s['min_stake']<=s['current_stake']<=s['max_stake']: raise ValueError('Current stake outside bounds')
                     updates.update(stake_settings=s,next_stake=s['current_stake'],streak=[0,0],rung=[0,0])
-                with self.db.c:
-                    for key,value in updates.items(): self.db.c.execute('INSERT OR REPLACE INTO meta VALUES(?,?)',(key,json.dumps(value)))
+                # set_many, not a bare INSERT OR REPLACE. Both of these paths write
+                # AUDITED controls - master and the stake bundle here, tp/sl below -
+                # and writing them raw bypassed the audit that set() carries.
+                self.db.set_many(updates)
                 if 'stake' in system: self.update_stake()
             elif path=='/api/controls/signal':
                 kind=p.get('kind')
@@ -361,8 +363,10 @@ class Dashboard:
                     v=float(p.get(param,0))
                     if not math.isfinite(v) or v<0: raise ValueError('Invalid daily limit')
                     updates[key]=v
-                with self.db.c:
-                    for key,value in updates.items(): self.db.c.execute('INSERT OR REPLACE INTO meta VALUES(?,?)',(key,json.dumps(value)))
+                # set_many, not a bare INSERT OR REPLACE. Both of these paths write
+                # AUDITED controls - master and the stake bundle here, tp/sl below -
+                # and writing them raw bypassed the audit that set() carries.
+                self.db.set_many(updates)
             elif path=='/api/controls/rule':
                 r=p.get('rule',{}); days=r.get('days',[]); kinds=r.get('kinds',[])
                 a,b=int(r.get('start_minute',-1)),int(r.get('end_minute',-1))

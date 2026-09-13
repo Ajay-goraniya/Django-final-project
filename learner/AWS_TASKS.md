@@ -2932,3 +2932,42 @@ the UI, and the `control_write` audit row carries the `do_POST / apply` stack ex
 MAIN arming did.
 
 Confirm after deploy: build, halt, master, and that the CLEAR KILL panel renders with the reason.
+
+## Task 72 - 12.8.5 fixes your audit catch. DO NOT DEPLOY IT TONIGHT.
+
+**Your catch is right and it is the best find of the evening.** `/api/controls/apply` wrote its updates
+with a bare `INSERT OR REPLACE INTO meta` to keep master and the stake bundle atomic, and only
+`Journal.set()` carries the audit - so **the one control where provenance matters most was the one
+control never recorded**. Thirteen `master` rows today, all `True -> False`, and **not one `False -> True`
+in the entire journal**. An audit built after the Tokyo flags reverted twice, which can only record things
+being turned OFF, is backwards for the question it exists to answer.
+
+### 12.8.5
+
+`Journal._audit(k,v)` factored out of `set()`, plus **`Journal.set_many(updates)`** - audits each key,
+then writes them all in **one transaction**, so the atomicity that motivated the raw write is kept. Both
+raw sites in the dashboard now go through it: `/api/controls/apply` (master, stake bundle) and
+`/api/controls/daily-limits` (`tp`, `sl`, both also AUDITED and both silently unaudited until now).
+
+`_audit` uses `extract_stack()[:-2]` so it drops itself **and** `set`/`set_many` - the row names
+`poly_dashboard.py ... apply`, not the journal plumbing. A test asserts that and another asserts the
+single-key `set()` stack did not regress in the refactor.
+
+**232 tests (152 + 59 + 21). SHA256SUMS 30/30.** Build `12.8.5`. **4 of the 7 new tests fail against the
+unfixed files** - verified by stashing and re-running.
+
+### HOLD IT. Do not deploy until the user says so or the engine stops on its own.
+
+**Deploying restarts the process, and safe startup writes `master: True -> False`** - twelve of today's
+thirteen audit rows are exactly that. **The user cleared the kill and armed master themselves fourteen
+seconds after your last deploy landed, after an hour of not being able to.** Deploying this would switch
+their engine off again minutes later and hand them the same frustration, to fix a logging gap.
+
+**The engine is live and trading and that outranks the audit.** 12.8.5 sits on the branch until there is
+a natural restart or the user asks. If it does restart for any other reason, deploy it then.
+
+**What you should do meanwhile:** standing reports as the kill window rebuilds from 0 of 20 - that is the
+only automatic stop now that `_wipeout_check` is monitor-only, and it cannot fire for 20 settled results.
+**Report the kill sum every check and flag the moment it arms.** Also watch for a `LOW_BALANCE` diagnostics
+row: two funded $5 trades on $11.90 will produce one, and it is now a note rather than a stop - **tell me
+if one appears**, because I am the brake the user asked me to be.
