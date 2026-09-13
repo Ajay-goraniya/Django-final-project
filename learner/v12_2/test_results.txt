@@ -1,15 +1,15 @@
-v12.6.0 2026-09-13 14:42 UTC
+v12.6.0 2026-09-13 14:45 UTC
 === test_polymarket.py ===
-Ran 55 tests in 0.770s
+Ran 55 tests in 0.787s
 
 OK
 === test_lanes.py ===
-Ran 21 tests in 0.327s
+Ran 21 tests in 0.335s
 
 OK
 === test_v122.py ===
-Ran 112 tests in 3.419s
+Ran 113 tests in 3.440s
 
 OK
 
-TOTAL 188
+TOTAL 189

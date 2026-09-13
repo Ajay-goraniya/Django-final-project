@@ -1813,3 +1813,40 @@ re-arming anything. **188 tests, SHA256SUMS 30/30.** Full detail in Task 44.
 
 Deploy, timestamp, re-arm master, and confirm `next_stake` reads **5.0** after the
 restart. The MAIN watch continues across the deploy.
+
+## Task 46 - CANCELS the 2-fill MAIN switch-off. MAIN runs until the money runs out.
+
+User: *"main off if no money available to trade not after 3 trades"*
+
+**Task 41's two-fill rule is CANCELLED. Do not switch MAIN off on a fill count.**
+The stop condition is the money running out, and nothing else.
+
+**Do not change `main_enabled` at all.** No counting, no switch-off, no poll
+boundary. MAIN stays armed until the account cannot fund a trade, and then the
+engine disarms it itself.
+
+**12.6.0 now does that in code.** `_wipeout_check()` turns off **master,
+`main_enabled` and `reversal_enabled`** together when spendable cash cannot cover
+one stake. Clearing the lane flags as well matters: otherwise a later master re-arm
+would silently bring an unvalidated lane back with it, and whoever re-arms should
+have to arm the lane deliberately. `ef_enabled` is left alone — EF is the validated
+lane and master already gates it.
+
+**On the "3": it is three balance READS, not three trades.** The 5 s balance loop
+means roughly **15 seconds** of confirmation, and it exists because the balance dips
+while an order is in flight — a single low read is a race, not a wipeout. It cannot
+delay the stop by three trades; it delays it by fifteen seconds. **I am keeping it**
+and flagging it plainly so nobody reads it as a trade counter. Say if the user wants
+it instant and I will drop it to one read, at the cost of false trips mid-flight.
+
+**189 tests (55 + 21 + 113). SHA256SUMS 30/30.** Build `12.6.0`. Deploy, timestamp,
+re-arm master, confirm `next_stake` is **5.0** and `main_enabled` is still **true**
+after the restart — the user wants MAIN running.
+
+### What I want you to watch, since the only stop is now the wipeout guard
+
+MAIN is unvalidated, its per-lane kill rule cannot arm (1 of 20 results), and the
+fill-count stop is gone. So report **every MAIN fill as it happens** — timestamp,
+side, quoted ask, cap, fill price, shares, stake, attempt, `paid - ask` — and the
+spendable balance alongside. **Flag immediately if spendable falls below two
+stakes ($10),** so the user sees the approach rather than only the arrival.

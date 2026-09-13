@@ -358,12 +358,19 @@ class PolyRunner(Runner):
             self._wipeout_seen=0; return
         self._wipeout_seen=getattr(self,'_wipeout_seen',0)+1
         if self._wipeout_seen<self.WIPEOUT_CONFIRMATIONS: return
-        if self.db.get('master'):
-            why=(f'Account wiped out: spendable {spendable:.2f} below stake {stake:.2f} '
-                 f'on {self._wipeout_seen} consecutive checks')
-            self.db.set('master',False)
-            if not self.db.get('halt'): self.db.set('halt',why)
-            print('[WIPEOUT] '+why+' - master OFF',flush=True)
+        why=(f'Account wiped out: spendable {spendable:.2f} below stake {stake:.2f} '
+             f'on {self._wipeout_seen} consecutive balance reads')
+        # Master AND the unvalidated lanes. User, 09-13: "main off if no money
+        # available to trade, not after 3 trades" - the stop condition is the
+        # money running out, never a fill count. Clearing the lane flags too
+        # means a later master re-arm cannot silently bring an unvalidated lane
+        # back with it; whoever re-arms has to arm the lane deliberately.
+        # Still only ever turns things OFF.
+        changed=[k for k in ('master','main_enabled','reversal_enabled') if self.db.get(k)]
+        if not changed: return
+        for k in changed: self.db.set(k,False)
+        if not self.db.get('halt'): self.db.set('halt',why)
+        print('[WIPEOUT] '+why+' - off: '+', '.join(changed),flush=True)
     async def reconcile_loop(self):
         while True: await self.executor.reconcile(); await asyncio.sleep(1)
     async def grade_loop(self):

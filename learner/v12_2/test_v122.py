@@ -1316,6 +1316,22 @@ class WipeoutTurnsMasterOff(unittest.TestCase):
         self.assertFalse(self.db.get('master'))
         self.assertIn('wiped out', (self.db.get('halt') or '').lower())
 
+    def test_wipeout_also_clears_the_unvalidated_lanes(self):
+        """User: "main off if no money available to trade, not after 3 trades".
+
+        The stop condition is the money, never a fill count. Clearing the lane
+        flags too means a later master re-arm cannot silently bring an
+        unvalidated lane back with it.
+        """
+        self.db.set('main_enabled',True); self.db.set('reversal_enabled',True)
+        self.db.set('ef_enabled',True)
+        self.r.cash=1.0
+        for _ in range(self.r.WIPEOUT_CONFIRMATIONS): self.r._wipeout_check()
+        self.assertFalse(self.db.get('master'))
+        self.assertFalse(self.db.get('main_enabled'))
+        self.assertFalse(self.db.get('reversal_enabled'))
+        self.assertTrue(self.db.get('ef_enabled'), 'EF is the validated lane; master gates it')
+
     def test_recovery_resets_the_counter(self):
         self.r.cash=1.0
         self.r._wipeout_check(); self.r._wipeout_check()
