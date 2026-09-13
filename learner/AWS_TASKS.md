@@ -2499,3 +2499,53 @@ standing observation, it costs nothing and `_main_oneshot_check` will still stop
 
 Nothing to deploy. Standing reports continue - EF's kill sum as the window rebuilds, and the first MAIN fill
 if the data is wrong and one arrives.
+
+## Task 63 - "fix it then". Testing the one fix that could still exist: fire MAIN EARLIER.
+
+User, on my saying MAIN will probably never fill: *"what do you mean it will never fill
+armed? fix it then??"* **Fair, and "it will never fill" was too final a thing to say
+with one test behind it.** So here is the fix that has not been tested, and the test.
+
+**The threshold is dead as an option** - even zero admits 3 of 12. But there is a
+second parameter nobody has touched: **MAIN waits for `MAIN_HOLD_READS = 60`
+consecutive aligned reads, about 15 seconds, before it calls.** In a 5-minute BTC
+market 15 seconds is enough for the side it wants to reprice completely. **So the
+question is not whether the bar is too high, it is whether MAIN is too slow.**
+
+**The one candle I can already test says no, and I want that checked against the
+other eleven before I believe it.** The 14:51 ask path:
+
+| time | DOWN ask | model p | EV |
+|---|---|---|---|
+| 14:50:14 | 0.57 | 0.544 | **-0.074** |
+| 14:51:14 | 0.64 | 0.594 | -0.095 |
+| 14:51:44 | 0.76 | 0.735 | -0.049 |
+| 14:51:56 | **0.87** | 0.643 | -0.268 |
+| 14:52:45 | 0.94 | 0.936 | -0.008 |
+
+**The ask runs 0.57 -> 0.94 and `p` runs 0.544 -> 0.936 with it. EV is negative at
+every point, early and late alike.** Firing sooner would not have rescued this one,
+because **the model's confidence is not ahead of the price - it is tracking it.**
+
+### Task 63a - the test that decides whether a faster MAIN is a fix
+
+For each of the **12** MAIN candles, reconstruct the ask and `p` at each read of the
+alignment streak, not just at the refusal:
+1. **What was the best EV available at ANY point during the streak**, and when?
+2. **How many of the 12 had a positive-EV moment at all**, at any hold length?
+3. If some did, **what hold length would have caught them** - is there an
+   `MAIN_HOLD_READS` that turns 3-of-12 into something better?
+4. And the one that matters most: **the correlation between `p` and the ask across
+   those reads.** If p rises with the ask every time, MAIN carries no information the
+   market lacks and no parameter fixes that.
+
+`lane_loop` does not record asks at non-refusal decisions, so this may need the EF
+decide-path rows for the same candles as a proxy. **Say so if it cannot be done
+honestly rather than reconstructing it** - a proxy that silently substitutes EF's view
+for MAIN's would be exactly the reconstruction error we have been burned by all day.
+
+**If 3 shows a hold length that helps, that is a real fix and we build it. If 4 shows
+p tracking the ask, MAIN needs a different signal and no parameter will do it** - and
+the user deserves that answer straight rather than another dial to turn.
+
+Nothing to deploy. Standing reports continue.
