@@ -730,3 +730,44 @@ settled.
 Also tightened: "the engine loses its pricing terms mid-candle" is a correct
 reading of the code, but it has not been shown happening on any of our rejects,
 and the timing above suggests it did not. 12.3.6 is what would show it.
+
+# 12.3.7 — why `quote()` declines, counted
+
+The AWS session's probe caught every `tick_size_change` on a **one-sided book**
+(0 asks / 41 bids, and 41 asks / 0 bids). It said plainly that the one-sidedness
+may be its own bookkeeping rather than the venue's, since it maintained that copy
+from deltas itself and those were the NEXT-candle tokens which get few snapshots.
+A corrected probe with three views is running.
+
+But whichever way that lands, it points at something here:
+
+```python
+if not b or not b['asks'] or not b['bids']: return None
+```
+
+`quote()` refuses a one-sided book entirely. That is almost certainly what the
+621 `"Waiting for fresh UP and DOWN books"` rows — **20.9% of a 12.4-hour
+session** — actually are. Which matters a great deal depending on *which* token:
+
+- the **NEXT-candle** token being one-sided is benign; nobody is quoting a market
+  that has not opened;
+- the **ACTIVE** token being one-sided is not, and the engine is refusing to
+  price a book it could price, since a buy needs only the ask side.
+
+`BookCache` now counts why each `quote()` call declined — `no_book`, `no_asks`,
+`no_bids`, `stale`, `crossed`, `ok` — surfaced in `health()` and persisted with
+the rest of the feed counters.
+
+**Nothing is relaxed.** Requiring both sides is doing one real job: `bid>=ask`
+catches a crossed book, and dropping that check on an argument is exactly the
+move that has gone wrong three times tonight. The change that may follow —
+quoting on the ask alone when the ask side is sound — needs the split first. If
+`no_bids` on the active token turns out to be a large share of that 20.9%, it is
+the most valuable fix available and the numbers will say so.
+
+The AWS session's own summary of where this leaves Task 10 is the right one: the
+confound is **unsettled**, not resolved. Its retrospective 0/11 vs 1/17 (Fisher
+p = 1.0) stands as data, but its interpretation rests on a trigger condition that
+is still unpinned, and the observed switches at second 70 are mild evidence
+against the assumption it used. Reported rather than guessed, which is the whole
+point.

@@ -615,6 +615,53 @@ class SnapshotAgeTracking(unittest.TestCase):
                          'the snapshot-age refusal must stay removed')
 
 
+class QuoteBlockReasons(unittest.TestCase):
+    """Why quote() declined, counted separately.
+
+    A one-sided book yields no quote, which is almost certainly what the 20.9%
+    of a session spent "Waiting for fresh UP and DOWN books" actually is. The
+    message does not distinguish that from a stale or crossed book, so the
+    counters do.
+    """
+    def setUp(self):
+        self.bc = C.BookCache()
+
+    def push(self, asks, bids, token='t1'):
+        self.bc.apply(dict(event_type='book', asset_id=token,
+                           timestamp=str(int(time.time()*1000)),
+                           asks=[{'price':p,'size':'100'} for p in asks],
+                           bids=[{'price':p,'size':'100'} for p in bids]))
+
+    def test_missing_book_is_counted(self):
+        self.assertIsNone(self.bc.quote('nope', 5.0))
+        self.assertEqual(self.bc.quote_block['no_book'], 1)
+
+    def test_one_sided_no_bids(self):
+        self.push(['0.55'], [])
+        self.assertIsNone(self.bc.quote('t1', 5.0))
+        self.assertEqual(self.bc.quote_block['no_bids'], 1)
+
+    def test_one_sided_no_asks(self):
+        self.push([], ['0.53'])
+        self.assertIsNone(self.bc.quote('t1', 5.0))
+        self.assertEqual(self.bc.quote_block['no_asks'], 1)
+
+    def test_crossed_is_counted_separately(self):
+        self.push(['0.50'], ['0.55'])
+        self.assertIsNone(self.bc.quote('t1', 5.0))
+        self.assertEqual(self.bc.quote_block['crossed'], 1)
+
+    def test_good_book_counts_ok(self):
+        self.push(['0.55'], ['0.53'])
+        self.assertIsNotNone(self.bc.quote('t1', 5.0))
+        self.assertEqual(self.bc.quote_block['ok'], 1)
+
+    def test_counters_reach_health(self):
+        self.push(['0.55'], [])
+        self.bc.quote('t1', 5.0)
+        self.assertEqual(self.bc.health()['quote_block']['no_bids'], 1)
+
+
 class TickSizeChangeIsRecorded(unittest.TestCase):
     """The venue moves these markets between grids intra-candle.
 

@@ -106,6 +106,10 @@ class BookCache:
         self.dropped_future=0; self.dropped_stale=0; self.applied=0
         # Last tick_size_change per token, and the running count.
         self.tick_changes={}; self.tick_change_count=0
+        # Why quote() declined, counted. Distinguishes a one-sided book from a
+        # stale or crossed one, which the "waiting for fresh books" message does
+        # not.
+        self.quote_block=dict(no_book=0,no_asks=0,no_bids=0,stale=0,crossed=0,ok=0)
     def clear(self): self.books.clear()
     def prune(self,keep):
         """Drop books for tokens we are no longer subscribed to, keep the rest.
@@ -121,7 +125,8 @@ class BookCache:
     def health(self):
         return dict(clock_offset_s=round(self.clock_offset,3),applied=self.applied,
                     dropped_future=self.dropped_future,dropped_stale=self.dropped_stale,
-                    tokens=len(self.books),tick_changes=self.tick_change_count)
+                    tokens=len(self.books),tick_changes=self.tick_change_count,
+                    quote_block=dict(self.quote_block))
     def apply(self,e):
         stamp=float(e['timestamp'])/1000; now=time.time()
         if not math.isfinite(stamp): return
@@ -176,17 +181,29 @@ class BookCache:
                 # have drifted from the venue's.
                 self.seq+=1; b.update(event=stamp,arrival=time.monotonic(),seq=self.seq)
     def quote(self,t,max_age=.75):
+        """Top of book, or None with the reason counted.
+
+        A one-sided book yields no quote, which is almost certainly the source of
+        the 20.9% of a session spent on "Waiting for fresh UP and DOWN books".
+        Whether that is the ACTIVE token (costly) or the NEXT-candle token that
+        nobody is quoting yet (benign) decides whether requiring both sides is
+        wrong. Count the reasons so that is measurable; do not change the rule on
+        an argument.
+        """
         b=self.books.get(t)
-        if not b or not b['asks'] or not b['bids']: return None
+        if not b: self.quote_block['no_book']+=1; return None
+        if not b['asks']: self.quote_block['no_asks']+=1; return None
+        if not b['bids']: self.quote_block['no_bids']+=1; return None
         # Monotonic arrival is authoritative for age: it cannot be moved by clock
         # drift or NTP steps.  The wall-clock figure is corrected by the measured
         # offset and used only when it indicates the book is OLDER.
         mono=time.monotonic()-b['arrival']
         wall=(time.time()-b['event'])-self.clock_offset
         age=max(mono,min(wall,mono+max_age))
-        if not 0<=age<=max_age: return None
+        if not 0<=age<=max_age: self.quote_block['stale']+=1; return None
         ask,bid=min(b['asks']),max(b['bids'])
-        if bid>=ask: return None
+        if bid>=ask: self.quote_block['crossed']+=1; return None
+        self.quote_block['ok']+=1
         return dict(ask=ask,bid=bid,asks=sorted(b['asks'].items()),seq=b['seq'],age_ms=age*1000,
                     snapshot_age_s=time.monotonic()-b.get('snapshot',b['arrival']))
 
@@ -258,10 +275,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.3.6')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.3.7')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):

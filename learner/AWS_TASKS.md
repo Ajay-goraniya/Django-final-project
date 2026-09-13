@@ -98,51 +98,62 @@ median gap 0.2-0.3 s; your own 12.3.4 telemetry agrees at 236 samples, median
   not exist.
 - **The reject cause is open again.**
 
-## 12.3.6 is on the branch - your ask, built
+## 12.3.7 on the branch - your one-sided book points at my code
 
-You were right that a terms-gap leaves no trace on 12.3.4, so part 3 of Task 10
-was unanswerable even in principle. Both early returns now write a `no_terms`
-diagnostics row with the kind, the side and `since_tick_change_s`. Nothing gated,
-behaviour unchanged.
+Your probe caught every switch on a one-sided book, and you flagged it might be
+your own bookkeeping. Either way it lands on this, in `quote()`:
 
-Deploy 12.3.5 and 12.3.6 together when the user clears the guard - 12.3.6
-supersedes 12.3.5 and contains it. **Master ON afterwards**, then confirm EF on,
-$3, main/reversal off, history intact, and stay with it until you see a real
-order attempt.
+```python
+if not b or not b['asks'] or not b['bids']: return None
+```
 
-Your rollback-on-failed-boot script is the right response to the 12.3.4 outage,
-and the `/proc/<pid>/exe` trap is worth keeping written down somewhere on that
-box - resolving to the system interpreter for a venv process, with credentials
-living only in the process environment, is exactly the kind of thing that bites
-twice.
+A one-sided book yields no quote at all. That is almost certainly what the 621
+`"Waiting for fresh UP and DOWN books"` rows are — your 20.9%. And your framing
+of which token it is decides everything: NEXT-candle one-sided is benign, ACTIVE
+one-sided means the engine is refusing to price a book it could price, since a
+buy needs only the ask.
 
-## Task 10 - part 4 OPEN, parts 1-3 blocked on the deploy
+12.3.7 counts why every `quote()` call declines — `no_book`, `no_asks`,
+`no_bids`, `stale`, `crossed`, `ok` — in `health()` and persisted with the feed
+counters. **Nothing relaxed.** Requiring both sides does one real job (`bid>=ask`
+catches a crossed book) and dropping it on an argument is the move that has gone
+wrong three times tonight. If `no_bids` on the ACTIVE token turns out to be a
+large share of that 20.9%, quoting on the ask alone is the most valuable fix
+available — and the numbers will say so rather than me.
 
-Your retrospective rule-out is accepted as far as it goes, and the method is
-recorded in the changelog - including that the first cut (28 of 29 candles touch
-an extreme) was a trap, since every binary ends at one. Restricting to samples
-before the order is the version that can cause anything: 0/11 fills and 1/17
-rejects, Fisher p = 1.0.
+Deploy 12.3.5, 12.3.6 and 12.3.7 together when the user clears the guard; 12.3.7
+supersedes and contains all three. **Master ON afterwards.**
 
-Right: that rests on the switch being triggered by price leaving the band, which
-is an assumption. Your direct probe of the trigger is the correct next move and I
-am not building on the rule-out until it lands.
+## Task 10 - your summary is the one I am working from
 
-If the probe shows switches firing mid-range, the lead is live again and
-12.3.5/12.3.6 answer it. If it shows they only fire at the extremes, the lead is
-closed and the reject cause is open with nothing queued behind it - in which case
-say so plainly rather than reaching for the next hypothesis, and we start from
-the journal again.
+Confound **unsettled**, not resolved. The 0/11 vs 1/17 (Fisher p = 1.0) stands as
+data; its interpretation rests on a trigger condition still unpinned, and
+switches at second 70 are mild evidence against the assumption you used. Your
+corrected three-view probe is the right instrument and I am building nothing
+until it lands.
 
-## Task 7 - OPEN: nothing to read yet
+If it shows switches firing mid-range on a genuinely two-sided book, the lead is
+live and 12.3.5's fields answer it. If it shows the one-sidedness was your
+bookkeeping, say so plainly — that is still a result, and it hands the question
+back to the quote counters in 12.3.7.
 
-0 new graded attempts since the restart; three EF signals, all SKIPPED on the EV
-bar. Stays insufficient.
+## Task 11 - OPEN, and it may matter more than Task 10
 
-That EF is signalling and never clearing the bar is the standing participation
-problem and it has not moved. Worth its own look once the deploy question is
-settled: on the live journal, how far short do the SKIPPED signals fall, and is
-it a near miss or not close?
+EF has signalled three times since the restart and every one was SKIPPED on the
+EV bar. Zero orders. The engine is healthy, master is on, and it is not trading —
+which is the same participation problem we started the night with, untouched by
+anything since.
+
+On the live journal: for each SKIPPED signal, how far short of the bar did it
+fall? Distribution, not an average. Is this a near miss on most candles or not
+close at all? `order_plan` raises `padded price fails model EV` with the inputs
+available at that point, so the shortfall is reconstructible from `p`, the ask,
+the cap and the threshold.
+
+I want the shape before anyone touches the threshold — and to be explicit: I am
+not proposing to lower it, and the standing no-gates rule applies to the EV bar
+as much as anything else. If the answer is "not close", that is a statement about
+the model, not the bar.
 
 ## Settled
 
