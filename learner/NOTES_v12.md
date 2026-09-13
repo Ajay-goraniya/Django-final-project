@@ -3192,6 +3192,37 @@ process against the current `v12_2` tree with `--execution paper`. I am **not** 
 the running lane is in the fair table the user has watched for days, and a restart resets that history. The
 clean option is a **second** paper lane on current code, leaving the existing one untouched.
 
+## 13:20 UTC (Sun 09-13) - RETRACTED: the side skew is not a profit mechanism. H1's Task 21b.
+
+**This corrects a standing findings-state line that the hourly check-in still carries**, so it needs to be
+read from here rather than from the trigger text.
+
+H1 at n=280, both cells now readable: **UP n=120 +0.044 per $1, DOWN n=160 +0.063.** **DOWN earns more.** My
+inference was backwards.
+
+What I claimed (Task 24): Polymarket's UP ask is 3.33c cheaper and its DOWN ask 2.62c dearer, therefore UP
+should earn more and the edge is a side skew to be harvested. **The measurement stands** - n=43,552 matched
+1 Hz samples, both halves stable, no reason to doubt it. **The inference from that price difference to PnL is
+refuted.** A cheaper ask is not a better trade; it is the market's opinion, and on this sample it is the
+correct opinion. Nothing is to be built on "harvest the UP discount".
+
+**Checked, because H1 asked: the live executor has no UP bias to drop.** Every `UP`/`DOWN` reference in
+`learner/v12_2/` is token selection - `toks[0 if d['side']=='UP' else 1]` at three call sites - with no stake
+modifier, no side preference and no side gate anywhere. Nothing acted on the claim, so nothing has to be
+unwound.
+
+**On H1's other result, I endorse their caution rather than the number.** The certifiable Polymarket figure
+now passes verify.py at n=280, +0.055 per $1, halves +0.017/+0.094, readings -0.062 (n=61) -> +0.022 (n=148)
+-> +0.055 (n=280). But it is **one unbroken window**, 13:28 Friday to now, so its halves are the first and
+second half of a single stretch - the exact structure that passed all four checks at n=62 on one Saturday and
+was worth -0.001 by n=104. **A halves pass inside one contiguous window should carry almost no weight.** Do
+not size on it. Monday supplies the second window and a halves split by window rather than by row index.
+
+Fresh <=1 s n=252 +0.033; stale >1 s n=28 +0.257 - under the bar, not read, not reasoned from.
+
+One line for the ledger: **the Polymarket paper is positive on one unbroken window and has not yet been
+tested across a break.**
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
