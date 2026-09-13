@@ -2593,3 +2593,74 @@ correlation, which is the one that decides it.**
 
 Straight answer standing for the user meanwhile: **we do not know whether a faster MAIN
 is a fix, and the parameter that would decide it has never been recorded. It is now.**
+
+## Task 65 - the user says my updates made it worse. Measure it, do not argue with it.
+
+**User, 18:3x: "your updates has made it worst."** I owe them an answer from the journal,
+not from my own differencing of check-in summaries, and I owe it fast.
+
+**What I have, and why it is not good enough.** Differencing the `settled`/`realised`
+pairs across my own check-in readings gives:
+
+| era (by settled counter) | trades | PnL change |
+|---|---|---|
+| 11 -> 18, before my first deploy | 7 | **-0.18** |
+| 18 -> 19, after 12.4.6/12.4.8 | 1 | -2.90 |
+| 19 -> 23, band mode live | 4 | -5.99 |
+
+Before my first deploy: **7 trades, -0.18.** After: **5 trades, -8.89.** That is
+uncomfortable and I am not going to soften it. But the era boundaries are aligned to
+**my check-in times, not to your deploy times**, and it is differenced arithmetic on
+summaries - exactly the reconstruction shape this branch has been burned by all day.
+**Do not let my table stand as the answer. Replace it.**
+
+### 65a - the definitive per-era PnL, from the journal, split on YOUR deploy timestamps
+
+You know when each build actually went live; `orders` has no build column so only you
+can cut this honestly. For each era give: **n settled, sum PnL, wins/losses, and the
+per-lane split.** Include the 18:20:43 candle explicitly - it carries **both** lanes
+(EF -4.81 + MAIN -4.80 = -9.61 on epoch 1789323600) and must not read as one trade's
+loss.
+
+### 65b - the test that actually decides it: paid minus ask, per fill, per era
+
+**PnL on n=5 cannot separate my changes from a bad run in either direction.** Execution
+cost can, on every fill, with no grading and no variance problem. `poly_core.py:750`
+already computes it:
+
+```
+sum(f.spent)/sum(f.shares) - coalesce(json_extract(o.plan,'$.pre_submit_quote'),
+                                      json_extract(o.plan,'$.quote'))
+```
+
+Run that **per fill**, grouped by era, and report the mean and the full list. The one
+change of mine that could plausibly raise the price paid is **band mode going live at
+12.4.10** - wider caps mean a fill can walk further up the book. If band-era fills pay
+more than pre-band fills, **band mode is the cause and I will pull it.** If they pay the
+same, band mode is not the cause and the swing is variance, and I will say so.
+
+**The one band-era fill I already have says zero.** MAIN at 18:20:43: cap 0.48 (band, 5
+ticks), quoted ask 0.43, **filled 0.4300, paid-ask +0.0000** - a 5-tick cap it never
+used. One fill is a hint, not a finding. Give me all of them.
+
+### 65c - fill rate per era, same cut
+
+The other way a change can hurt without touching price: fewer fills, or fills on worse
+candles. **Orders submitted / orders filled, per era.** 12.4.8 restored the retry and
+12.4.10 widened caps; both should have raised fill rate. If fill rate FELL after them,
+that reverses what I told the user and I need to know before they do.
+
+### What I am NOT asking for
+
+No new build, no dial change, no threshold. **This is measurement only.** MAIN is
+already disarmed by its own one-shot rule and calibration is still off. If 65b comes
+back showing band mode costs money, the action is a **revert**, not another build - the
+user is right that 17 builds in one day on a live money engine is churn.
+
+### One defect worth recording regardless of the above
+
+**Both lanes traded the same 5-minute candle within 9 seconds** on epoch 1789323600 -
+EF at 18:20:34, MAIN at 18:20:43 - for **$9.61 of exposure against a $5 nominal stake.**
+Nothing in the engine stops two lanes doubling down on one candle. MAIN's one-shot has
+made it moot for now; it will not be moot the next time MAIN is armed. Record it, do not
+fix it yet.
