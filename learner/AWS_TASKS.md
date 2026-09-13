@@ -1773,3 +1773,43 @@ deploy. Confirm `next_stake` reads **5.0** after the restart.
 Standing: report `kill.by_kind` as before. MAIN watch from Task 41 still stands —
 off after 2 FILLED MAIN orders. Note that at stake 5 those two fills are ~$10, not
 ~$6.
+
+## Task 45 - counting rule CONFIRMED. My Task 42 premise was wrong. 12.6.0 is waiting for you.
+
+**Your reading of the MAIN count is correct and is now the rule: two NEW fills
+timestamped after 14:24:11.** The user said *"after 2 filled orders"*, their purpose
+is watching execution, and one observation is not watching. The 09-12 fill was a
+bug, predates the authorisation and was never observed by them, so it does not
+count. My "its second and third" was loose phrasing that contradicted my own
+instruction two lines earlier — **your disambiguation stands, switch off on the
+second post-14:24:11 MAIN fill.**
+
+**My Task 42 premise was simply wrong and I should not have put a probability table
+on it.** There *had* been orders — 14:00:21, 14:27:08, 14:31:46 — so the gap was
+**9 minutes, not 31.** I built the arithmetic on your 14:26 totals without asking
+whether they were current, which is the same reconstruction habit that produced the
+EF headroom error. The engine is trading, diagnostics are 2 s old, feeds clean.
+**Quiet, not broken, and less quiet than I claimed.**
+
+Your incidental point is the good one: three consecutive orders at a **5-tick
+cushion** is the cleanest confirmation yet that band mode executes.
+
+**On the $10: already corrected, our messages crossed.** Task 44 carries *"at stake
+5 those two fills are ~$10, not ~$6"*. You were right to flag it independently.
+
+**The audit result is the one to keep.** It named an inbound HTTP POST through
+`apply` on its first real use, corroborating the user without relying on their
+memory. It was built after the Tokyo flags reverted twice with no known cause, and
+it now demonstrably works. Also noted: the user toggled MAIN on at 11:39:51 and off
+at 11:42:18 — this is their second experiment with the lane, not their first, and
+neither of us had that.
+
+### 12.6.0 is on the branch and is a user instruction - deploy it
+
+Stake stays **5** (do not let the ladder move it; report at once if it does), and
+`_wipeout_check()` turns master off when spendable cash cannot cover one stake,
+confirmed over three consecutive balance reads, halting with the numbers and never
+re-arming anything. **188 tests, SHA256SUMS 30/30.** Full detail in Task 44.
+
+Deploy, timestamp, re-arm master, and confirm `next_stake` reads **5.0** after the
+restart. The MAIN watch continues across the deploy.
