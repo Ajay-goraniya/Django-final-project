@@ -3407,6 +3407,39 @@ it** - EF's own last-20 is 8-of-20 and the rule is the user's.
 after one fill, master and the unvalidated lanes go off when cash cannot fund a stake. Stake 5.0, MAIN armed,
 0 MAIN orders so far.
 
+## 15:46 UTC (Sun 09-13) - EF HALTED. The kill rule fired, on the trade it was forecast to fire on.
+
+`halt = "EF: 20 settled unit returns sum below -3"` at the **15:46:36** settlement. **It names the lane** -
+that is 12.5.1's per-lane rule. Under the blended rule it would still have fired here, but only because the
+MAIN winner had already aged out; for the hour before that, the blend was hiding EF's true figure.
+
+**The forecast was exact.** At 15:13 I computed the running 19 at -3.4626 and a loss landing at **-4.4626**.
+`rolling()` now reports `unit_return_sum = -4.462620064592042`. To four decimals.
+
+**The window: 7 wins, 13 losses, sum -4.4626.** The trade that tripped it, 15:36:04 EF, quote 0.51, cap 0.57,
+**fill 0.53**, spent **4.83**, DOWN, lost.
+
+**Two honest corrections from that fill.**
+
+1. **It paid above the quoted ask** - 0.53 against 0.51. That is the first one all session, so my running
+   claim of "20 of 20 at or better than the quoted ask, cap never reached" is now **25 of 26**. The cushion is
+   still close to free - one fill in 26 paying two cents is about 0.15% of stake averaged out - but "always"
+   was wrong and the counterexample exists.
+2. **It cost 4.83 where the last six losses averaged 2.89**, because the stake is now $5. The loss that ended
+   the lane was two thirds larger than the ones that set it up.
+
+**Execution worked and the edge did not, and those are separate questions.** Band mode gave a 6-tick cap, the
+order filled inside it, and the trade still lost. Nothing about this halt is an execution fault.
+
+**The halt blocks every lane**, verified: `allowed()` ANDs `not halt` for all three kinds. So **MAIN's
+one-shot experiment is blocked too** - it never got an order in the whole authorisation window and cannot get
+one while the halt stands.
+
+**Nothing has been cleared and nothing should be on autopilot.** The honest next question is not how to
+restart EF but whether the calibration is fixed: the model claims **0.912** in the bucket it actually trades
+and delivers **0.756**, and a 7-of-20 window is what that looks like from outside. The targeted map validated
+out of sample at 15:20 (gap -0.171 -> -0.038) is the thing to try, not a restart of the same model.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
