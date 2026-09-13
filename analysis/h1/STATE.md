@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-13 00:50 UTC. Update this file at the end of every check.
+Last updated: 2026-09-13 02:47 UTC. Update this file at the end of every check.
 
 ## VERIFICATION IS NOW A GATE, NOT A HABIT (user 00:30: "verification is the most important part")
 `analysis/h1/verify.py` — a `Finding` runs grading provenance / sample size / both halves /
@@ -496,7 +496,8 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
   have shipped on nine fires of noise. Objection 2 was the operative one: the halves were
   morning-vs-afternoon of ONE Saturday, not a real out-of-sample split, and it broke as the afternoon
   extended. **The cleanest vindication of the 60/100 bars this project has produced.**
-- Final grid: **all n=161 −0.063 · weekend n=104 −0.001 · weekday n=57 −0.177 (under the bar, not read).**
+- Grid 09-13 02:47: **all n=176 −0.051 · weekend n=119 +0.009 · weekday n=57 −0.177 (under the bar,
+  not read).** The weekend cell stays within a cent of zero after closing; nothing reopens.
 - **Why it is still not a finding:** (1) it is ONE Saturday — 62 fires from one day is one draw of the
   regime; (2) its halves are morning-vs-afternoon of the SAME continuous day, the weakest form of the
   check (the 09-11 flat bucket looked identical to three decimals and died at McNemar p=0.341);
