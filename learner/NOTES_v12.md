@@ -4348,6 +4348,20 @@ with rules 5 and 6 from that moment - and I say first what the wallet reads.**
 Polymarket v12 live unchanged: armed, cash 40.35, stake 3, hand rule **-1.1818** (n=3), kill 17 to arm.
 12.8.5 + 12.8.6 held.
 
+## 22:3x UTC (Sun 09-13) - SCOPE: Polymarket only. Tokyo and Predict.fun are out.
+
+User: *"tokyo server is no longer our thing, nothing related to predict for now on, for now polymarket is
+the only thing we should be focusing and that's where the goal applying."*
+
+**Closed by this:** the REVERSAL re-arm question (rule met at 22:22, not acted on, now retired with the
+rule); the eight-hour Tokyo wallet 0.00 mystery (no longer ours to chase); every Tokyo item in the hourly
+routine. **The hourly trigger is re-scoped** - `tokyo_health.py`, the Tokyo flag check and the Predict.fun
+rule are removed; the fair table stays verbatim with its Polymarket rows as the comparators; the source
+file for the Polymarket paper reading is named every time. `REMAKE_PLAN.md` §5a and `HANDOVER_HEAD.md`
+carry the scope. **Nothing in the remake depended on Predict.fun.** The 12 local processes are untouched -
+build10/build11 twins keep running as they were, per the standing never-kill rule; their rows are simply
+not read.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |

@@ -59,7 +59,12 @@ refuted. Both retracted in `NOTES_v12.md`. Do not repeat the shape.
    audit rows are that. **So any deploy stops their trading.** Do not deploy while they are live unless
    they ask or it restarts anyway.
 
-### Tokyo v11 — Predict.fun, live but idle
+### Tokyo v11 — Predict.fun — OUT OF SCOPE as of 09-13 22:3x (user: "tokyo server is no longer our thing")
+
+Everything below this heading is historical context only. Do not check its flags, do not evaluate the
+Predict.fun re-arm rule (retired, criterion met and deliberately not acted on), do not chase the wallet.
+
+#### (historical) Tokyo v11 — Predict.fun, live but idle
 
 master OFF, `{'MAIN': False, 'REVERSAL': False, 'EF': False}`, checked per kind every hour. `realised
 -8.04`, `settled 442`, `open 0`. **Wallet 0.00 and equity 0.00 for six consecutive hours** while realised

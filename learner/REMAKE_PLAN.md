@@ -159,6 +159,18 @@ quartile, recent crossings, book width), every cell tracked from **live outcomes
 at 60+ graded both halves, and the engine's frequency in a cell follows that verdict. The buckets and the
 bar are fixed now; the verdicts come from the data. That is the difference between a gate and a brain.
 
+## 5a. SCOPE — Polymarket only (user, 09-13 22:3x)
+
+*"tokyo server is no longer our thing, nothing related to predict for now on, for now polymarket is the
+only thing we should be focusing and that's where the goal applying."* So: the Tokyo v11 engine, the
+Predict.fun venue, the Predict.fun re-arm rule and the Tokyo wallet question are **out of scope**. The
+re-arm criterion was met at 22:22 (Predict.fun paper +0.140 then +0.478 on the verified source) and was
+**deliberately not acted on** — the wallet read 0.00 for eight hours — and is now retired with it. The
+fair table's Polymarket paper (v10) and Polymarket v12 lane rows are the comparators; the Predict.fun and
+Tokyo rows are reported verbatim and not read. Nothing in this plan depended on Predict.fun: the model is
+v10 on Binance features, `candles.actual` is Binance close≥open, and every step above targets the
+Polymarket engine on the AWS box.
+
 ## 6. Roles
 
 - **V (this session):** owns the plan, the build, the tests, the twin, and every claim in this file.
