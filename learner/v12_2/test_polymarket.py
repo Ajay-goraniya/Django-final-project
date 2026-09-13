@@ -178,6 +178,33 @@ class Tests(unittest.TestCase):
         self.assertTrue(h,'a lane past its limit must halt even when the blend is fine')
         self.assertIn('EF',h)
 
+    def test_rolling_reports_the_same_per_lane_rule_halt_check_enforces(self):
+        """What the rule enforces is what the screen must show.
+
+        12.5.1 made halt_check per-lane but left rolling()['kill'] blended, so
+        the engine acted on one number while the operator read another - the
+        same shape as the dashboard build string reading 12.4.4 while 12.4.6 ran.
+        """
+        f=dict(shares=10.,spent=5.,fees=0.,price=.5,fee_bps=0)
+        def settle(ep,kind,pnl):
+            self.db.sql('INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,reason,kind)'
+                        " VALUES(?,?,1,'FILLED','{}',0,0,'',?)",(f'o{ep}',ep,kind))
+            self.db.fill(f'o{ep}',ep,f't{ep}',f,'paper')
+            self.db.sql('INSERT INTO results(epoch,actual,payout,pnl,ts) VALUES(?,?,?,?,0)',
+                        (ep,'UP',0.,pnl))
+        for i in range(20): settle(5000+i,'EF',-1.0)   # EF's own 20: sum -4.00
+        settle(5100,'MAIN',+25.0)                       # lifts the blend
+        k=self.db.rolling()['kill']
+        self.assertGreater(k['unit_return_sum'],-3.0,'the blend alone looks fine')
+        self.assertIn('EF',k['by_kind'])
+        self.assertLess(k['by_kind']['EF']['unit_return_sum'],-3.0,
+                        "EF's own window is what halt_check acts on")
+        self.assertTrue(k['by_kind']['EF']['armed'])
+        # MAIN has one result, so it is not armed and reports no sum.
+        self.assertEqual(k['by_kind']['MAIN']['n'],1)
+        self.assertIsNone(k['by_kind']['MAIN']['unit_return_sum'])
+        self.assertEqual(k['by_kind']['MAIN']['results_until_armed'],19)
+
     def test_kill_rule_does_not_fire_on_a_healthy_lane(self):
         f=dict(shares=10.,spent=5.,fees=0.,price=.5,fee_bps=0)
         for i in range(20):
@@ -313,7 +340,7 @@ class Tests(unittest.TestCase):
     def test_v120_database_migrates_additively(self):
         self.db.reserve(123,decision(),'up','condition')
         self.db.set('build','12.0'); self.db.c.close(); self.db=Journal(self.path,'PAPER','abc')
-        self.assertEqual(self.db.get('build'),'12.5.1')
+        self.assertEqual(self.db.get('build'),'12.5.2')
         self.assertEqual(self.db.sql('SELECT count(*) FROM signals WHERE epoch=123')[0][0],1)
         cols={r[1] for r in self.db.c.execute('PRAGMA table_info(orders)')}
         self.assertTrue({'error_json','timing_json','request_reached','reconcile_count','venue_live'}<=cols)

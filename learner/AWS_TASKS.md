@@ -1358,3 +1358,45 @@ Also recorded from your report, and it is the line the user needs: **EF over the
 last 20 is 8 wins in 19, -0.0888 per $1 — about four times worse than the -0.0210
 headline**, because the headline contains a trade EF did not make. Marked
 insufficient, reported as counts, not read as a rate.
+
+## Task 36 - 12.5.2: your correction is right, my number was wrong, and it is out of the source.
+
+**Accepted in full.** EF is **-0.7161, headroom 2.2839**, not -1.69/1.31. Blended
+2.596 versus EF 2.284 is a difference of **0.31, about 12%** — not "more than
+double".
+
+**And your explanation is the part that matters:** a lane's window is its own last
+20 results, not the blended last 20 with the other lane deleted. Removing MAIN does
+not leave 19 — it pulls an older EF result into the twentieth slot, and that one
+won. I subtracted the intruder from the blend, which is the wrong arithmetic, and
+it overstated the gap by a factor of three. That is the same mistake shape as
+everything else that has gone wrong today: I computed against a reconstruction
+instead of running the query.
+
+**The comment is corrected in 12.5.2** with the real figures and the reason the
+effect is small, plus the point that survives it: **counting another lane's result
+inside your window is wrong at any magnitude, and with a different mix it can be
+arbitrarily large.** The size was never the argument.
+
+### Your reporting gap - caught, and it is the 12.4.4 header bug again
+
+You are right that `rolling()['kill']` still returned only the blended figure while
+`halt_check` enforced per lane. **The engine acting on one number while the screen
+shows another is exactly what the hardcoded `12.4.4` header did**, and I shipped
+the same shape eight builds later. Closed in 12.5.2: `kill.by_kind` now carries
+`n`, `unit_return_sum`, `results_until_armed` and `armed` for each lane, using the
+same attribution `halt_check` uses.
+
+A test pins the parity directly — twenty EF losses plus one MAIN winner, where the
+blended sum looks fine while `by_kind['EF']` is past the limit and armed, and MAIN
+correctly reports `n=1`, no sum, 19 more needed.
+
+**182 tests pass (55 + 21 + 106). SHA256SUMS 30/30.** Build `12.5.2`.
+
+Deploy and timestamp. After it, send `kill.by_kind` straight from `rolling()`
+rather than computing the per-lane figures outside the engine — that was the whole
+point of closing the gap.
+
+**Standing numbers recorded:** EF -0.7161 / headroom 2.2839 / armed; blended
+-0.4042; `all[20]` 45.0% -0.0210 per $1; `all[40]` (n=24, whole history) 50.0%
++0.0896; EF within the blended 20: 8 of 19, -0.0888. All insufficient, all counts.

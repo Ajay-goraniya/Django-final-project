@@ -390,10 +390,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.5.1')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.5.2')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -635,6 +635,18 @@ class Journal:
                          unit_return_limit=-3.0,
                          results_until_armed=max(0,20-len(rows)),
                          armed=len(rows)>=20)
+        # PER LANE TOO. halt_check enforces per lane as of 12.5.1, and reporting
+        # only the blended figure would leave the engine acting on one number
+        # while the operator reads another - the same shape as the hardcoded
+        # dashboard build string that said 12.4.4 while 12.4.6 was running.
+        # Whatever the rule enforces is what the screen must show.
+        out['kill']['by_kind']={}
+        for k in sorted({r['kind'] for r in rows if (r['kinds'] or 1)==1}):
+            own=[(r['pnl'] or 0)/r['staked'] for r in rows
+                 if (r['kinds'] or 1)==1 and r['kind']==k and r['staked']][:20]
+            out['kill']['by_kind'][k]=dict(
+                n=len(own), unit_return_sum=(sum(own) if len(own)==20 else None),
+                results_until_armed=max(0,20-len(own)), armed=len(own)>=20)
         return out
     ABSENT_GRACE_S=5.0
     ABSENT_CONFIRMATIONS=2
@@ -711,12 +723,21 @@ class Journal:
         # cumulative PnL over its LAST 20 FILLS is below -3.00", and this used to
         # group by epoch alone, mixing every kind into one window.
         #
-        # That is not academic. On 09-13 the blended sum read -0.40 (headroom
-        # 2.60) while EF alone was at roughly -1.69 (headroom 1.31): a single
-        # MAIN winner of +3.67 - from the 09-12 seeding bug, on a lane that is
-        # supposed to be off - was buying EF more than double its real margin
-        # against its own auto-halt. A safety net that counts another lane's
-        # stale win as your headroom is not a safety net.
+        # Measured on 09-13: blended -0.4042 (headroom 2.596) against EF's own
+        # -0.7161 (headroom 2.284). A difference of 0.31, about 12% - the MAIN
+        # winner of +3.67 from the 09-12 seeding bug was flattering EF, but
+        # modestly, NOT by the "more than double" this comment first claimed.
+        #
+        # The reason the effect is small is the same reason per-lane is correct:
+        # a lane's window is its own last 20 results, not the blended last 20
+        # with the other lanes deleted. Removing MAIN does not leave 19 - it
+        # pulls an older EF result into the twentieth slot, and that one won.
+        # Subtracting the intruder from the blend is the wrong arithmetic and it
+        # overstated the gap by a factor of three.
+        #
+        # The size of the effect is not why the fix is right. Counting another
+        # lane's result inside your window is wrong at any magnitude, and it can
+        # be arbitrarily large with a different mix.
         #
         # Both checks now run and either can halt, so this can only ever fire
         # sooner than before, never later.
