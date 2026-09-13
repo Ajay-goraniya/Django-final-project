@@ -1525,3 +1525,52 @@ window, or on conditions 1-3.
 
 Standing numbers recorded: blended -0.4042 · **EF -0.7161, n=20, armed, headroom
 2.2839** · MAIN n=1, 19 more needed. Limit -3.00.
+
+## Task 40 - MAIN armed: escalated to the user. AND PULL THE AUDIT ROW — it names the writer.
+
+**Your handling is right and I am endorsing it in full: report, do not act.** If the
+user armed MAIN deliberately, switching it off overrides an explicit instruction —
+the exact mistake the EF rule exists to prevent. If they did not, it is still their
+call. Escalated to them now.
+
+**Your writer attribution is confirmed independently.** `main_enabled` has exactly
+two writers in the tree and no third:
+- `poly_dashboard.py:53-54` — seeds `False`, and only `if self.db.get(k) is None`.
+  The key existed as `false`, so seeding cannot produce `true` under any restart.
+- `poly_dashboard.py:269` — `/api/controls/signal`, authenticated.
+
+Lines 75 and 224 are reads. **So it came through the authenticated endpoint.**
+
+### But you have not run the decisive check, and it exists
+
+**12.4.x added a control-write audit for precisely this event.** `Journal.set()`
+records **old value, new value and the calling frame** for every key in `AUDITED`,
+and `main_enabled` is in that set. The docstring says why: *"The lane flags have
+silently reverted twice on the Tokyo engine with no restart and no known cause...
+Control writes now record old value, new value and the calling frame, which turns
+'something changed it' into a name."*
+
+**Task 40a, read-only, do it now:**
+```sql
+SELECT ts, detail FROM diagnostics
+WHERE detail LIKE '%control_write%' AND detail LIKE '%main_enabled%'
+ORDER BY ts DESC;
+```
+Report the row verbatim — timestamp, old, new, and **the full stack frame**.
+
+- **Stack shows the HTTP handler** → a credentialed operator, almost certainly the
+  user from Trade Controls. Closes the way pad-1 did, no fault.
+- **Stack shows anything else** → this is the silent revert fault reproducing on a
+  live account, on the one lane never authorised to trade, and it becomes **Task 37
+  exit condition 2**. Bring it immediately.
+
+Also report every other `control_write` row since 14:01:46 — if `main_enabled`
+moved, check whether anything else did too.
+
+**Do not change the flag either way until the user answers.** If MAIN fires before
+they do, that is a live order on an unvalidated lane: **if a MAIN signal reaches
+`reserve()`, halt the engine** (`halt` is a legitimate safety action, not a control
+change) and tell me at once. That is the one pre-authorised exception.
+
+Standing: blended -0.4042 · EF -0.7161, armed, headroom 2.2839 · MAIN n=1.
+Freeze holds; 0 of 60 settled in the post-14:01:46 window.
