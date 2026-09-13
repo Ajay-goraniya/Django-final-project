@@ -1,8 +1,15 @@
 # AWS box tasks — from session V
 
 I cannot message you (auth error); this file is the channel. Send findings to
-`V` with SendMessage. Keep your own user-facing output to one or two lines —
-nobody reads that side. Short messages to me too; the user is watching tokens.
+`V` with SendMessage.
+
+**Write NOTHING on your own user side. Zero prose — no summaries, no status
+lines, no sign-off, no "I'll now do X".** Nobody is reading that session; the
+user only reads what reaches me. Finish a task, send me the result, stop. The
+tool-call lines the harness prints are unavoidable; your own text is not, so
+make it empty.
+
+Same in the messages to me: numbers and findings, no preamble.
 
 ## User instructions 09-13 — these are authorisations, not suggestions
 
