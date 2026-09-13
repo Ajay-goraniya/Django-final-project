@@ -34,7 +34,7 @@ class PolyRunner(Runner):
         self.executor=Executor(self.db,self.books,self.broker,a.quote_age_ms/1000,a.pad_ticks,
                                budget_s=getattr(a,'execution_budget_ms',2000)/1000,
                                post_timeout_s=getattr(a,'post_timeout_ms',1200)/1000,
-                               attempts=getattr(a,'max_attempts',3))
+                               attempts=getattr(a,'max_attempts',4))
         self.age={k:0. for k in ('spot','perp','depth','venue')}; self.msgs={}; self._agg=None
         # Arrival age AND event lag per stream; see poly_feeds for why both.
         self.health=poly_feeds.FeedHealth(('spot','perp','depth','venue'))
@@ -498,7 +498,10 @@ def args():
     # latency block reports the measured split so the value can be set from data.
     p.add_argument('--execution-budget-ms',type=float,default=2000)
     p.add_argument('--post-timeout-ms',type=float,default=1200)
-    p.add_argument('--max-attempts',type=int,default=3)
+    p.add_argument('--max-attempts',type=int,default=4)   # build 36 parity:
+    # PREDICT_ORDER_MAX_RETRIES=3 is used as `range(1, ...+2)`, i.e. one
+    # submit plus three retries = FOUR attempts. v12 shipped 3 and so was a
+    # whole attempt short of the rule it was ported from.
     a=p.parse_args()
     if not math.isfinite(a.capital) or a.capital<=0 or not 0<a.quote_age_ms<=2000 or a.pad_ticks<0: p.error('invalid capital/quote age/pad')
     if a.ev is not None and not math.isfinite(a.ev): p.error('invalid EV')

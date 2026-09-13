@@ -794,6 +794,29 @@ class BookDepthIsCheckedBeforeSending(unittest.TestCase):
         # attribute is as wrong as a True one.
         self.assertIn('all_or_nothing', vars(poly_live.LiveBroker))
 
+    def test_four_attempts_matches_build_36(self):
+        """Build 36 sends FOUR orders per fire, not three.
+
+        `PREDICT_ORDER_MAX_RETRIES = 3` is consumed as
+        `range(1, PREDICT_ORDER_MAX_RETRIES + 2)` and
+        `max_attempts = PREDICT_ORDER_MAX_RETRIES + 1`, i.e. one submit plus
+        three retries. v12 read the constant as a total and shipped 3, so it was
+        a whole attempt short of the rule it was ported from.
+        """
+        import inspect
+        sig = inspect.signature(C.Executor.__init__)
+        self.assertEqual(sig.parameters['attempts'].default, 4)
+        ex = C.Executor.__new__(C.Executor)
+        ex.max_attempts = max(1, int(sig.parameters['attempts'].default))
+        self.assertEqual(list(range(1, ex.max_attempts + 1)), [1, 2, 3, 4])
+
+    def test_engine_cli_default_is_four_attempts(self):
+        """The CLI default is the one that reaches the live box."""
+        import pathlib
+        src = pathlib.Path(__file__).with_name('btc_model_v12_polymarket.py').read_text()
+        self.assertIn("p.add_argument('--max-attempts',type=int,default=4)", src)
+        self.assertIn("attempts=getattr(a,'max_attempts',4))", src)
+
     def test_band_is_clamped_to_clear_the_five_share_minimum(self):
         """A wider cap signs FEWER shares, so the band can trip the floor.
 

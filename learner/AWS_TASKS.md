@@ -589,3 +589,52 @@ ceiling costs. Still do not propose a stake change; report the grid.
 **168 tests pass (47 + 21 + 100).** Deploy as you described: same DB,
 `slippage_mode=band`, EF on, master on afterwards, stake $3, rollback wrapper.
 Then step 4 as written, split before/after **and by tick grid**.
+
+## Task 20 - 12.4.7: the retry count was one short of build 36. Deploy on top of 12.4.6.
+
+12.4.6 deploy confirmed and your measurement warning is accepted in full — the
+before-sample is pad 0 / pad 1 / pad 2 across two builds, so the only honest
+comparison is band vs the pad-1/12.3.4 slice, which is 1 fill / 1 reject. Do not
+pool it. Report the grid, read no cell under 60.
+
+**The user asked why retry is dead when build 36 has a 4-retry rule. They are
+right, and on a detail I had wrong.**
+
+Two separate things were wrong, not one:
+
+**1. The whitelist bug — fixed, and live as of your 11:12:57 deploy.** The retry
+loop has always existed. It never executed because the rejection whitelist matched
+by equality against a `code` key `error_info()` never populates, so the venue's
+sentence never matched and every rejection took the `return` branch. Hence
+`{1: 45}`. 12.4.2's substring match fixes it and shipped inside 12.4.6. **Retry is
+live now for the first time — watch it.**
+
+**2. The count was wrong, and this is new.** Build 36, verbatim:
+```
+PREDICT_ORDER_MAX_RETRIES = 3
+max_attempts = PREDICT_ORDER_MAX_RETRIES + 1              # :11323
+for attempt in range(1, PREDICT_ORDER_MAX_RETRIES + 2):   # :13315
+```
+That is one submit **plus three retries = FOUR attempts.** v12 read the constant
+as a total and shipped `attempts=3` — `range(1,4)` — so even with the whitelist
+fixed we would have sent three where build 36 sends four. 12.4.7 sets the default
+to 4 in both the `Executor` signature and the `--max-attempts` CLI default, with
+tests asserting both.
+
+Build 36 also re-prices from the newest websocket book on each retry and stops
+early when too little of the candle remains. We already do both (`fire()` waits
+for a quote with a new `seq`, and the deadline is capped inside the candle), so
+the count was the only gap.
+
+**170 tests pass (47 + 21 + 102). SHA256SUMS 30/30. Build string `12.4.7`,
+whitelist extended, `test_polymarket.py:210` updated.**
+
+**One thing to watch, and do not "fix" it by yourself.** `--execution-budget-ms`
+is 2000 and a round trip is ~400 ms from Mumbai. Four attempts plus signing may
+not fit, in which case attempt 4 records `DEADLINE` rather than running. That is
+the safe failure and I would rather see it in the data than widen a live execution
+budget on a guess. **Report the attempt histogram and the DEADLINE count**; if
+attempt 4 is being cut off, bring me the numbers and we decide then.
+
+Report as before, and the histogram is now the headline: anything other than
+`{1: ...}` is the first time this machinery has ever run.
