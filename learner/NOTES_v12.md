@@ -3377,6 +3377,36 @@ model states about itself is corrected to what that statement has historically b
 **Not shipped.** Both cells are under 60, the live build is frozen, and EF is one trade from halting - if it
 halts, the honest next step is this, not a restart. Recorded for the user's decision.
 
+## 15:22 UTC (Sun 09-13) - seventeenth reading. TOKYO WALLET READS 0.00 - flagged, not diagnosed.
+
+**Tokyo's wallet and equity now read 0.00.** They were **15.02** at every check today up to 14:21. Two
+consecutive successful polls agree on 0.00; a third attempt returned **502**, so the host is flaky right now.
+
+**What has NOT changed, and it is the important part:** `realised -8.04` and `settled 442` are **identical to
+every reading today**, `open 0`, and all three lanes plus master are **OFF**. **Nothing traded.** If the
+balance had drained through trading, realised would have moved; it did not. `next_stake` has followed equity
+to 0.0, which is just the ladder reading the balance it was given.
+
+So it is one of: the funds were moved off the account, or the balance endpoint is misreporting - possibly
+related to the 502s. **I cannot distinguish those from here and I must not touch that host.** Recorded as an
+observation, not a loss. Raised with the user, who is the only one who knows whether they withdrew.
+
+Re-arm reading, Predict.fun v10 paper: last-20 **+0.144**, last-40 **+0.280**, **545 graded**. Polymarket
+paper last-20 **+0.148**, last-40 **+0.172**. Seventeen readings: +0.155, -0.102, -0.001, -0.193, -0.082,
++0.004, +0.347, +0.413, +0.412, +0.607, +0.630, +0.411, +0.295, +0.302, +0.203, +0.170, +0.144. Twelfth
+consecutive positive; the last-20 has fallen five hours running. Not arming - criterion refuted 22:12 09-11,
+unreplaced. All **12** processes verified, no duplicates.
+
+**Polymarket v12 live (AWS): EF is ONE LOSING TRADE from its automatic halt.** Last-20 sum **-2.6769** against
+the -3.00 limit; when the oldest (+0.79) rolls out the running 19 is **-3.46**, already past the limit, so the
+next result must return **>= +0.46**. Any loss halts EF; any normal win clears it. The MAIN winner that was
+flattering the blend has aged out, so blended and EF now read the same for the first time. **Nobody touches
+it** - EF's own last-20 is 8-of-20 and the rule is the user's.
+
+12.6.2 deployed 15:05:24: the screen now says *why* a signal was skipped with the numbers, MAIN disarms itself
+after one fill, master and the unvalidated lanes go off when cash cannot fund a stake. Stake 5.0, MAIN armed,
+0 MAIN orders so far.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
