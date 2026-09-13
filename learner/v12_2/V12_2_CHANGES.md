@@ -682,3 +682,51 @@ switch to 0.001 may simply mark the price running to 0 or 1 late in a candle —
 which is also when the book thins. Tick change and thin book would then be
 symptoms of the same thing, and separating them needs the timing data now being
 recorded.
+
+# 12.3.6 — a skip for missing terms is no longer invisible
+
+The AWS session asked for this and it is the right ask: on 12.3.4 a lane that
+skips because the token has no pricing terms leaves **no trace at all**. Both
+paths are a bare early return:
+
+```python
+if token not in self.books.terms: return            # lane_loop
+if token in self.books.terms and stake<=...:        # EF
+```
+
+So a skip for missing terms is indistinguishable from no signal, and the third
+part of the tick-switch question — *how much time per candle does a token spend
+with no terms, and does the lane skip inside those windows* — is not answerable
+even in principle. `terms` is dropped on every `tick_size_change` and refetched
+by housekeeping's 5 s loop, so the gap is real and repeating.
+
+Both paths now write a `no_terms` diagnostics row carrying the kind, the side and
+`since_tick_change_s`. Nothing is gated; the behaviour is unchanged. It simply
+becomes measurable.
+
+## Where the tick-switch lead stands
+
+The AWS session has largely ruled it out for the 17 historical rejects, on its
+own lead, and the method is worth recording because the first cut was a trap.
+
+28 of 29 order candles touch outside 0.10-0.90 *at some point* — meaningless,
+since a binary resolves to 0 or 1 and every candle ends at an extreme. Restricted
+to samples **before each order**, which is the only version that can cause
+anything:
+
+| outcome | extreme before the order | share |
+|---|---|---|
+| FILLED | 0 / 11 | 0% |
+| REJECTED | 1 / 17 | 6% |
+
+Fisher two-sided **p = 1.0**. Every other order, fill and reject alike, was sent
+with both sides mid-range.
+
+That rule-out is conditional on the switch being triggered by price leaving the
+band, which is an assumption, so that session is probing the trigger directly
+rather than resting on it. Until that lands, neither the lead nor the rule-out is
+settled.
+
+Also tightened: "the engine loses its pricing terms mid-candle" is a correct
+reading of the code, but it has not been shown happening on any of our rejects,
+and the timing above suggests it did not. 12.3.6 is what would show it.

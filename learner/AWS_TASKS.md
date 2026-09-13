@@ -98,39 +98,51 @@ median gap 0.2-0.3 s; your own 12.3.4 telemetry agrees at 236 samples, median
   not exist.
 - **The reject cause is open again.**
 
-## Task 10 - OPEN (priority): tie rejects to tick_size_change, or rule it out
+## 12.3.6 is on the branch - your ask, built
 
-Your lead, and it is the best one on the table. 8 switches in 300 s, all
-0.01 -> 0.001, on active tokens. `BookCache.apply` pops `terms`; housekeeping
-refetches on a 5 s loop; both the EF path and `lane_loop` return early when a
-token has no terms.
+You were right that a terms-gap leaves no trace on 12.3.4, so part 3 of Task 10
+was unanswerable even in principle. Both early returns now write a `no_terms`
+diagnostics row with the kind, the side and `since_tick_change_s`. Nothing gated,
+behaviour unchanged.
 
-**12.3.5 is on the branch** and makes this decidable from the journal instead of
-inferred. Every attempt now records `believed_tick`, `since_tick_change_s` and
-`last_tick_change`; `BookCache` keeps the last change per token plus a count in
-`health()`. Nothing is gated on any of it.
+Deploy 12.3.5 and 12.3.6 together when the user clears the guard - 12.3.6
+supersedes 12.3.5 and contains it. **Master ON afterwards**, then confirm EF on,
+$3, main/reversal off, history intact, and stay with it until you see a real
+order attempt.
 
-Deploy 12.3.5 (same DB, same flags, $3, EF on, and **master ON afterwards** —
-it comes back off on every restart), then answer:
+Your rollback-on-failed-boot script is the right response to the 12.3.4 outage,
+and the `/proc/<pid>/exe` trap is worth keeping written down somewhere on that
+box - resolving to the system interpreter for a venv process, with credentials
+living only in the process environment, is exactly the kind of thing that bites
+twice.
 
-1. Do rejects follow a `tick_size_change` on the same token more often than fills
-   do? Distributions of `since_tick_change_s` for both outcomes, not medians.
-2. Does `believed_tick` ever disagree with the grid the venue was matching on at
-   that moment?
-3. How much time per candle does a token spend with no terms at all, and does the
-   lane skip inside those windows?
+## Task 10 - part 4 OPEN, parts 1-3 blocked on the deploy
 
-**The confound to separate:** Polymarket widens the grid near the extremes, so a
-switch to 0.001 may just mark price running to 0 or 1 late in a candle — which is
-also when the book thins. Tick change and thin book would then be the same
-symptom. The timing data now recorded should separate them; if it cannot, say so.
+Your retrospective rule-out is accepted as far as it goes, and the method is
+recorded in the changelog - including that the first cut (28 of 29 candles touch
+an extreme) was a trap, since every binary ends at one. Restricting to samples
+before the order is the version that can cause anything: 0/11 fills and 1/17
+rejects, Fisher p = 1.0.
 
-You over-retracted the 0.439 ask — it was real. Noted in the changelog.
+Right: that rests on the switch being triggered by price leaving the band, which
+is an assumption. Your direct probe of the trigger is the correct next move and I
+am not building on the rule-out until it lands.
 
-## Task 7 - OPEN, low priority: did the prune change the reject rate?
+If the probe shows switches firing mid-range, the lead is live again and
+12.3.5/12.3.6 answer it. If it shows they only fire at the extremes, the lead is
+closed and the reject cause is open with nothing queued behind it - in which case
+say so plainly rather than reaching for the next hypothesis, and we start from
+the journal again.
 
-Run it, but treat any difference as **unexplained**. Its premise is refuted, so a
-change would need its own account. Under 60 graded attempts, marked not read.
+## Task 7 - OPEN: nothing to read yet
+
+0 new graded attempts since the restart; three EF signals, all SKIPPED on the EV
+bar. Stays insufficient.
+
+That EF is signalling and never clearing the bar is the standing participation
+problem and it has not moved. Worth its own look once the deploy question is
+settled: on the live journal, how far short do the SKIPPED signals fall, and is
+it a near miss or not close?
 
 ## Settled
 

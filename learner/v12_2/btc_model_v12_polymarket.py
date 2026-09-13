@@ -166,6 +166,15 @@ class PolyRunner(Runner):
             if d.get('fire') and self.ui.allowed() and self.cash is not None and time.monotonic()-self.cash_at<15:
                 token=self.market[ep][0 if d['side']=='UP' else 1]; stake=self.db.get('next_stake',1.)
                 reserved=self.db.live_reserve()
+                # A skip for missing terms used to be silent and therefore
+                # indistinguishable from no signal. terms are dropped on every
+                # tick_size_change and refetched by housekeeping's 5 s loop, so
+                # the gap is real and repeating; record it or it cannot be
+                # measured.
+                if token not in self.books.terms:
+                    self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(dict(
+                        reason='no_terms',kind='EF',side=d.get('side'),
+                        since_tick_change_s=self._since_tick_change(token)))))
                 if token in self.books.terms and stake<=max(0,self.cash-reserved):
                     f=self.st.features(ep*US,int(time.time()*US)) or {}
                     d['features']={k:float(v) for k,v in f.items() if isinstance(v,(int,float)) and math.isfinite(v)}
@@ -205,7 +214,11 @@ class PolyRunner(Runner):
         if ep not in self.market or ep not in self.info: return
         self.executor.pad=self.pad_ticks()      # live slippage allowance
         token=self.market[ep][0 if decision['side']=='UP' else 1]
-        if token not in self.books.terms: return
+        if token not in self.books.terms:
+            self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(dict(
+                reason='no_terms',kind=kind,side=decision.get('side'),
+                since_tick_change_s=self._since_tick_change(token)))))
+            return
         stake=self.db.get('next_stake',1.); reserved=self.db.live_reserve()
         if stake>max(0,(self.cash or 0)-reserved): return
         d=dict(decision); d['fire']=True
@@ -232,6 +245,10 @@ class PolyRunner(Runner):
         if not placed:
             print(f'[{kind}] signal not executed - {reason}',flush=True)
         self.revision+=1
+    def _since_tick_change(self,token):
+        """Seconds since this token's last tick_size_change, or None."""
+        tc=getattr(self.books,'tick_changes',{}).get(str(token))
+        return round(time.monotonic()-tc['at'],2) if tc else None
     async def housekeeping(self):
         while True:
             try:
