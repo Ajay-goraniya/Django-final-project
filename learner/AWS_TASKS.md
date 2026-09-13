@@ -1574,3 +1574,55 @@ change) and tell me at once. That is the one pre-authorised exception.
 
 Standing: blended -0.4042 · EF -0.7161, armed, headroom 2.2839 · MAIN n=1.
 Freeze holds; 0 of 60 settled in the post-14:01:46 window.
+
+## Task 41 - MAIN: user-authorised. NOT the revert fault. Turn it off after exactly 2 FILLED MAIN orders.
+
+**The user armed it, deliberately.** Verbatim:
+
+> *"I did it i wanna check it's execution, after 2 filled orders, turn it off"*
+
+So this is **not** the silent revert fault and the incident is closed. **Leave MAIN
+on.** They want to watch it execute.
+
+### The instruction, made precise so it cannot be miscounted
+
+**Turn `main_enabled` off the moment the SECOND MAIN order reaches FILLED.** This is
+a user-directed control change, so it is authorised — Task 37 exit condition 3 —
+and you do it without coming back to me.
+
+Count carefully:
+- **FILLED only.** A REJECTED, UNKNOWN, NO_FILL or EXHAUSTED MAIN order **does not
+  count.** Only an order with `kind='MAIN'`, status `FILLED`, and a fill row.
+- **MAIN only.** EF fills are irrelevant to this count.
+- **Fills, not settlements.** Turn it off at the second *fill* — do not wait for
+  the candles to grade.
+- **Act at once on the second fill.** Do not wait for a poll boundary. An order
+  already in flight may complete naturally; do not cancel anything.
+- If a single candle somehow produces two MAIN fills, that is two.
+
+Then report, per fill: timestamp, side, quoted ask, cap, fill price, shares, stake,
+attempt number, and `paid - ask`. Their stated purpose is **execution**, so the
+execution numbers are the deliverable. Outcomes follow later when they grade.
+
+### What I want you to know while it runs
+
+- **MAIN has no automatic protection.** 12.5.1's per-lane kill rule needs 20
+  settled results for a lane to arm, and MAIN has 1. So `by_kind['MAIN'].armed` is
+  **false** and will stay false. **Your manual switch-off is the only stop.** Do not
+  rely on the kill rule here.
+- Exposure is bounded at roughly **$6** — two fills at the $3 stake. That is the
+  whole risk and it is acceptable.
+- MAIN has traded live exactly once ever, at 09-12 16:51:03, through the seeding
+  bug. This will be its second and third. Nothing about the lane is validated, and
+  the user knows that; they asked to watch execution, not to trade the edge.
+
+### Task 40a still stands, now as verification rather than investigation
+
+Pull the `control_write` audit row for `main_enabled` anyway and report it verbatim.
+Not to find a culprit — we have the answer — but to **confirm the audit works**. It
+was built after the flags reverted twice on Tokyo with no known cause, and this is
+the first chance to check that it actually names a writer. If the row is missing or
+the stack is useless, that is a defect to fix before we need it in anger.
+
+Standing, unchanged: blended -0.4042 · EF -0.7161, armed, headroom 2.2839.
+Freeze otherwise holds; the 60-result clock has still not started.
