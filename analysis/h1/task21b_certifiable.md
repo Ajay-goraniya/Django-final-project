@@ -91,3 +91,52 @@ more — is **not** visible here yet. Marked, not read, pending the UP cell.
 zero, not the +0.187 of the recorded-quote rows and not the −0.062 I reported yesterday. It fails the
 both-halves check. It is not ready to carry real money, and it is no longer evidence that the venue
 loses money either.
+
+---
+
+# n=280: it now passes, and the side-skew prediction is refuted. 2026-09-13 12:50 UTC.
+
+| certifiable set | n | per $1 | halves | hit |
+|---|---|---|---|---|
+| 09-11 20:50 | 61 | −0.062 | −0.013 / −0.108 | 45.9% |
+| 09-12 12:50 | 148 | +0.022 | −0.058 / +0.102 | 49.3% |
+| **09-13 12:50** | **280** | **+0.055** | **+0.017 / +0.094** | 50.4% |
+
+`verify.py` now passes quote age, sample size **and both halves**. Uncertifiable rows: +0.120 (n=430).
+
+## Read this before treating it as a finding
+
+**It is one continuous window** — 13:28 Friday to now, unbroken. Its "halves" are the first and second
+half of that single stretch. That is the **exact structure that failed two days ago**: the weekend
+cell passed all four checks at n=62 on one Saturday and was worth −0.001 by n=104. A halves pass
+inside one contiguous window is the weakest form of the check, and this branch has now watched it
+break in real time. **Do not size on this.**
+
+What would make it real is the same shape as before: **the number holding across a break** — a second
+window, separated from this one, with halves split by window rather than by row index.
+
+## The side skew is refuted
+
+Task 24 measured Polymarket's UP ask 3.33c cheaper and its DOWN ask 2.62c dearer, and predicted UP
+should therefore earn more. Now that both cells are readable:
+
+| side | n | per $1 |
+|---|---|---|
+| UP | 120 | +0.044 |
+| DOWN | 160 | **+0.063** |
+
+**DOWN earns more, not UP.** The prediction is backwards, so whatever the price skew is, it is not
+flowing through to PnL the way the mechanism implied. The skew measurement itself stands (n=43,552,
+both halves stable) — what fails is the inference from it to profit. Recorded as refuted; nothing
+should be built on "harvest the UP discount".
+
+## The fresh/stale split, for completeness
+fresh ≤1 s n=252 **+0.033** · stale >1 s n=28 +0.257 (under the bar, not read). The stale cell is
+still tiny and still noisy; it is now going the opposite way from the fresh one again, which is what
+it did at n=61 before collapsing. Not read, and not reasoned from — that was my error on 09-11.
+
+## Where this leaves the Polymarket question
+Three readings: **−0.062 → +0.022 → +0.055**, drifting up as n grows, now passing on one window.
+The honest summary is **"positive on one unbroken window, not yet tested across a break"** — better
+than the "about zero" I reported yesterday and nothing like the +0.187 of the uncertifiable rows.
+The next real test is a second window, which Monday supplies.

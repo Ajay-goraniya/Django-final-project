@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-13 10:47 UTC. Update this file at the end of every check.
+Last updated: 2026-09-13 12:50 UTC. Update this file at the end of every check.
 
 ## 04:47 09-13 — the new CLAUDE.md rule applies to MY OWN LEDGER. Read this before trusting it.
 Repo CLAUDE.md now carries the user's 09-13 rule: V is the head session and speaks with the user's
@@ -38,23 +38,22 @@ the reason the checks run as a set and grading runs first.
 Its `permutation()` permutes the model's PREDICTIONS, never the labels: shuffling labels destroys
 the market's calibration too, so longshots "win" at the base rate and it prints a fake profit.
 
-## Task 21b UPDATED 09-12 12:50 — **I CORRECT MYSELF: the certifiable number is ~0, not negative**
-`analysis/h1/task21b_certifiable.md` (correction section at the end) + `.py`.
-- n has grown 61 → 148. **Then −0.062 (halves −0.013/−0.108). Now +0.022 (halves −0.058/+0.102),
-  hit 49.3%.** verify.py passes quote age and sample, **fails both halves only**. Still not a finding,
-  but "the Polymarket paper does not make money on verified quotes" is NOT what the data says now,
-  and I said it to both V and the user. Corrected to both.
-- **RETRACTED — my fresh/stale reading.** At n=61 I called fresh −0.141 (n=48) vs stale +0.232 (n=13)
-  "the part that should worry you" and read it as the Task 20 mechanism recurring. I had marked both
-  cells under-the-bar and then reasoned from them anyway — the same error as reading them. Now:
-  fresh **+0.015 (n=130)**, stale +0.078 (n=18). The ordering collapsed. There was no effect, only a
-  small sample.
-- **What stands:** uncertifiable +0.120 (n=430) vs certifiable +0.022 (n=148) — still ~5x, still
-  consistent with recorded-quote optimism, still the reason +0.187 must not be sized on. But the
-  certifiable number is FLAT, not negative, and the window confound (one 23-h stretch vs several days)
-  is not excluded.
-- **By side:** DOWN n=93 **+0.019** (readable); UP n=55 +0.028 (under the bar, not read). Task 24's
-  side-skew prediction (poly cheaper on UP ⇒ UP earns more) is **not visible yet**. Marked, not read.
+## Task 21b at n=280 (09-13 12:50) — **now PASSES on one window; the side skew is REFUTED**
+`analysis/h1/task21b_certifiable.md` (latest section) + `.py`.
+- Three readings: **−0.062 (n=61) → +0.022 (n=148) → +0.055 (n=280, halves +0.017/+0.094, hit 50.4%)**.
+  verify.py passes quote age, sample **and both halves**. Uncertifiable rows +0.120 (n=430).
+- **DO NOT SIZE ON IT.** It is ONE continuous window (13:28 Fri → now) and its halves are first/second
+  half of that single stretch — **the exact structure that failed two days ago**, when the weekend cell
+  passed all four checks at n=62 and was worth −0.001 by n=104. What would make it real: the number
+  holding across a BREAK, halves split by window, second window from Monday.
+- **SIDE SKEW REFUTED.** Task 24 predicted UP should earn more (poly UP ask 3.33c cheaper). Both cells
+  now readable: **UP n=120 +0.044 · DOWN n=160 +0.063 — DOWN earns more.** The skew measurement stands
+  (n=43,552); the inference from it to profit does not. Nothing should be built on "harvest the UP
+  discount".
+- fresh ≤1 s n=252 +0.033 · stale >1 s n=28 +0.257 (under the bar, NOT read, NOT reasoned from —
+  reasoning from that cell was my 09-11 error).
+- Honest summary: **"positive on one unbroken window, not yet tested across a break"** — better than
+  the "about zero" I reported on 09-12, nothing like the +0.187 of the uncertifiable rows.
 
 ## Task 25 QUEUED 18:46, NOT started (V, REQUEST.md 18:20) — deliberately deferred
 V asks me to **independently reproduce a v12 lane decision**: take logged fires, rebuild the feature
@@ -528,8 +527,7 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
 - **At exactly 200 fires — twice the pre-set bar — the verdict is unchanged: −0.057/fire against a
   +0.018 baseline, both halves negative (−0.069/−0.045).** That is the useful closing fact: doubling
   the sample past the bar did not rescue it, so the REFUTED call was not a sample-size artifact.
-- Accrual has slowed to ~1 fire / 2 h (Sunday quiet), so further ledger checks add little. The
-  standing job is effectively done; the open work is Task 25 and the Polymarket UP cell.
+- Accrual has stopped (0 fires this check). The standing ledger job is done; open work is Task 25.
 - **Why it is still not a finding:** (1) it is ONE Saturday — 62 fires from one day is one draw of the
   regime; (2) its halves are morning-vs-afternoon of the SAME continuous day, the weakest form of the
   check (the 09-11 flat bucket looked identical to three decimals and died at McNemar p=0.341);
