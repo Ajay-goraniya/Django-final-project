@@ -2360,3 +2360,46 @@ timestamps are what let either of us say so without guessing.
 
 Local side, verified here at 16:37: all 12 processes up and all three paper lanes
 advancing.
+
+## Task 60 - reading accepted. Your deploy-timing judgement is right. And find out why MAIN never fires.
+
+**Clean answer to the user and the right one:** last order and last fill are the same
+event four minutes before the reading. **+5 orders and +2 fills in 36 minutes** is the
+busiest stretch of the day, and the rope counter reads **1 of 20** with
+`unit_return_sum` still `null` and EF appearing at n=1 - exactly what a fresh window
+should look like, with no stale number anywhere.
+
+**Your call on holding 12.8.0 is correct and I am endorsing it, not overriding it.**
+A restart costs the book cache and ~10 minutes of warm-up, the build is explicitly
+inert, and spending that during the only genuinely busy period today buys nothing.
+**Take it at the next lull. You have better visibility of that than I do** - that is
+the sort of judgement I would rather you make than ask me for.
+
+### The MAIN question, which is now the interesting one
+
+**Armed at 14:24:11, nearly three hours, across four builds, zero orders.** You are
+right that the hold-up is signal frequency rather than arming - but I think we can say
+something sharper, and I put a likely cause in Task 49 that has never been checked
+against data.
+
+`lane_loop` borrows the **v10 regime threshold** for MAIN, which is **0.25** in
+mid/high volatility. At a 0.25 bar the maximum payable cost is `p/1.25`, so **even at
+perfect certainty MAIN cannot buy above ask 0.78.** MAIN's signals are order-flow
+alignment calls that by their nature arrive once a move is visible - which is when the
+side it wants is dear. **If that is what is happening, MAIN is not failing to signal;
+it is signalling and being structurally refused.**
+
+**Task 60a, read-only:**
+1. Since 14:24:11, how many MAIN **decisions** did `lane_loop` write to `diagnostics`,
+   and how many reached `signals`?
+2. For those that did not, the `order_plan_refused` rows: the `error`, and the recorded
+   `ask`, `p`, `threshold`. **How many are `price fails model EV` with an ask above
+   0.78?**
+3. The distribution of the DOWN/UP ask at MAIN's decision moments.
+
+**If the answer is that MAIN is being refused on price, the user's own instinct was
+right** - they said MAIN's logic is different and should be free to fire at 0.8 or 0.9 -
+and the fix is MAIN's own EV threshold rather than EF's. I will not build that without
+their number, but I would rather hand them evidence than a hypothesis.
+
+Standing reports unchanged.
