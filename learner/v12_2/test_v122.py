@@ -658,65 +658,58 @@ class MultiLaneCandleIsNotDoubleCounted(unittest.TestCase):
         self.assertNotIn('JOIN fills f USING(epoch)', src)
 
 
-class FailedRedeemStaysReachable(unittest.TestCase):
-    """A redeem that raised must not put the row where no query can see it.
+class AutoRedeemIsNotAFailure(unittest.TestCase):
+    """The venue redeems first on an auto-redeem account. That is a success.
 
-    Verified on the live box 09-13: six winning candles worth $39.12 were stuck
-    at claim_status=REVIEW with claim_id NULL - excluded from the PENDING redeem
-    path and from the recovery poll, which needs claim_id NOT NULL. Three of the
-    six accrued after the first count, so it was an active leak. The money is
-    not lost; the rows are unreachable BY THE ENGINE and need redeeming by hand.
+    Retracted from 12.4.2/12.4.3: those treated a raising redeem() as a failure
+    to retry. The user has AUTO-REDEEM enabled, so the venue claims each winning
+    position itself and our call then raises "already redeemed". Retrying that
+    is an unbounded loop of doomed redemption calls against a live account.
+    Venue truth for the six affected rows: venue_value 0.00 and +21.14 of
+    realized PnL already booked - collected, not outstanding.
     """
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.db = C.Journal(str(pathlib.Path(self.temp.name)/'a.db'), 'PAPER', 'h')
-        self.db.sql("INSERT INTO results(epoch,actual,payout,pnl,ts,claim_status) "
-                    "VALUES(100,'UP',6.85,3.97,0,'PENDING')")
 
     def tearDown(self):
         self.db.c.close(); self.temp.cleanup()
 
-    def status(self):
-        r = self.db.sql('SELECT claim_status,claim_id,coalesce(claim_tries,0) FROM results WHERE epoch=100')[0]
-        return r[0], r[1], r[2]
+    def add(self, epoch, status, payout, venue_value=None, venue_ts=None):
+        self.db.sql("INSERT INTO results(epoch,actual,payout,pnl,ts,claim_status) VALUES(?,?,?,?,0,?)",
+                    (epoch, 'UP', payout, 1.0, status))
+        if venue_ts is not None:
+            self.db.sql("UPDATE results SET venue_value=?,venue_ts=? WHERE epoch=?",
+                        (venue_value, venue_ts, epoch))
 
-    def fail_once(self):
-        """What the exception handler now does when redeem() raised."""
-        n = self.status()[2] + 1
-        self.db.sql("UPDATE results SET claim_status=?,claim_tries=? WHERE epoch=?",
-                    ('PENDING' if n < 5 else 'REVIEW', n, 100))
+    def pending(self):
+        return self.db.sql("""SELECT coalesce(sum(payout),0) FROM results
+                              WHERE claim_status NOT IN ('CONFIRMED','NO_PAYOUT','PAPER','AUTO_REDEEMED')
+                                AND NOT (venue_ts IS NOT NULL AND coalesce(venue_value,0)<=1e-9)""")[0][0]
 
-    def test_a_failed_redeem_returns_to_pending(self):
-        self.fail_once()
-        self.assertEqual(self.status()[0], 'PENDING')
-        self.assertIsNone(self.status()[1], 'nothing was submitted, so there is no claim id')
+    def test_a_venue_valued_zero_row_is_not_pending(self):
+        self.add(100, 'REVIEW', 6.85, venue_value=0.0, venue_ts=1.0)
+        self.assertEqual(self.pending(), 0, 'the venue paid it; it cannot be outstanding')
 
-    def test_it_is_still_selected_by_the_redeem_path(self):
-        self.fail_once()
-        rows = self.db.sql("SELECT epoch FROM results WHERE claim_status='PENDING'")
-        self.assertEqual([r[0] for r in rows], [100], 'the row must stay reachable')
+    def test_the_old_query_showed_it_forever(self):
+        self.add(100, 'REVIEW', 6.85, venue_value=0.0, venue_ts=1.0)
+        old = self.db.sql("SELECT coalesce(sum(payout),0) FROM results "
+                          "WHERE claim_status NOT IN ('CONFIRMED','NO_PAYOUT','PAPER')")[0][0]
+        self.assertAlmostEqual(old, 6.85, msg='the old shape must still show it, or this proves nothing')
 
-    def test_retries_are_bounded(self):
-        for _ in range(6):
-            self.fail_once()
-        self.assertEqual(self.status()[0], 'REVIEW')
-        self.assertGreaterEqual(self.status()[2], 5)
+    def test_an_unpriced_row_still_counts(self):
+        self.add(101, 'REVIEW', 5.0)          # venue has not valued it yet
+        self.assertAlmostEqual(self.pending(), 5.0, msg='genuinely outstanding')
 
-    def test_an_exhausted_row_is_visible_to_a_human(self):
-        for _ in range(6):
-            self.fail_once()
-        stuck = self.db.sql("SELECT epoch,payout FROM results "
-                            "WHERE claim_status='REVIEW' AND claim_id IS NULL")
-        self.assertEqual(len(stuck), 1, 'REVIEW must mean "look at this", not "lost"')
+    def test_auto_redeemed_is_terminal(self):
+        self.add(102, 'AUTO_REDEEMED', 7.0)
+        self.assertEqual(self.pending(), 0)
 
-    def test_the_old_behaviour_was_unreachable(self):
-        # what the handler used to do
-        self.db.sql("UPDATE results SET claim_status='REVIEW' WHERE epoch=100")
-        pending = self.db.sql("SELECT epoch FROM results WHERE claim_status='PENDING'")
-        recover = self.db.sql("SELECT epoch FROM results WHERE "
-                              "claim_status IN ('REVIEW','SUBMITTING') AND claim_id IS NOT NULL")
-        self.assertEqual(pending, [], 'excluded from the redeem path')
-        self.assertEqual(recover, [], 'and from the recovery poll - no path back')
+    def test_no_retry_sweep_remains_in_the_source(self):
+        src = pathlib.Path(__file__).parent.joinpath('btc_model_v12_polymarket.py').read_text()
+        self.assertNotIn("claim_status='PENDING',claim_tries", src,
+                         'a REVIEW -> PENDING sweep would retry an already-redeemed position forever')
+        self.assertNotIn('claim_tries', src)
 
 
 class UnfilledFakIsRetryable(unittest.TestCase):

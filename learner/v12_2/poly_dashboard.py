@@ -92,6 +92,24 @@ class Dashboard:
                     last_event_age_ms=int(1000*spot_age) if spot_age is not None else None,
                     book=self.r.books.health() if hasattr(self.r.books,'health') else {})
         return snap
+    def pending_payout(self):
+        """Payout the VENUE still owes us, from the venue's own answer.
+
+        This was `sum(payout) WHERE claim_status NOT IN (CONFIRMED, NO_PAYOUT,
+        PAPER)` - our claim_status enum, which is a guess about what the venue
+        did. On an account with AUTO-REDEEM the guess is wrong for every win:
+        the venue claims the position itself, our redeem() then raises "already
+        redeemed", and the row was filed as REVIEW. Six of ten winners sat there
+        showing a permanent +$39.12 that could never clear, while the venue had
+        already paid and booked +21.14 of realized PnL against those same rows.
+
+        A row the venue has valued at zero has been settled and collected,
+        whatever our enum says. Rows the venue has not priced yet keep counting,
+        because those genuinely are outstanding.
+        """
+        return self.db.sql("""SELECT coalesce(sum(payout),0) FROM results
+                              WHERE claim_status NOT IN ('CONFIRMED','NO_PAYOUT','PAPER','AUTO_REDEEMED')
+                                AND NOT (venue_ts IS NOT NULL AND coalesce(venue_value,0)<=1e-9)""")[0][0]
     def equity(self):
         # Live sizing is driven by what Polymarket says the account is worth:
         # collateral balance plus the venue's own valuation of open positions.
@@ -100,7 +118,7 @@ class Dashboard:
         vt=getattr(self.r,'venue_state',None) or {}
         if vt.get('cash') is not None:
             return float(vt['cash'])+float(vt.get('open_value') or 0.)
-        unclaimed=self.db.sql("SELECT coalesce(sum(payout),0) FROM results WHERE claim_status NOT IN ('CONFIRMED','NO_PAYOUT')")[0][0]
+        unclaimed=self.pending_payout()
         return (self.r.cash or 0)+unclaimed
     def update_stake(self):
         with self.db.lock:
@@ -370,7 +388,7 @@ class Dashboard:
         return dict(candles=candles,markers=markers,history=[],revision=self.r.revision)
     def snapshot(self):
         if self.cache is not None and time.monotonic()-self.cache_at<.5: return self.cache
-        r=self.r; metrics=self.db.metrics(); ctr=self.controls(); pending=self.db.sql("SELECT coalesce(sum(payout),0) FROM results WHERE claim_status NOT IN ('CONFIRMED','NO_PAYOUT','PAPER')")[0][0]
+        r=self.r; metrics=self.db.metrics(); ctr=self.controls(); pending=self.pending_payout()
         age=time.monotonic()-r.cash_at; d=r.last_decision; ep=int(time.time()//300)*300
         pairs=r.market.get(ep,()); q=[r.books.quote(t,r.a.quote_age_ms/1000) for t in pairs]; book={}
         if len(q)==2 and all(q):
@@ -419,7 +437,7 @@ class Dashboard:
                         local_vs_venue=divergence)),trades=self.pnl(),latency=r.executor.latency_stats(),chart_revision=r.revision,error=r.error,dashboard_errors=list(getattr(self,'errors',[])),lane='LIVE' if r.a.live else 'PAPER',model_hash=r.hash,fee_basis=r.broker.basis,halt=self.db.get('halt'))
         self.cache_at=time.monotonic(); return self.cache
     def page(self,name):
-        text=(ROOT/name).read_text().replace('__VERSION__','12 Polymarket').replace('__BUILD__','12.4.3 · v10 PnL · '+('LIVE' if self.r.a.live else 'PAPER')).replace('__UPTIME_SEC__',str(time.time()-self.r.started))
+        text=(ROOT/name).read_text().replace('__VERSION__','12 Polymarket').replace('__BUILD__','12.4.4 · v10 PnL · '+('LIVE' if self.r.a.live else 'PAPER')).replace('__UPTIME_SEC__',str(time.time()-self.r.started))
         return text
     def make_server(self):
         ui=self

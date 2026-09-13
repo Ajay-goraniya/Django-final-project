@@ -1200,3 +1200,62 @@ fix stops the leak; it does not reach back for what is already stranded.
 Also confirmed independently: **all 45 live orders are `attempt=1`**. The
 three-attempt FAK retry has still never executed on the deployed build, matching
 the dead whitelist 12.4.2 fixed but which is not yet deployed.
+
+# 12.4.4 — RETRACTION: the payouts were never stranded, and my fix was dangerous
+
+**No money is at risk and none ever was.** The AWS session checked the venue
+rather than our enum, and the account has **auto-redeem enabled**.
+
+Venue truth for the six "stranded" rows, from the engine's own authenticated
+snapshot:
+
+| claim_status | n | payout | venue_realized_pnl | **venue_value** |
+|---|---|---|---|---|
+| CONFIRMED | 4 | 24.05 | 12.05 | 0.00 |
+| NO_PAYOUT | 7 | 0.00 | −0.73 | 0.00 |
+| REVIEW | 6 | 39.12 | **+21.14** | **0.00** |
+
+`venue_value` is zero on all six and +21.14 of realized PnL is already booked
+against them. The venue collected those payouts itself. Cash 25.96,
+portfolio_value 0.00, open_value 0.00 — nothing outstanding.
+
+## What was actually wrong
+
+The engine assumed **it is the only redeemer of its own positions.** On an
+auto-redeem account that assumption is false for every single win:
+
+1. auto-redeem claims the position, usually before our loop reaches it;
+2. our `redeem()` then raises "already redeemed";
+3. the handler wrote `REVIEW` with `claim_id` NULL, unreachable by either query;
+4. `pending_payout` summed `claim_status NOT IN (CONFIRMED, NO_PAYOUT, PAPER)`,
+   so those rows showed a permanent **+$39.12** that could never clear.
+
+The four CONFIRMED rows are simply the races we happened to win. The defect is
+**cosmetic plus accounting drift**, not a loss.
+
+## The fix I shipped in 12.4.2 and 12.4.3 was worse than the bug
+
+Both moved `REVIEW` rows back to `PENDING` so the redeem loop would retry them.
+Against an already-redeemed position that call raises again, every cycle,
+forever — **an unbounded stream of doomed redemption calls against a live
+account.** Both are removed. A test now asserts no such sweep can return.
+
+I built that fix on the assumption that a raising `redeem()` meant redemption
+had failed. It meant the opposite. That is the third time in this build that a
+claim about live behaviour was wrong because it was reasoned about rather than
+checked against the venue — and the first time the wrong answer would have done
+damage rather than just wasted effort.
+
+## What 12.4.4 does instead
+
+- **The handler asks the venue.** On an exception, if the row is venue-priced
+  and `venue_value` is zero, the payout was collected: status `AUTO_REDEEMED`,
+  terminal. Only a row the venue has not settled becomes `REVIEW`.
+- **`pending_payout` is derived from venue truth**, not from our enum. A row the
+  venue has valued at zero is not outstanding whatever we labelled it; a row the
+  venue has not priced yet still counts, because that genuinely is.
+- "Already redeemed" is treated as success, which is what it is.
+
+Five tests pin it, including one that reproduces the old query and asserts it
+still shows the phantom — so the fix is measured against the real behaviour
+rather than against itself.

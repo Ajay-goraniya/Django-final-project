@@ -347,14 +347,13 @@ class PolyRunner(Runner):
                         if state=='STATE_CONFIRMED': self.db.sql("UPDATE results SET claim_status='CONFIRMED' WHERE epoch=?",(old['epoch'],))
                         elif state in ('STATE_FAILED','STATE_INVALID'): self.db.sql("UPDATE results SET claim_status='PENDING',claim_id=NULL WHERE epoch=?",(old['epoch'],))
                     except Exception: pass
-            # A redeem that raised left claim_status='REVIEW' with claim_id NULL,
-            # which matches NEITHER the poll above (needs claim_id NOT NULL) nor
-            # the redeem below (needs PENDING). Four winning candles worth $25.24
-            # were stranded that way - half of all wins. Bounded retry: move them
-            # back to PENDING so the redeem path can pick them up again.
-            for row in self.db.sql("SELECT epoch,coalesce(claim_tries,0) AS n FROM results "
-                                   "WHERE claim_status='REVIEW' AND claim_id IS NULL AND coalesce(claim_tries,0)<5"):
-                self.db.sql("UPDATE results SET claim_status='PENDING',claim_tries=? WHERE epoch=?",(row['n']+1,row['epoch']))
+            # NO REVIEW -> PENDING SWEEP. 12.4.2 added one and 12.4.3 moved it
+            # into the handler; both are removed. The user's account has
+            # AUTO-REDEEM enabled, so the venue claims each winning position
+            # itself and our redeem() call then raises "already redeemed".
+            # Retrying that is an unbounded loop of doomed redemption calls
+            # against a live account, every cycle, forever. The row is not a
+            # failure to retry - it is a success we mislabelled.
             # GROUP BY epoch: results JOIN signals yields one row per LANE, so a
             # multi-lane candle redeemed the same condition_id twice. The second
             # call fails (already redeemed) and its handler wrote REVIEW over the
@@ -375,20 +374,17 @@ class PolyRunner(Runner):
                     state='CONFIRMED' if getattr(outcome,'transaction_hash',None) else 'REVIEW'
                     self.db.sql('UPDATE results SET claim_status=? WHERE epoch=?',('CONFIRMED' if state in ('CONFIRMED','STATE_CONFIRMED','STATE_MINED','MINED') else 'REVIEW',row['epoch']))
                 except Exception:
-                    # REVIEW meant "submitted, outcome unclear". A redeem() that
-                    # RAISED never reached the claim_id write, so nothing was
-                    # submitted and REVIEW was simply the wrong word - and it put
-                    # the row where no query could see it: excluded from the
-                    # PENDING redeem path and from the recovery poll, which needs
-                    # claim_id NOT NULL. Six winning candles worth $39.12 ended
-                    # up unreachable that way, and it was still accruing.
-                    # A failure with no claim_id is PENDING with one more try
-                    # spent; only an exhausted row becomes REVIEW, and that is
-                    # now a state a human is meant to look at rather than a
-                    # black hole.
-                    n=int((self.db.sql('SELECT coalesce(claim_tries,0) FROM results WHERE epoch=?',(row['epoch'],))[0][0]) or 0)+1
-                    self.db.sql("UPDATE results SET claim_status=?,claim_tries=? WHERE epoch=?",
-                                ('PENDING' if n<5 else 'REVIEW',n,row['epoch']))
+                    # Ask the venue what actually happened rather than assuming
+                    # our call was the only one. With auto-redeem on, the venue
+                    # has usually already claimed the position and redeem()
+                    # raises "already redeemed" - which is a SUCCESS, and was
+                    # being recorded as a failure. Six of ten winners landed in
+                    # REVIEW that way and showed as a permanent pending payout
+                    # that could never clear.
+                    v=self.db.sql('SELECT venue_value,venue_ts FROM results WHERE epoch=?',(row['epoch'],))
+                    collected=bool(v) and v[0][1] is not None and (v[0][0] or 0)<=1e-9
+                    self.db.sql("UPDATE results SET claim_status=? WHERE epoch=?",
+                                ('AUTO_REDEEMED' if collected else 'REVIEW',row['epoch']))
             await asyncio.sleep(20)
     EV_MODES=('regime','fixed','accuracy')
     def ev_setting(self):
