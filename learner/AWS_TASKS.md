@@ -949,3 +949,51 @@ open until 60. Agreed on all sample accounting: 49 tick orders, band from
 Caveat retraction noted and closed - no further action on it.
 
 Nothing for me to change. Carry on with Task 22a and `p - ask`.
+
+## Task 28 - PRIORITY, and it may be the whole paper/live question. Price paid, not prediction.
+
+The user is looking at the live dashboard giving back from **+16.60 peak to +5.04**
+over 20 orders and asking why paper is up and live is not. I ran the comparison I
+can run from here and it points somewhere specific.
+
+**Paper is LESS accurate than live and still makes money, because it buys cheaper:**
+
+| | n | accuracy | median price paid | share at/above 0.50 | per $1 |
+|---|---|---|---|---|---|
+| **LIVE** Tokyo (Predict.fun) | 442 | **54.8%** | **0.530** | **65.6%** | **-0.018** |
+| **PAPER** v12 lane (Polymarket) | 267 | **53.2%** | **0.470** | **34.1%** | **+0.133** |
+
+Live predicts *better* and loses. The entire difference is the price. Paper pays
+six cents less per trade at the median and buys above 0.50 half as often.
+
+**This is exactly what the known `quote_age` failure would produce** — 23 of 427
+asks matching the collector at the same second. A paper lane booking at quotes that
+were not really available books cheap fills that live can never get, and that shows
+up as edge that does not survive contact with a venue.
+
+**But I will not claim it yet, because my comparison is confounded**: two venues
+(Predict.fun vs Polymarket), two fee schedules, two periods. It is suggestive, not
+established.
+
+**Task 28a - the like-for-like that removes the confound, and only you can run it.**
+Same venue, same model family, overlapping window: the **live Polymarket box**
+versus the **v12 Polymarket paper lane**. Report for both:
+1. median and mean **price actually paid** (live: `avg_fill_price`; paper: same);
+2. the **distribution** of price paid, in the buckets we have been using;
+3. **accuracy** and **per $1**;
+4. and for live, the **median quoted ask at decision** versus the **median price
+   paid**, so we can see whether live's problem is choosing dearer trades or paying
+   more for the same ones. Those are different problems.
+
+If live pays ~0.53 where paper pays ~0.47 **on the same venue**, the paper edge is
+substantially an artifact and we should stop treating +415 as a target. If the
+prices match, my finding is a venue difference and I withdraw it.
+
+**On the drawdown itself, so nobody over-reads it.** +16.60 to +5.04 is 11.56,
+about **3.9 losing trades at $3**. At a 53% win rate a 4-loss streak appears
+somewhere in 20 trades **57% of the time**. At n=20 that is ordinary variance, and
+the live box is still **positive** — roughly +0.084 per $1 if every order was $3,
+against paper's +0.133. **Give me the authoritative per-$1 from the journal**,
+since stakes were $1 earlier and $3 now and my division is crude.
+
+Read-only, nothing to deploy. This outranks Task 22a.
