@@ -725,3 +725,61 @@ Also report `quote_age_ms` as actually set in `ev_settings` on the box — if it
 at the 750 ms default we are allowing a book three quarters of a second old into a
 decision that then waits another 125 ms and flies 140 ms. That compounds with the
 stale-cap mechanism and may be the cheaper half of this to fix.
+
+## Task 23 - PRIORITY. Your own numbers contain a bigger loss than the rejects. 88 of 134 EF fires never reach the venue.
+
+12.4.8 deploy accepted, and thank you for confirming Task 21 from the running tree
+rather than the log. Record straight: **the user read the screen correctly and the
+screen was wrong.** My read-back and their report were both accurate.
+
+**Two corrections to how you read the 25-minute window, and then the real thing.**
+
+**1. n=0 in 25 minutes is not a participation gap. It is the expected outcome.**
+From your own counts, EF reserves on 134 of 551 candles = 24.3%, and 46 of 551
+candles produce an order = 8.3%. Over five candles:
+- P(0 orders) = 0.647 — **a coin-flip-ish outcome, not a signal**
+- expected signals = 1.22, **you observed exactly 1**
+So 11:12:57→11:38:19 behaved precisely as the base rate predicts. Do not spend
+anything chasing it. Agreed that 11:38:19 is the effective sample start.
+
+**2. But that one signal with zero orders is the whole story, repeated 88 times.**
+Your funnel, from your own numbers:
+
+| stage | n | survives |
+|---|---|---|
+| candles | 551 | — |
+| EF fires (signals) | 134 | 24.3% of candles |
+| orders actually sent | **46** | **34.3% — 88 fires never reach the venue** |
+| fills | 18 | 39.1% of sent |
+| **end to end** | **18 / 134** | **13.4%** |
+
+**We lose twice as much before the network as we lose to rejects.** 88 fires
+silently dropped versus 28 rejected. Every conversation tonight — FOK, the band,
+the cap, the retry — has been about the 46. The 88 is the bigger number and nobody
+has looked at it.
+
+**It is fully attributable from data you already have, read-only, right now.**
+`fire()` has exactly six exits before an order row can exist, and **every one
+writes a `diagnostics` row**:
+
+| release reason | where | means |
+|---|---|---|
+| `DEADLINE` | quote wait, after prepare, loop exhaust | budget ran out |
+| `SIGNAL_CHANGED` | pre-prepare and pre-post | model flipped or stopped firing |
+| `SKIPPED` | `order_plan` raised | EV, venue minimum, no ask at cap, thin book |
+| `PREPARE_FAILED` | signing | SDK or credential path |
+| `EV_CHANGED` | final re-plan | EV failed on re-check |
+
+**Task 23a: break the 88 down by release reason, with counts.** Then for
+`SKIPPED`, split by the `ValueError` text that `order_plan` raised — the
+diagnostics row carries it as a plain string. I want to know specifically how many
+are `below venue minimum; stake not increased`, because that is the 0.57 ceiling
+from Task 18 showing up as lost participation, and it would make Task 18a's answer
+concrete rather than hypothetical.
+
+Report the full breakdown, every reason, including zeros. No cell under 60 gets
+read as a rate, but raw counts are counts and I want all of them.
+
+This is the answer to "why is live 22x less frequent than paper", and it is
+probably a larger prize than anything in the execution path. Do this before Task
+22a.
