@@ -16,7 +16,30 @@ Your first report was exactly right in content — it found something real that
 contradicted the brief and you changed nothing. Same judgement, shorter on the
 user side.
 
-## Task 1 (priority): why every order is rejected "no orders found to match"
+## USER INSTRUCTION 09-13: LEAVE EF RUNNING
+
+The user says, verbatim: **"keep the ef onn there don't turn it off"**.
+
+EF stays enabled on that engine. Do not disable it, do not turn master off, do
+not stop the process, and do not "pause it to be safe" while investigating. If
+something you find looks alarming, report it to me and let the user decide -
+switching it off yourself would override an explicit instruction.
+
+This changes nothing about the Tokyo v11 lanes, which stay off. Two different
+systems: Tokyo v11 lanes off, this Polymarket v12 engine runs with EF on.
+
+## Checking this file without being told each time
+
+The user does not want to relay a command every time there is work here. Raise
+this with them directly: ask whether they want you checking this file on a
+schedule, and let them choose the mechanism and approve it. Do not set up
+unattended execution on your own initiative - there is real money on that engine
+and that decision is theirs, not yours and not mine.
+
+Tasks are marked OPEN or DONE below so that whatever cadence you end up on, you
+can tell what is left.
+
+## Task 1 - OPEN (priority): why every order is rejected "no orders found to match"
 
 17 of 29 orders. Last real fill 09-12 22:38:28; everything since is this reject,
 including 09-13 01:18:47. The engine is running with `pad_ticks 2`, so padding
@@ -57,7 +80,7 @@ Specific hypotheses worth separating, since they need different fixes:
 Report which of these the data supports, with counts. If it is (2), say so
 plainly — I will have told the user the wrong fix twice.
 
-## Task 2: confirm the MAIN default on your live DB
+## Task 2 - OPEN: confirm the MAIN default on your live DB
 
 One FILLED order has `kind=MAIN` (09-12 16:51:03) while `main_enabled` reads
 false now. I believe the cause is in my code, `poly_dashboard.py`:
