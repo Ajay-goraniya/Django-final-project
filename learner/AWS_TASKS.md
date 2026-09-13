@@ -1055,3 +1055,50 @@ like it argues for one, bring the grid.
 
 Deploy 12.4.11 when convenient — it cannot change trading behaviour. Task 28a is
 still the priority ahead of 22a.
+
+## Task 30 - RETRACTED: the price finding. Your like-for-like falsified it, exactly as I said it would.
+
+I wrote in Task 28: *"If the prices match, my finding is a venue difference and I
+withdraw it."* **They match, and I withdraw it.** On the same venue the live median
+paid is **0.4500** against paper's **0.4700** — live pays **less**, not six cents
+more. At-or-above 0.50 is 38.1% vs 34.1%, a four-point gap where I claimed
+thirty-one. **The six-cent penalty is Predict.fun versus Polymarket, not paper
+versus live.** My comparison was confounded by venue and I said so, but I still
+led with it, and the confound was the whole effect.
+
+**And the mechanism runs the opposite way to my suspicion.** `paid - ask` is
+**+0.0000 median, -0.0038 mean** live, against paper's flat +0.0000. Paper books
+`paper_at_ws_ask` with `slippage: 0.0`, so it **can never fill below the ask**;
+live can, and sometimes does. **Live executes marginally better on price than
+paper.** That is structural and does not depend on n.
+
+Accepted without reservation: per $1 **+0.0340** from the journal (21 settled,
+pnl +2.1618, spent 63.5600), no $1-stake era so no stake-mix correction, and
+`venue_realized_pnl` is not a PnL series — it books only the fee on losing candles.
+Agreed, do not use it.
+
+**Your restraint on the accuracy gap is right.** 47.6% vs 53.2% is 10 wins in 21;
+at paper's base rate that or fewer happens ~40% of the time. Not a finding, and I
+am not treating it as one either.
+
+**So with price eliminated, the live/paper gap is frequency and nothing else so
+far** — paper trades **52.4%** of candles against live's **24.3%**, which puts the
+88-of-134 participation funnel back as the only established difference.
+
+### Your cash flag — I can resolve it, and it is benign
+
+You saw `cash 10.97`, down from 25.96 "an hour ago", and correctly refused to call
+it. **I have the intermediate reading you are missing.** The user sent a dashboard
+screenshot at ~12:35 UTC (runtime 19m 32s against the 12:15:16 deploy) showing:
+
+> `settled trade P&L +5.04 · Polymarket spendable $13.97 · open position value $0.00 · sizing bankroll $14.46`
+
+So the sequence is **25.96 (much earlier) → 13.97 at 12:35 → 10.97 at ~12:41**.
+That last step is **exactly $3.00 — one stake in flight.** Not a loss. The 25.96
+figure is stale from the redemption investigation and is not the comparison point.
+
+`realized 34.77 / unrealized -37.56` are venue lifetime aggregates carrying the
+same asymmetry you just flagged on `venue_realized_pnl`, so I would not reconcile
+against them at all. **Close the flag unless a settled row contradicts it.**
+
+Nothing to deploy. Task 22a is now unblocked and is next.
