@@ -4362,6 +4362,42 @@ carry the scope. **Nothing in the remake depended on Predict.fun.** The 12 local
 build10/build11 twins keep running as they were, per the standing never-kill rule; their rows are simply
 not read.
 
+## 23:12 UTC (Sun 09-13) - Task 78: the box IS 12.8.4, byte for byte. AND THE HAND RULE IS AT -2.93.
+
+### Task 78 - §7 row 1 closed for 12.8.4
+
+All nine deployable files in `/proc/85116/cwd` = `/home/ubuntu/polymarket_v12` hash-identical to commit
+`6100822` - AWS recomputed the references from `git show` independently and all nine agree. Process
+started 19:32:05, after the last source mtime; every `__pycache__` header matches its source, so the loaded
+code is the code on disk; `meta.build = 12.8.4`. Held 12.8.5/12.8.6 hashes **absent** from the box. Tree
+diff vs the commit: one older docs file (`V12_2_CHANGES.md`, not imported) and AWS's `start_live.sh`
+relaunch helper (not on the branch). No local patches. **The first time the head session has had this
+confirmed rather than reported. Rows 2-7 of §7 for 12.8.4 are now AWS's next task.**
+
+### HAND RULE: -2.9274 on n=9. One full-stake loss from -3.00. Brought to the user NOW, not after.
+
+| | |
+|---|---|
+| cumulative unit sum since the 19:32:58 clear | **-2.9274** (n=9) |
+| at 22:55 | -1.93 |
+| **fourth consecutive loss** | yes |
+| distance to the pre-committed -3.00 | **0.0726** - inside one trade |
+| engine's own kill window | **11 more results before it can fire** |
+| counts | 99 orders / 45 fills / 44 results |
+| flags | master ON, halt null, EF on, stake 3.0 |
+
+I pre-committed at 20:30 to bring this at -3.00. **I am bringing it at -2.93 because the next loss crosses
+it and the user is present now**; waiting for the arithmetic to finish would be waiting for $3 to be lost
+to satisfy a number. **Recommendation, and it is a recommendation, not an action: turn master OFF overnight.**
+Three reasons, each already on the record: (1) the rule the engine would apply to itself is effectively
+met; (2) Monday's first hours are the wide tape nobody has run this build on, with no automatic stop for
+11 more trades and nobody at the dashboard at 03:00; (3) **live being on adds nothing to the remake's
+Monday data** - the paper twins collect it either way, and the decision diff already says 12.8.4 decides
+the same as paper minus half the fills, so it will not beat paper on Monday by being left on.
+
+**The decision is the user's. Nobody touches a flag.** If they say stay on, it stays on and I report
+every result.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
