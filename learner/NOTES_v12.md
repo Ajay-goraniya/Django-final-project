@@ -2699,6 +2699,50 @@ session addressable from this one - ListAgents shows no reachable agents, checke
 it probably would appear and it did not; corrected. Git stays the only channel between sessions, which is the
 same conclusion CLAUDE.md already records for H1.
 
+## 02:21 UTC (Sun 09-13) - Tokyo steady; the AWS Polymarket engine caught a real error of mine
+
+Re-arm reading, Predict.fun v10 paper: last-20 -0.082 per $1 (cum -1.649), last-40 -0.019 per $1 (cum -0.746),
+493 graded. Five hourly readings now: +0.155, -0.102, -0.001, -0.193, -0.082. Not arming - criterion refuted
+22:12 09-11 and unreplaced.
+
+Lanes off, re-asserted, nothing enabled. Equity 15.02, settled 442, nothing open, ladder $1 OK. No real fill
+since 19:59:37 yesterday. Engines up 3.3 h, 13 processes.
+
+### The AWS box, and a mistake of mine worth recording
+
+The user deployed the v12 Polymarket build to their own Mumbai box and put a Claude Code session on it with
+Remote Control. That session can message this one; my sends back are refused with an auth error, so the branch
+is the channel from here. It found two things in the live engine's own database on 09-12/13.
+
+REAL: `main_enabled` and `reversal_enabled` seeded themselves True. The dashboard's first-run loop PERSISTS
+its defaults, so switching master on armed every lane at once - which is a live MAIN fill at 09-12 16:51:03 on
+a lane never validated with money. Fixed: they seed False now, EF keeps True.
+
+NOT REAL, and mine: I claimed `order_plan` built the price cap with a Decimal-from-float and gained a free
+tick on 35 of 99 prices. `D` in that module is `lambda x: Decimal(str(x))` and always has been. I "reproduced"
+the bug in a scratch script that defined its own `D = decimal.Decimal` and never imported the module's one,
+then shipped a no-op as 12.3.1 and wrote a changelog section about it. The AWS session caught it by running
+the engine's own `order_plan` from the engine's own venv. Reverted in 12.3.3; the 12.3.1 notes are corrected
+rather than deleted.
+
+The lesson is the one this branch keeps relearning in a new costume: I verified a claim about running code
+against a reconstruction of it instead of against the code itself. verify.py's grading check exists because of
+the same error shape - checking the thing you built rather than the thing that is running.
+
+What survives from that session's work, and is the actual finding: Polymarket sends no per-token sequence
+number, and `price_change` applies deltas with only a timestamp guard and no continuity check. A dropped delta
+is undetectable by design and leaves a phantom level until the next full book snapshot; a FAK priced against
+it returns "no orders found to match". 17 of 29 live orders are that reject. Since the gap cannot be detected
+it can only be aged out, so 12.3.2/12.3.3 refuse to price against a book running on deltas alone beyond 90 s.
+Whether that reduces the reject rate is registered as a test, not claimed.
+
+Also retracted there: my slippage advice. Across 11 live fills not one executed above the quoted ask - two
+filled better - so the pad has never engaged. The measurement behind the advice compared `signal_quote` with
+`pre_submit_quote`, which `order_plan` sets from the same read; they are identical in 25 of 25 rows by
+construction.
+
+Tokyo is untouched by all of this. Different host, different engine, lanes still off.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
