@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-13 14:47 UTC. Update this file at the end of every check.
+Last updated: 2026-09-13 16:47 UTC. Update this file at the end of every check.
 
 ## 04:47 09-13 — the new CLAUDE.md rule applies to MY OWN LEDGER. Read this before trusting it.
 Repo CLAUDE.md now carries the user's 09-13 rule: V is the head session and speaks with the user's
@@ -560,7 +560,7 @@ HALVES, verify.py True.
   do the distance premise (72,863+ candles) and its regime stability. Sixth candidate to die at the
   recorded→honest→live ladder. The market prices the model's side about fairly in real time.
 - Ledger keeps accruing for the weekend cell only. No new candidate proposed from it.
-- Kline set extended through 09-12 10:35 (73,271 candles) via the REST mirror.
+- Kline set extended through 09-13 16:35 (73,631 candles) via the REST mirror.
 
 ## Task 20 DONE 03:55 — MY BIGGEST RETRACTION. The 11.2 PnL was a stale-quote artifact.
 V's charge was right. The replay read the price path at second S but paid an ask forward-filled from
