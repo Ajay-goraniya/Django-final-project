@@ -2924,6 +2924,26 @@ rhetorical. What is not acceptable is arming now and writing the rule afterwards
 Lanes off, re-asserted, nothing enabled. Equity 15.02, settled 442, nothing open, ladder $1 OK. No real fill
 since 19:59:37 yesterday, now 9.3 hours. Engines up 6.3 h, 13 processes.
 
+## 06:21 UTC (Sun 09-13) - fourth consecutive positive, and a note on what the paper runs are doing
+
+Re-arm reading, Predict.fun v10 paper: last-20 **+0.412** per $1, last-40 **+0.225** per $1, 514 graded. The
+last-20 has held its level while the last-40 keeps climbing, which is what a genuinely good stretch looks
+like rather than one lucky window.
+
+Nine hourly readings: +0.155, -0.102, -0.001, -0.193, -0.082, +0.004, +0.347, +0.413, +0.412.
+
+Four consecutive positives. Position unchanged and for the unchanged reason: the criterion was refuted and
+has no replacement. Nothing about the fourth reading is different in kind from the first.
+
+Worth recording separately, because it is not the same claim: all three paper runs have had a strong night.
+Predict.fun +164.8, Polymarket +231.3, the v12 lane +408.4 at $10 stake, and the v12 lane is at 55% on 238
+graded. That is the population the re-arm rule reads from, so a rising last-20 is partly just this. It does
+not make the rule less refuted - a noisy estimator pointing the right way is still a noisy estimator - but it
+does mean the Sunday review should look at the whole window rather than only at the rule's behaviour.
+
+Lanes off, re-asserted, nothing enabled. Equity 15.02, settled 442, nothing open, ladder $1 OK. No real fill
+since 19:59:37 yesterday, now 10.4 hours. Engines up 7.3 h, 13 processes, Tokyo uptime 47.9 h with no restart.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
