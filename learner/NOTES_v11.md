@@ -692,3 +692,5 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 20:39 UTC 09-13: Tokyo dashboard returning HTTP 502 on four attempts - DOWN, not flaky. Lanes were all OFF and wallet 0.00 at the 20:22 read, so nothing at risk, but the per-kind flag check cannot be performed while it is down. Possible same root cause as the seven-hour 0.00 wallet.
 
 21:24 UTC 09-13: Tokyo up, master OFF, all kinds False, no revert; wallet 0.00 eighth hour. LABEL RESOLVED from command lines: the rule's Predict.fun run is b10.sqlite3 (build10), reading +0.140 / +0.156 - FIRST correctly-sourced positive, needs a second at 22:21. Prior readings today were the Polymarket runner by mistake; no lane was armed so no money affected.
+
+22:22 UTC 09-13: RULE 1 MET for REVERSAL - Predict.fun paper (b10.sqlite3) +0.140 then +0.478, two consecutive on the correct run. NOT ARMED: Tokyo wallet 0.00 for eight hours unexplained (nothing to stake / cannot verify), and the source correction is under an hour old. Brought to the user. Tokyo master OFF, all kinds False, no revert.

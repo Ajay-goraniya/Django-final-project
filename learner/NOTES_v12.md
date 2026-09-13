@@ -4303,6 +4303,51 @@ every change everything should be rechecked" cuts both ways.
 
 Hand rule: **-1.1818** on n=3 (a fill won). 86 orders / 39 fills / 38 results. Kill 17 to arm.
 
+## 22:22 UTC (Sun 09-13) - twenty-fourth reading. RULE 1 IS MET. NOT ARMED. Brought to the user with two blockers.
+
+```
+FAIR STATES 22:22 UTC | window opens with the NEWEST run: Polymarket paper (v10), 09-11 15:15 UTC (55.1 h)
+| run | W/L | acc | open | PnL @$10 |
+| Predict.fun paper (v10) | 149/121 | 55% | 1 | +298.5 |
+| Polymarket paper (v10) | 166/149 | 53% | 1 | +321.7 |
+| Polymarket v12 lane (paper exec) | 171/139 | 55% | 1 | +503.7 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 0.00 equity 0.00) |
+```
+
+Re-arm readings, **source file named**:
+
+| run | source | last-20 | last-40 | graded |
+|---|---|---|---|---|
+| **Predict.fun paper (v10)** - the rule's run | `b10.sqlite3` | **+0.478** | +0.236 | 1,831 |
+| Polymarket paper (v10) | `/tmp/v10_long4.sqlite3` | +0.228 | +0.089 | 761 |
+
+**Two consecutive positives on the correct run: 21:24 +0.140, 22:22 +0.478. Rule 1's criterion for
+REVERSAL is satisfied.** A strong hour everywhere - all three paper rows gained 40-65 points at $10.
+
+### Not armed. Two blockers, and the decision is the user's.
+
+The rule grants authority (*"whenever you think it's profit time turn the wanted signals as well"*), and I
+am not exercising it, because arming would put real money on a lane through two things I cannot verify:
+
+1. **Tokyo's wallet has read 0.00, equity 0.00, for EIGHT consecutive hours** while `realised -8.04` and
+   `settled 442` stay frozen. Rule 4 sizes the stake off equity; at 0.00 there is nothing to stake. **If
+   the 0.00 is real, arming does nothing but generate rejected orders. If it is a misreporting endpoint,
+   arming trades money I cannot see on the strength of a number I know is wrong** - the exact "verify the
+   artifact" failure this branch is built to stop. This has been the most important unexplained item on
+   the board since 14:00 and the user has not answered it.
+2. **The source-file correction is 58 minutes old.** Both readings are genuinely from the correct run, so
+   the criterion is honestly met - but every reading before 21:24 was the wrong file, and the 20:36 note
+   that consecutive hourly readings on a ~13.5/hr run share ~7 of 20 trades stands: two consecutive is
+   less than two independent observations. I said then the rule needed replacing before it fired; it
+   has fired.
+
+**Tokyo state, checked per kind:** master OFF, `{'MAIN': False, 'REVERSAL': False, 'EF': False}`, no revert.
+**12** processes. Rule 6 moot (nothing armed). **If the user says arm, I arm REVERSAL only, at the $1 rung,
+with rules 5 and 6 from that moment - and I say first what the wallet reads.**
+
+Polymarket v12 live unchanged: armed, cash 40.35, stake 3, hand rule **-1.1818** (n=3), kill 17 to arm.
+12.8.5 + 12.8.6 held.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
