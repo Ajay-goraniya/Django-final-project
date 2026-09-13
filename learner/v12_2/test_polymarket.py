@@ -57,10 +57,10 @@ class Tests(unittest.TestCase):
     def test_no_stake_inflation(self):
         with self.assertRaisesRegex(ValueError,'minimum'): order_plan(self.books.quote('up'),(.01,5,.07,1),1,decision())
     def test_budget_and_cap(self):
-        q=self.books.quote('up');p=order_plan(q,self.books.terms['up'],10,decision());f=walk_book(q,p)
+        q=self.books.quote('up');p=order_plan(q,self.books.terms['up'],10,decision(),require_depth=False);f=walk_book(q,p)  # partial-fill maths is PaperBroker behaviour
         self.assertLessEqual(f['spent']+f['fees'],10);self.assertAlmostEqual(p['cap'],.41)
     def test_partial_paper_fill(self):
-        self.books.apply(snapshot(qty=2));q=self.books.quote('up');p=order_plan(q,self.books.terms['up'],10,decision());f=walk_book(q,p)
+        self.books.apply(snapshot(qty=2));q=self.books.quote('up');p=order_plan(q,self.books.terms['up'],10,decision(),require_depth=False);f=walk_book(q,p)  # partial-fill maths is PaperBroker behaviour
         self.assertEqual(f['shares'],2);self.assertAlmostEqual(f['spent'],.8)
     def test_database_separation(self):
         with self.assertRaises(ValueError): Journal(self.path,'LIVE','abc')
@@ -207,7 +207,7 @@ class Tests(unittest.TestCase):
     def test_v120_database_migrates_additively(self):
         self.db.reserve(123,decision(),'up','condition')
         self.db.set('build','12.0'); self.db.c.close(); self.db=Journal(self.path,'PAPER','abc')
-        self.assertEqual(self.db.get('build'),'12.4.1')
+        self.assertEqual(self.db.get('build'),'12.4.2')
         self.assertEqual(self.db.sql('SELECT count(*) FROM signals WHERE epoch=123')[0][0],1)
         cols={r[1] for r in self.db.c.execute('PRAGMA table_info(orders)')}
         self.assertTrue({'error_json','timing_json','request_reached','reconcile_count','venue_live'}<=cols)

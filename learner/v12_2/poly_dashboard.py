@@ -324,12 +324,13 @@ class Dashboard:
         return dict(ok=True,state=self.controls())
     def positions(self):
         return self.db.sql('''SELECT s.*,sum(f.shares) shares,sum(f.spent) spent,sum(f.fees) fees,
-        r.actual,r.pnl,r.payout,r.claim_status FROM signals s LEFT JOIN fills f USING(epoch) LEFT JOIN results r USING(epoch)
+        r.actual,r.pnl,r.payout,r.claim_status FROM signals s LEFT JOIN orders o ON o.epoch=s.epoch AND o.kind=s.kind
+        LEFT JOIN fills f ON f.order_id=o.id LEFT JOIN results r ON r.epoch=s.epoch
         GROUP BY s.epoch ORDER BY s.epoch DESC''')
     def orders(self,kind='EF',offset=0,limit=10):
         if kind!='EF': return dict(rows=[],offset=offset,total=0)
         rows=self.db.sql('''SELECT o.*,s.side,s.token,s.condition_id,s.decision,sum(f.shares) shares,sum(f.spent) spent,sum(f.fees) fees,CASE WHEN sum(f.shares)>0 THEN r.pnl ELSE NULL END pnl
-        FROM orders o JOIN signals s USING(epoch) LEFT JOIN fills f ON f.order_id=o.id LEFT JOIN results r ON r.epoch=o.epoch
+        FROM orders o JOIN signals s ON s.epoch=o.epoch AND s.kind=o.kind LEFT JOIN fills f ON f.order_id=o.id LEFT JOIN results r ON r.epoch=o.epoch
         GROUP BY o.id ORDER BY o.ts DESC LIMIT ? OFFSET ?''',(limit,offset))
         out=[]
         for r in rows:
@@ -341,7 +342,8 @@ class Dashboard:
     def history(self,offset,limit):
         rows=[]
         ps=self.db.sql('''SELECT s.*,sum(f.shares) shares,sum(f.spent) spent,sum(f.fees) fees,r.actual,r.pnl
-        FROM results r JOIN signals s USING(epoch) JOIN fills f USING(epoch) GROUP BY s.epoch ORDER BY s.epoch DESC LIMIT ? OFFSET ?''',(limit,offset))
+        FROM results r JOIN signals s ON s.epoch=r.epoch
+        JOIN orders o ON o.epoch=s.epoch AND o.kind=s.kind JOIN fills f ON f.order_id=o.id GROUP BY s.epoch ORDER BY s.epoch DESC LIMIT ? OFFSET ?''',(limit,offset))
         for r in ps:
             d=json.loads(r['decision']); result='WIN' if r['pnl']>0 else 'LOSS' if r['pnl']<0 else 'FLAT'
             ef=dict(direction=r['side'],at=d.get('sec'),filled=True,fill_price=r['spent']/r['shares'],stake=r['spent']+r['fees'],pnl=r['pnl'],correct=r['pnl']>0,financial_result=result,financial_is_shadow=not self.r.a.live)
@@ -417,7 +419,7 @@ class Dashboard:
                         local_vs_venue=divergence)),trades=self.pnl(),latency=r.executor.latency_stats(),chart_revision=r.revision,error=r.error,dashboard_errors=list(getattr(self,'errors',[])),lane='LIVE' if r.a.live else 'PAPER',model_hash=r.hash,fee_basis=r.broker.basis,halt=self.db.get('halt'))
         self.cache_at=time.monotonic(); return self.cache
     def page(self,name):
-        text=(ROOT/name).read_text().replace('__VERSION__','12 Polymarket').replace('__BUILD__','12.4.1 · v10 PnL · '+('LIVE' if self.r.a.live else 'PAPER')).replace('__UPTIME_SEC__',str(time.time()-self.r.started))
+        text=(ROOT/name).read_text().replace('__VERSION__','12 Polymarket').replace('__BUILD__','12.4.2 · v10 PnL · '+('LIVE' if self.r.a.live else 'PAPER')).replace('__UPTIME_SEC__',str(time.time()-self.r.started))
         return text
     def make_server(self):
         ui=self

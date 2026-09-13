@@ -208,23 +208,36 @@ class LiveBroker:
                     fees_paid=sum(p['entry_fees'] for p in pos) if pos else None,
                     ts=time.time(),source='polymarket-api')
     async def account_snapshot(self):
-        cash=await self.cash(); open_ids=set(); positions=[]
+        # open_order_ids is None when the LISTING FAILED, and a set when it
+        # succeeded. The difference matters: mark_venue_open treats a set as
+        # authoritative venue truth, so swallowing the error into an empty set
+        # told the engine "no open orders" and, two cycles later, released a
+        # live order's reserve as phantom - freeing budget a resting order still
+        # holds. This DB carries RequestRejectedError 500 and
+        # TransportError ConnectionTerminated against the venue, so it is not
+        # hypothetical.
+        cash=await self.cash(); open_ids=set(); positions=None; listed=False
         try:
             async for page in self.client.list_open_orders():
                 for o in getattr(page,'items',()): open_ids.add(str(getattr(o,'id',getattr(o,'order_id',''))))
+            listed=True
         except Exception:
-            pass
+            open_ids=None
         # Newer 0.10.x clients expose wallet positions. Keep this optional so the pinned
         # client remains usable if its exact patch surface differs.
         if hasattr(self.client,'list_positions'):
             try:
+                _pos=[]
                 async for page in self.client.list_positions():
                     for p in getattr(page,'items',()):
                         size=float(getattr(p,'size',getattr(p,'amount',0)) or 0)
-                        if size>0: positions.append(dict(condition_id=str(getattr(p,'condition_id','')),asset_id=str(getattr(p,'asset_id',getattr(p,'token_id',''))),size=size,current_value=float(getattr(p,'current_value',0) or 0)))
+                        if size>0: _pos.append(dict(condition_id=str(getattr(p,'condition_id','')),asset_id=str(getattr(p,'asset_id',getattr(p,'token_id',''))),size=size,current_value=float(getattr(p,'current_value',0) or 0)))
+                positions=_pos
             except Exception:
-                pass
-        return dict(cash=cash,open_order_ids=open_ids,positions=positions,ts=time.time())
+                # None, not [] - an empty list would blank open_position_value
+                # on the dashboard as though the account held nothing.
+                positions=None
+        return dict(cash=cash,open_order_ids=open_ids,positions=positions,listed=listed,ts=time.time())
     async def redeem(self,condition): return await self.client.redeem_positions(condition_id=condition)
     async def claim_state(self,claim_id):
         if not claim_id.startswith('relayer:'): return None

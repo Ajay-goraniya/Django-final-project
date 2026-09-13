@@ -615,6 +615,90 @@ class SnapshotAgeTracking(unittest.TestCase):
                          'the snapshot-age refusal must stay removed')
 
 
+class MultiLaneCandleIsNotDoubleCounted(unittest.TestCase):
+    """A candle with two lanes must not report twice the shares and spend.
+
+    signals has been keyed (epoch,kind) since the 12.3.x migration, but three
+    dashboard queries still joined fills on epoch alone. Verified on the live
+    box: epoch 1789232100 reported 10.3929 shares / $5.82 against a truth of
+    5.1964 / $2.91 - exactly 2x, because it carries EF:FILLED plus MAIN:DEADLINE.
+    That feeds open-position size and the last-fill panel, which is the
+    "available and fundable amounts are misleading" the user reported.
+    """
+    BAD = ("SELECT sum(f.shares) FROM signals s JOIN fills f USING(epoch) "
+           "WHERE s.epoch=500")
+    GOOD = ("SELECT sum(f.shares) FROM signals s "
+            "JOIN orders o ON o.epoch=s.epoch AND o.kind=s.kind "
+            "JOIN fills f ON f.order_id=o.id WHERE s.epoch=500")
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.db = C.Journal(str(pathlib.Path(self.temp.name)/'a.db'), 'PAPER', 'h')
+        d = dict(side='UP', fire=True)
+        for kind, status in (('EF','FILLED'), ('MAIN','DEADLINE')):
+            self.db.reserve(500, d, 'tok', 'cond', kind=kind)
+            self.db.status(500, status, kind)
+        self.db.sql("INSERT INTO orders(id,epoch,attempt,status,plan,ts,kind) "
+                    "VALUES('o1',500,1,'FILLED','{}',0,'EF')")
+        self.db.sql("INSERT INTO fills(id,order_id,epoch,shares,spent,fees,price,basis) "
+                    "VALUES('f1','o1',500,5.1964,2.91,0.0,0.56,'T')")
+
+    def tearDown(self):
+        self.db.c.close(); self.temp.cleanup()
+
+    def test_joining_on_epoch_alone_doubles_it(self):
+        self.assertAlmostEqual(self.db.sql(self.BAD)[0][0], 2*5.1964, places=4,
+                               msg='the old shape must still double, or this test proves nothing')
+
+    def test_routing_through_orders_does_not(self):
+        self.assertAlmostEqual(self.db.sql(self.GOOD)[0][0], 5.1964, places=4)
+
+    def test_the_dashboard_no_longer_joins_fills_on_epoch_alone(self):
+        src = pathlib.Path(C.__file__).parent.joinpath('poly_dashboard.py').read_text()
+        self.assertNotIn('JOIN fills f USING(epoch)', src)
+
+
+class UnfilledFakIsRetryable(unittest.TestCase):
+    """The venue sends a sentence; the whitelist compared it for equality.
+
+    error_info() never populates 'code' for this exception - the stored keys
+    are class/message/phase/repr/request_reached/status - so the match fell
+    through to the venue's full text and never equalled any entry. Across 34
+    live orders the attempt histogram was {1: 34}: the retry loop, the 2 s
+    budget, the wait-for-a-new-book-seq and the EV re-check had never once run.
+    """
+    SENTENCE = ('no orders found to match with FAK order. FAK orders are '
+                'partially filled or killed if no match is found.')
+
+    def code_for(self, info):
+        return ' '.join(str(info.get(k) or '') for k in ('code','message','class')).lower()
+
+    def retryable(self, code):
+        return any(x in code for x in ('fak_not_filled','unmatched','market_not_ready',
+                                       'no orders found to match','partially filled or killed'))
+
+    def test_the_real_venue_sentence_is_retryable(self):
+        info = dict(**{'class':'RequestRejectedError'}, message=self.SENTENCE, phase='post')
+        self.assertTrue(self.retryable(self.code_for(info)))
+
+    def test_equality_would_have_missed_it(self):
+        self.assertNotIn(self.SENTENCE.lower(),
+                         ('fak_not_filled','unmatched','market_not_ready'))
+
+    def test_the_short_codes_still_match(self):
+        for c in ('fak_not_filled','unmatched','market_not_ready'):
+            self.assertTrue(self.retryable(self.code_for(dict(code=c))))
+
+    def test_an_unrelated_rejection_is_not_retried(self):
+        info = dict(**{'class':'RequestRejectedError'}, message='insufficient balance')
+        self.assertFalse(self.retryable(self.code_for(info)))
+
+    def test_source_uses_substring_matching(self):
+        src = pathlib.Path(C.__file__).read_text()
+        self.assertIn('no orders found to match', src)
+        self.assertNotIn("if code not in ('fak_not_filled'", src)
+
+
 class BookDepthIsCheckedBeforeSending(unittest.TestCase):
     """Do not POST an order the ladder cannot fill.
 

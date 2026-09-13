@@ -329,7 +329,7 @@ class Journal:
         })
         # Money as Polymarket reports it, kept beside the local figure rather than
         # replacing it, so the two can be compared and any divergence surfaced.
-        self._add_columns('results',{
+        self._add_columns('results',{'claim_tries':'INTEGER DEFAULT 0',
             'venue_pnl':'REAL','venue_realized_pnl':'REAL','venue_fees':'REAL',
             'venue_value':'REAL','venue_ts':'REAL','pnl_basis':"TEXT DEFAULT 'LOCAL_FROM_FILLS'"
         })
@@ -347,10 +347,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.4.1')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.4.2')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -604,9 +604,15 @@ class Journal:
         r=self.sql('''SELECT sum(f.spent)/sum(f.shares)-min(coalesce(json_extract(o.plan,'$.pre_submit_quote'),
                       json_extract(o.plan,'$.quote'))) FROM fills f JOIN orders o ON o.id=f.order_id
                       GROUP BY f.epoch ORDER BY f.epoch DESC LIMIT 20''')
-        if len(r)==20 and sum(x[0] for x in r)/20>.03: self.set('halt','Average slippage > $0.03 over 20 fills')
+        # A NULL group makes sum() raise TypeError, which is unguarded all the
+        # way up through reconcile_loop and gather() and would exit the process
+        # holding open positions. Currently armed and unfired: the live DB has 13
+        # results, and this needs 20.
+        vals=[x[0] for x in r if x[0] is not None]
+        if len(vals)==20 and sum(vals)/20>.03: self.set('halt','Average slippage > $0.03 over 20 fills')
         r=self.sql('SELECT r.pnl/sum(f.spent+f.fees) FROM results r JOIN fills f USING(epoch) GROUP BY r.epoch ORDER BY r.epoch DESC LIMIT 20')
-        if len(r)==20 and sum(x[0] for x in r)<-3: self.set('halt','20 settled unit returns sum below -3')
+        vals=[x[0] for x in r if x[0] is not None]
+        if len(vals)==20 and sum(vals)<-3: self.set('halt','20 settled unit returns sum below -3')
 
 
 class PaperBroker:
@@ -742,8 +748,22 @@ class Executor:
                 self.db.order_status(oid,'REJECTED',compact_error(info),latency,error=info,timing=timing,request_reached=True)
                 self._sample(timing,'REJECTED')
                 print(f'[order rejected] id={oid} condition={condition} token={token} side={d.get("side")} quote={plan.get("quote"):.4f} pre={plan.get("pre_submit_quote"):.4f} cap={plan.get("cap"):.4f} stake={stake:.2f} amount={plan.get("amount"):.4f} max_shares={plan.get("max_shares"):.4f} attempt={n} submit={latency:.1f}ms total={timing.get("total_attempt_ms",0):.1f}ms {compact_error(info)}',flush=True)
-                code=str(info.get('code') or info.get('message') or '')
-                if code not in ('fak_not_filled','unmatched','market_not_ready'): self.db.status(ep,'REJECTED',kind); return
+                # error_info() never populates 'code' for this exception - the
+                # stored keys are class/message/phase/repr/request_reached/status -
+                # so this matched the venue's full sentence against the whitelist,
+                # missed, and every unfilled FAK returned instead of retrying. The
+                # attempt histogram across 34 live orders was {1: 34}: the entire
+                # retry apparatus had never once executed.
+                code=' '.join(str(info.get(k) or '') for k in ('code','message','class')).lower()
+                # Substring, not equality: the venue sends a whole sentence -
+                # "no orders found to match with FAK order. FAK orders are
+                # partially filled or killed if no match is found." - which
+                # never equalled any whitelist entry, so every one of 20 live
+                # rejections took the return branch.
+                RETRYABLE=('fak_not_filled','unmatched','market_not_ready',
+                           'no orders found to match','partially filled or killed')
+                if not any(x in code for x in RETRYABLE):
+                    self.db.status(ep,'REJECTED',kind); return
                 continue
             if r.get('id')!=oid:
                 info={'class':'OrderIdentityMismatch','message':f'signed={oid} response={r.get("id")}', 'request_reached':True}

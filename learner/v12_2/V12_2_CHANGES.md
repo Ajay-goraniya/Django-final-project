@@ -1058,3 +1058,97 @@ Worth stating as a finding in its own right: **the paper lane books trades the
 live venue would refuse outright.** That is a fourth structural advantage paper
 has, on top of no rejection, no slippage and a quote up to ten seconds stale. It
 belongs in any paper-versus-live comparison.
+
+# 12.4.2 — six bugs from a code review of the running engine
+
+A `code-review` agent on the AWS box audited live 12.3.4 against its own
+database. Twelve findings, three money-affecting. These are the six fixed here.
+
+## 1. $25.24 of won payouts could never be redeemed
+
+A `redeem()` that raised left `claim_status='REVIEW'` with `claim_id` **NULL**.
+The poll loop selects `claim_status IN ('REVIEW','SUBMITTING') AND claim_id IS
+NOT NULL`; the redeem path selects `claim_status='PENDING'`. A REVIEW row with a
+NULL claim id matches **neither**, so nothing ever retried it.
+
+Live: four stranded rows — epochs 1789222500 ($5.686), 1789231800 ($6.545),
+1789234800 ($6.857), 1789269000 ($6.149) = **$25.24**, four of eight winning
+candles. A 50% permanent redemption-failure rate on won money.
+
+Bounded retry added: REVIEW with a NULL claim id returns to PENDING, up to five
+times, counted in a new `claim_tries` column. **The four existing rows still need
+redeeming by hand** — the fix stops it recurring, it does not reach back.
+
+## 2. The retry apparatus had never once executed
+
+`code=str(info.get('code') or info.get('message') or '')` was compared for
+**equality** against `('fak_not_filled','unmatched','market_not_ready')`.
+`error_info()` never populates `code` for this exception, so the comparison fell
+through to the venue's whole sentence — *"no orders found to match with FAK
+order. FAK orders are partially filled or killed if no match is found."* — which
+equals nothing in that list.
+
+So all 20 live rejections took `return` instead of `continue`. Attempt histogram
+across 34 orders: **{1: 34}**. The three attempts, the 2-second budget, the
+wait-for-a-new-book-seq loop and the EV re-check have never run in live.
+
+Now matched as substrings across class, message and code.
+
+## 3. A failed order listing released a live order's reserve
+
+`account_snapshot` swallowed a `list_open_orders()` failure and returned an
+**empty set**, which `mark_venue_open` treats as authoritative venue truth. Two
+cycles later the order is classified `phantom`, its budget stops being counted,
+and the engine sizes the next order as though the funds were free — while a real
+resting order still holds them. This database contains
+`RequestRejectedError 500` and `TransportError ConnectionTerminated` against the
+venue, so it is a live path, not a hypothetical.
+
+Now returns `None` on failure, so existing state is preserved. Same for
+positions, where an empty list blanked the dashboard's open-position value.
+
+## 4. The daily-limit check was an armed crash
+
+`halt_check` does `sum(x[0] for x in r)` over 20 grouped rows. A NULL group
+raises `TypeError`, which is unguarded through `reconcile_loop` and `gather()` —
+and `gather()` has no `return_exceptions`, so the process exits **holding open
+positions and no longer reconciling or claiming**. It needs 20 results and the
+live DB has 13: armed, unfired. NULLs are now filtered.
+
+## 5. `decide_loop` had no exception containment
+
+Also fatal through the same `gather()`. `ep` is recomputed *after* `decide_now()`
+returns, so a candle rollover inside that window is a plain `KeyError` on
+`self.market[ep]`. Now wrapped, with the error recorded and the loop continuing.
+
+## 6. Multi-lane candles double-counted shares, spend and stake
+
+`signals` has been keyed `(epoch,kind)` since 12.3.x, but three dashboard
+queries still joined fills on epoch alone. Verified live: epoch 1789232100
+reported **10.3929 shares / $5.82** against a truth of 5.1964 / $2.91, and
+1789234800 reported 13.7143 / $5.76 against 6.8571 / $2.88 — exactly 2x, because
+each carries EF:FILLED plus MAIN:DEADLINE.
+
+This feeds open-position size and the last-fill panel. **It is at least part of
+the "claim, fundable and available amounts are misleading" the user has reported
+repeatedly.** Fills belong to an order and orders carry kind, so all three now
+route through `orders` on `(epoch,kind)` — the shape `pnl_by_kind()` already
+used correctly.
+
+Also fixed alongside: `claim_loop` selected one row per *lane*, so a multi-lane
+candle redeemed the same condition twice and the second failure overwrote the
+first's CONFIRMED with REVIEW. Now grouped by epoch, with the status re-read
+inside the loop.
+
+## Still open from that review
+
+- **37,277 reconcile round-trips** for one dead UNKNOWN order over ~14 h, no age
+  cap and no backoff, on the same connection pool the order hot path uses.
+- `BookCache` mutated on the event loop and read from dashboard HTTP threads with
+  no lock — a concurrent delta can raise `dictionary changed size during
+  iteration` and 500 the dashboard. This is a plausible source of the API errors
+  reported earlier.
+- `venue_truth` deriving whole-account money from a query narrowed to a few
+  markets; dormant under fixed sizing, live under ladder or percent.
+- The clock-drift guard only corrects a clock that is *behind* the venue.
+- Ladder mode ignores the configured `max_stake`.

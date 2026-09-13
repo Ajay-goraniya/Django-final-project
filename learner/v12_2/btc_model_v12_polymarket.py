@@ -185,8 +185,25 @@ class PolyRunner(Runner):
             return out
         return dict(d,ev_gate='pass',ev_gate_pad=pad,ev_gate_ask=q['ask'],ev_gate_cap=plan['cap'])
     async def decide_loop(self):
-        last=0
+        self._decide_last=0
         while True:
+            try:
+                await self._decide_once()
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                # Unguarded until 12.4.2, and gather() has no return_exceptions,
+                # so one raise here exited the whole process holding open
+                # positions and stopped reconciling and claiming. ep is
+                # recomputed after decide_now() returns, so a candle rollover in
+                # that window is a plain KeyError on self.market[ep].
+                self.error=f'decide loop: {type(e).__name__}'
+                try: self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),0,json.dumps(dict(
+                    reason='decide_loop_error',error=type(e).__name__,detail=str(e)[:400]))))
+                except Exception: pass
+            await asyncio.sleep(.25)
+    async def _decide_once(self):
+        if True:
             d=self.decide_now(); ep=int(time.time()//300)*300; self.last_decision=d
             self.executor.pad=self.pad_ticks()
             if d.get('fire') and self.ui.allowed() and self.cash is not None and time.monotonic()-self.cash_at<15:
@@ -208,9 +225,8 @@ class PolyRunner(Runner):
                     await self.executor.fire(ep,d,token,self.info[ep]['conditionId'],stake,lambda: self.decide_now() if self.ui.allowed() else {'fire':False})
                     self.revision+=1
             await self.lane_loop(ep)
-            if time.time()-last>15:
-                self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(d))); last=time.time()
-            await asyncio.sleep(.25)
+            if time.time()-self._decide_last>15:
+                self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(d))); self._decide_last=time.time()
     async def lane_loop(self,ep):
         """Evaluate MAIN and REVERSAL and fire whichever is ready.
 
@@ -331,7 +347,23 @@ class PolyRunner(Runner):
                         if state=='STATE_CONFIRMED': self.db.sql("UPDATE results SET claim_status='CONFIRMED' WHERE epoch=?",(old['epoch'],))
                         elif state in ('STATE_FAILED','STATE_INVALID'): self.db.sql("UPDATE results SET claim_status='PENDING',claim_id=NULL WHERE epoch=?",(old['epoch'],))
                     except Exception: pass
-            for row in self.db.sql("SELECT r.*,s.condition_id FROM results r JOIN signals s USING(epoch) WHERE claim_status='PENDING'"):
+            # A redeem that raised left claim_status='REVIEW' with claim_id NULL,
+            # which matches NEITHER the poll above (needs claim_id NOT NULL) nor
+            # the redeem below (needs PENDING). Four winning candles worth $25.24
+            # were stranded that way - half of all wins. Bounded retry: move them
+            # back to PENDING so the redeem path can pick them up again.
+            for row in self.db.sql("SELECT epoch,coalesce(claim_tries,0) AS n FROM results "
+                                   "WHERE claim_status='REVIEW' AND claim_id IS NULL AND coalesce(claim_tries,0)<5"):
+                self.db.sql("UPDATE results SET claim_status='PENDING',claim_tries=? WHERE epoch=?",(row['n']+1,row['epoch']))
+            # GROUP BY epoch: results JOIN signals yields one row per LANE, so a
+            # multi-lane candle redeemed the same condition_id twice. The second
+            # call fails (already redeemed) and its handler wrote REVIEW over the
+            # CONFIRMED the first one earned.
+            for row in self.db.sql("SELECT r.*,min(s.condition_id) AS condition_id FROM results r "
+                                   "JOIN signals s USING(epoch) WHERE claim_status='PENDING' GROUP BY r.epoch"):
+                # status can change under us across an await; re-read before acting
+                cur=self.db.sql('SELECT claim_status FROM results WHERE epoch=?',(row['epoch'],))
+                if not cur or cur[0][0]!='PENDING': continue
                 if not self.a.live or row['payout']==0:
                     self.db.sql('UPDATE results SET claim_status=? WHERE epoch=?',('PAPER' if not self.a.live else 'NO_PAYOUT',row['epoch'])); continue
                 self.db.sql("UPDATE results SET claim_status='SUBMITTING' WHERE epoch=?",(row['epoch'],))
