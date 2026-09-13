@@ -3440,6 +3440,39 @@ restart EF but whether the calibration is fixed: the model claims **0.912** in t
 and delivers **0.756**, and a 7-of-20 window is what that looks like from outside. The targeted map validated
 out of sample at 15:20 (gap -0.171 -> -0.038) is the thing to try, not a restart of the same model.
 
+## 16:21 UTC (Sun 09-13) - eighteenth reading. EF restarted. Tokyo still reads 0.00.
+
+Re-arm reading, Predict.fun v10 paper: last-20 **+0.154**, last-40 **+0.272**, **548 graded**. Polymarket
+paper last-20 **+0.177**, last-40 **+0.152**. Thirteenth consecutive positive. Not arming - the criterion was
+refuted 22:12 on 09-11 and has not been replaced. All **12** processes verified, no duplicates.
+
+**Tokyo unchanged and still anomalous: wallet 0.00, equity 0.00**, against 15.02 through 14:21. `realised
+-8.04`, `settled 442`, `open 0`, all lanes and master OFF - a second hour with **no trading and no change to
+realised PnL**, so the balance did not leave through trades. The order backup corroborates independently: it
+grew 1092 -> 1104 rows and **real fills stayed at 442**, every new row a shadow. Uptime 57.9 h, no restart.
+Still either a withdrawal or a misreporting endpoint; still not diagnosable from here and still not to be
+investigated by touching that host. With the user.
+
+**Polymarket v12 live: EF halted and was restarted on the user's instruction.**
+- Halt fired **15:46:36** at **-4.4626** against -3.00, on a 7-of-20 window, exactly as forecast at 15:13.
+- **Clearing the halt did nothing, and that was a real bug.** The window is the last 20 settled results;
+  clearing `halt` does not change them and no new result can arrive while every lane is blocked, so the rule
+  re-fired on the next reconcile pass about a second later. **12.4.1 added clear-halt because "a kill switch
+  with no reset is an outage" - the reset was itself an outage**, unnoticed because this was the first kill
+  ever to fire. 12.7.0 makes a clear start a fresh 20-result window.
+- Deployed 16:11:35, cleared 16:12:30, **verified across 70 s of sampling that it did not re-fire**. Master
+  re-armed. Trading again at stake $5.
+- **The cost, recorded because the user takes it knowingly: after a clear, EF can lose up to 20 more trades
+  before the rule can stop it again - about $100 of rope at $5.**
+
+**And the pattern the AWS session named, which matters more than any of the three bugs in it:** three times
+today the code that ACTS and the code that DISPLAYS were changed separately and drifted - the hardcoded
+`12.4.4` header against `meta` 12.4.6; `halt_check` enforcing per-lane while `rolling()` showed the blend; and
+`halt_check` honouring the fresh window while `rolling()` showed the stale one, so the dashboard reported EF
+armed at -4.46 minutes after enforcement had reset. **An operator reading that would have concluded the clear
+failed** - the wrong direction for a safety display to be wrong in. 12.7.1 gives both a single `kill_window()`
+and a test that they cannot diverge again.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
