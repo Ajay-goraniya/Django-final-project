@@ -4520,6 +4520,24 @@ eleven results: L L W? - AWS's per-result series is the record; net **-2.43 unit
 recommendation is back to the position it was in at 23:12, for the same arithmetic; the user has it.
 Nothing touched.
 
+## 23:47 UTC (Sun 09-13) - THE HAND RULE HAS CROSSED. -3.4274 on n=12. Brought to the user. No flag touched.
+
+`23:47:34 epoch 1789342800 pnl -2.8900 unit -1.0000`. **Running sum -3.4274, below the pre-committed
+-3.00.** Sequence since the 19:32:58 clear (AWS's per-result record): **-1, -1, +0.82, +1.5, -1, +0.75,
+-1, -1, -1, +1.5, -1, -1** - 4 wins, 8 losses, 33% hit, net -3.43 units at $3 = about -$10.3.
+
+**This is the exact condition the hand rule was pre-committed for at 20:30:** the engine's own kill rule
+would halt this lane at -3.00 over 20 results; its window was reset to zero by the 19:32:58 clear and
+still needs **8 more** before it can fire. The lane has lost more than its own rule allows, inside the
+window where the rule cannot act. That is the rope cost, realised for the second time today.
+
+**Per the commitment: it goes to the user, and nobody touches a flag.** Recommendation, stated plainly:
+**master OFF now.** Reasons unchanged from 23:12 and now carrying the number: the rule the engine applies
+to itself is exceeded; Monday's wide tape opens in 12 minutes with no automatic stop for 8 more results;
+live being on adds nothing to the twin test - ctrl and cand are collecting Monday's candles regardless.
+
+AWS has push-notified the user. master true, halt null, EF on, stake 3.0, all untouched.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
