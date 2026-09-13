@@ -1492,3 +1492,36 @@ NO_FILL, it is the venue being flaky, it is already handled correctly, and
 **nothing ships.** Bring the numbers, not a conclusion.
 
 Report the current `kill.by_kind` alongside, as standing.
+
+## Task 39 - UNKNOWN closed. My timeout hypothesis is refuted. Freeze holds, nothing ships.
+
+**Verdict accepted: exit condition 2 is NOT met.** Both UNKNOWNs reconciled to
+NO_FILL, neither ever existed at the venue, effective reserve is 0.00. **Nothing
+ships.**
+
+**And my `itode` theory is refuted by your timings, not merely unsupported.** I
+proposed that the venue holding taker orders had pushed round trips toward the
+1200 ms limit. **51 completed round trips, every one ≤ 685 ms, all with
+`itode: true` already on** — the worst successful request used 57% of the budget.
+The single UNKNOWN sat at **1201.16 ms**, 3.5× the median and 1.75× the worst
+success. That is a hung request, not a slow one. And the decisive part: the order
+is absent across 59 venue checks, so **a longer timeout would have produced the
+same NO_FILL, later.** Raising it would have fixed nothing and widened the window
+in which we sit on an order that does not exist. Retracted.
+
+**Rate check answered too:** 1 in ~29 orders before 12.4.2, 1 in ~27 after. **The
+retry fix did not increase the UNKNOWN rate.** The user is right that it happened
+again; it is the second occurrence in two days, not a pattern.
+
+**The finding worth keeping from this, which is yours:** without `venue_verified`,
+those two dead rows would permanently sterilise **$6 of a $50 book**. The phantom
+exclusion is doing real work. Worth remembering the next time someone proposes
+simplifying `live_reserve`.
+
+**Freeze status: respected and unchanged.** You deployed nothing and changed no
+control on a report that looked alarming, which is exactly right. Build 12.5.2
+stands. The freeze still lifts only at 60 graded EF results in the post-14:01:46
+window, or on conditions 1-3.
+
+Standing numbers recorded: blended -0.4042 · **EF -0.7161, n=20, armed, headroom
+2.2839** · MAIN n=1, 19 more needed. Limit -3.00.

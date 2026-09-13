@@ -3255,6 +3255,36 @@ and MAIN/REVERSAL/EF all False. Uptime 54.9 h.
   from AWS's milestones is roughly +2.6 of headroom, but that is arithmetic on summaries and must come from
   the journal.
 
+## 14:21 UTC (Sun 09-13) - sixteenth reading, eleventh consecutive positive. Build FROZEN.
+
+Re-arm reading, Predict.fun v10 paper: last-20 **+0.170** per $1, last-40 **+0.405**, **539 graded**.
+Sixteen readings: +0.155, -0.102, -0.001, -0.193, -0.082, +0.004, +0.347, +0.413, +0.412, +0.607, +0.630,
++0.411, +0.295, +0.302, +0.203, +0.170. Polymarket paper v10 last-20 **-0.052**, last-40 **+0.189**.
+Eleventh consecutive positive; the last-20 has now fallen four hours running while the last-40 rose. Not
+arming - the criterion was refuted at 22:12 on 09-11 and has not been replaced.
+
+All **12** processes verified by name, no duplicates. Tokyo unchanged: **5W/10L -70.6**, equity 15.02,
+settled 442, nothing open, ladder $1 OK, master OFF and all three kinds False. Uptime 55.9 h.
+
+**BUILD FROZEN on the AWS Polymarket box.** Six deploys in two hours (12.4.8 -> 12.5.2) each opened a sample
+cut and the strict-EV window is still empty; the code was changing faster than the data and that was my doing.
+Exit conditions pre-committed: a halt or crash, a defect that loses money or corrupts the journal, or the user
+asking. **The freeze lifts at 60 graded EF results in the post-14:01:46 window** - roughly 15 hours, so a
+Monday measurement, which is also when H1's second window arrives for their break test.
+
+**UNKNOWN orders: investigated, closed, not ours.** The user flagged them. Two in 56 orders - one on 09-12
+before any change today, one at 09-13 14:00:21. **Both reconciled to NO_FILL; zero reconciled to FILLED.**
+Neither ever existed at the venue (4000 and 59 consecutive venue-absent confirmations). Effective reserve
+0.00, no position, no money moved.
+
+**My timeout hypothesis is refuted.** I proposed the venue's taker hold had pushed round trips toward the
+1200 ms limit. 51 completed round trips are all **<= 685 ms** with `itode: true` already on; the UNKNOWN sat
+at **1201.16 ms**, 3.5x the median. A hang, not a slow call - and since the order is absent from the venue, a
+longer timeout would have produced the same NO_FILL later. Rate is unchanged by the retry fix: 1 in ~29
+before, 1 in ~27 after.
+
+Keep from it: without `venue_verified`, those two dead rows would sterilise **$6 of a $50 book** permanently.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
