@@ -19,6 +19,14 @@ PORTS = [8788, 8789, 8794, 8795, 8796, 8798, 8790]
 # for 72 minutes behind a port probe and fresh 1 Hz logger rows.
 FEED_PORTS = [8788, 8790]
 MAX_FEED_AGE_S = 180
+# A fresh feed and an answering port do not mean the engine is still THINKING.
+# On 09-13 both Polymarket runs showed identical numbers for 77 minutes, which
+# reads as a stall; it was a quiet market - 277 decisions, every one fire=0.
+# The trades table cannot tell those apart and neither could this watcher. The
+# decisions table can: a stalled engine stops deciding, a quiet one does not.
+DECISIONS = [
+    ("v12 lane decisions", V12, "decisions", "ts_ms", 120),
+]
 
 def row_age(db, table, col):
     c = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
@@ -35,7 +43,7 @@ def main():
     bad = {}
     while True:
         alerts = []
-        for label, db, table, col, limit in FEEDS:
+        for label, db, table, col, limit in FEEDS + DECISIONS:
             try:
                 a = row_age(db, table, col)
                 if a is None:
