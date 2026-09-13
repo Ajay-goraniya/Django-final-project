@@ -179,3 +179,25 @@ Polymarket engine on the AWS box.
   measurement and deployment work only — no more speculative tasks.
 - **H1:** `verify.py` on the twin result at step 3.
 - **The user:** the step-4 go, and every control write on the live engine.
+
+## 7. Deploy procedure — binding from 12.8.5/12.8.6 onward (user, 09-13 23:1x: "not only byte identical but it needs to be proper code")
+
+Byte-identity proves the box has what the branch says. It does not prove the code is right. **A deploy is
+not done until every row below is written into `learner/DEPLOYED.md` by the AWS session, with the
+evidence, and committed to the branch.** V verifies the commit; nothing is taken on report.
+
+| # | check | proves | evidence AWS commits |
+|---|---|---|---|
+| 1 | `git rev-parse` of the deployed commit + `sha256sum` of every deployable file **in the running process's cwd** (`/proc/<pid>/cwd`), beside the branch's hashes at that commit | the box has exactly what was reviewed | the hash table, every row |
+| 2 | **all three test suites run ON THE BOX**, against the deployed files, with the box's Python and deps | the code works where it runs, not only where it was written | `Ran N tests … OK` × 3, with N |
+| 3 | **each new test run against the PREVIOUS build's files** (the `polymarket_v12_backup_*` dir kept on every swap) and shown to **fail** | the test tests the change, not itself | the FAIL/ERROR lines |
+| 4 | post-restart state read from `meta` and the venue: build, master, halt, lane flags, stake, cash | the restart came back as intended; no safe-startup surprise | the state table |
+| 5 | **the behavioural effect observed in the live journal**, not inferred — e.g. 12.8.2's MAIN row visible; 12.8.3's `LOW_BALANCE` row with `acted:false`; 12.8.4's `clear-halt` audit row carrying `do_POST`; 12.8.5's first `master False→True` row; 12.8.6's one halt row per episode + `AMBIENT_AGE` rows arriving every ~5 s | the change does what it was built to do, in production | the journal rows, quoted |
+| 6 | **AWS reads the diff and states disagreement** — anything it thinks is wrong, unclear, or untested, in writing, before the deploy goes live | a second reader on the box, not an echo | its objections, or "none, and here is what I checked" |
+| 7 | **downstream rechecked**: every path the change touches (journal, kill rules, dashboard rows, audit, `rolling()`, the reconcile loop) exercised once after restart | the user's rule — "after every change everything should be rechecked, its effects, and all the other things affected" | one line per path with what was seen |
+
+**Rows 1–3 and 6 happen BEFORE the restart. Rows 4, 5, 7 after.** A row that cannot be checked is
+written as "cannot check, because …", never skipped. **V does not mark a build deployed until
+`DEPLOYED.md` for it is on the branch and V has read every row.** Deploys stay AWS's job; verifying the
+deploy is now a document, not a message.
+
