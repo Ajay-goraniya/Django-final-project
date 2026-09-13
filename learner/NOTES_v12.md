@@ -3647,3 +3647,58 @@ Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is 
 | M | 09-11 02:05 | 11.2 direction model (GBM on the price path at the fire second; H1 Task 11.2) as the EF probability into the existing EV rule | replay 648 candles at recorded asks: +0.266/fire n=89, halves +0.356/+0.177, verify.py all PASS; forward test: frozen model on new venue-window days + 1 Hz live book log | REFUTED ON THE FORWARD TEST TOO (11:00 09-12, H1 Task 17.2 verdict, analysis/h1/task17_verdict.md): 104 forward fires, 48.1% hit, -0.040/fire, -4.16 total, halves -0.214/+0.134; verify.py passes quote age and sample size, FAILS halves on the sign flip and FAILS beats-the-null against the +0.018 honest-rule replay. Criteria were registered when the window opened and restated at n=95, so not framed after the fact. The level drifted up steadily (-0.330 at n=25 to -0.040 at n=104) and H1 explicitly refused to extend the window to see it cross zero. Weekday n=57 -0.177, weekend n=47 +0.126, buckets pre-defined; the weekend cell is under the 60 bar and is NOT being read - and a weekend-only version would be a regime switch on a score that just failed its overall test, which the no-gates rule forbids. Sixth candidate to die at the recorded-to-honest-to-live ladder. Earlier: REFUTED (04:00, H1 Task 20): replay edge was stale-quote selection - honest-quote replay +0.018 to -0.017/fire, NEXT-sample rule negative at every margin; the direction signal stands, the monetisation does not. Earlier: live 1-s shadow 0 fires in 14 candles, the replay's fires only exist with 5-s forward-filled asks 20c+ below the live book, H1 forward 1/8 -0.73/fire; awaiting the synchronous re-run; previously SHADOW CANDIDATE; verdict at >= 100 forward fires, both halves, verify.py True; realistic +0.10/fire after the 2.5x quote-to-fill haircut. The +0.266 is WEEKDAY-ONLY (replay window Tue-Thu, zero weekend fires); the direction signal itself is regime-flat on 14,442 held-out candles (weekend 0.588 vs weekday 0.576 at S=20), so Sat-Sun is the first fire-set evidence |
 | N | 09-11 02:58 | Polymarket transfer (H1 Task 18): (a) frozen 11.2 at Polymarket asks; (b) current EF fire set at Polymarket asks; 7% taker fee, graded on Polymarket resolution | replay 648 candles | (a) REFUTED for Polymarket: negative at every margin, hit below random (Binance-close model vs TWAP resolution). (b) corrected 05:10 (Task 20c, honest quote): +0.223/fire n=67 at margin 0.10, halves -1.22/+16.14 - suggestive, NOT established; the v10 Polymarket paper run (real-time quotes, +0.148 after fee) is the primary Polymarket evidence; no executor yet - v12 decision next week |
 Decision rule: a variant replaces the baseline setting only when, over the same candles, it is ahead on PnL at $10 AND not behind on hit rate after >= 100 graded fires, and the sign holds on both halves of its own run.
+
+## 18:44 UTC (Sun 09-13) - "your updates has made it worst". I cannot defend it, and I stopped building.
+
+The user's judgement, and the arithmetic I owe them rather than the framing I had been using.
+
+**What I had been saying, and why it was not an answer.** Repeatedly: *"19 of 23 settled before band
+mode ever executed"*. That is true and it is about **trade count and the accuracy decline**. It says
+nothing about PnL, and I let it stand as though it did. Differencing the `settled`/`realised` pairs
+across my own check-in readings:
+
+| era (by settled counter) | trades | PnL change |
+|---|---|---|
+| 11 -> 18, before my first deploy | 7 | **-0.18** |
+| 18 -> 19, after 12.4.6 / 12.4.8 | 1 | -2.90 |
+| 19 -> 23, band mode live | 4 | -5.99 |
+
+**Before my first deploy: 7 trades, -0.18. After: 5 trades, -8.89.** The damage is concentrated on
+my side of the line. **n=5 cannot prove my changes caused it and equally cannot clear them** - and I
+had been speaking as though the count argument cleared them. It does not.
+
+**The table itself is not trustworthy either** and must not be quoted as the answer: the era
+boundaries are **my check-in times, not the deploy times**, and it is differenced arithmetic on
+summaries - the exact reconstruction shape that produced three errors on 09-12/13. Task 65a asks AWS
+for the cut on their own deploy timestamps from the journal.
+
+**The test that actually settles it is not PnL.** Task 65b: **paid minus ask, per fill, per era** -
+`poly_core.py:750` already computes it. It works on **every fill**, needs no grading, and has no n=5
+problem. Band mode going live at 12.4.10 widened the slippage caps, and a wider cap is the one change
+of mine that can raise the price paid. **If band-era fills pay more than pre-band fills, band mode is
+the cause and it gets reverted.** If they pay the same, band mode is not the cause and I will say so.
+
+**First band-era data point, and it is zero.** MAIN at 18:20:43: cap 0.48 (band, 5 ticks), quoted ask
+0.43, **filled 0.4300, paid-ask +0.0000** - a five-tick cap it never touched. One fill is a hint.
+
+**Freeze, and this one holds.** Seventeen builds shipped today, 12.3.1 through 12.8.1, on a live money
+engine. Most were defect fixes (clear-halt did nothing; band mode was never live; dials reset on
+restart) but the churn is real and the user is right to be uneasy about it. **No further build until
+65b comes back.**
+
+## 18:20:43 UTC - MAIN fired, filled, and disarmed itself. The rule the user set worked.
+
+*"main off after 1 filled order, whatever happens, win or lose i don't care"*.
+
+**Fill:** 18:20:43, UP, quoted ask **0.43**, cap 0.48 (band, 5 ticks), **filled at 0.4300**,
+paid-ask **+0.0000**, spent $4.80, **attempt 1**. The candle graded DOWN. **MAIN lost $4.80.**
+
+**Disarm:** `_main_oneshot_check` cleared `main_enabled` **11 seconds later** from the reconcile loop;
+the audit row names `btc_model_v12_polymarket.py:499 _main_oneshot_check`. One filled order, lane off,
+as instructed - no operator action needed.
+
+**The defect the fill exposed.** The result row on epoch 1789323600 reads **-9.61**, and that is
+**both lanes**: EF -4.81 at 18:20:34 and MAIN -4.80 at 18:20:43. **Two lanes traded the same 5-minute
+candle nine seconds apart for $9.61 of exposure against a $5 nominal stake.** Nothing in the engine
+stops that. MAIN's one-shot has made it moot for now; it will not be moot the next time MAIN is armed.
+**Recorded, not fixed** - the freeze holds and this is not urgent while MAIN is off.
