@@ -1,6 +1,6 @@
 """Polymarket order policy, book cache, durable trade journal and reconciliation."""
 import asyncio, json, math, os, sqlite3, threading, time, uuid
-from decimal import Decimal, ROUND_CEILING, ROUND_DOWN
+from decimal import Decimal, ROUND_CEILING, ROUND_DOWN, ROUND_FLOOR
 
 D=lambda x:Decimal(str(x))
 
@@ -248,6 +248,8 @@ def order_plan(q,terms,stake,d,pad=1,band=False,require_depth=True):
     # ROUND_CEILING turns that into 29. I shipped exactly that non-fix as 12.3.1
     # after reproducing the "bug" in a scratch script that defined its own D and
     # never imported this one. TickGridRounding guards both mistakes.
+    # The narrowest cap that is still marketable: the ask itself on the grid.
+    floor_cap=float((D(q['ask'])/D(tick)).to_integral_value(rounding=ROUND_CEILING)*D(tick))
     if band:
         # Proportional headroom, snapped up to the tick grid.
         # Stay in Decimal for the multiply. 0.28*1.5 is 0.42000000000000004 as a
@@ -293,6 +295,26 @@ def order_plan(q,terms,stake,d,pad=1,band=False,require_depth=True):
             raise ValueError(f'book too thin at cap: {_depth:.2f} of {stake:.2f} available')
     ratio=max(levels)
     amount=float((D(stake)/(1+D(ratio))).quantize(D('.01'),rounding=ROUND_DOWN))
+    if band and amount/cap+1e-8<minimum:
+        # The venue minimum is 5 SHARES, not dollars, and the size we sign is
+        # amount/cap - so a WIDER cap signs FEWER shares and a generous band can
+        # trip the floor the tight pad cleared. At the live $3 stake that pulls
+        # the tradable ask from 0.57 down to 0.52, i.e. band mode would trade a
+        # reject problem for a skip problem across the expensive half of the
+        # book. Clamp the cushion to the widest cap that still clears the floor
+        # instead of dropping the trade: some cushion beats none, and this is
+        # never worse than tick mode, which is the whole point of the parameter.
+        #
+        # One pass is enough. Narrowing the cap can only drop ask levels, which
+        # can only lower max(levels), which can only RAISE amount - so the
+        # recomputed plan clears the floor whenever any marketable cap does.
+        clamped=float((D(amount)/D(minimum)/D(tick)).to_integral_value(rounding=ROUND_FLOOR)*D(tick))
+        if clamped>=floor_cap:
+            cap=clamped
+            levels=[rate*(p*(1-p))**exp/p for p,size in q['asks'] if p<=cap]
+            if not levels: raise ValueError('no executable ask at cap')
+            ratio=max(levels)
+            amount=float((D(stake)/(1+D(ratio))).quantize(D('.01'),rounding=ROUND_DOWN))
     if amount/cap+1e-8<minimum: raise ValueError('below venue minimum; stake not increased')
     return dict(cap=cap,amount=amount,max_shares=amount/cap,budget=stake,quote=q['ask'],pre_submit_quote=q['ask'],age_ms=q['age_ms'],rate=rate,exponent=exp,seq=q['seq'])
 
@@ -345,10 +367,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.4.4')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.4.6')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):

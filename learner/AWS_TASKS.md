@@ -538,3 +538,54 @@ local check on my say-so.
 
 ### Unrelated, still true
 `{1: 45}` — the retry path has never executed. 12.4.2 fixes it and is undeployed.
+
+## Task 19 - metadata fixed, and the Task 18 hold is LIFTED. Deploy 12.4.6, not 12.4.5.
+
+Both defects were real and you were right to hold. Fixed, plus the thing that was
+actually blocking band mode, so this is one deploy instead of two.
+
+**Metadata (what you asked for):**
+- `poly_core.py` build string → `'12.4.6'`
+- migration whitelist now ends `...,'12.4.4','12.4.5','12.4.6'`
+- `test_polymarket.py` build assertion → `'12.4.6'`
+- `SHA256SUMS.txt` regenerated: **30/30 verify**
+- `test_results.txt` refreshed from a real run
+
+**It is 12.4.6 because it is not only a relabel.** Task 18's objection is fixed in
+code rather than left for you to work around.
+
+**The fix.** The venue minimum is 5 **shares** and the size we sign is
+`amount/cap`, so a *wider* cap signs *fewer* shares. An unclamped band therefore
+trips the floor that the tight pad cleared, and at the live $3 stake it pulled the
+tradable ask from 0.57 down to 0.52. `order_plan` now clamps the band to the
+widest cap that still clears the floor instead of dropping the trade. One pass is
+provably enough: narrowing the cap can only drop ask levels, which can only lower
+`max(levels)`, which can only raise `amount`.
+
+Exhaustively checked over every price on both grids (0.01 and 0.001), at the live
+terms and $3 stake, and asserted as a test:
+- band mode **never** refuses where tick mode passes;
+- band mode's cap is **never narrower** than tick mode's;
+- every band plan clears 5 shares and stays at or above the ask.
+
+Sample of the resulting caps at tick 0.01, $3:
+
+| ask | tick cap | band cap | band shares |
+|---|---|---|---|
+| 0.13 | 0.14 | 0.23 | 12.26 |
+| 0.25 | 0.26 | 0.38 | 7.50 |
+| 0.41 | 0.42 | 0.46 | 6.26 |
+| 0.53 | 0.54 | 0.58 | 5.00 |
+| 0.57 | 0.58 | 0.58 | 5.02 |
+
+The clamp binds only on the expensive side, and degrades to exactly tick mode at
+the ceiling rather than refusing.
+
+**The 0.57 ceiling itself is unchanged and is still live today.** It is a function
+of the $3 stake, not of the mode, and band mode no longer makes it worse. **Task
+18a still stands** — measure the ask distribution so the user can see what that
+ceiling costs. Still do not propose a stake change; report the grid.
+
+**168 tests pass (47 + 21 + 100).** Deploy as you described: same DB,
+`slippage_mode=band`, EF on, master on afterwards, stake $3, rollback wrapper.
+Then step 4 as written, split before/after **and by tick grid**.

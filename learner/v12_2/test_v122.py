@@ -794,6 +794,41 @@ class BookDepthIsCheckedBeforeSending(unittest.TestCase):
         # attribute is as wrong as a True one.
         self.assertIn('all_or_nothing', vars(poly_live.LiveBroker))
 
+    def test_band_is_clamped_to_clear_the_five_share_minimum(self):
+        """A wider cap signs FEWER shares, so the band can trip the floor.
+
+        The venue minimum is 5 SHARES and the signed size is amount/cap. At the
+        live $3 stake an unclamped band pulls the tradable ask from 0.57 down to
+        0.52 - band mode would trade a reject problem for a skip problem across
+        the expensive half of the book. 12.4.6 clamps the cushion instead of
+        dropping the trade.
+        """
+        terms = (0.01, 5.0, 0.07, 1.0)
+        d = dict(p=0.99, threshold=-1.0)
+        for tick in (0.01, 0.001):
+            for i in range(1, int(1 / tick)):
+                ask = round(i * tick, 4)
+                if not 0 < ask < 1:
+                    continue
+                q = dict(ask=ask, asks=[(ask, 10000.0)], age_ms=0, seq=1)
+                t = (tick,) + terms[1:]
+                def plan(band):
+                    try:
+                        return C.order_plan(q, t, 3.0, d, pad=1, band=band,
+                                            require_depth=False)
+                    except ValueError:
+                        return None
+                pad, band = plan(False), plan(True)
+                if band is None:
+                    # Band may only refuse where the tight pad also refuses.
+                    self.assertIsNone(pad, f'band refused at ask {ask}, tick {tick}')
+                    continue
+                self.assertGreaterEqual(band['max_shares'] + 1e-8, 5.0, ask)
+                self.assertGreaterEqual(band['cap'] + 1e-9, ask, ask)
+                if pad is not None:
+                    # Cushion is the point of the parameter: never narrower.
+                    self.assertGreaterEqual(band['cap'] + 1e-9, pad['cap'], ask)
+
     def test_thin_book_is_refused_locally(self):
         # $3 wanted, one level holding 2 shares at 0.50 = $1.00 of depth
         with self.assertRaises(ValueError) as e:
