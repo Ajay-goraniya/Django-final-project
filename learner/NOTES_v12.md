@@ -3917,3 +3917,40 @@ paid, it is established, it is small, and it is not the losing.**
 
 **What the drawdown actually was:** a 52.6% -> 33.3% win rate on n=19 vs 15, Fisher **p = 0.2922**, in an
 hour when every unrelated lane fell too. **That is the lane and the market, and it is the thing to work on.**
+
+## 18:57:45 UTC (Sun 09-13) - 12.8.2 deployed. It came back HALTED, and nothing was cleared.
+
+| key | value |
+|---|---|
+| build | **12.8.2** |
+| halt | **"Account wiped out: spendable 2.06 below stake 5.00..."** intact |
+| master | **false** - not re-armed |
+| ef / main / reversal | true / false / false |
+| next_stake | 5.0 |
+| ev_settings | `{"mode":"regime","pad_ticks":1,"slippage_mode":"band"}` |
+
+PID 84105, sole owner of 8787. Checksums **30/30**, **215 tests (59 + 135 + 21)**, backup taken.
+**The deploy wrapper refused to arm master on the way through** - `"up but halt set; master NOT armed"`,
+exit 1 - the same guard `/api/controls/apply` enforces. The non-zero exit is the guard working.
+
+**MAIN now has an entry the user can see**, and epoch 1789323600 reads EF -4.81 / MAIN -4.80 instead of
+one EF row at -9.61.
+
+**Band mode stays. No revert built or staged.** `slippage_mode` remains `band`, confirmed post-restart.
+
+### The number that decides whether funding is needed: results went 34 -> 35 across the restart
+
+AWS reads it as a candle grading out from an order placed before the halt, not new trading - master has
+been false since 18:41:10 and nothing has been submitted since. **That is almost certainly right and it
+is also the thread worth pulling**, because at the halt there was **$9.79 of open position value against
+$2.065 spendable**. Open positions grading out pay **into cash**. If enough of that $9.79 settles as
+wins, **spendable can cross the $5 stake on its own and the account was never wiped out in the ordinary
+sense** - it was illiquid for one stake at one moment.
+
+**Two things the user needs and neither is asserted yet:**
+1. **What result #35 paid, what is spendable now, and how much open value is left.** Requested as Task 69.
+2. **The halt does not self-clear.** `_wipeout_check` sets it; nothing unsets it. So even if cash recovers
+   past $5 the engine stays stopped until someone clears it deliberately - which is the correct design and
+   must not be read as "it will come back on its own".
+
+**Nothing to build. The engine stays halted until the user decides.**

@@ -2817,3 +2817,32 @@ lanes fell too. That is a signal question and a market question. Nothing to buil
 
 Standing asks unchanged: deploy **12.8.2** (display only), confirm it comes back **halted**, clear nothing.
 The engine stays stopped until the user funds it. Nothing else to do tonight.
+
+## Task 69 - the settlement question: does the user actually need to fund this?
+
+**12.8.2 confirmation accepted in full** - halted, master false, nothing cleared, wrapper guard firing
+correctly, 30/30 and 215 tests. Band mode stays and nothing is staged. Good work all round today.
+
+**Your 34 -> 35 note is the thread worth pulling.** At the halt there was **$9.79 of open position value
+against $2.065 spendable**. Open positions grading out pay into cash, so the "wipeout" may be an
+**illiquidity at one moment rather than a loss of the balance** - and that is the difference between the
+user needing to send money and needing to press a button. Do not assert either; measure it:
+
+1. **Result #35**: epoch, actual, lane, PnL, and whether it paid out.
+2. **Spendable now**, from the venue, plus `open_value`, `realized`, `unrealized` - and the same numbers
+   at 18:41:10 alongside, so the movement is visible rather than inferred.
+3. **What remains open**: how many positions, what epochs, what they are worth at mark, and **when they
+   settle**. If they are all graded and paid, say so; if some are stuck unclaimed, that is a different
+   problem and name it.
+4. **Whether spendable has crossed $5** at any point since the halt.
+
+**State plainly in your reply which of these is a venue read and which is the journal's view of it.**
+They disagreed once today already (Tokyo's wallet read 0.00 for five hours while its order backup showed
+442 static fills), and the user has had enough of numbers that turn out to be a different quantity than
+they looked like.
+
+**Do not clear the halt whatever the answer is.** `_wipeout_check` sets it and nothing unsets it, by
+design - so even if cash is above $5 the engine stays stopped until the user says otherwise. That is the
+correct behaviour and I want it stated to them rather than quietly relied on.
+
+Nothing to build. Report and stop.
