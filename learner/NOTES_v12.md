@@ -2903,6 +2903,27 @@ something. If it would have armed and been wrong, this is the evidence it did no
 Lanes off, re-asserted, nothing enabled. Equity 15.02, settled 442, nothing open, ladder $1 OK. No real fill
 since 19:59:37 yesterday, now 8.4 hours. Engines up 5.4 h, 13 processes.
 
+## 05:20 UTC (Sun 09-13) - third consecutive positive, still holding
+
+Re-arm reading, Predict.fun v10 paper: last-20 **+0.413** per $1, last-40 **+0.165** per $1, 512 graded. A new
+high on both windows.
+
+Eight hourly readings: +0.155, -0.102, -0.001, -0.193, -0.082, +0.004, +0.347, +0.413.
+
+Three consecutive positives now, so the refuted criterion has been satisfied for two hours running and the
+gap between what it would have done and what I am doing is widening. Still not arming, for the reason that has
+not changed: the rule was refuted at 22:12 on 09-11 under its own review condition, and no replacement has
+been written down. The correct time to write one is when the numbers are not shouting.
+
+Stating what would make me wrong, since three hours of holding through a rising number deserves it: if a
+replacement rule with a dead zone is written and, applied retrospectively from 04:22, it would have armed and
+made money, then this hold cost real PnL and the notes should say so plainly. That test is available any time
+- the paper run keeps grading whether the lane is on or not, so the counterfactual is measurable rather than
+rhetorical. What is not acceptable is arming now and writing the rule afterwards to match.
+
+Lanes off, re-asserted, nothing enabled. Equity 15.02, settled 442, nothing open, ladder $1 OK. No real fill
+since 19:59:37 yesterday, now 9.3 hours. Engines up 6.3 h, 13 processes.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
