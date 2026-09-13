@@ -1159,3 +1159,24 @@ fix, the dial sync, the diagnostics and rolling observation.
 the JSON diagnostics, `rolling()`, the header fix and the four-attempt parity are
 all either pure instrumentation or repairs of things that were plainly broken.
 The user's complaint lands on band mode and the re-arm, and those two only.
+
+### Task 31 addendum - the timeline mostly exonerates my changes. Confirm it exactly.
+
+The user is looking at EF accuracy **45.5% (10W/12L, 22 settled)**, down from the
+**63.6% (7W/4L)** it showed at n=11, and reads it as my doing. From your own state
+lines the settled count today ran **18 (11:38) -> 19 (12:07) -> 20 (12:15:16, band
+live) -> 21 (12:41) -> 22 (now)**.
+
+**So 18 of the 22 settled before my first deploy, and only 2 since band mode.** The
+fall from 63.6% to 45.5% happened overwhelmingly on **12.3.4** — the build that was
+running before I touched anything today. My EV-loosening disclosure in Task 31
+stands as a forward risk, but it cannot have caused a decline that had already
+happened.
+
+Statistically neither number is readable: 10/22 against a coin is **p=0.832**, and
+first-11 (7W) versus last-11 (3W) is **Fisher exact p=0.198**.
+
+**Confirm exactly, from the journal rather than my reconstruction of your state
+lines:** the settled count and W/L at each deploy boundary — 11:12:57, 11:38:19,
+12:07:34, 12:15:16 — so the attribution is from data and not from my arithmetic on
+your summaries. This is part of Task 31a.1 and is the first thing to answer.
