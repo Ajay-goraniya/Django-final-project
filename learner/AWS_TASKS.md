@@ -997,3 +997,61 @@ against paper's +0.133. **Give me the authoritative per-$1 from the journal**,
 since stakes were $1 earlier and $3 now and my division is crude.
 
 Read-only, nothing to deploy. This outranks Task 22a.
+
+## Task 29 - 12.4.11: rolling observation. And the honest answer to "why isn't it adapting".
+
+The user: *"why isnt that being observed? pnl, ev modes? i told you to make
+everything automatic so it can adapt, in a market change now it's started to lose
+money?"* I checked what is actually wired rather than answer from memory, and they
+are right. Here is the true inventory.
+
+**What IS automatic today:**
+1. **EV mode `regime`** — a **hardcoded per-volatility table**, 0.15 low / 0.25
+   mid-high. It adapts to *volatility*, from a constant written by hand. Nothing
+   learned, nothing fitted, and the name oversells it: it is not a market regime.
+2. **Stake ladder** — steps on win/loss streaks.
+3. **Two kill rules** in `halt_check()`: avg slippage > $0.03 over 20 fills, and
+   the sum of 20 unit returns below -3.
+
+**What is NOT automatic, and this is the real answer:**
+- **Nothing observes PnL over a recent window at all.** Every number the engine
+  reported was cumulative — total, by kind, by day. **A cumulative total hides a
+  turn**: a run that made money for two days and is losing now still reads "up"
+  until the entire gain is gone. That is precisely the +16.60 to +5.04 the user is
+  looking at.
+- **Both kill rules need exactly 20 results and the live box only just reached 20.**
+  The safety net has been armed and blind for the whole run.
+- **Nothing retrains, refits or updates the model.** The weights are static.
+- **The EV threshold never responds to PnL** — only to volatility, off that table.
+
+**12.4.11 fixes the observation half, which is the half I can fix without
+violating a standing rule.** New `Journal.rolling()`: last 20 and 40 settled
+results — n, accuracy, PnL, **per $1**, **median price actually paid**, and the
+distance to each kill rule. Surfaced in the dashboard payload as `rolling`.
+
+**It gates nothing, sizes nothing and refuses nothing.** Pure instrumentation.
+
+Two details worth your attention:
+- **Lane attribution is conditional, on purpose.** `results` has no `kind` — one
+  row per epoch — so when two lanes trade one candle the PnL cannot be split and a
+  naive join double-counts it. `by_kind` is emitted **only** for windows with no
+  mixed epoch and is `None` otherwise, with `mixed_epochs` reporting how many.
+  Tested both ways.
+- **Under 60 is marked.** Every cut carries `sufficient`, false below 60, so a
+  20-window can never be quietly read as a rate.
+
+**177 tests pass (52 + 21 + 104). SHA256SUMS 30/30.** Build `12.4.11`.
+
+**What I am NOT doing, and why you should not either.** The other half of the
+user's ask — make the *trading* adapt automatically — is a threshold or a gate on a
+score whose standing evidence is flat, and that is banned by their own rule:
+*"EF should know when to fire and it cannot be decided by a gate... give it a
+trained brain that knows that move is wrong and it will reverse."* Four such
+attempts already failed on 09-10. Auto-tuning the EV bar or auto-pausing on a
+drawdown would be the fifth. **I have put the choice back to the user** rather than
+pick one on a live account. Do not implement any adaptive threshold, stake
+modifier or auto-pause unless they say so explicitly, and if the next sample looks
+like it argues for one, bring the grid.
+
+Deploy 12.4.11 when convenient — it cannot change trading behaviour. Task 28a is
+still the priority ahead of 22a.

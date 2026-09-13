@@ -367,10 +367,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.4.10')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.4.11')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -559,6 +559,60 @@ class Journal:
     def metrics(self):
         n,w,l,pnl=self.sql('SELECT count(*),coalesce(sum(pnl>0),0),coalesce(sum(pnl<0),0),coalesce(sum(pnl),0) FROM results')[0]
         return dict(n=n,wins=w,losses=l,pnl=pnl,accuracy=w/n if n else None)
+    def rolling(self,windows=(20,40)):
+        """Rolling health over the most recent settled results. Observes only.
+
+        Everything the engine reported was cumulative - total PnL, PnL by kind,
+        the day - and a cumulative total hides a turn: a run that made money for
+        two days and is losing now still reads as "up" until the whole gain is
+        gone. The operator asked why that was not being observed. It was not.
+
+        Changes no behaviour: gates nothing, sizes nothing, refuses nothing.
+
+        Lane attribution is deliberately conditional. `results` has no `kind` -
+        it is one row per epoch - so when two lanes trade the same candle their
+        shared PnL cannot be split, and a naive join would count it twice. The
+        per-lane block is therefore emitted only for windows with no mixed
+        epoch, and `mixed_epochs` says how many were dropped.
+        """
+        rows=[dict(r) for r in self.sql("""
+            SELECT r.epoch, r.pnl,
+                   sum(f.spent+f.fees) staked,
+                   sum(f.spent)/nullif(sum(f.shares),0) px,
+                   count(DISTINCT coalesce(o.kind,'EF')) kinds,
+                   min(coalesce(o.kind,'EF')) kind
+            FROM results r
+            JOIN fills f ON f.epoch=r.epoch
+            JOIN orders o ON o.id=f.order_id
+            WHERE r.pnl IS NOT NULL
+            GROUP BY r.epoch ORDER BY r.epoch DESC""")]
+        def cut(rs):
+            if not rs: return None
+            staked=sum(r['staked'] or 0 for r in rs)
+            px=sorted(r['px'] for r in rs if r['px'] is not None)
+            wins=sum(1 for r in rs if (r['pnl'] or 0)>0)
+            return dict(n=len(rs),wins=wins,accuracy=wins/len(rs),
+                        pnl=sum(r['pnl'] or 0 for r in rs),
+                        per_dollar=(sum(r['pnl'] or 0 for r in rs)/staked) if staked else None,
+                        median_price=(px[len(px)//2] if px else None),
+                        # Under the bar is marked, never silently read as a rate.
+                        sufficient=len(rs)>=60)
+        out={'all':{},'by_kind':{},'mixed_epochs':sum(1 for r in rows if (r['kinds'] or 1)>1)}
+        for w in windows:
+            win=rows[:w]
+            out['all'][w]=cut(win)
+            if any((r['kinds'] or 1)>1 for r in win):
+                out['by_kind'][w]=None      # unattributable, not zero
+                continue
+            out['by_kind'][w]={k:cut([r for r in win if r['kind']==k])
+                               for k in sorted({r['kind'] for r in win})}
+        # Distance to each kill rule, so the safety net is visible before it trips.
+        unit=[(r['pnl'] or 0)/r['staked'] for r in rows[:20] if r['staked']]
+        out['kill']=dict(unit_return_sum=(sum(unit) if len(unit)==20 else None),
+                         unit_return_limit=-3.0,
+                         results_until_armed=max(0,20-len(rows)),
+                         armed=len(rows)>=20)
+        return out
     ABSENT_GRACE_S=5.0
     ABSENT_CONFIRMATIONS=2
     def mark_venue_open(self,open_ids,now=None):

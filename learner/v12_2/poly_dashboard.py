@@ -436,7 +436,7 @@ class Dashboard:
                         venue_fees_paid=vt.get('fees_paid'),account_pnl=vt.get('account_pnl'),
                         venue_age_sec=(time.time()-vt['ts']) if vt.get('ts') else None,
                         pnl_basis=('VENUE_POSITION_PNL' if live_venue else 'LOCAL_FROM_FILLS'),
-                        local_vs_venue=divergence)),trades=self.pnl(),latency=r.executor.latency_stats(),chart_revision=r.revision,error=r.error,dashboard_errors=list(getattr(self,'errors',[])),lane='LIVE' if r.a.live else 'PAPER',model_hash=r.hash,fee_basis=r.broker.basis,halt=self.db.get('halt'))
+                        local_vs_venue=divergence)),trades=self.pnl(),rolling=self.db.rolling(),latency=r.executor.latency_stats(),chart_revision=r.revision,error=r.error,dashboard_errors=list(getattr(self,'errors',[])),lane='LIVE' if r.a.live else 'PAPER',model_hash=r.hash,fee_basis=r.broker.basis,halt=self.db.get('halt'))
         self.cache_at=time.monotonic(); return self.cache
     def page(self,name):
         # The build shown to the operator is READ FROM THE JOURNAL, never

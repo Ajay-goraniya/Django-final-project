@@ -110,6 +110,54 @@ class Tests(unittest.TestCase):
             self.assertEqual(self.db.sql('SELECT count(*) FROM orders')[0][0],0)
         asyncio.run(run())
 
+    def test_rolling_observes_a_turn_that_cumulative_pnl_hides(self):
+        """Cumulative PnL reads "up" while the recent window is bleeding.
+
+        That is exactly the state the operator was looking at: a run that made
+        money earlier and is losing now. rolling() is observation only.
+        """
+        f=dict(shares=10.,spent=5.,fees=0.,price=.5,fee_bps=0)
+        for i in range(30):                      # 30 winners, then 20 losers
+            ep=1000+i
+            self.db.sql('INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,reason,kind)'
+                        " VALUES(?,?,1,'FILLED','{}',0,0,'',?)",(f'o{ep}',ep,'EF'))
+            self.db.fill(f'o{ep}',ep,f't{ep}',f,'paper')
+            self.db.sql('INSERT INTO results(epoch,actual,payout,pnl,ts) VALUES(?,?,?,?,0)',
+                        (ep,'UP',10.,+5.))
+        for i in range(20):
+            ep=2000+i
+            self.db.sql('INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,reason,kind)'
+                        " VALUES(?,?,1,'FILLED','{}',0,0,'',?)",(f'o{ep}',ep,'EF'))
+            self.db.fill(f'o{ep}',ep,f't{ep}',f,'paper')
+            self.db.sql('INSERT INTO results(epoch,actual,payout,pnl,ts) VALUES(?,?,?,?,0)',
+                        (ep,'DOWN',0.,-5.))
+        self.assertGreater(self.db.metrics()['pnl'],0,'cumulative still reads up')
+        r=self.db.rolling()
+        self.assertEqual(r['all'][20]['n'],20)
+        self.assertLess(r['all'][20]['per_dollar'],0,'the recent window must show the turn')
+        self.assertEqual(r['all'][20]['wins'],0,'the whole recent window lost')
+        self.assertFalse(r['all'][20]['sufficient'],'20 is under the 60 bar and must say so')
+        self.assertAlmostEqual(r['all'][20]['median_price'],.5)
+        self.assertTrue(r['kill']['armed'])
+        self.assertEqual(r['by_kind'][20]['EF']['n'],20)
+        self.assertEqual(r['mixed_epochs'],0)
+
+    def test_rolling_refuses_to_split_lanes_that_share_a_candle(self):
+        """results has no kind, so a shared epoch cannot be attributed.
+
+        Reporting it per lane would count the same PnL twice. It reports None.
+        """
+        f=dict(shares=10.,spent=5.,fees=0.,price=.5,fee_bps=0)
+        for kind in ('EF','MAIN'):
+            self.db.sql('INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,reason,kind)'
+                        " VALUES(?,?,1,'FILLED','{}',0,0,'',?)",(f'o{kind}',500,kind))
+            self.db.fill(f'o{kind}',500,f't{kind}',f,'paper')
+        self.db.sql('INSERT INTO results(epoch,actual,payout,pnl,ts) VALUES(?,?,?,?,0)',(500,'UP',10.,+5.))
+        r=self.db.rolling()
+        self.assertEqual(r['mixed_epochs'],1)
+        self.assertIsNone(r['by_kind'][20],'a mixed epoch must not be split per lane')
+        self.assertEqual(r['all'][20]['n'],1,'the overall window still counts it once')
+
     def test_paper_fill_survives_broker_restart(self):
         async def run():
             ep=epoch();ex=Executor(self.db,self.books,PaperBroker(self.books,self.db))
@@ -233,7 +281,7 @@ class Tests(unittest.TestCase):
     def test_v120_database_migrates_additively(self):
         self.db.reserve(123,decision(),'up','condition')
         self.db.set('build','12.0'); self.db.c.close(); self.db=Journal(self.path,'PAPER','abc')
-        self.assertEqual(self.db.get('build'),'12.4.10')
+        self.assertEqual(self.db.get('build'),'12.4.11')
         self.assertEqual(self.db.sql('SELECT count(*) FROM signals WHERE epoch=123')[0][0],1)
         cols={r[1] for r in self.db.c.execute('PRAGMA table_info(orders)')}
         self.assertTrue({'error_json','timing_json','request_reached','reconcile_count','venue_live'}<=cols)
