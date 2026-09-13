@@ -3650,6 +3650,34 @@ while `halt` is set, `controls()` never sent `halt` to the page, and the page ha
 all. **12.8.4 fixes that** (kill panel + CLEAR KILL button); **12.8.3** takes the low-balance rule out of the
 engine on the user's correction. Both on the branch, with AWS to deploy. Venue cash **11.90**, open 0.
 
+## 19:57 UTC (Sun 09-13) - live and pricing. No signals yet, and that is a 1-in-4 outcome, not a fault.
+
+Engine armed since the user cleared the kill at 19:32:58. Build 12.8.4, master true, ef true, main/reversal
+false, stake 5.0, venue cash **11.9017**, open 0. **75 orders / 36 fills / 35 results, unchanged.**
+
+**0 signals and 0 orders in 25 minutes.** At the ~24% per-candle signal rate that is ~5 candles and
+**P(zero) = 0.254** - unremarkable, and less than that once warm-up and the stall below are removed.
+Recorded because "armed but nothing happening" is exactly what the user read as broken last time, and the
+distinction that matters is **armed-and-pricing** versus **armed-and-not-deciding**. It is the first:
+decide reason is back to `None` and it has books.
+
+**Kill window 0 of 20, `armed: false`, `unit_return_sum: null`.** No automatic stop, as expected.
+**No `LOW_BALANCE` row** - nothing has drawn the balance down because nothing has been ordered.
+
+### A 60-second feed stall at ~19:54, recovered
+
+`dropped_stale` sat at **0 for the whole 21 minutes** after the restart, then took **14,855 in about sixty
+seconds** while `applied` froze at 330,503 across two samples and the decide loop said *"Waiting for fresh
+UP and DOWN books"*. Events arriving more than 8 s off the corrected clock and being discarded.
+
+**Over by 19:57**: three readings 12 s apart show `dropped_stale` flat at 14,855, `applied` climbing ~2,000
+per 12 s and quote `ok` ~4,200. Cumulative since restart: dropped/applied **4.4%**, quote attempts refused
+as stale **13.5%**, ok **80.2%**. **Pre-restart it ran 0 -> 25,800 between 17:20 and 19:31, so it is not new
+and not caused by any build** - the same phenomenon as this morning's 20.9%-unusable measurement, in episode
+form. Not acting on it; recorded so the next episode is recognised rather than re-derived.
+
+12.8.5 still held. Next natural restart takes it.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
