@@ -2840,6 +2840,45 @@ Two actions are sitting on the user, both refused by guards on that box and corr
 Nothing about the model is implicated by any of this. Live edge per $1 still matches paper on 11 trades; the
 gap is entirely count.
 
+## 04:05 UTC (Sun 09-13) - pad 1 was the user, not the revert fault. Closed.
+
+The user confirms: *"tick set to 1"*. So the 2 -> 1 change between 03:36:03 and 03:45:21 was a deliberate
+choice, and the silent-revert fault is **not** implicated on the Polymarket engine.
+
+The AWS session's static audit had already narrowed it to that before the confirmation, and the method is
+worth keeping: `ev_settings` has exactly **one** writer in the whole tree - `poly_dashboard.py:270`, inside
+the `/api/controls/ev` branch, behind basic auth. No loop, no watchdog, no scheduled path. So the write had
+to come from a credentialed request, which meant a person.
+
+It also listed every non-request writer of a control key, which is the part that bears on Tokyo:
+
+| writer | keys | fires when |
+|---|---|---|
+| `poly_dashboard.py:54` seeding | master, the three lane flags, stake_settings, rules, sx_enabled, tp, sl | **only if the key is absent** |
+| `btc_model_v12_polymarket.py:52` | master=False | every `--live` start |
+| `poly_core.py:453/455/583` | halt | kill rules and order-hash mismatch |
+| `poly_dashboard.py:119-132` | sx_until, streak_cursor, streak, sx_losses, rung, **next_stake** | background stake updater |
+
+So for master and the lane flags the only non-request writer is the seeding loop, and it cannot overwrite a
+key that exists. `next_stake` is the one control that moves without a request.
+
+**One caution on transferring that to Tokyo:** Tokyo runs build 11.2, a different codebase. "The v12 seeding
+loop can only fire on an absent key, so the Tokyo revert means the keys went missing" is a hypothesis about a
+program this audit did not read. It is a good hypothesis and the first I would test - it predicts a specific,
+checkable thing, that the meta rows were absent rather than changed - but it is not established, and
+cross-codebase inference is exactly the shape of error that cost three claims tonight.
+
+Why no trail existed: `poly_dashboard.py:394` is `def log_message(self,*args): pass`. Request logging is
+suppressed by design, so the engine log carries orders and reconciles and not one HTTP line. 12.3.8's
+control-write audit exists because of that deliberate suppression, not because requests are untraceable in
+principle.
+
+**Exact pad changeover, from the caps themselves.** Pad-2 era closes at the 03:36:03 order (quote 0.40, cap
+0.42); pad-1 era opens at 03:45:21 (quote 0.56, cap 0.57). Cut samples there, and do not pool across it -
+earlier tonight also ran pad 0 (00:18:01, 00:20:40) and pad 2 (01:18:47 onward).
+
+Engine is trading: 34 orders, 13 fills, 13 results, 106 signals, master on, stake $3, pad 1.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
