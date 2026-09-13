@@ -843,3 +843,51 @@ padding the price cannot buy a level that no longer exists.
 
 Neither session picks a value. That is the user's call, and the no-gates rule
 cuts against choosing a cell from a grid either way.
+
+# 12.3.8 — every control write is now audited
+
+`pad_ticks` moved from 2 to 1 on the live box between 03:36 and 03:41 and nobody
+admits to it. The AWS session's write was refused by a guard and never retried;
+either the user set it from the dashboard, or it is the same silent revert that
+has hit the Tokyo lane flags twice (09-11 14:40, 09-12 20:38) with no restart and
+no known cause.
+
+**I could not tell which, and that is the problem worth fixing.** `Journal.set`
+was a bare `INSERT OR REPLACE`, so a control changing value left nothing behind.
+Every such event on this branch has been unreconstructable after the fact.
+
+Control writes now record the old value, the new value and the calling frame:
+
+```python
+AUDITED={'master','main_enabled','reversal_enabled','ef_enabled','ev_settings',
+         'stake_settings','next_stake','halt','sx_enabled','tp','sl','rules'}
+```
+
+A write of the same value records nothing, so the trace is changes only. Next
+time a flag moves on its own, the diagnostics row names the code path that did
+it. This is the instrument the Tokyo fault has needed for two days.
+
+Ruled out while looking, so nobody repeats the search:
+
+- the `/api/controls/ev` handler is **not** the culprit. It reads the existing
+  settings into a fresh dict and only assigns `pad_ticks` when `slippage_ticks`
+  is present in the request, so a mode-only change cannot reset it.
+- the dashboard form is **not** the culprit either. `renderEv()` fills the
+  control from `ev.slippage_ticks` rather than a default, and only while the user
+  has not touched it.
+- `pad_ticks()` falls back to the CLI default of 1 when the key is *absent* — so
+  a partial or defaulted write does land on exactly 1, which is what makes the
+  observation suspicious. But the key was present with value 1, so this was a
+  stored value, not a read-time fallback.
+
+Also fixed, minor: the slippage control offered 0-3 while the endpoint accepts
+0-5, so two valid settings were unreachable from the dashboard.
+
+## Do not assume pad 0
+
+The user's 03:25 decision was pad 0. It never applied — the write was refused by
+a guard. The engine has been running at **pad 1** since roughly 03:41, and at
+pad 2 before that. Any comparison of fills, rejects or PnL across tonight spans
+three different pad values, and the changeover times are known only to the
+minute. Treat the whole night's execution numbers as three small unpooled
+samples, not one series.

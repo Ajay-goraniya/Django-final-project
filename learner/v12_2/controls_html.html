@@ -19,7 +19,7 @@
 <select id="evMode"><option value="regime">regime · model default 0.15 / 0.25 / 0.25</option><option value="fixed">fixed threshold</option><option value="accuracy">accuracy floors</option></select>
 <label class="small" for="evValue">fixed value</label><input id="evValue" type="number" step="0.01" min="0" max="5" style="width:90px"></div>
 <div class="row" style="margin-top:9px"><label class="small" for="evSlip">slippage allowance</label>
-<select id="evSlip"><option value="0">0 ticks · order priced at the ask</option><option value="1">1 tick</option><option value="2">2 ticks</option><option value="3">3 ticks</option></select>
+<select id="evSlip"><option value="0">0 ticks · order priced at the ask</option><option value="1">1 tick</option><option value="2">2 ticks</option><option value="3">3 ticks</option><option value="4">4 ticks</option><option value="5">5 ticks</option></select>
 <button id="saveEv">Apply</button></div>
 <div class="note">Slippage is how many ticks above the ask the order may pay, and it is the fill-versus-frequency dial. Measured on 206 real fires: 0 ticks lets 100% of signals clear the EV re-check, 1 tick lets 57% clear and 2 ticks 37%, because one tick is a median 2.1% of the ask while the EV bar is 0.15 to 0.25. More padding fills more often and fires less often.</div>
 <div id="evNote" class="small" style="margin-top:9px"></div></section>

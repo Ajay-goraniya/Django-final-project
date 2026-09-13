@@ -275,10 +275,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.3.7')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.3.8')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -313,7 +313,31 @@ class Journal:
         with self.lock,self.c: return self.c.execute(q,args).fetchall()
     def get(self,k,default=None):
         r=self.sql('SELECT v FROM meta WHERE k=?',(k,)); return json.loads(r[0][0]) if r else default
-    def set(self,k,v): self.sql('INSERT OR REPLACE INTO meta VALUES(?,?)',(k,json.dumps(v)))
+    # Controls whose value decides whether, and how, real money moves. Every
+    # write to one is audited below.
+    AUDITED={'master','main_enabled','reversal_enabled','ef_enabled','ev_settings',
+             'stake_settings','next_stake','halt','sx_enabled','tp','sl','rules'}
+    def set(self,k,v):
+        """Set a meta key, recording who changed a control and from what.
+
+        The lane flags have silently reverted twice on the Tokyo engine with no
+        restart and no known cause, and on 09-13 pad_ticks moved from 2 to 1 with
+        nobody admitting to it. A bare INSERT OR REPLACE leaves no trace, so
+        those events are unreconstructable after the fact. Control writes now
+        record old value, new value and the calling frame, which turns "something
+        changed it" into a name.
+        """
+        if k in self.AUDITED:
+            try:
+                old=self.get(k)
+                if old!=v:
+                    import traceback
+                    where=[f'{f.filename.rsplit("/",1)[-1]}:{f.lineno} {f.name}'
+                           for f in traceback.extract_stack()[:-1][-4:]]
+                    self.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),0,json.dumps(dict(
+                        reason='control_write',key=k,old=old,new=v,stack=where))))
+            except Exception: pass
+        self.sql('INSERT OR REPLACE INTO meta VALUES(?,?)',(k,json.dumps(v)))
     def reserve(self,ep,d,token,condition,kind='EF'):
         with self.lock,self.c:
             return self.c.execute('''INSERT OR IGNORE INTO signals(epoch,ts,side,token,condition_id,decision,status,kind)

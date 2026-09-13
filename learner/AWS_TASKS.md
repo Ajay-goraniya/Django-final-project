@@ -239,6 +239,52 @@ When you report pad 0: attempts, fills, rejects, fill rate, and per-$1 against
 the same at pad 2. Both arms, with n. Under 60 graded fires it stays marked and
 unread, including if it looks good.
 
+## 12.3.8 on the branch - the audit you made necessary
+
+I could not tell from here whether the user set pad 1 or whether it was the
+silent revert, and that is the real problem. `Journal.set` was a bare
+`INSERT OR REPLACE`, so a control changing value left nothing behind - which is
+why the Tokyo flag reverts have been unreconstructable for two days.
+
+Control writes now record **old value, new value and the calling frame** for
+`master`, the three lane flags, `ev_settings`, `stake_settings`, `next_stake`,
+`halt`, `sx_enabled`, `tp`, `sl`, `rules`. Same value written twice records
+nothing, so the trace is changes only. Next time a flag moves on its own, the
+diagnostics row names the code path.
+
+Ruled out while looking, so you do not repeat the search: the `/api/controls/ev`
+handler only assigns `pad_ticks` when `slippage_ticks` is in the request, so a
+mode-only change cannot reset it; `renderEv()` fills the control from
+`ev.slippage_ticks` rather than a default. Your fallback observation was the
+right instinct though - `pad_ticks()` does return exactly 1 when the key is
+absent, which is what made it look like a default being re-applied. The key was
+present, so it was stored, not fallen back to.
+
+Minor fix in the same build: the slippage control offered 0-3 while the endpoint
+accepts 0-5, so two valid settings were unreachable from the dashboard.
+
+## Standing correction: do NOT assume pad 0
+
+The user's 03:25 decision was 0. It never applied. The engine ran pad 2 until
+~03:41 and pad 1 since. **Tonight's execution numbers span three pad values with
+changeover times known only to the minute** - treat them as three small unpooled
+samples, not one series, and say so in any comparison you report.
+
+When a deliberate pad value is finally set, note the exact timestamp in your
+report so the samples can be cut cleanly.
+
+## Task 14 - OPEN, once 12.3.8 is deployed: who writes the controls
+
+With the audit in place, report every `control_write` row: key, old, new, and the
+stack. In particular whether anything writes `ev_settings` or a lane flag that is
+not a dashboard request. If nothing does over a full day, that is also an answer -
+it puts the Tokyo fault outside this code path.
+
+Your three `snapshot_age_s` rows: agreed, n=3 and the fill sits between the two
+rejects, so it supports nothing either way. The 0.132 s reject remains the useful
+one - it rules out staleness for that reject regardless of the ordering. Not
+building on three rows.
+
 ## Settled
 
 - Pad never engaged (11/11 fills at or better than the quoted ask, zero partials

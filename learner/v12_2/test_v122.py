@@ -615,6 +615,53 @@ class SnapshotAgeTracking(unittest.TestCase):
                          'the snapshot-age refusal must stay removed')
 
 
+class ControlWritesAreAudited(unittest.TestCase):
+    """Every change to a money-moving control leaves a named trace.
+
+    The lane flags reverted silently twice on the Tokyo engine with no restart
+    and no known cause, and on 09-13 pad_ticks moved from 2 to 1 with nobody
+    admitting to it. A bare INSERT OR REPLACE leaves nothing to reconstruct
+    from, so control writes now record old, new and the calling frame.
+    """
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.db = C.Journal(str(pathlib.Path(self.temp.name)/'a.db'), 'PAPER', 'h')
+
+    def tearDown(self):
+        self.db.c.close(); self.temp.cleanup()
+
+    def rows(self):
+        return [json.loads(r[2]) for r in self.db.sql('SELECT * FROM diagnostics')
+                if 'control_write' in (r[2] or '')]
+
+    def test_a_control_change_is_recorded_with_old_and_new(self):
+        self.db.set('ev_settings', {'mode':'regime','pad_ticks':2})
+        self.db.set('ev_settings', {'mode':'regime','pad_ticks':1})
+        r = [x for x in self.rows() if x['key']=='ev_settings']
+        self.assertEqual(len(r), 2)
+        self.assertEqual(r[1]['old'], {'mode':'regime','pad_ticks':2})
+        self.assertEqual(r[1]['new'], {'mode':'regime','pad_ticks':1})
+
+    def test_the_calling_frame_is_recorded(self):
+        self.db.set('master', True)
+        r = [x for x in self.rows() if x['key']=='master']
+        self.assertTrue(r and r[0]['stack'], 'a control write must name where it came from')
+
+    def test_writing_the_same_value_is_not_noise(self):
+        self.db.set('ef_enabled', True)
+        before = len(self.rows())
+        self.db.set('ef_enabled', True)
+        self.assertEqual(len(self.rows()), before, 'only actual changes are recorded')
+
+    def test_lane_flags_are_audited(self):
+        for k in ('master','main_enabled','reversal_enabled','ef_enabled'):
+            self.assertIn(k, C.Journal.AUDITED)
+
+    def test_ordinary_keys_are_not_audited(self):
+        self.db.set('some_scratch_value', 7)
+        self.assertFalse([x for x in self.rows() if x['key']=='some_scratch_value'])
+
+
 class QuoteBlockReasons(unittest.TestCase):
     """Why quote() declined, counted separately.
 
