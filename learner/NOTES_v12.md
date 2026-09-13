@@ -2671,6 +2671,34 @@ nothing was enabled. Equity 15.02, wallet 15.02, settled 442, nothing open, ladd
 Engines up 139 minutes since the restart, 13 python processes. Feeds clean - the watcher has run three
 consecutive 30-minute windows with no staleness or port alerts.
 
+## 01:20 UTC (Sun 09-13) - both windows now clearly negative, and the four-hour sequence is the record
+
+Re-arm reading, Predict.fun v10 paper: last-20 -0.193 per $1 (cum -3.855), last-40 -0.125 per $1 (cum -4.982),
+488 graded. Both windows negative together and the last-20 is its worst reading of this sequence.
+
+The four hourly readings now stand at +0.155, -0.102, -0.001, -0.193. That is the whole case against the old
+criterion in one night: a rule that arms on two consecutive positives would have started arming at 22:20 and
+been carried straight into the worst four-hour stretch of the window. Worth stating plainly because the rule
+was originally defended on the grounds that two readings filter noise better than one - these four hours show
+the noise is larger than the signal the rule was reading, so consecutive sampling does not help.
+
+A replacement, when it is written, needs a dead zone wide enough that a two-fire hour cannot cross it, and it
+should be sized against this sequence (0.35 per $1 of range across four hours on the 20-window) rather than
+picked to fit a number that looks good on the day. Not writing it tonight - that is Sunday-review work, and it
+gets written down before it is used.
+
+Lane state unchanged: master OFF ("safe startup"), MAIN/REVERSAL/EF all manual_enabled False, re-asserted,
+nothing was enabled. Equity 15.02, wallet 15.02, settled 442, nothing open, ladder $1 OK. No real fill since
+19:59:37 yesterday - six hours flat, which is what a correctly held pause looks like.
+
+Engines up 198 minutes, feeds clean, watcher quiet across six consecutive 30-minute windows.
+
+Separately: the user installed Claude Code on their own AWS box (Mumbai, Ubuntu, 2.1.270) and connected Remote
+Control. That gives them phone and browser access to a Claude running on that machine. It does NOT make that
+session addressable from this one - ListAgents shows no reachable agents, checked twice. I had told the user
+it probably would appear and it did not; corrected. Git stays the only channel between sessions, which is the
+same conclusion CLAUDE.md already records for H1.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
