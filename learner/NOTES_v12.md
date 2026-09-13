@@ -3899,6 +3899,67 @@ rule exists to prevent. It has not fired and is not close to firing (-0.225). **
 it ever does** - with a window measured in trades that do not overlap, or a fire count rather than a clock.
 Flagged to the user; the rule is theirs.
 
+## 20:45 UTC (Sun 09-13) - weekend vs weekday, checked. The premise is backwards, and the real Monday risk is elsewhere.
+
+User: *"be aware it's weekend market and any changes should be adaptive because Tomorrow is Monday, and you
+have already analyzed weekday market 4 days all 4 in profit, remember all factors and be responsible."*
+
+**Checked against the fire records rather than accepted.** Buckets are the calendar, so they were fixed
+before looking. Whole grid, every day with data, nothing omitted.
+
+| date | day | v10 paper | build11 twin | build10 |
+|---|---|---|---|---|
+| 09-08 | Tue | +0.282 (46) | -- | +0.005 (110) |
+| 09-09 | Wed | +0.078 (136) | **-0.024** (57) | +0.047 (388) |
+| 09-10 | Thu | +0.127 (159) | +0.039 (488) | +0.061 (354) |
+| 09-11 | Fri | **+0.000** (170) | **-0.018** (457) | +0.026 (322) |
+| 09-12 | Sat | +0.124 (148) | +0.044 (274) | +0.132 (338) |
+| 09-13 | Sun | +0.098 (95) | +0.121 (402) | +0.177 (288) |
+
+| run | weekday Mon-Fri | weekend Sat-Sun |
+|---|---|---|
+| v10 paper | +0.086 (511) | **+0.114** (243) |
+| build11 twin | +0.009 (1002) | **+0.090** (676) |
+| build10 | +0.042 (1174) | **+0.153** (626) |
+
+**The weekend has been BETTER than the weekday in all three runs, 3 of 3, same direction.** The user's
+recollection is partly right on its own terms - the four weekdays were positive for v10 (+0.282, +0.078,
++0.127, **+0.000** - Friday is exactly flat, not profit) and for build10 (all four positive but tiny,
++0.005 to +0.061). **But build11 was NEGATIVE on two of its three weekdays.** And in every run the weekend
+did better than the weekdays did.
+
+**So "weekdays were good, Monday should be better" is not supported, and the opposite reads slightly
+stronger on this sample.**
+
+### But do not read that either. The big sample says flat.
+
+This is **six days and ONE weekend** - one draw of "weekend", not a repeated pattern. The 252-day,
+72,331-candle study already settled the direction question and is recorded above at 15:08 09-10:
+**Mon-Fri t20 58.3% vs Sat-Sun 58.4% - flat**, and the earlier "weekends are more predictable" claim was
+**WITHDRAWN** on that bigger sample. The weekend cell of the refuted 11.2 test also passed every check in
+`verify.py` and was **explicitly not shipped**, for the same reason.
+
+**Conclusion: there is no weekday/weekend direction effect to act on, in either direction. Nothing changes
+for Monday on the strength of a day-of-week bucket, and a switch would be a regime gate, which is banned.**
+
+### The real Monday risk, which IS supported, and it is not about direction
+
+**The weekend tape is structurally thinner: range 10.9 bps vs 17.7 bps weekday, 2.96 crossings vs 4.10** -
+that survived the 252-day recheck when the predictability claims did not. **Monday's tape will be ~60%
+wider and faster.** Two consequences, both already measured on this branch:
+
+1. **Task 73, today: rejects price against a book twice as old** - 174.8 ms median against 86.6 ms for
+   fills, p ~= 0.0003. **A faster tape moves the book more between read and submit.** Expect MORE rejects
+   on Monday, not fewer, and that is an execution cost rather than a signal problem.
+2. **Task 13's one bad cell is the busiest tape.** Range quartile Q4 (> 76.4 bps) came in at **-0.233 on 24
+   fires** while Q1-Q3 were +0.537 / +0.579 / +0.367. **n=24 is under the 60 bar and I am not reading it as
+   a result** - but it is the only negative cell in that grid, it is the fast-tape cell, and Monday brings
+   more of it. **Marked to watch, not acted on.**
+
+**So the responsible Monday position is: expect the execution to get worse, not the signal**, and watch
+reject rate and book age at submit rather than day-of-week PnL. Nothing to change tonight; the engine's
+settings were last exercised on thin weekend candles and Monday is the first test of them on a wide tape.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
