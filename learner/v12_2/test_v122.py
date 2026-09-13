@@ -615,6 +615,102 @@ class SnapshotAgeTracking(unittest.TestCase):
                          'the snapshot-age refusal must stay removed')
 
 
+class BookDepthIsCheckedBeforeSending(unittest.TestCase):
+    """Do not POST an order the ladder cannot fill.
+
+    order_plan only required that SOME ask existed at or below the cap, never
+    that there was enough of it - so the engine signed and sent fill-or-kill
+    orders against books that demonstrably could not fill them, and the venue
+    answered "no orders found to match". That is the reject signature, and it is
+    why zero of 28 attempts partially filled. Build 36 walked the ladder locally
+    and refused before the network.
+    """
+    terms = (0.01, 1.0, 0.0, 1.0)
+    d = dict(p=0.99, threshold=-1.0)
+
+    def plan(self, asks, stake, **kw):
+        q = dict(ask=asks[0][0], asks=asks, age_ms=0, seq=1)
+        return C.order_plan(q, self.terms, stake, self.d, **kw)
+
+    def test_a_partial_filling_venue_is_not_depth_checked(self):
+        """The check reflects the venue, not a global policy.
+
+        Polymarket's FAK is all-or-nothing - 28 live attempts, zero partials -
+        so a book that cannot absorb the stake returns nothing and the order is
+        a wasted round trip. The PaperBroker fills whatever is there, which is
+        itself a paper-vs-live divergence: it books trades the live venue would
+        have refused outright.
+        """
+        self.plan([(0.50, 2.0)], 3.0, pad=0, require_depth=False)
+        self.assertFalse(C.PaperBroker.all_or_nothing)
+
+    def test_thin_book_is_refused_locally(self):
+        # $3 wanted, one level holding 2 shares at 0.50 = $1.00 of depth
+        with self.assertRaises(ValueError) as e:
+            self.plan([(0.50, 2.0)], 3.0, pad=0)
+        self.assertIn('book too thin', str(e.exception))
+
+    def test_deep_enough_book_passes(self):
+        self.plan([(0.50, 100.0)], 3.0, pad=0)   # $50 of depth
+
+    def test_depth_is_summed_across_levels_within_the_cap(self):
+        # no single level covers $3, but two inside the cap together do
+        self.plan([(0.50, 4.0), (0.51, 4.0)], 3.0, pad=1)
+
+    def test_depth_beyond_the_cap_does_not_count(self):
+        with self.assertRaises(ValueError) as e:
+            self.plan([(0.50, 1.0), (0.90, 1000.0)], 3.0, pad=0)
+        self.assertIn('book too thin', str(e.exception))
+
+
+class SlippageBands(unittest.TestCase):
+    """Build 36's policy: headroom scales inversely with price.
+
+    A flat tick pad collapses in relative terms exactly where build 36 was most
+    generous - at ask 0.28 one tick is 3.6% against build 36's ~50%. The bands
+    are build 36's stated price-expansion intent; its bps figures were Predict's
+    isMinAmountOut encoding and do not port to a venue that takes a price cap.
+    """
+    terms = (0.01, 1.0, 0.0, 1.0)
+    d = dict(p=0.99, threshold=-1.0)
+
+    def test_bands_scale_inversely_with_price(self):
+        self.assertAlmostEqual(C.slippage_band(0.06), 1.00)
+        self.assertAlmostEqual(C.slippage_band(0.15), 0.70)
+        self.assertAlmostEqual(C.slippage_band(0.25), 0.50)
+        self.assertAlmostEqual(C.slippage_band(0.35), 0.20)
+        self.assertAlmostEqual(C.slippage_band(0.45), 0.10)
+        self.assertAlmostEqual(C.slippage_band(0.90), 0.10)
+
+    def test_band_edges_are_half_open_at_the_top(self):
+        self.assertAlmostEqual(C.slippage_band(0.10), 0.70, msg='0.10 enters the 0.10-0.20 band')
+        self.assertAlmostEqual(C.slippage_band(0.40), 0.10)
+
+    def test_invalid_price_gets_the_widest_band(self):
+        for bad in (0.0, -1.0, float('nan'), None):
+            self.assertAlmostEqual(C.slippage_band(bad), 1.00)
+
+    def test_band_mode_gives_more_headroom_than_the_tick_dial(self):
+        q = dict(ask=0.28, asks=[(0.28, 1000.0)], age_ms=0, seq=1)
+        ticks = C.order_plan(q, self.terms, 3.0, self.d, pad=2)['cap']
+        band = C.order_plan(q, self.terms, 3.0, self.d, band=True)['cap']
+        self.assertGreater(band, ticks)
+        self.assertAlmostEqual(band, 0.42, places=6)   # 0.28 * 1.5, on the grid
+
+    def test_band_mode_judges_ev_at_the_ask_not_the_ceiling(self):
+        """Widening survivability must not refuse more trades.
+
+        Judging EV at the cap is what made a wider allowance refuse MORE - the
+        opposite of what an execution parameter should do, and why build 36 kept
+        the two apart.
+        """
+        q = dict(ask=0.50, asks=[(0.50, 1000.0)], age_ms=0, seq=1)
+        d = dict(p=0.56, threshold=0.10)          # clears at 0.50, fails at 0.55
+        C.order_plan(q, self.terms, 3.0, d, band=True)
+        with self.assertRaises(ValueError):
+            C.order_plan(q, self.terms, 3.0, d, pad=5)
+
+
 class RefusedCandleIsRearmed(unittest.TestCase):
     """A refused attempt must not consume the candle.
 
@@ -852,7 +948,9 @@ class TickGridRounding(unittest.TestCase):
     d = dict(p=0.99, threshold=-1.0)
 
     def plan(self, ask, pad):
-        q = dict(ask=ask, asks=[(ask, 1000.0)], age_ms=0, seq=1)
+        # depth in SHARES: 50/ask keeps every tick able to absorb the $50 stake,
+        # so this fixture tests rounding rather than the depth check
+        q = dict(ask=ask, asks=[(ask, 50.0/ask + 10)], age_ms=0, seq=1)
         return C.order_plan(q, self.terms, 50.0, self.d, pad=pad)
 
     def test_pad_zero_cap_equals_ask_on_every_tick(self):

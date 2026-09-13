@@ -208,7 +208,36 @@ class BookCache:
                     snapshot_age_s=time.monotonic()-b.get('snapshot',b['arrival']))
 
 
-def order_plan(q,terms,stake,d,pad=1):
+# Build 36's execution-survivability policy, ported as percentages.
+#
+# Build 36 (Predict.fun) set no price ceiling at all: it sent a value-denominated
+# market buy with an isMinAmountOut floor, and the tolerance scaled INVERSELY
+# with price - about 100% headroom on a 6c share, about 10% on a 45c one. v12
+# instead used a flat 0-5 tick pad, which collapses in relative terms exactly
+# where build 36 was most generous: at ask 0.28 one tick is 3.6% against build
+# 36's ~50%.
+#
+# The bands below are build 36's stated PRICE-EXPANSION intent, not its bps
+# figures - those were Predict's isMinAmountOut encoding of this same intent and
+# do not port to a venue where the equivalent encoding is a price cap.
+#
+# Deliberately NOT an eligibility gate. Build 36's own comment: "execution
+# survivability only: no EF eligibility/share-price gate is added here". EV is
+# decided once, on the signal, at the price we expect to pay - see
+# _gate_on_padded_ev in the runner. This only governs how far a fill may walk.
+SLIPPAGE_BANDS=((0.10,1.00),(0.20,0.70),(0.30,0.50),(0.40,0.20))
+SLIPPAGE_FALLBACK=0.10
+
+
+def slippage_band(ask):
+    """Fraction of price a fill may expand by, from build 36's bands."""
+    if not (isinstance(ask,(int,float)) and math.isfinite(ask)) or ask<=0: return SLIPPAGE_BANDS[0][1]
+    for upper,frac in SLIPPAGE_BANDS:
+        if ask<upper: return frac
+    return SLIPPAGE_FALLBACK
+
+
+def order_plan(q,terms,stake,d,pad=1,band=False,require_depth=True):
     tick,minimum,rate,exp=map(float,terms)
     if not all(map(math.isfinite,(tick,minimum,rate,exp,stake,d['p'],d['threshold']))) or not (0<tick<1 and minimum>0 and 0<=rate<1 and exp>=1 and stake>0 and 0<d['p']<1 and pad>=0):
         raise ValueError('invalid order inputs')
@@ -219,13 +248,51 @@ def order_plan(q,terms,stake,d,pad=1):
     # ROUND_CEILING turns that into 29. I shipped exactly that non-fix as 12.3.1
     # after reproducing the "bug" in a scratch script that defined its own D and
     # never imported this one. TickGridRounding guards both mistakes.
-    cap=float(((D(q['ask'])/D(tick)).to_integral_value(rounding=ROUND_CEILING)+pad)*D(tick))
+    if band:
+        # Proportional headroom, snapped up to the tick grid.
+        # Stay in Decimal for the multiply. 0.28*1.5 is 0.42000000000000004 as a
+        # float, which ceils to 0.43 and quietly hands out a free tick - the same
+        # trap that produced a phantom off-by-one bug earlier in this build.
+        raw=D(q['ask'])*(D(1)+D(slippage_band(q['ask'])))
+        cap=float((raw/D(tick)).to_integral_value(rounding=ROUND_CEILING)*D(tick))
+    else:
+        cap=float(((D(q['ask'])/D(tick)).to_integral_value(rounding=ROUND_CEILING)+pad)*D(tick))
     if not 0<cap<1: raise ValueError('price cap outside market')
-    f=rate*(cap*(1-cap))**exp
-    cost=max(cap+f,cap/(1-f/cap))
-    if d['p']/cost-1<d['threshold']: raise ValueError('padded price fails model EV')
+    # EV is judged at the price we EXPECT to pay, not at the ceiling we would
+    # tolerate. Judging it at the cap is what made a wider allowance refuse more
+    # trades - the opposite of what a survivability parameter should do, and the
+    # reason build 36 kept the two apart. In band mode the expected price is the
+    # ask; in tick mode the cap is close enough to the ask to keep the old
+    # behaviour unchanged.
+    _px=q['ask'] if band else cap
+    f=rate*(_px*(1-_px))**exp
+    cost=max(_px+f,_px/(1-f/_px))
+    if d['p']/cost-1<d['threshold']: raise ValueError('price fails model EV')
     levels=[rate*(p*(1-p))**exp/p for p,size in q['asks'] if p<=cap]
     if not levels: raise ValueError('no executable ask at cap')
+    # Can the ladder actually absorb the whole stake at or under the cap?
+    #
+    # Until 12.4.1 this only checked that SOME ask existed at or below the cap,
+    # never that there was enough of it. So the engine signed and POSTed
+    # fill-or-kill orders against books that demonstrably could not fill them,
+    # and the venue answered "no orders found to match" - which is exactly the
+    # reject signature, and exactly why zero of 28 attempts partially filled.
+    #
+    # Build 36 walked the ladder locally and refused before the network, turning
+    # a venue reject into a free local skip. Doing the same here costs nothing:
+    # an order that cannot fill is not an opportunity we are declining.
+    # Only where the venue is all-or-nothing. Polymarket's FAK is: 28 live
+    # attempts produced zero partial fills. The PaperBroker DOES fill partially,
+    # which is itself a paper-vs-live divergence worth measuring - it lets the
+    # paper lane book trades the live venue would have refused outright.
+    if require_depth:
+        _depth=0.
+        for _p,_n in q['asks']:
+            if _p>cap: break
+            _depth+=_p*_n
+            if _depth>=stake: break
+        if _depth+1e-9<stake:
+            raise ValueError(f'book too thin at cap: {_depth:.2f} of {stake:.2f} available')
     ratio=max(levels)
     amount=float((D(stake)/(1+D(ratio))).quantize(D('.01'),rounding=ROUND_DOWN))
     if amount/cap+1e-8<minimum: raise ValueError('below venue minimum; stake not increased')
@@ -280,10 +347,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.4.0')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.4.1')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -543,6 +610,8 @@ class Journal:
 
 
 class PaperBroker:
+    # Fills whatever the ladder holds, so the pre-send depth check does not apply.
+    all_or_nothing=False
     basis='PAPER_DEPTH_FEE_ESTIMATE'
     def __init__(self,books,db=None): self.books=books; self.db=db; self.pending={}
     async def prepare(self,token,plan):
@@ -563,7 +632,9 @@ class PaperBroker:
 
 class Executor:
     def __init__(self,db,books,broker,age=.75,pad=1,budget_s=2.0,post_timeout_s=1.2,attempts=3):
-        self.db=db; self.books=books; self.broker=broker; self.age=age; self.pad=pad
+        self.db=db; self.books=books; self.broker=broker; self.age=age; self.pad=pad; self.band=False
+        # A venue that fills partially does not need the pre-send depth check.
+        self.require_depth=getattr(broker,'all_or_nothing',True)
         # v12.1 hardcoded a 2.0s total budget and a 1.2s post timeout. Both are
         # fine beside the venue and too tight from a distant region: three
         # attempts of sign + round trip do not fit in 2s when one round trip is
@@ -622,7 +693,7 @@ class Executor:
             _tc=getattr(self.books,'tick_changes',{}).get(token)
             timing['since_tick_change_s']=(round(time.monotonic()-_tc['at'],2) if _tc else None)
             timing['last_tick_change']=(_tc.get('new') if _tc else None)
-            try: plan=order_plan(q,_terms,stake,new,self.pad)
+            try: plan=order_plan(q,_terms,stake,new,self.pad,band=self.band,require_depth=self.require_depth)
             except (ValueError,KeyError) as e:
                 self.db.release(ep,'SKIPPED',kind); self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,str(e))); return
             timing['signal_quote']=float(d.get('ask',plan['quote'])) if d.get('ask') is not None else plan['quote']
@@ -639,7 +710,7 @@ class Executor:
             plan['pre_submit_quote']=latest['ask']; plan['signal_quote']=timing['signal_quote']
             t=time.monotonic(); final=reassess(); timing['final_recheck_ms']=1000*(time.monotonic()-t)
             if not final.get('fire') or final.get('side')!=d['side']: self.db.release(ep,'SIGNAL_CHANGED',kind); return
-            try: order_plan(latest,self.books.terms[token],stake,final,self.pad)
+            try: order_plan(latest,self.books.terms[token],stake,final,self.pad,band=self.band,require_depth=self.require_depth)
             except (KeyError,ValueError): self.db.release(ep,'EV_CHANGED',kind); return
             timing['pre_submit_book_age_ms']=latest['age_ms']; timing['fire_to_submit_ms']=1000*(time.monotonic()-fire_start)
             self.db.order(oid,ep,n,plan,timing,kind); start=time.monotonic()

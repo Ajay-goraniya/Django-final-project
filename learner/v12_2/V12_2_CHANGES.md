@@ -959,3 +959,102 @@ The user's list was longer than this. Still open, in their words:
   read into this build. They should be, rather than reinvented.
 
 Recorded here so they are not lost between sessions.
+
+# 12.4.1 — build 36's slippage policy, ported; and the reject cause found
+
+Two sessions read build 36 independently and agreed. The user was right that its
+slippage rules were never applied — and the reason the rejects persisted is
+bigger than the pad.
+
+## Build 36 never padded a price
+
+It sent a **value-denominated market buy with an `isMinAmountOut` floor**, and
+the tolerance scaled **inversely with price**:
+
+| ask | build 36 headroom | v12 pad 1 tick | v12 pad 2 |
+|---|---|---|---|
+| 0.06 | ~100% | 17% | 33% |
+| 0.15 | ~70% | 6.7% | 13% |
+| 0.25 | ~50% | 4.0% | 8.0% |
+| 0.35 | ~20% | 2.9% | 5.7% |
+| 0.45 | ~10% | 2.2% | 4.4% |
+
+A flat tick dial collapses in relative terms exactly where build 36 was most
+generous. Even `pad=5` is below build 36's band across our whole traded range.
+
+Ported as `SLIPPAGE_BANDS`, selectable from Trade Controls as `slippage_mode`
+(`ticks` keeps the old dial, `band` uses this). The **percentages** port; build
+36's bps figures were Predict's `isMinAmountOut` encoding and do not transfer to
+a venue whose equivalent is a price cap.
+
+## EV is judged at the price we expect, not the ceiling we tolerate
+
+Build 36's own comment: *"execution survivability only: no EF eligibility or
+share-price gate is added here"*. v12 re-priced EV **at the cap**, so widening
+the allowance refused *more* trades — the exact opposite of what an execution
+parameter should do. In band mode EV is judged at the ask. Together with
+12.4.0's EV-as-a-gate change, the two concerns are now properly separated: the
+signal decides *whether*, the band decides only *how far a fill may walk*.
+
+## The reject cause: we never checked the book could fill the order
+
+`order_plan` required only that **some** ask existed at or below the cap — never
+that there was **enough** of it. `walk_book` exists and walks depth properly, but
+it is called only by the PaperBroker; the live path never called it.
+
+So the engine signed and POSTed fill-or-kill orders against ladders that
+demonstrably could not fill them, and the venue answered *"no orders found to
+match"*. That is the reject signature, and it explains the thing measured twice
+and never accounted for: **zero partial fills in 28 attempts**. A book with
+partial depth returns nothing to a FAK that wants more than it holds.
+
+`order_plan` now walks the ladder to the cap and refuses locally when the depth
+cannot absorb the stake. An order that cannot fill is not an opportunity being
+declined — it is a wasted round trip converted into a free local skip, which is
+precisely what build 36 did.
+
+## A kill switch with no reset was an outage
+
+`halt` is set by three paths — average slippage over $0.03 across 20 fills, 20
+unit returns summing below −3, and an order-hash mismatch — and until now was
+**cleared by none of them**. No endpoint existed. While set, `allowed()` is False
+for every lane and `/api/controls/apply` refuses to turn master back on. So the
+first time a kill rule fired, the engine stopped permanently and the only
+recovery was editing the database by hand.
+
+`/api/controls/clear-halt` clears it, and requires the caller to echo the exact
+halt reason back, so it cannot be cleared without reading why it fired. Logged as
+`halt_cleared`.
+
+## Quote age is a live control
+
+`--quote-age-ms` was CLI-only, so changing the freshness requirement meant a
+restart — and a restart returns master to OFF. It gates `publish()`, the EV gate
+and the executor simultaneously, which makes it the main lever on "waiting for
+fresh UP and DOWN books" — 20.9% of a session. Now settable 0-2000 ms while
+running.
+
+## Found by the tests, in my own new code
+
+The band cap computed `ask*(1+band)` in float, and `0.28*1.5` is
+0.42000000000000004, which ceils to 0.43 — a free tick, the same trap that
+produced the phantom off-by-one earlier tonight. Fixed by staying in Decimal.
+Worth recording that I walked into it again two hours after retracting it.
+
+## The depth check is scoped to the venue, not global
+
+Two existing tests exercise partial fills, and the depth check initially broke
+them. That was the right failure to get: the check is a statement about **this
+venue**, not a global policy.
+
+Polymarket's FAK is all-or-nothing — 28 live attempts, zero partials — so a book
+that cannot absorb the stake returns nothing, and sending is a wasted round trip.
+The `PaperBroker` fills whatever the ladder holds, so it does not need the check.
+
+`Executor` now reads `broker.all_or_nothing` (False on `PaperBroker`) and passes
+it through as `require_depth`.
+
+Worth stating as a finding in its own right: **the paper lane books trades the
+live venue would refuse outright.** That is a fourth structural advantage paper
+has, on top of no rejection, no slippage and a quote up to ten seconds stale. It
+belongs in any paper-versus-live comparison.

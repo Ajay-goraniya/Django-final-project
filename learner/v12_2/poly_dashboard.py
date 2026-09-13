@@ -249,6 +249,22 @@ class Dashboard:
                 if kind not in ('MAIN','REVERSAL','EF'): raise ValueError('Invalid signal kind')
                 if not isinstance(p.get('manual_enabled'),bool): raise ValueError('Invalid signal toggle')
                 self.db.set({'MAIN':'main_enabled','REVERSAL':'reversal_enabled','EF':'ef_enabled'}[kind],p['manual_enabled'])
+            elif path=='/api/controls/clear-halt':
+                # `halt` is set by three kill paths (avg slippage over 20 fills,
+                # returns over 20 settled, order-hash mismatch) and until 12.4.1
+                # was cleared by NONE of them. allowed() is False for every lane
+                # while it is set and /api/controls/apply refuses to turn master
+                # back on, so the first kill stopped the engine permanently and
+                # the only recovery was editing the database by hand. A kill
+                # switch with no reset is an outage, not a safety feature.
+                if not self.db.get('halt'): raise ValueError('No execution kill is active')
+                was=self.db.get('halt')
+                if p.get('acknowledge')!=was:
+                    raise ValueError('Send acknowledge set to the exact halt reason to clear it: '+str(was))
+                self.db.set('halt',None)
+                self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),0,json.dumps(dict(
+                    reason='halt_cleared',was=was))))
+                return dict(ok=True,cleared=was)
             elif path=='/api/controls/ev':
                 # Changes what the engine will pay and how often it fires, so it
                 # is confirmed like every other trading control and bounded here.
@@ -261,6 +277,18 @@ class Dashboard:
                     v=float(p['value'])
                     if not (0<=v<=5) or not math.isfinite(v): raise ValueError('EV threshold must be 0..5')
                     cfg['value']=v
+                if 'quote_age_ms' in p:
+                    # CLI-only until 12.4.1, so loosening or tightening the
+                    # freshness requirement meant a restart - and a restart
+                    # returns master to OFF. It gates publish(), the EV gate and
+                    # the executor at once, so it is the main lever on "waiting
+                    # for fresh UP and DOWN books".
+                    qa=float(p['quote_age_ms'])
+                    if not (0<qa<=2000) or not math.isfinite(qa): raise ValueError('quote age must be 0..2000 ms')
+                    cfg['quote_age_ms']=qa
+                if 'slippage_mode' in p:
+                    if p['slippage_mode'] not in ('ticks','band'): raise ValueError('slippage_mode must be ticks or band')
+                    cfg['slippage_mode']=p['slippage_mode']
                 if 'slippage_ticks' in p:
                     t=int(p['slippage_ticks'])
                     if not 0<=t<=5: raise ValueError('slippage must be 0..5 ticks')
@@ -268,7 +296,10 @@ class Dashboard:
                 if cfg.get('mode')=='fixed' and cfg.get('value') is None:
                     raise ValueError('fixed mode needs a value')
                 self.db.set('ev_settings',cfg)
-                if hasattr(self.r,'executor') and 'pad_ticks' in cfg: self.r.executor.pad=int(cfg['pad_ticks'])
+                if hasattr(self.r,'executor'):
+                    if 'pad_ticks' in cfg: self.r.executor.pad=int(cfg['pad_ticks'])
+                    self.r.executor.band=(cfg.get('slippage_mode')=='band')
+                    if 'quote_age_ms' in cfg: self.r.executor.age=float(cfg['quote_age_ms'])/1000
                 return dict(ok=True,ev=self.ev_controls())
             elif path=='/api/controls/state-x':
                 if not isinstance(p.get('manual_enabled'),bool): raise ValueError('Invalid SX toggle')
@@ -386,7 +417,7 @@ class Dashboard:
                         local_vs_venue=divergence)),trades=self.pnl(),latency=r.executor.latency_stats(),chart_revision=r.revision,error=r.error,dashboard_errors=list(getattr(self,'errors',[])),lane='LIVE' if r.a.live else 'PAPER',model_hash=r.hash,fee_basis=r.broker.basis,halt=self.db.get('halt'))
         self.cache_at=time.monotonic(); return self.cache
     def page(self,name):
-        text=(ROOT/name).read_text().replace('__VERSION__','12 Polymarket').replace('__BUILD__','12.4.0 · v10 PnL · '+('LIVE' if self.r.a.live else 'PAPER')).replace('__UPTIME_SEC__',str(time.time()-self.r.started))
+        text=(ROOT/name).read_text().replace('__VERSION__','12 Polymarket').replace('__BUILD__','12.4.1 · v10 PnL · '+('LIVE' if self.r.a.live else 'PAPER')).replace('__UPTIME_SEC__',str(time.time()-self.r.started))
         return text
     def make_server(self):
         ui=self

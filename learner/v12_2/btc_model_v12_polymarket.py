@@ -174,11 +174,11 @@ class PolyRunner(Runner):
         terms=self.books.terms.get(token)
         if terms is None:
             return dict(d,fire=False,reason='No venue terms for this token yet')
-        q=self.books.quote(token,self.a.quote_age_ms/1000)
+        q=self.books.quote(token,self.quote_age_s())
         if not q: return dict(d,fire=False,reason='No fresh quote to price against')
         pad=self.pad_ticks(); stake=self.db.get('next_stake',1.)
         try:
-            plan=order_plan(q,terms,stake,d,pad)
+            plan=order_plan(q,terms,stake,d,pad,band=self.slippage_mode()=='band')
         except ValueError as e:
             out=dict(d,fire=False,reason=f'EV at padded price: {e}',ev_gate=str(e),
                      ev_gate_pad=pad,ev_gate_ask=q['ask'])
@@ -364,6 +364,16 @@ class PolyRunner(Runner):
             if v is None or not math.isfinite(v): return 'regime',None
             return 'fixed',v
         return mode,None
+    def quote_age_s(self):
+        """Max book age we will price against. Live control, CLI flag seeds it."""
+        v=(self.db.get('ev_settings') or {}).get('quote_age_ms')
+        try: v=float(v)
+        except (TypeError,ValueError): v=float(self.a.quote_age_ms)
+        return max(0.001,min(2.0,v/1000))
+    def slippage_mode(self):
+        """'ticks' (flat 0-5 dial) or 'band' (build 36's proportional policy)."""
+        m=(self.db.get('ev_settings') or {}).get('slippage_mode','ticks')
+        return m if m in ('ticks','band') else 'ticks'
     def pad_ticks(self):
         cfg=self.db.get('ev_settings') or {}
         v=cfg.get('pad_ticks',getattr(self.a,'pad_ticks',1))
