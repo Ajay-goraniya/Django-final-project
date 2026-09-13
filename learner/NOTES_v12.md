@@ -3598,6 +3598,34 @@ move is to decline it.
 Carried unchanged: the asks are 0.69-0.98 because the market has already priced the move, so buying there is
 buying near-certainties at near-certainty prices - thin margin, whole stake on each loss.
 
+## 18:21 UTC (Sun 09-13) - twentieth reading. THE STREAK BROKE, one hour after the best hour of the day.
+
+Re-arm reading, Predict.fun v10 paper: last-20 **-0.078**, last-40 **+0.033**, **564 graded**. Polymarket
+paper last-20 **-0.050**, last-40 **+0.128**. **The fourteen-reading positive streak is over.**
+
+Twenty readings: +0.155, -0.102, -0.001, -0.193, -0.082, +0.004, +0.347, +0.413, +0.412, +0.607, +0.630,
++0.411, +0.295, +0.302, +0.203, +0.170, +0.144, +0.154, +0.248, **-0.078**.
+
+**This is the hour that justifies not having armed.** At 17:22 the last-20 read **+0.248**, the paper lanes
+had just put on their best hour of the day, and fourteen consecutive readings were positive. Sixty minutes
+later the last-20 is **negative** and the three paper lanes gave back **-47, -42 and -32** at $10. **Had the
+pre-committed rule been followed literally it would have armed REVERSAL hours ago and be re-pausing it now** -
+which is the flip-flop its own review condition was written to catch. The criterion was refuted at 22:12 on
+09-11 and this is what refuted looks like from the inside.
+
+Rule 6's symmetric re-pause is moot: **Tokyo's lanes are all OFF and have been all day**, checked per kind
+again - `{'MAIN': False, 'REVERSAL': False, 'EF': False}`, master OFF. Nothing to pause.
+
+**Tokyo: wallet 0.00, equity 0.00, fifth consecutive hour.** `realised -8.04`, `settled 442`, `open 0`,
+uptime 59.9 h, no restart. Five hours of a zero balance with no trading and no movement in realised PnL.
+Still with the user.
+
+All **12** processes verified, no duplicates.
+
+**Polymarket v12 live:** 12.8.1 on the branch and not yet deployed - it records `ask_up`/`ask_dn` on **every**
+lane decision, which is the field that makes the MAIN question answerable at all. Build 12.8.0 live,
+calibration off, kill window fresh at 1 of 20, MAIN armed 3h+ with 0 orders.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
