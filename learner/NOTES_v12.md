@@ -4512,6 +4512,14 @@ broker, same candles, one variable.** Live 12.8.4's Monday per-candle series (AW
 decided-and-filled >= 56.4% on `candles.actual`, both halves, >= 60 graded, `verify.py` by H1. If
 paid-ask rises more than the fill gain is worth, it does not ship. Read hourly; verdict not before 60.
 
+## 23:43 UTC (Sun 09-13) - result #11: a loss. Hand rule -2.4274 on n=11. One full-stake loss from the line again.
+
+`23:43:14 epoch 1789342500 pnl -2.8800 unit -1.0000`. Running sum **-1.4274 -> -2.4274**. Headroom **0.57**;
+the next full-stake loss (-1.0) crosses -3.00. Engine's own window: 9 to arm. Sequence since the clear,
+eleven results: L L W? - AWS's per-result series is the record; net **-2.43 units at $3**. The overnight-off
+recommendation is back to the position it was in at 23:12, for the same arithmetic; the user has it.
+Nothing touched.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
