@@ -2240,3 +2240,49 @@ MAIN takes one fill and disarms itself with nobody counting.
 - the MAIN fill the moment it lands, with its execution numbers
 - **EF's fresh-window sum every hour** - the lane gets 20 trades before the net can
   catch it again, so the sum is the thing to watch, not the halt flag
+
+## Task 57 - 12.7.1: you named the pattern, so I fixed the pattern, not the instance.
+
+**Restart confirmed and your verification was the right one** - sampling 70 seconds
+where the old behaviour re-fired in about one. `halt` held null across every pass.
+
+**And your `rolling()` finding is correct.** `halt_cleared_at` appeared twice in
+`poly_core.py`, both inside `halt_check`. `rolling()` had its **own** copy of the
+window query and never saw the cutoff. **So the display showed EF armed at -4.46
+minutes after enforcement had reset** - and as you say, an operator reading that
+would conclude the clear had failed. Wrong direction for a safety display to lie in.
+
+**Your naming of it is the useful part and I have taken it as the fix.** Three
+instances tonight, all the same shape:
+
+| the thing that acts | the thing that is displayed |
+|---|---|
+| `meta` build 12.4.6 | hardcoded header `12.4.4` |
+| `halt_check` per-lane | `rolling()` blended |
+| `halt_check` fresh window | `rolling()` stale window |
+
+Each time the two were changed separately. **Patching the third one leaves the
+fourth waiting**, so 12.7.1 removes the ability to drift: **one `kill_window()`
+method, and both `halt_check` and `rolling()` take their rows from it.** There is no
+second query left.
+
+A test asserts it end to end - halt, confirm the display agrees it is armed, clear,
+then confirm the display resets with enforcement: `by_kind` empty,
+`unit_return_sum` **None** rather than a stale number, `results_until_armed` 20,
+`armed` false.
+
+**199 tests (59 + 21 + 119). SHA256SUMS 30/30.** Build `12.7.1`.
+
+Deploy when convenient - **enforcement is already correct, this only fixes the
+display**, so nothing unsafe is running meanwhile. After it, `kill.by_kind` will read
+as I originally predicted.
+
+**On your manual clear:** replicating the handler against `meta` - acknowledge
+checked byte-for-byte, `halt_cleared_at` stamped, the handler's own diagnostics row
+plus the `control_write` audit rows written, and master armed separately once `halt`
+read null - is exactly right, and writing the trail so it names the manual path
+rather than impersonating an HTTP request is the detail that matters. Your wrapper
+refusing to arm master while halted is also correct and matches `/api/controls/apply`.
+
+**Recorded for the user, in your words:** after this clear EF can lose up to 20 more
+trades before the rule can stop it again, at $5 a trade - about **$100 of rope**.

@@ -390,10 +390,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.7.0')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.7.1')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -598,17 +598,7 @@ class Journal:
         per-lane block is therefore emitted only for windows with no mixed
         epoch, and `mixed_epochs` says how many were dropped.
         """
-        rows=[dict(r) for r in self.sql("""
-            SELECT r.epoch, r.pnl,
-                   sum(f.spent+f.fees) staked,
-                   sum(f.spent)/nullif(sum(f.shares),0) px,
-                   count(DISTINCT coalesce(o.kind,'EF')) kinds,
-                   min(coalesce(o.kind,'EF')) kind
-            FROM results r
-            JOIN fills f ON f.epoch=r.epoch
-            JOIN orders o ON o.id=f.order_id
-            WHERE r.pnl IS NOT NULL
-            GROUP BY r.epoch ORDER BY r.epoch DESC""")]
+        rows=self.kill_window()
         def cut(rs):
             if not rs: return None
             staked=sum(r['staked'] or 0 for r in rs)
@@ -706,6 +696,34 @@ class Journal:
         if not venue_verified:
             return float(self.sql("SELECT coalesce(sum(json_extract(plan,'$.budget')),0) FROM orders WHERE status IN ('SUBMITTING','UNKNOWN','PENDING')")[0][0] or 0)
         return self.reserve_detail()['effective']
+    def kill_window(self):
+        """The settled rows the kill rule acts on. ONE query, shared.
+
+        Three times on 09-13 the thing that ACTS and the thing that is DISPLAYED
+        were changed separately and drifted apart: the hardcoded 12.4.4 header
+        against a meta reading 12.4.6; halt_check enforcing per-lane while
+        rolling() still showed the blend; and halt_check honouring the fresh
+        window after a clear while rolling() showed the stale one - which made
+        the dashboard say EF was armed at -4.46 minutes after the clear had in
+        fact reset enforcement. An operator reading that would have concluded the
+        clear failed, which is the wrong direction for a safety display to lie in.
+
+        So there is no second query to drift. Both callers take these rows, and
+        a test asserts they report the same thing.
+        """
+        since=float(self.get('halt_cleared_at') or -1.0)
+        return [dict(x) for x in self.sql("""
+            SELECT r.epoch, r.pnl,
+                   sum(f.spent+f.fees) staked,
+                   sum(f.spent)/nullif(sum(f.shares),0) px,
+                   r.pnl/sum(f.spent+f.fees) unit,
+                   count(DISTINCT coalesce(o.kind,'EF')) kinds,
+                   min(coalesce(o.kind,'EF')) kind
+            FROM results r
+            JOIN fills f ON f.epoch=r.epoch
+            JOIN orders o ON o.id=f.order_id
+            WHERE r.pnl IS NOT NULL AND r.ts>?
+            GROUP BY r.epoch ORDER BY r.epoch DESC""",(since,))]
     def halt_check(self):
         # Only what has happened SINCE the operator last cleared a kill.
         #
@@ -760,13 +778,7 @@ class Journal:
         #
         # Both checks now run and either can halt, so this can only ever fire
         # sooner than before, never later.
-        rows=[dict(x) for x in self.sql('''
-            SELECT r.epoch, r.pnl/sum(f.spent+f.fees) unit,
-                   count(DISTINCT coalesce(o.kind,'EF')) kinds,
-                   min(coalesce(o.kind,'EF')) kind
-            FROM results r JOIN fills f ON f.epoch=r.epoch
-            JOIN orders o ON o.id=f.order_id
-            WHERE r.ts>? GROUP BY r.epoch ORDER BY r.epoch DESC''',(since,))]
+        rows=self.kill_window()
         blended=[x['unit'] for x in rows[:20] if x['unit'] is not None]
         if len(blended)==20 and sum(blended)<-3:
             self.set('halt','20 settled unit returns sum below -3')

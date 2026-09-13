@@ -271,6 +271,40 @@ class Tests(unittest.TestCase):
         loss(2100,700.0); self.db.halt_check()
         self.assertTrue(self.db.get('halt'),'20 fresh bad results must halt it again')
 
+    def test_what_the_rule_enforces_is_what_the_screen_shows(self):
+        """Three times on 09-13 the acting code and the displayed code drifted.
+
+        The header said 12.4.4 while meta said 12.4.6. halt_check enforced per
+        lane while rolling() showed the blend. halt_check honoured the fresh
+        window after a clear while rolling() showed the stale one - so the
+        dashboard reported EF armed at -4.46 minutes after enforcement had
+        reset, and an operator would have read that as the clear having failed.
+
+        They share one query now. This asserts they cannot drift again.
+        """
+        f=dict(shares=10.,spent=5.,fees=0.,price=.5,fee_bps=0)
+        def loss(ep,ts):
+            self.db.sql("INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,reason,kind)"
+                        " VALUES(?,?,1,'FILLED','{}',?,0,'','EF')",(f'o{ep}',ep,ts))
+            self.db.fill(f'o{ep}',ep,f't{ep}',f,'paper')
+            self.db.sql('INSERT INTO results(epoch,actual,payout,pnl,ts) VALUES(?,?,?,?,?)',
+                        (ep,'UP',0.,-5.,ts))
+        for i in range(20): loss(1000+i,100.0+i)
+        self.db.halt_check()
+        self.assertTrue(self.db.get('halt'))
+        k=self.db.rolling()['kill']
+        self.assertTrue(k['by_kind']['EF']['armed'],'armed while it really is armed')
+
+        # The clear resets enforcement. The display must reset with it.
+        self.db.set('halt',None); self.db.set('halt_cleared_at',500.0)
+        self.db.halt_check()
+        self.assertIsNone(self.db.get('halt'),'enforcement reset')
+        k=self.db.rolling()['kill']
+        self.assertEqual(k['by_kind'],{},'no lane has results in the fresh window')
+        self.assertIsNone(k['unit_return_sum'],'and no stale sum is displayed')
+        self.assertEqual(k['results_until_armed'],20)
+        self.assertFalse(k['armed'],'the screen must not say armed when it is not')
+
     def test_paper_fill_survives_broker_restart(self):
         async def run():
             ep=epoch();ex=Executor(self.db,self.books,PaperBroker(self.books,self.db))
@@ -394,7 +428,7 @@ class Tests(unittest.TestCase):
     def test_v120_database_migrates_additively(self):
         self.db.reserve(123,decision(),'up','condition')
         self.db.set('build','12.0'); self.db.c.close(); self.db=Journal(self.path,'PAPER','abc')
-        self.assertEqual(self.db.get('build'),'12.7.0')
+        self.assertEqual(self.db.get('build'),'12.7.1')
         self.assertEqual(self.db.sql('SELECT count(*) FROM signals WHERE epoch=123')[0][0],1)
         cols={r[1] for r in self.db.c.execute('PRAGMA table_info(orders)')}
         self.assertTrue({'error_json','timing_json','request_reached','reconcile_count','venue_live'}<=cols)
