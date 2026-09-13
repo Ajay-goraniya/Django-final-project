@@ -1897,3 +1897,50 @@ during the swap before assuming a fault.
 Then report the one MAIN fill when it happens — timestamp, side, quoted ask, cap,
 fill price, shares, stake, attempt, `paid - ask` — and confirm `main_enabled` went
 false by itself. Execution is what the user asked to see.
+
+## Task 48 - "if price is already moving up then why does it still skip it?" Pull the exact row.
+
+User screenshot, 15:51:57 BST (14:51 UTC), build 12.5.2:
+> `MAIN PREDICTION DOWN · P(up) 31.7% · called, not executed (6 attempts) ·`
+> `SKIPPED: MAIN: DOWN strong ~$0 with fair 0.14 held 17s`
+
+**First, what that message is not.** `poly_lanes.py:479` builds that string on the
+**success** path, after `self.main_block = ""`. It is the reason MAIN **fired**, not
+a block. **So the signal worked. The ORDER was skipped, in `order_plan`** — and 92%
+of those raises are the EV check.
+
+**The arithmetic, and it is almost certainly the whole answer.** MAIN called DOWN at
+P(up) 0.317, so P(down) = 0.683. At the 0.15 threshold the most it may pay is
+`0.683 / 1.15 = 0.594`:
+
+| DOWN ask | cost | EV | |
+|---|---|---|---|
+| 0.55 | 0.568 | +0.203 | PASS |
+| **0.58** | 0.598 | **+0.143** | **skip** |
+| 0.70 | 0.715 | -0.045 | skip |
+| 0.80 | 0.811 | -0.158 | skip |
+
+**The DOWN ask has to be at or under ~0.57.** If the move was already visible, DOWN
+was trading dearer than that and the engine correctly declined to overpay. **This
+skip is the system working, not failing** — but I want it proved, not asserted.
+
+### Task 48a - confirm from the journal, read-only
+
+For the candle at **14:51 UTC** (and the two either side):
+1. The `order_plan_refused` diagnostics row from 12.4.9's JSON — the recorded
+   **`error`, `ask`, `p`, `threshold`, `kind`, `side`**. That names the cause exactly.
+2. The **DOWN token's ask** at that moment, and the UP ask alongside.
+3. Whether the refusal was `price fails model EV` or something else entirely.
+
+If it is the EV check at a dear ask, the answer to the user is "the model was right
+and so was the market, and the market was there first". **If it is anything else, I
+have told them the wrong thing and I want to correct it quickly.**
+
+Two side observations, lower priority, do not chase them today:
+- `fair_p_up` is **0.14** while the dashboard's model `P(up)` is **0.317**. Those are
+  two different estimates of the same thing disagreeing by 18 points. Worth knowing
+  which one the EV test actually uses.
+- `pressure_text` reads `DOWN strong ~$0` — `poly_lanes.py:120` puts the estimated
+  size at **$0**, so the pressure behind that call had no money behind it.
+
+Standing: report `kill.by_kind`. 12.6.1 is on the branch to deploy (Task 47).
