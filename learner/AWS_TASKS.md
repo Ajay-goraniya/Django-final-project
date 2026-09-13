@@ -2337,3 +2337,26 @@ have put it to them. Confirm after deploy that `calibration` reads
 
 Standing reports unchanged: first MAIN fill, and EF's kill sum as it rebuilds toward
 20 of 20.
+
+## Task 59 - user asks "working?" - send a fresh live reading now.
+
+My last confirmed reading of the live box is your **16:27:38** deploy report. It is
+now **16:37** and I have nothing newer, so I have told the user exactly that rather
+than imply a current state I cannot see.
+
+**Send now, and then hourly without being asked:**
+- `halt` (must still be null), master, ef_enabled, main_enabled, next_stake, build
+- orders / fills / results, and **how many results have settled since the 16:12:30
+  clear** - that is the 0-of-20 rope counter and the number that matters most
+- `kill.by_kind`
+- the timestamp of the **last order** and the **last fill**, so "quiet" can be told
+  from "stopped" without another round trip
+- MAIN: still 0 orders since 14:24:11?
+
+At 16:27 you reported **61 orders / 26 fills / 26 results** against 60/26/26 before
+the restart - one new order, no new fill. That is unremarkable at the base rate over
+15 minutes and I am not reading it as a problem, but the last-order and last-fill
+timestamps are what let either of us say so without guessing.
+
+Local side, verified here at 16:37: all 12 processes up and all three paper lanes
+advancing.
