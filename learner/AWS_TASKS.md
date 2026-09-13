@@ -341,3 +341,43 @@ control in the panel, and rank by what would actually be changed while running.
 - Feed unusable 20.9% of the session; gap proximity does not separate fills from
   rejects (73% vs 76%).
 - Snapshot-age refusal: **withdrawn, mine.** No threshold helps.
+
+## Task 17 - PRIORITY: the rejects. FOK is not the fix; deploy 12.4.4 is.
+
+User: *"still many rejection, use fok maybe?"*
+
+**Answer given: no.** We already send `order_type='FAK'` (`poly_live.py:38`). Across
+28 live attempts there were **zero partial fills**, so the venue's FAK is already
+behaving all-or-nothing. FOK cannot reject less than that — it can only reject
+the partial fills FAK would have allowed. Flipping the flag is a no-op at best.
+(Build 36's `isFillOrKill: True` is a *different venue*, Predict.fun, and it was
+paired with `isMinAmountOut`, a minimum-shares floor, not a price cap. Not
+portable as a flag.)
+
+**The cause is ours, and it is already fixed on the branch, undeployed.**
+Until 12.4.1 `order_plan` checked only that *some* ask sat at or below the cap,
+never that there was *enough* of it. So the engine signed and POSTed orders
+against books that could not fill them, and the venue answered
+`no orders found to match with FAK order` — **17 of 29 live orders are that one
+reject**. 12.4.1 walks the ladder and refuses locally before the network, exactly
+as build 36 did: a venue reject becomes a free local skip.
+
+Second half: the retry whitelist matched by equality against a `code` key that
+`error_info()` never populates, so the venue's whole sentence never matched and
+**every live order was attempt=1 — the retry apparatus had never once run.**
+12.4.2 matches by substring.
+
+**Do this:**
+1. Deploy 12.4.4 to the box (it is on 12.3.4). You have standing authority — do
+   not wait to be asked. Keep EF on, master on, stake $3, pad_ticks 1.
+2. After deploy, report the reject breakdown by `compact_error` over the next
+   session, split before/after the deploy, with counts. Specifically: how many
+   `no orders found to match` remain, and how many candles now end as a local
+   `book too thin at cap` skip instead of a venue reject.
+3. Report the attempt histogram. If it is still `{1: N}` after 12.4.2, the retry
+   is still dead and I want that immediately.
+4. Watch the re-arm cap from 12.4.0: more than 4 attempts on one candle, or two
+   orders sent for one candle, is a bug — report it at once.
+
+Do **not** flip FAK to FOK. If after 12.4.4 the rejects persist at a similar
+rate, say so and we look again — but change one thing at a time.
