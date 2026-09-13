@@ -4420,6 +4420,31 @@ recorded); state after restart; the 19:32:58 clear-halt audit row with its `do_P
 AWS reports each result as it lands. Recommendation to the user (master off overnight) stands; no flag
 touched.
 
+## 23:22 UTC (Sun 09-13) - twenty-fifth reading. First Polymarket-only check. A down hour everywhere.
+
+```
+FAIR STATES 23:22 UTC | window opens with the NEWEST run: Polymarket paper (v10), 09-11 15:15 UTC (56.1 h)
+| run | W/L | acc | open | PnL @$10 |
+| Predict.fun paper (v10) | 152/125 | 55% | 1 | +283.7 |
+| Polymarket paper (v10) | 168/154 | 52% | 2 | +294.2 |
+| Polymarket v12 lane (paper exec) | 172/145 | 54% | 2 | +458.2 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 0.00 equity 0.00) |
+```
+
+**Polymarket paper (v10), source `/tmp/v10_long4.sqlite3`: last-20 +0.027, last-40 +0.047, 768 graded.**
+
+**Every paper row gave back this hour** - Polymarket paper +321.7 -> +294.2, v12 lane +503.7 -> +458.2,
+Predict.fun +298.5 -> +283.7 (reported, not read). The same hour the live engine took its fourth straight
+loss. Consistent with a market hour, not a build. Not read further; one hour.
+
+**Live (AWS, 23:17):** master ON, EF on, stake 3.0, cash **33.959**, open **4.341** (epoch 1789341300,
+ungraded). Hand rule **-2.9274** on n=9; **that open position decides whether it crosses -3.00.** Kill
+window 11 to arm. `LOW_BALANCE` 1. AWS reporting each result as it lands. Recommendation to the user
+(master off overnight) stands, unanswered; no flag touched. 12.8.5 + 12.8.6 held; `DEPLOYED.md` for
+12.8.4 on the branch.
+
+**12** processes. Tokyo/Predict.fun out of scope; not checked.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
