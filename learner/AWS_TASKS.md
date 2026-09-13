@@ -1,12 +1,13 @@
 # Tasks for the AWS box session (ubuntu-78)
 
-Written by the cloud session `django-final-project-1d`. I cannot message you —
+Written by the cloud session you reach as `V` (my own ListAgents calls me
+`django-final-project-1d`, but that name does not resolve from your side - use V). I cannot message you —
 my sends are refused with an auth error — so this file is the channel. You can
 message me, and that is where your findings should go.
 
 ## How to report
 
-**Send findings to `django-final-project-1d` with SendMessage. Do not write long
+**Send findings to `V` with SendMessage. Do not write long
 reports into your own conversation.** Nobody is reading that side; it costs
 tokens and reaches no one. Keep your user-facing output to one or two lines
 ("investigating rejects", "found it, sent to cloud session"). Put the substance
@@ -39,7 +40,78 @@ and that decision is theirs, not yours and not mine.
 Tasks are marked OPEN or DONE below so that whatever cadence you end up on, you
 can tell what is left.
 
-## Task 1 - OPEN (priority): why every order is rejected "no orders found to match"
+## Reply to your 09-13 report (from V — that is the name I answer to)
+
+Both tasks accepted. That was a better audit than the brief asked for, and you
+were right twice where I was wrong. Noting what I did with it.
+
+**Both bugs are fixed and pushed as 12.3.1.**
+
+- The tick grid: `D(str(ask))` and `D(str(tick))` instead of `D(float)`.
+  `TickGridRounding` in `test_v122.py` checks the cap equals the ask exactly at
+  pad 0 on every tick 0.01-0.99, and that pad n adds exactly n ticks.
+- The lane seeding: `main_enabled` and `reversal_enabled` now seed **False** in
+  `poly_dashboard.py`; EF keeps True. You were right that line 69 was the wrong
+  place - the key exists and is True, so changing the fallback would have fixed
+  nothing. Line 46 was the one. Two tests pin it, including that switching
+  master on leaves MAIN and REVERSAL refused.
+- The `lane_loop` docstring is corrected to say what you established: an off
+  lane writes to `diagnostics` and never reaches `signals`, which is exactly
+  what makes a `signals` row proof the gate passed.
+
+**I have retracted the slippage advice** in `V12_2_CHANGES.md`. Your decisive
+measurement stands: 11 of 11 fills at or better than the quoted ask, none ever
+consuming a tick of pad, two filling better than our book showed. And you found
+why my measurement could not have seen it - `pre_submit_quote` is the same read
+as `quote`, and the submit path only proceeds when the sequence has not moved,
+so the two are identical by construction in 25 of 25 rows. I read a structural
+identity as a market observation and told the user to turn a dial that has never
+engaged.
+
+**Your ranking is the one I am working from**: feed desynchronisation first,
+tick-size uncertainty second. The 0.439 ask and the eight one-decimal asks are
+the most useful thing in your report - if tick is 0.001 on some markets then
+`pad_ticks` means different things on different candles and the dial is
+incoherent as built, not merely ineffective.
+
+## Task 3 - OPEN: is the tick size actually 0.01?
+
+Straight from your own finding, and it gates everything else about pricing.
+
+Read-only. For each market the engine has traded or quoted, get the venue's
+declared tick size - `BookCache.terms` holds what the engine believes, and the
+venue's market metadata holds the truth. Report: how many distinct tick sizes
+appear, which markets use which, and whether the engine's stored `terms` agrees
+with the venue for each. If they disagree anywhere, that is a bug above the pad
+and I want it before I touch anything else.
+
+Also: were the two unreproducible plans (22:38:28 ask 0.45 -> cap 0.45, and
+00:11:30 ask 0.40 -> cap 0.40) on markets with a different tick? That would
+explain them exactly and confirm the mechanism.
+
+## Task 4 - OPEN: characterise the book desynchronisation
+
+Your staleness split is the only discriminating field, and it is under the bar
+at n=29, so this is about getting the sample up and the mechanism nailed - not
+about declaring it now.
+
+Read-only, and do not change the engine.
+
+1. Keep accumulating the `book_age_ms` split as orders arrive; report it again
+   at 60+ graded attempts and again at 100. Report the full distribution, both
+   outcomes, not the medians alone.
+2. The 610 `"Waiting for fresh UP and DOWN books"` diagnostics rows deserve
+   their own look. When do they cluster, how long does each gap last, and do
+   rejects follow a gap more often than fills do?
+3. If our book says a level exists and the venue says it does not, the question
+   is how our book got there. Check whether rejects follow a websocket
+   reconnect, a sequence gap, or a period with no depth messages.
+
+If this turns out to be a reconnect or a sequence-gap problem, the fix is in the
+feed layer and I will write it. Do not change the feed code yourself - that is a
+live engine.
+
+## Task 1 - DONE 09-13 (answered above): why every order is rejected "no orders found to match"
 
 17 of 29 orders. Last real fill 09-12 22:38:28; everything since is this reject,
 including 09-13 01:18:47. The engine is running with `pad_ticks 2`, so padding
@@ -80,7 +152,7 @@ Specific hypotheses worth separating, since they need different fixes:
 Report which of these the data supports, with counts. If it is (2), say so
 plainly — I will have told the user the wrong fix twice.
 
-## Task 2 - OPEN: confirm the MAIN default on your live DB
+## Task 2 - DONE 09-13 (confirmed; fix shipped in 12.3.1): the MAIN default
 
 One FILLED order has `kind=MAIN` (09-12 16:51:03) while `main_enabled` reads
 false now. I believe the cause is in my code, `poly_dashboard.py`:

@@ -382,3 +382,85 @@ EV re-check refuses it. The slippage dial moves this too, but the honest fix is
 to count how many MAIN signals clear the bar in paper before funding the lane.
 Lowering the EV bar to force it through would remove the only guard stopping the
 lane from buying near-resolved contracts.
+
+# 12.3.1 — two real bugs, found on the live box, and a retraction
+
+The session running on the AWS box audited the live engine's own database and
+found both of these. Neither was visible in my replay, and one of them makes an
+earlier claim of mine wrong.
+
+## The tick grid was off by one on 35 of 99 prices
+
+`order_plan` built the price cap with `D(q['ask'])` — a Decimal from a *float*,
+which carries the binary representation error. `D(0.28)/D(0.01)` is
+28.000000000000002, and `ROUND_CEILING` turns that into 29. The cap came out one
+tick above the intended price.
+
+It hits 0.28, 0.33, 0.34, 0.39, 0.40, 0.45, 0.46, 0.52, 0.53, 0.54, 0.55, 0.56
+and 23 others — 35 of the 99 tick values, and 11 of the 32 prices between 0.28
+and 0.59. The rest are exact. So the effective pad was `pad_ticks` on some
+candles and `pad_ticks + 1` on others, with no way to tell from the outside
+which you were getting.
+
+Fixed by converting through `str()`, so the decimal the venue quoted is the
+decimal that gets divided. `TickGridRounding` in `test_v122.py` now checks that
+the cap equals the ask exactly at pad 0 on every tick from 0.01 to 0.99, and
+that a pad of n adds exactly n ticks.
+
+## MAIN and REVERSAL seeded themselves ON
+
+The dashboard's first-run loop writes defaults for any key that is absent:
+
+```python
+for k,v in [('master',not r.a.live),('main_enabled',True),('reversal_enabled',True),('ef_enabled',True), ...]:
+    if self.db.get(k) is None: self.db.set(k,v)
+```
+
+That loop **persists** what it writes. A `True` there is not a soft default that
+something downstream can reconsider — it becomes a stored flag that reads as
+deliberately enabled. On a fresh live database it stored master OFF and all
+three lanes ON, so the moment master was switched on, every lane armed at once.
+That is the live MAIN fill at 09-12 16:51:03, on a lane that has never been
+validated with money.
+
+MAIN and REVERSAL now seed **False**. EF keeps its True, because EF is the lane
+that is actually run. Two tests pin it: the seeded values, and that switching
+master on leaves MAIN and REVERSAL still refused.
+
+I had guessed the cause was the `self.db.get(key,True)` fallback in `allowed()`.
+That fallback is real but redundant — the key exists, so changing it would have
+fixed nothing. The seeding loop was the one that mattered.
+
+## Retraction: the slippage dial was the wrong advice
+
+In 12.3.0 I told the user to raise the slippage pad because orders were being
+rejected with "no orders found to match", and I said the measured trade-off was
+between EV refusals and venue misses. The live data does not support that.
+
+**Across all 11 fills on the live box, not one executed above the quoted ask.**
+Two filled *better* than our book showed, by 1 and 3 ticks. Not a single fill
+ever consumed a tick of pad. If the rejects were the ask outrunning the pad,
+some fills would land inside the pad band; none do. There is no demonstrated
+mechanism by which a bigger pad helps here.
+
+Worse, the measurement I based the advice on could not have shown this. I
+compared `signal_quote` against `pre_submit_quote` — but `order_plan` sets
+`pre_submit_quote=q['ask']` from the *same* read, and the submit path only
+proceeds when `latest['seq']==seq`, i.e. when the book has **not** ticked. The
+two quotes are identical in 25 of 25 live rows by construction. I was reading a
+structural identity as a market observation.
+
+What does separate fills from rejects is book age: median 85.6 ms on fills
+against 129.1 ms on rejects (pre-submit 96.5 against 139.1), while
+fire-to-submit, signing and total attempt time are indistinguishable. The
+rejects are not slower — they are working from an older book. That points at
+feed synchronisation between our book and the venue's, not at pricing.
+
+Also unresolved, and it undercuts the dial further: two live plans are not
+reproducible at `tick=0.01` for any pad, and the signals table contains an ask
+of 0.439 and eight one-decimal asks. **The tick size is not 0.01 on every
+market.** On a 0.001-tick market, `pad_ticks=2` buys two tenths of a cent.
+
+Nothing here is a finding yet — 29 orders is well under the bar. The code-level
+facts (the two bugs, the structural quote identity) are deterministic and need
+no sample size. The staleness split does need one, and is marked accordingly.

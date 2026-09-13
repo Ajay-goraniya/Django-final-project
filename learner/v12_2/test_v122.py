@@ -556,5 +556,39 @@ class LaneCardMatchesBuild36(unittest.TestCase):
         self.assertIn('model EV', c['reason'])
 
 
+class TickGridRounding(unittest.TestCase):
+    """The cap must land on the tick grid the venue quoted.
+
+    Found live on 09-13 by the session on the AWS box: D(float) carries the
+    binary representation error, so D(0.28)/D(0.01) is 28.000...2 and
+    ROUND_CEILING made it 29 - a free extra tick on roughly half of all ask
+    values. At pad 0 the cap must equal the ask exactly, on every tick.
+    """
+    terms = (0.01, 5.0, 0.0, 1.0)
+    d = dict(p=0.99, threshold=-1.0)
+
+    def plan(self, ask, pad):
+        q = dict(ask=ask, asks=[(ask, 1000.0)], age_ms=0, seq=1)
+        return C.order_plan(q, self.terms, 50.0, self.d, pad=pad)
+
+    def test_pad_zero_cap_equals_ask_on_every_tick(self):
+        for i in range(1, 100):
+            ask = round(i / 100, 2)
+            with self.subTest(ask=ask):
+                self.assertAlmostEqual(self.plan(ask, 0)['cap'], ask, places=9)
+
+    def test_pad_adds_exactly_that_many_ticks(self):
+        for ask in (0.28, 0.33, 0.52, 0.55, 0.29, 0.44, 0.63):
+            for pad in (0, 1, 2, 3):
+                with self.subTest(ask=ask, pad=pad):
+                    self.assertAlmostEqual(self.plan(ask, pad)['cap'],
+                                           round(ask + pad * 0.01, 2), places=9)
+
+    def test_the_specific_values_that_were_wrong(self):
+        # 0.28 -> 0.29 and 0.52 -> 0.53 at pad 0 before the fix.
+        self.assertAlmostEqual(self.plan(0.28, 0)['cap'], 0.28, places=9)
+        self.assertAlmostEqual(self.plan(0.52, 0)['cap'], 0.52, places=9)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=1)

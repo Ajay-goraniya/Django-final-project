@@ -166,7 +166,12 @@ def order_plan(q,terms,stake,d,pad=1):
     tick,minimum,rate,exp=map(float,terms)
     if not all(map(math.isfinite,(tick,minimum,rate,exp,stake,d['p'],d['threshold']))) or not (0<tick<1 and minimum>0 and 0<=rate<1 and exp>=1 and stake>0 and 0<d['p']<1 and pad>=0):
         raise ValueError('invalid order inputs')
-    cap=float(((D(q['ask'])/D(tick)).to_integral_value(rounding=ROUND_CEILING)+pad)*D(tick))
+    # D(float) keeps the binary error: D(0.28)/D(0.01) is 28.000...2, which
+    # ROUND_CEILING turns into 29 - a free extra tick on roughly half of all
+    # ask values. Go through str() so the decimal the venue quoted is the
+    # decimal we divide.
+    dtick=D(str(tick))
+    cap=float(((D(str(q['ask']))/dtick).to_integral_value(rounding=ROUND_CEILING)+pad)*dtick)
     if not 0<cap<1: raise ValueError('price cap outside market')
     f=rate*(cap*(1-cap))**exp
     cost=max(cap+f,cap/(1-f/cap))
@@ -222,10 +227,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.3.0')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.3.1')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):

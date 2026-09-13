@@ -43,7 +43,14 @@ class Dashboard:
         self.password=os.environ.get('DASHBOARD_PASSWORD','')
         if r.a.host not in ('127.0.0.1','localhost','::1') and len(self.password)<12:
             raise ValueError('Set DASHBOARD_PASSWORD (12+ characters) before exposing the dashboard')
-        for k,v in [('master',not r.a.live),('main_enabled',True),('reversal_enabled',True),('ef_enabled',True),('stake_settings',DEFAULT_STAKE),('rules',[]),('sx_enabled',False),('tp',0),('sl',0)]:
+        # MAIN and REVERSAL seed OFF. This loop PERSISTS what it writes, so a
+        # True here is not a soft default that a later check can override - it
+        # becomes a stored flag that reads as deliberately enabled. Seeding all
+        # three True meant that switching master on armed every lane at once,
+        # which put a live MAIN order on the book on 09-12 16:51 on a lane that
+        # has never been validated with money. EF is the lane that is run, so it
+        # keeps its True; the other two are opt-in from Trade Controls.
+        for k,v in [('master',not r.a.live),('main_enabled',False),('reversal_enabled',False),('ef_enabled',True),('stake_settings',DEFAULT_STAKE),('rules',[]),('sx_enabled',False),('tp',0),('sl',0)]:
             if self.db.get(k) is None: self.db.set(k,v)
     def day(self):
         now=dt.datetime.now(LONDON); start=now.replace(hour=12,minute=0,second=0,microsecond=0)
@@ -379,7 +386,7 @@ class Dashboard:
                         local_vs_venue=divergence)),trades=self.pnl(),latency=r.executor.latency_stats(),chart_revision=r.revision,error=r.error,dashboard_errors=list(getattr(self,'errors',[])),lane='LIVE' if r.a.live else 'PAPER',model_hash=r.hash,fee_basis=r.broker.basis,halt=self.db.get('halt'))
         self.cache_at=time.monotonic(); return self.cache
     def page(self,name):
-        text=(ROOT/name).read_text().replace('__VERSION__','12 Polymarket').replace('__BUILD__','12.3.0 · v10 PnL · '+('LIVE' if self.r.a.live else 'PAPER')).replace('__UPTIME_SEC__',str(time.time()-self.r.started))
+        text=(ROOT/name).read_text().replace('__VERSION__','12 Polymarket').replace('__BUILD__','12.3.1 · v10 PnL · '+('LIVE' if self.r.a.live else 'PAPER')).replace('__UPTIME_SEC__',str(time.time()-self.r.started))
         return text
     def make_server(self):
         ui=self

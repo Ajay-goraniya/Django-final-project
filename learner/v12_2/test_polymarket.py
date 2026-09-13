@@ -207,7 +207,7 @@ class Tests(unittest.TestCase):
     def test_v120_database_migrates_additively(self):
         self.db.reserve(123,decision(),'up','condition')
         self.db.set('build','12.0'); self.db.c.close(); self.db=Journal(self.path,'PAPER','abc')
-        self.assertEqual(self.db.get('build'),'12.3.0')
+        self.assertEqual(self.db.get('build'),'12.3.1')
         self.assertEqual(self.db.sql('SELECT count(*) FROM signals WHERE epoch=123')[0][0],1)
         cols={r[1] for r in self.db.c.execute('PRAGMA table_info(orders)')}
         self.assertTrue({'error_json','timing_json','request_reached','reconcile_count','venue_live'}<=cols)
@@ -271,6 +271,24 @@ class DashboardTests(unittest.TestCase):
         a=SimpleNamespace(model=str(ROOT/'model_v10.json'),db=str(pathlib.Path(self.temp.name)/'ui.db'),live=False,host='127.0.0.1',port=0,capital=50,quote_age_ms=750,pad_ticks=1,ev=None)
         self.r=PolyRunner(a);self.r.cash=50;self.r.cash_at=time.monotonic();self.ui=self.r.ui
     def tearDown(self):self.r.db.c.close();self.r.process_lock.close();self.temp.cleanup()
+    def test_unvalidated_lanes_seed_off(self):
+        """MAIN and REVERSAL must not be armed by switching master on.
+
+        The seeding loop PERSISTS what it writes, so a True there is a stored
+        flag that reads as deliberately enabled, not a soft default. Seeding all
+        three True is what put a live MAIN order on the book on 09-12 16:51 on a
+        lane that has never been validated with money.
+        """
+        self.assertIs(self.r.db.get('main_enabled'),False)
+        self.assertIs(self.r.db.get('reversal_enabled'),False)
+        self.assertIs(self.r.db.get('ef_enabled'),True)
+
+    def test_master_on_does_not_arm_main_or_reversal(self):
+        self.ui.apply('/api/controls/apply',dict(confirmed=True,system={'manual_enabled':True}))
+        self.assertTrue(self.ui.allowed('EF'))
+        self.assertFalse(self.ui.allowed('MAIN'))
+        self.assertFalse(self.ui.allowed('REVERSAL'))
+
     def test_original_dashboard_has_old_panels(self):
         page=self.ui.page('dashboard_html.html')
         for name in ['id="lwchart"','id="history"','id="pnlCanvas"','Trade Controls','sideTiles']: self.assertIn(name,page)

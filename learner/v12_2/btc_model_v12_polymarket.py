@@ -170,9 +170,15 @@ class PolyRunner(Runner):
 
         Each lane is gated by its own Trade Controls toggle through the same
         allowed() check EF uses, so the master switch and the per-kind switch
-        behave identically for all three. A lane that is switched off still
-        evaluates and is still recorded; only the order is suppressed, which is
-        how the live build separates signal from permission."""
+        behave identically for all three.
+
+        A lane that is switched off still EVALUATES, and its decision is written
+        to `diagnostics` below - but the allowed() check returns before anything
+        reaches `signals`. So a row in `signals` for a kind is proof that kind's
+        permission gate passed at that moment, which is what makes the table
+        usable as an audit trail. (This docstring previously claimed an off lane
+        was still recorded in signals; it is not, and the session on the AWS box
+        caught that on 09-13 while using signals rows as exactly that proof.)"""
         now=time.time()
         bad=self.health.stale(('spot','depth'))
         if bad or not self.current_candle: return
