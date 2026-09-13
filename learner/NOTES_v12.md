@@ -3829,6 +3829,76 @@ itself on funding after one more trade unless that trade wins.** Told to the use
 
 Kill window **1 of 20**, not armed. 80 orders / 38 fills / 36 results. 12.8.5 still held.
 
+## 20:36 UTC (Sun 09-13) - "verify the drawdown market". Verified, and it CORRECTS something I told the user.
+
+User: *"but that drawdown market needs to be verified because it's not good observe and analyse
+everything"*. Four runs with graded PnL and timestamps, last 24 h, hourly per $1. **Whole grid reported;
+nothing omitted, no cell selected.**
+
+### 1. The market is NOT currently bad. Nothing is bleeding.
+
+Pooled, last 6 hours against the 18 before, per $1:
+
+| run | last 6 h | n | prior 18 h | n |
+|---|---|---|---|---|
+| v10 paper | **+0.048** | 38 | +0.038 | 79 |
+| v12 paper exec | **-0.008** | 41 | +0.137 | 73 |
+| build11 twin | **+0.123** | 129 | +0.126 | 303 |
+| build10 | **+0.061** | 101 | +0.216 | 222 |
+
+**No run is losing over the last six hours.** "The market has turned bad" is **not supported**.
+
+### 2. But the v10 lineage - what the live engine runs - is indistinguishable from zero
+
+Halves check on those same six hours:
+
+| run | pooled | first half | second half | |
+|---|---|---|---|---|
+| v10 paper | +0.048 | **+0.379** (15) | **-0.167** (23) | **SIGN FLIPS** |
+| v12 paper exec | -0.008 | +0.297 (15) | -0.184 (26) | **SIGN FLIPS** |
+| build11 twin | +0.123 | +0.100 (55) | +0.139 (74) | consistent |
+| build10 | +0.061 | +0.171 (36) | +0.000 (65) | consistent |
+
+**The v10 lineage fails its own halves check: the +0.048 is noise around zero, not a small positive.**
+build11 and build10 hold their sign across both halves on 129 and 101 trades.
+
+**So the honest statement is: the underlying is tradeable right now, and the lane that is live is the one
+not earning on it.** Stated with its confound - build10/11 are a different model AND a different venue's
+prices, and they fire 3-4x more often, so this is **not** evidence that swapping would work. It is
+evidence against "bad market".
+
+### 3. CORRECTION: two of the runs I cited to the user as independent are r = +0.916
+
+| pair | r | sign-agree |
+|---|---|---|
+| v10 paper vs v12 paper exec | **+0.916** | **22/24** |
+| v10 paper vs build11 twin | **-0.012** | 13/22 |
+| v10 paper vs build10 | +0.415 | 16/24 |
+| v12 paper exec vs build11 | -0.041 | 14/22 |
+| v12 paper exec vs build10 | +0.307 | 16/24 |
+| build11 vs build10 | +0.303 | 14/22 |
+
+**When I told the user "two paper lanes sharing no code both fell", I counted one signal twice.** They are
+the same signal at r=0.92. **That leg of the argument is weaker than I presented it.**
+
+**What survives, and it was always the stronger leg:** MAIN paid **+0.0000 over the ask** and lost anyway,
+and the arithmetic - band mode worth **0.026 per $1** against a **0.578** swing, **4.5%**, matching AWS's
+independent 6% by dollars. **The conclusion stands on the arithmetic; the "all models fell" support does
+not, and I have told the user so.** At 18:00 all four were indeed negative - but build11 at -0.037 was
+flat, not a drawdown, so even that hour is weaker than "every model".
+
+### 4. My own re-arm rule is methodologically broken
+
+v10 paper fires **4.9 per hour**, so a **last-20 spans 4.1 hours** and **consecutive hourly readings share
+~15 of the same 20 trades**. Rule 1's *"two consecutive hourly checks positive"* is therefore **close to
+one observation, not two** - the same over-counting `paired()` exists to catch. build11 fires 19.6/hour so
+its last-20 spans one hour and consecutive reads are genuinely independent.
+
+**Recorded, not rewritten.** Changing a pre-committed criterion after seeing readings is the failure the
+rule exists to prevent. It has not fired and is not close to firing (-0.225). **It needs replacing before
+it ever does** - with a window measured in trades that do not overlap, or a fire count rather than a clock.
+Flagged to the user; the rule is theirs.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
