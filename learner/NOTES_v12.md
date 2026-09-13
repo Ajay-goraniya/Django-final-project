@@ -3626,6 +3626,30 @@ All **12** processes verified, no duplicates.
 lane decision, which is the field that makes the MAIN question answerable at all. Build 12.8.0 live,
 calibration off, kill window fresh at 1 of 20, MAIN armed 3h+ with 0 orders.
 
+## 19:22 UTC (Sun 09-13) - twenty-first reading. Second consecutive negative; rule does not fire.
+
+Re-arm reading, Predict.fun v10 paper: last-20 **-0.054** per $1, last-40 **+0.113**, **746 graded**.
+Polymarket paper last-20 **+0.012**, last-40 **-0.032**.
+
+Twenty-one readings: +0.155, -0.102, -0.001, -0.193, -0.082, +0.004, +0.347, +0.413, +0.412, +0.607,
++0.630, +0.411, +0.295, +0.302, +0.203, +0.170, +0.144, +0.154, +0.248, -0.078, **-0.054**.
+
+**Rule 1 requires TWO CONSECUTIVE positives and this is the second consecutive NEGATIVE.** Does not fire;
+REVERSAL stays off, EF stays off, MAIN stays off. Rule 6's symmetric re-pause is moot - Tokyo's lanes are
+all OFF, checked per kind: `{'MAIN': False, 'REVERSAL': False, 'EF': False}`, master OFF, no silent revert.
+The windows disagree again (last-20 negative, last-40 positive), which is the 20-window still handing back
+the good stretch as it rolls off.
+
+**Tokyo: wallet 0.00, equity 0.00, sixth consecutive hour.** `realised -8.04`, `settled 442`, `open 0`,
+uptime 60.9 h, no restart. Unchanged and still with the user.
+
+All **12** processes verified.
+
+**Polymarket v12 live: HALTED and the user cannot clear it** - `/api/controls/apply` refuses to arm master
+while `halt` is set, `controls()` never sent `halt` to the page, and the page has no clear-halt control at
+all. **12.8.4 fixes that** (kill panel + CLEAR KILL button); **12.8.3** takes the low-balance rule out of the
+engine on the user's correction. Both on the branch, with AWS to deploy. Venue cash **11.90**, open 0.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
