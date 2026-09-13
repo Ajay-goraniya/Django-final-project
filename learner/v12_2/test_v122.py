@@ -615,6 +615,43 @@ class SnapshotAgeTracking(unittest.TestCase):
                          'the snapshot-age refusal must stay removed')
 
 
+class TickSizeChangeIsRecorded(unittest.TestCase):
+    """The venue moves these markets between grids intra-candle.
+
+    Measured on the live feed 09-13: eight tick_size_change events in 300 s on
+    the active tokens, every one 0.01 -> 0.001. Popping terms makes housekeeping
+    refetch, but that loop runs every 5 s, so the token has no terms until it
+    does. Whether that explains the rejects is a hypothesis; this records enough
+    to decide it from the journal rather than infer it.
+    """
+    def setUp(self):
+        self.bc = C.BookCache()
+
+    def change(self, token='t1', new='0.001'):
+        return dict(event_type='tick_size_change', asset_id=token,
+                    timestamp=str(int(time.time()*1000)),
+                    old_tick_size='0.01', new_tick_size=new)
+
+    def test_terms_are_still_dropped(self):
+        self.bc.terms['t1'] = (0.01, 5.0, 0.07, 1.0)
+        self.bc.apply(self.change())
+        self.assertNotIn('t1', self.bc.terms)
+
+    def test_the_change_is_recorded_with_a_time(self):
+        self.bc.apply(self.change())
+        self.assertIn('t1', self.bc.tick_changes)
+        self.assertEqual(self.bc.tick_changes['t1']['new'], '0.001')
+        self.assertGreater(self.bc.tick_changes['t1']['at'], 0)
+
+    def test_count_reaches_health(self):
+        for _ in range(3): self.bc.apply(self.change())
+        self.assertEqual(self.bc.health()['tick_changes'], 3)
+
+    def test_untouched_tokens_are_not_recorded(self):
+        self.bc.apply(self.change('t1'))
+        self.assertNotIn('t2', self.bc.tick_changes)
+
+
 class BookPruneKeepsSubscribedTokens(unittest.TestCase):
     """A resubscribe must not start from an empty cache.
 

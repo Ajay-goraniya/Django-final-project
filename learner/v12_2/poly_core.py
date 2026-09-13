@@ -104,6 +104,8 @@ class BookCache:
         # offset, correct for it, and surface it instead of dropping data.
         self.clock_offset=0.0; self._offset_seeded=False
         self.dropped_future=0; self.dropped_stale=0; self.applied=0
+        # Last tick_size_change per token, and the running count.
+        self.tick_changes={}; self.tick_change_count=0
     def clear(self): self.books.clear()
     def prune(self,keep):
         """Drop books for tokens we are no longer subscribed to, keep the rest.
@@ -119,7 +121,7 @@ class BookCache:
     def health(self):
         return dict(clock_offset_s=round(self.clock_offset,3),applied=self.applied,
                     dropped_future=self.dropped_future,dropped_stale=self.dropped_stale,
-                    tokens=len(self.books))
+                    tokens=len(self.books),tick_changes=self.tick_change_count)
     def apply(self,e):
         stamp=float(e['timestamp'])/1000; now=time.time()
         if not math.isfinite(stamp): return
@@ -142,7 +144,16 @@ class BookCache:
         self.applied+=1
         k=e.get('event_type')
         if k=='tick_size_change':
-            token=str(e['asset_id']); self.terms.pop(token,None); return
+            # The venue moves these markets between the 0.01 and 0.001 grids
+            # intra-candle - 8 times in 300 s on the active tokens, measured
+            # 09-13. Popping terms makes housekeeping refetch, but that runs on a
+            # 5 s loop, so the token has no terms until it does and the lane
+            # skips. Record every change with its time so a reject can be tied to
+            # a preceding switch instead of inferred.
+            token=str(e['asset_id']); self.terms.pop(token,None)
+            self.tick_changes[token]=dict(at=time.monotonic(),wall=time.time(),
+                                          old=e.get('old_tick_size'),new=e.get('new_tick_size'))
+            self.tick_change_count+=1; return
         if k=='book':
             token=str(e['asset_id'])
             if token in self.books and stamp<self.books[token]['event']: return
@@ -247,10 +258,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.3.4')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.3.5')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -526,7 +537,16 @@ class Executor:
             timing['snapshot_age_s']=q.get('snapshot_age_s')
             t=time.monotonic(); new=reassess(); timing['decision_ms']=1000*(time.monotonic()-t)
             if not new.get('fire') or new['side']!=d['side']: self.db.status(ep,'SIGNAL_CHANGED',kind); return
-            try: plan=order_plan(q,self.books.terms[token],stake,new,self.pad)
+            # What tick we believed, and how long since a tick_size_change on
+            # this token. If the engine prices on a grid the venue has just moved
+            # off, "no orders found to match" follows - this makes that decidable
+            # from the journal rather than inferred.
+            _terms=self.books.terms[token]
+            timing['believed_tick']=float(_terms[0])
+            _tc=getattr(self.books,'tick_changes',{}).get(token)
+            timing['since_tick_change_s']=(round(time.monotonic()-_tc['at'],2) if _tc else None)
+            timing['last_tick_change']=(_tc.get('new') if _tc else None)
+            try: plan=order_plan(q,_terms,stake,new,self.pad)
             except (ValueError,KeyError) as e:
                 self.db.status(ep,'SKIPPED',kind); self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,str(e))); return
             timing['signal_quote']=float(d.get('ask',plan['quote'])) if d.get('ask') is not None else plan['quote']

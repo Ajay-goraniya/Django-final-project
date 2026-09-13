@@ -612,3 +612,73 @@ event trail. The housekeeping counters added in 12.3.2 (`dropped_stale`,
 every attempt close that gap. Ship the instrumentation, let it run, grid the real
 numbers at 60 and 100 attempts. If Polymarket does push mid-stream snapshots,
 the grid above is wrong and this section needs redoing.
+
+# 12.3.5 — the snapshot story was wrong on both sides, and a better lead
+
+## Correcting 12.3.4, whose justification does not survive measurement
+
+12.3.4 was written on the belief that full `book` events arrive only at
+subscribe, so a token carried a cycle on deltas alone. **That is false.** The AWS
+session measured the public market websocket for 300 s and cross-checked against
+12.3.4's own telemetry:
+
+| event_type | count in 300 s |
+|---|---|
+| price_change | 46,352 |
+| **book** | **1,220** |
+| last_trade_price | 585 |
+| tick_size_change | 8 |
+
+The two active tokens each received **605 full snapshots in 300 s** — a median
+gap of 0.2-0.3 s. 12.3.4's own `snapshot_age_s` samples agree: 236 readings, min
+0.0 s, median 2.1 s, p90 34.9 s, max 71.3 s, and **none above 90 s**.
+
+So, in both directions:
+
+- **My 90 s refusal would have been a near no-op**, not a fill-killer. 0 of 236
+  samples exceed it. It was still pointless, but "harmless" and "cuts 73% of
+  fills" are different claims and only the first is supported. The 73%/53% grid
+  is void — it modelled ages of 315-329 s where the real values are 0-71 s.
+- **The cold-book cause behind the prune change is refuted.** Books do not run on
+  deltas for five minutes; the active token is re-snapshotted about twice a
+  second, so `books.clear()` on rollover refilled within a second or two and was
+  close to harmless.
+- **A phantom level surviving long enough to matter is now unlikely** — a dropped
+  delta is corrected by the next snapshot within about half a second. The reject
+  cause is **open again**.
+
+`prune()` and the `ep+345` rollover stay: prune is strictly more correct, and
+moving the teardown out of the decision window is sane on its own. But they fix
+something that was not costing anything, and the record should say that rather
+than credit a mechanism that does not exist.
+
+## The lead that replaces it: the venue changes the tick mid-candle
+
+`tick_size_change` fired **8 times in 300 s**, every one **0.01 -> 0.001**, on the
+active tokens. That makes the earlier 0.439 ask genuine signal rather than noise
+— it was over-retracted — and it means `/tick-size` reporting 0.001 on resolved
+markets reflects this switch, not only a post-resolution artefact.
+
+`BookCache.apply` pops `terms` on every such event. Housekeeping refetches, but
+that loop sleeps 5 s, and both the EF path and `lane_loop` return early when a
+token has no terms. So each switch costs the token a window, and if a refetch
+lands on the wrong side of the switch the cap is computed on one grid while the
+venue matches on another.
+
+**This is a hypothesis, not a finding.** No reject has yet been tied to a
+preceding `tick_size_change` on the same token. 12.3.5 makes that decidable
+instead of inferred:
+
+- `BookCache` keeps the last `tick_size_change` per token (time, old, new) and a
+  running count, surfaced in `health()`;
+- every attempt records `believed_tick`, `since_tick_change_s` and
+  `last_tick_change` in its `timing` blob.
+
+Nothing is gated on any of it. The next step is to check whether rejects follow a
+switch more often than fills do, on the journal rather than on a model.
+
+One confound to keep in view: Polymarket widens the grid near the extremes, so a
+switch to 0.001 may simply mark the price running to 0 or 1 late in a candle —
+which is also when the book thins. Tick change and thin book would then be
+symptoms of the same thing, and separating them needs the timing data now being
+recorded.

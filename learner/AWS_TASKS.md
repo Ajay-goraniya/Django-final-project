@@ -80,32 +80,57 @@ test now asserts both stay gone so it cannot come back by accident.
 Nothing is refused. It attacks why the book goes cold rather than filtering
 orders after it has.
 
-## Task 6 - OPEN, pending the user: deploy 12.3.4 (not 12.3.3)
+## Task 6 - DONE. 12.3.4 live, master ON, confirmed.
 
-**Do not deploy 12.3.3 if they say yes to an older message** — it carries the
-refusal. 12.3.4 is the one.
+## Task 9 - DONE, and it overturns both our stories. Accepted in full.
 
-It contains: the MAIN/REVERSAL seeding fix, the prune/rollover changes, the
-persisted feed counters, `snapshot_age_s` telemetry, and no gate.
+Full `book` events roughly twice a second, 605 per active token per 300 s,
+median gap 0.2-0.3 s; your own 12.3.4 telemetry agrees at 236 samples, median
+2.1 s, max 71.3 s, none above 90 s. So:
 
-Same DB (additive migration), same flags, $3, EF on, master on. Report build
-12.3.4, EF on, master on, stake $3, main/reversal off, history intact.
+- My 90 s refusal would have been a **near no-op**, not a fill-killer. You
+  blocked it for the wrong reason and said so before I could build on it.
+- Your grid is void, and the **cold-book cause behind 12.3.4 is refuted** — the
+  active token is re-snapshotted constantly, so `clear()` on rollover was close
+  to harmless.
+- `prune()` and `ep+345` stay (both strictly more correct), but the changelog now
+  says their justification was wrong rather than crediting a mechanism that does
+  not exist.
+- **The reject cause is open again.**
 
-## Task 9 - OPEN: settle the assumption the grid rests on
+## Task 10 - OPEN (priority): tie rejects to tick_size_change, or rule it out
 
-You flagged it yourself: everything rests on full `book` events arriving only at
-subscribe, and 12.3.0 logs no book-vs-delta trail. 12.3.4 logs one.
+Your lead, and it is the best one on the table. 8 switches in 300 s, all
+0.01 -> 0.001, on active tokens. `BookCache.apply` pops `terms`; housekeeping
+refetches on a 5 s loop; both the EF path and `lane_loop` return early when a
+token has no terms.
 
-Once it is running: how often does a full `book` event arrive for a token, and
-does it ever arrive mid-stream rather than at subscribe? If Polymarket does push
-mid-stream snapshots, your grid is wrong and so is my reading of the cause.
-Settle it before either of us builds anything else on it.
+**12.3.5 is on the branch** and makes this decidable from the journal instead of
+inferred. Every attempt now records `believed_tick`, `since_tick_change_s` and
+`last_tick_change`; `BookCache` keeps the last change per token plus a count in
+`health()`. Nothing is gated on any of it.
 
-## Task 7 - OPEN, after 6 and 9: did the prune change the reject rate?
+Deploy 12.3.5 (same DB, same flags, $3, EF on, and **master ON afterwards** —
+it comes back off on every restart), then answer:
 
-Reject rate before vs after 12.3.4, comparable samples. This is now a clean
-before/after because nothing is being refused. Under 60 graded attempts is
-insufficient and gets marked, not read.
+1. Do rejects follow a `tick_size_change` on the same token more often than fills
+   do? Distributions of `since_tick_change_s` for both outcomes, not medians.
+2. Does `believed_tick` ever disagree with the grid the venue was matching on at
+   that moment?
+3. How much time per candle does a token spend with no terms at all, and does the
+   lane skip inside those windows?
+
+**The confound to separate:** Polymarket widens the grid near the extremes, so a
+switch to 0.001 may just mark price running to 0 or 1 late in a candle — which is
+also when the book thins. Tick change and thin book would then be the same
+symptom. The timing data now recorded should separate them; if it cannot, say so.
+
+You over-retracted the 0.439 ask — it was real. Noted in the changelog.
+
+## Task 7 - OPEN, low priority: did the prune change the reject rate?
+
+Run it, but treat any difference as **unexplained**. Its premise is refuted, so a
+change would need its own account. Under 60 graded attempts, marked not read.
 
 ## Settled
 
