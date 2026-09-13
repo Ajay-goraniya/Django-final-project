@@ -3154,6 +3154,44 @@ and reporting the one that separates is the banned move; testing all of them wit
 reporting every grid is not, but it is a real multiple-comparison problem and the per-bucket n here is already
 too small. Not started without the user asking.
 
+## 13:00 UTC (Sun 09-13) - RETRACTION: paper and live are not two builds of one program. They are two programs.
+
+The user, from two dashboard screenshots: *"two models, same data but different fire in live and paper? why
+paper and live seems two different codes??? okay different timing and all? but then it should be equal in same
+candles???"* They are right, and the answer is worse than different timing.
+
+**Header evidence, their screenshots:** paper reads `build 12.0 - PAPER`, live reads `build 12.4.10 - LIVE`.
+
+**Code evidence, checked here.** The paper lane runs `scratchpad/v12/engine/`, a directory with **no
+`poly_core.py`, no `poly_live.py`, no `poly_dashboard.py`** - a single 34 KB `btc_model_v12_polymarket.py`
+dated **Sep 11 13:40**. The live engine is the four-module `learner/v12_2/` package. Feature check on the
+paper tree: `_gate_on_padded_ev` **0**, `_sync_executor_dials` **0**, `slippage_band` **0**,
+`candle_attempts` **0**.
+
+So the paper lane has **none** of 12.4.x. It is not an old build of the live engine; it is a different
+program that shares a name.
+
+**The consequence that invalidates my own work today.** 12.4.0 moved EV from a judgement *after* the fire to a
+**gate before it**, and when I shipped it I wrote, in this file: *"the fire count will drop... do not compare
+fire counts across 12.4.0."* I then spent the day comparing paper's **52.4%** fire rate against live's
+**24.3%** and calling the gap "frequency, the only established difference". **That comparison is void.** Paper
+does not contain the gate at all, so it fires and its broker fills; live refuses before firing. A large part
+of that gap is a change I made on purpose, at the user's own request, and I compared across it after warning
+myself not to.
+
+**Retracted:** "the live/paper difference is frequency" (Task 30 and the 12:55 entry). What is actually
+established is that the two systems are not comparable as they stand, on any axis, and every paper-vs-live
+number today - fire rate, accuracy, per $1 - is measuring a program difference of unknown size alongside
+whatever real effect exists.
+
+**Still standing** (unaffected, because it was live-versus-live or venue truth): price parity on the same
+venue from Task 28a; live per $1 **+0.0340** over 21 settled; paper cannot fill below the ask and live can.
+
+**What a real comparison needs:** the paper lane running the **same code** as live, in paper mode. That is one
+process against the current `v12_2` tree with `--execution paper`. I am **not** starting it unilaterally -
+the running lane is in the fair table the user has watched for days, and a restart resets that history. The
+clean option is a **second** paper lane on current code, leaving the existing one untouched.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
