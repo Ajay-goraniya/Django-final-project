@@ -2996,6 +2996,37 @@ since 19:59:37 yesterday, now 12.4 hours. Tokyo uptime 49.9 h with no restart. 1
 plus the watcher and one leftover probe from the 07:20 investigation; benign, noted so the count is not read
 as a duplicate engine.
 
+## 09:21 UTC (Sun 09-13) - the fair table was quietly rewriting Tokyo's history. Fixed.
+
+Re-arm reading, Predict.fun v10 paper: last-20 **+0.411** per $1, last-40 **+0.283** per $1, 524 graded.
+Twelve readings: +0.155, -0.102, -0.001, -0.193, -0.082, +0.004, +0.347, +0.413, +0.412, +0.607, +0.630,
++0.411. Seventh consecutive positive; last-20 off its high, last-40 still climbing. Not arming, unchanged
+reason.
+
+### A reporting bug in fair.py, found because a number moved that could not move
+
+The Tokyo row printed **3W/6L -43.5** this hour against **5W/10L -70.6** last hour - with no new Tokyo fills
+(settled 442 both times, no real fill since 19:59:37 yesterday). Fills cannot leave a window whose start did
+not move, so this was a fetch problem rather than a data problem.
+
+Cause: `fair.py` paged Tokyo's orders with `for off in range(0,400,50)` - a fixed 400-row budget per kind.
+Tokyo's order table is mostly SHADOW rows and grows all day; it passed 900 rows overnight, so the real fills
+fell off the end of the budget and silently vanished from the table.
+
+**A bounded fetch against a growing table quietly rewrites history.** Nothing errored, nothing looked wrong,
+and the headline number the user reads every hour was simply smaller. Had I not noticed the arithmetic was
+impossible, the Tokyo line would have kept shrinking toward zero and looked like recovery.
+
+Fixed: page until the rows are older than the window start, capped at 4000 for safety. Re-running gives
+5W/10L -70.6 again, matching the unchanged underlying data.
+
+Worth noting what caught it: not a test and not the watcher, but the fact that a number moved in a direction
+the underlying data forbade. That check is cheap and worth keeping - if settled count and fill timestamps are
+unchanged, every derived figure must be unchanged too.
+
+Lanes off, re-asserted, nothing enabled. Equity 15.02, settled 442, nothing open, ladder $1 OK. No real fill
+since 19:59:37, now 13.4 hours. Tokyo uptime 50.9 h.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |

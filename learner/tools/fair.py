@@ -8,6 +8,11 @@ S="/tmp/claude-0/-home-user-Django-final-project/6e3b6e11-d14f-50d1-8719-c1998d0
 V12="/tmp/claude-0/-home-user-Django-final-project/6e3b6e11-d14f-50d1-8719-c1998d0e6b9a/scratchpad/v12/results/v12_poly_weekend.sqlite3"
 TOKYO_START=1788990900000
 
+MARK="/tmp/claude-0/-home-user-Django-final-project/6e3b6e11-d14f-50d1-8719-c1998d0e6b9a/scratchpad/fair_start_ms"
+def marker():
+    try: return int(open(MARK).read().strip())
+    except Exception: return 0
+
 def first_ms():
     st={}
     try:
@@ -24,6 +29,28 @@ def first_ms():
         if v: st["Polymarket v12 lane"]=v*1000
     except Exception: pass
     st["Tokyo live (v11)"]=TOKYO_START
+    m=marker()
+    if m:
+        out={}
+        try:
+            c=sqlite3.connect(f"file:{S}/b10.sqlite3?mode=ro",uri=True)
+            v=c.execute("select min(candle_id) from ef_predictions where candle_id>=?",(m,)).fetchone()[0]
+            if v: out["Predict.fun paper (v10)"]=v
+        except Exception: pass
+        try:
+            c=sqlite3.connect("file:/tmp/v10_long4.sqlite3?mode=ro",uri=True)
+            v=c.execute("select min(candle_epoch) from trades where candle_epoch>=?",(m//1000,)).fetchone()[0]
+            if v: out["Polymarket paper (v10)"]=v*1000
+        except Exception: pass
+        try:
+            c=sqlite3.connect(f"file:{V12}?mode=ro",uri=True)
+            v=c.execute("select min(candle_epoch) from trades where candle_epoch>=?",(m//1000,)).fetchone()[0]
+            if v: out["Polymarket v12 lane"]=v*1000
+        except Exception: pass
+        out["Tokyo live (v11)"]=m
+        pend=[k for k in ("Polymarket paper (v10)","Polymarket v12 lane") if k not in out]
+        if pend: print("WARMING UP, not yet fired since the restart: "+", ".join(pend))
+        return out
     return st
 
 starts=first_ms()
@@ -62,12 +89,19 @@ try:
     hdr={"Authorization":"Basic "+base64.b64encode(f"{user}:{pw}".encode()).decode()}
     st=json.load(urllib.request.urlopen(urllib.request.Request(url+"/api/state",headers=hdr),timeout=25))
     got=[]
+    # Page until the rows are older than the window, not for a fixed 400.
+    # Tokyo's order table is mostly SHADOW rows and it grows all day: by 09:21 on
+    # 09-13 the real fills had been pushed past a 400-row budget, and the Tokyo
+    # line silently fell from 5W/10L -70.6 to 3W/6L -43.5 with no new fills. A
+    # bounded fetch on a growing table quietly rewrites history.
     for kind in ("EF","REVERSAL"):
-        for off in range(0,400,50):
+        for off in range(0,4000,50):
             d=json.load(urllib.request.urlopen(urllib.request.Request(f"{url}/api/orders?kind={kind}&limit=50&offset={off}",headers=hdr),timeout=25))
             rs=d.get("rows") or []
             got+=rs
             if not rs or (d.get("total") or 0)<=off+50: break
+            # Stop once this page is entirely older than the window start.
+            if rs and max((r.get("ts_ms") or 0) for r in rs)<t0: break
     seen=[r for r in got if (r.get("ts_ms") or 0)>=t0 and r.get("filled")]
     gw=sum(1 for r in seen if r.get("correct")); gl=sum(1 for r in seen if r.get("correct") is False)
     pnl=sum(r.get("pnl") or 0.0 for r in seen); openn=sum(1 for r in seen if r.get("correct") is None)
