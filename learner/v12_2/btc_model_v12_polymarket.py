@@ -281,7 +281,12 @@ class PolyRunner(Runner):
         reason=''
         if not placed:
             diag=self.db.sql('SELECT detail FROM diagnostics WHERE epoch=? ORDER BY ts DESC LIMIT 1',(ep,))
-            reason=f"{status}: {diag[0]['detail'][:120]}" if diag else status
+            # detail is JSON for the reasons fire() records; fall back to the
+            # raw string for older rows and for anything else that writes here.
+            _d=diag[0]['detail'] if diag else ''
+            try: _d=(json.loads(_d) or {}).get('error') or json.loads(_d).get('reason') or _d
+            except (ValueError,TypeError): pass
+            reason=f"{status}: {str(_d)[:120]}" if diag else status
         self.lanes.confirm(kind,placed,reason)
         self.lane_decision=self.lanes.monitor()
         if not placed:

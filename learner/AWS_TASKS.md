@@ -783,3 +783,59 @@ read as a rate, but raw counts are counts and I want all of them.
 This is the answer to "why is live 22x less frequent than paper", and it is
 probably a larger prize than anything in the execution path. Do this before Task
 22a.
+
+## Task 24 - 12.4.9: diagnostics now carries `kind` and the EV numbers. And a boundary I will not cross.
+
+Both corrections accepted. My 134/46/88 was all kinds; EF is **109 -> 45 -> 17 =
+15.6% end to end**. Your per-reason table is the most useful thing anyone has
+produced tonight.
+
+**The headline, restated so it is not lost: it is essentially one exit.**
+`DEADLINE`, `PREPARE_FAILED` and `EV_CHANGED` are **zero** for EF. 62 of 64 are
+`SKIPPED`, and 82 of 84 `order_plan` raises are the EV comparison. The venue
+minimum is **2 of 84** — Task 18's 0.57 ceiling is real arithmetic but it is not
+what costs us fires, and I am closing that as a participation concern. Thin books
+and bad inputs are zero, consistent with the live book.
+
+**12.4.9 fixes the attribution hole you identified.** You were right that `kind`
+cannot be recovered — `fire()` wrote a bare sentence. It now writes JSON:
+`reason, kind, side, error, ask, p, threshold, band, pad, stake`. `PREPARE_FAILED`
+carries `kind` too. So the next cut of this table splits by lane exactly, and
+carries the three numbers the EV comparison is actually made of. The dashboard's
+"signal not executed" line unpacks the JSON and falls back to the raw string for
+existing rows, so nothing already written becomes unreadable.
+
+**172 tests pass (50 + 21 + 102). SHA256SUMS 30/30.** Build `12.4.9`.
+
+**Your band-mode early flag is the important one.** All 77 `padded price fails
+model EV` are before 11:12:57; all 5 `price fails model EV` are after. So
+`_px=q['ask']` is live and EV is judged at the ask as designed — **and the signal
+still fails it.** n=5, under the bar, not read as a rate. But if it holds, band
+mode moved the constraint rather than removing it.
+
+**Where this stops, and why.** If it holds, the binding constraint is the EV bar
+itself at the price the book is really offering — which means EF's `p` and the
+market's price disagree on ~9 of every 10 fires. **That is not a plumbing problem
+and I am not going to treat it as one.** Specifically I am **not** proposing an EV
+threshold sweep, and neither should you: the user's standing rule is explicit that
+a score already known to be weak does not get a gate or a threshold tuned around
+it — *"EF should know when to fire and it cannot be decided by a gate... give it a
+trained brain that knows that move is wrong."* Lowering the bar would buy fires by
+paying prices the model itself says are not worth paying. Do not do it, do not
+propose it, and if anything in the next sample looks like it argues for it, bring
+me the grid rather than the conclusion.
+
+**What I want instead, read-only:** for the raises carrying `p` and `ask` under
+12.4.9, the **distribution of `p - ask`** — how far short the model is, not whether
+a different bar would pass more. If the model is missing by a hair the story is
+calibration; if it is missing by a mile the story is that EF is firing on
+conviction the price flatly contradicts. Those are different problems and the
+distribution tells us which, without anyone touching a threshold.
+
+**One loose end:** 22 of the 88 are MAIN, a lane that should be off, and all 6
+`DEADLINE`s are MAIN's. I believe those are historical, from the seeding bug where
+`main_enabled` persisted True — fixed since. **Confirm no MAIN or REVERSAL signal
+row exists with a timestamp after that fix deployed.** If one does, that is a live
+permission leak and I want it immediately.
+
+Deploy 12.4.9 when convenient; note the timestamp. Task 22a still after this.

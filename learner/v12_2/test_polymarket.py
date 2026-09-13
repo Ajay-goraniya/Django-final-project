@@ -84,6 +84,32 @@ class Tests(unittest.TestCase):
             await ex.fire(ep,decision(),'up','c',10,decision);await ex.reconcile();self.db.grade(ep,'UP')
             self.assertEqual(self.db.metrics()['n'],1);self.assertEqual(self.db.metrics()['wins'],1)
         asyncio.run(run())
+    def test_skipped_records_kind_and_the_ev_numbers(self):
+        """The SKIPPED exit is 97% of what EF loses before the network.
+
+        It used to write a bare sentence. diagnostics has ts and epoch only, and
+        one epoch can hold an EF and a MAIN signal at once, so the largest loss
+        in the system could not be attributed to a lane at all. Record the lane
+        and the three numbers the EV comparison is made of.
+        """
+        async def run():
+            ex=Executor(self.db,self.books,PaperBroker(self.books,self.db));ep=epoch()
+            d=dict(decision(),p=.30,threshold=.20)   # 0.30/cost - 1 < 0.20 -> raises
+            await ex.fire(ep,d,'up','c',10,lambda:d,kind='MAIN')
+            rows=[r[2] for r in self.db.sql('SELECT * FROM diagnostics')]
+            hit=[json.loads(r) for r in rows
+                 if 'order_plan_refused' in (r or '')]
+            self.assertEqual(len(hit),1,rows)
+            g=hit[0]
+            self.assertEqual(g['kind'],'MAIN')
+            self.assertEqual(g['side'],'UP')
+            self.assertIn('EV',g['error'])
+            self.assertAlmostEqual(g['ask'],.4)
+            self.assertAlmostEqual(g['p'],.30)
+            self.assertAlmostEqual(g['threshold'],.20)
+            self.assertEqual(self.db.sql('SELECT count(*) FROM orders')[0][0],0)
+        asyncio.run(run())
+
     def test_paper_fill_survives_broker_restart(self):
         async def run():
             ep=epoch();ex=Executor(self.db,self.books,PaperBroker(self.books,self.db))
@@ -207,7 +233,7 @@ class Tests(unittest.TestCase):
     def test_v120_database_migrates_additively(self):
         self.db.reserve(123,decision(),'up','condition')
         self.db.set('build','12.0'); self.db.c.close(); self.db=Journal(self.path,'PAPER','abc')
-        self.assertEqual(self.db.get('build'),'12.4.8')
+        self.assertEqual(self.db.get('build'),'12.4.9')
         self.assertEqual(self.db.sql('SELECT count(*) FROM signals WHERE epoch=123')[0][0],1)
         cols={r[1] for r in self.db.c.execute('PRAGMA table_info(orders)')}
         self.assertTrue({'error_json','timing_json','request_reached','reconcile_count','venue_live'}<=cols)

@@ -367,10 +367,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.4.8')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.4.9')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -721,13 +721,24 @@ class Executor:
             timing['last_tick_change']=(_tc.get('new') if _tc else None)
             try: plan=order_plan(q,_terms,stake,new,self.pad,band=self.band,require_depth=self.require_depth)
             except (ValueError,KeyError) as e:
-                self.db.release(ep,'SKIPPED',kind); self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,str(e))); return
+                # This one exit is 97% of everything EF loses before the network,
+                # and it used to record a bare sentence with no lane and no
+                # prices - so the largest loss in the system could not be split
+                # by kind at all (diagnostics has ts and epoch only, and one
+                # epoch can hold an EF and a MAIN signal at once). Record what
+                # makes it decidable: which lane, which side, and the three
+                # numbers the EV comparison is made of.
+                self.db.release(ep,'SKIPPED',kind)
+                self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(dict(
+                    reason='order_plan_refused',kind=kind,side=new.get('side'),error=str(e),
+                    ask=q.get('ask'),p=new.get('p'),threshold=new.get('threshold'),
+                    band=self.band,pad=self.pad,stake=stake)))); return
             timing['signal_quote']=float(d.get('ask',plan['quote'])) if d.get('ask') is not None else plan['quote']
             t=time.monotonic()
             try: signed,oid=await asyncio.wait_for(self.broker.prepare(token,plan),max(.001,deadline-time.monotonic()))
             except Exception as e:
                 info=error_info(e,phase='prepare',request_reached=False)
-                self.db.release(ep,'PREPARE_FAILED',kind); self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(info)))
+                self.db.release(ep,'PREPARE_FAILED',kind); self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(dict(info,reason='prepare_failed',kind=kind))))
                 print('[order prepare failed]',compact_error(info),flush=True); return
             timing['sign_ms']=1000*(time.monotonic()-t)
             if time.monotonic()>=deadline: self.db.release(ep,'DEADLINE',kind); return
