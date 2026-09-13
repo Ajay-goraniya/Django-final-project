@@ -3285,6 +3285,54 @@ before, 1 in ~27 after.
 
 Keep from it: without `venue_verified`, those two dead rows would sterilise **$6 of a $50 book** permanently.
 
+## 14:45 UTC (Sun 09-13) - ROOT CAUSE: the model has real skill and overstates it by 15.6 points at the top.
+
+User: *"i just want to achieve my goal."* So I went at the question that decides it rather than more
+execution plumbing: **is the model's `p` calibrated?** If it is not, no amount of execution work helps.
+
+**Method.** Every decision the v12 lane made, paired with `candles.actual` - the Binance close>=open ground
+truth the standing rule prescribes - not with a venue oracle. One decision per candle (the last before close).
+**Calibrated on ALL decided candles, not just traded ones**, because calibrating on the subset that passed the
+EV gate would calibrate on the biased sample. Buckets declared before any outcome was inspected.
+**n=530 decided candles with a graded outcome.**
+
+| model p | n | predicted | realised | gap |
+|---|---|---|---|---|
+| 0.50-0.55 | 106 | 0.529 | 0.519 | -0.010 |
+| 0.55-0.60 | 86 | 0.580 | 0.570 | -0.010 |
+| 0.60-0.65 | 103 | 0.627 | 0.612 | -0.016 |
+| 0.65-0.70 | 50 | 0.678 | 0.740 | +0.062 *(<60)* |
+| 0.70-0.80 | 95 | 0.740 | 0.768 | +0.028 |
+| **0.80-1.01** | **90** | **0.912** | **0.756** | **-0.156** |
+| ALL | 530 | 0.673 | 0.651 | -0.022 |
+
+**Calibration is good below 0.80** - every gap inside a point and a half. **The top bucket is not.**
+
+**Gates, run as a set:**
+- **grading** - `candles.actual`, the prescribed oracle, never a venue's resolution. Pass.
+- **sample** - n=90 in the failing bucket, above the 60 bar. Pass.
+- **halves** - first 45 **-0.132**, second 45 **-0.181**. Same sign, same magnitude. Pass.
+- **binomial** - 68 of 90 correct against a claimed 0.912: **p = 8.7e-06.**
+- **null** - the model's direction accuracy is **0.651** against an always-UP null of **0.530**. It is not
+  the base rate in disguise.
+- **permutation** (predictions shuffled, never labels) - **and this corrected my framing.** Under shuffled
+  predictions the top bucket realises the base rate, so its gap is **-0.416**; observed is **-0.156**, far
+  *better* than chance. **The model is not guessing at high p - it carries real information there. It simply
+  claims more than it has.** My first reading of this as "the high-conviction trades are worthless" was wrong.
+
+**Why this is the root cause of the PnL.** EV is `p/cost - 1`, so the trades that clear the 0.15 bar are the
+high-`p` ones - **precisely the bucket that is overstated.** At a claimed 0.912 the engine will pay a cost up
+to **0.793**. The true rate is **0.756**. Realised EV at that price: **-0.047.** The model's most confident
+trades are systematically negative-EV, and they are the only ones the gate lets through.
+
+That reconciles everything seen today: a live account drifting down while the EV gate refuses 82 of 84 fires;
+Tokyo's 0.60+ price bucket winning 70% yet returning only +0.059 per $1; and EF's standing evidence sitting
+flat across hundreds of fills.
+
+**What this is NOT.** Not a gate, not a threshold, not a stake rule. The fix is to make `p` honest at the top -
+recalibration, which is the *"trained brain"* the user asked for rather than a dial bolted on after the fact.
+Not started; recorded first.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
