@@ -327,10 +327,43 @@ class PolyRunner(Runner):
                     held=self.db.sql('SELECT coalesce(sum(spent+fees),0) FROM fills WHERE epoch NOT IN (SELECT epoch FROM results)')[0][0]
                     self.cash=max(0.,self.a.capital+self.db.metrics()['pnl']-held)
                 self.cash_at=time.monotonic(); self.ui.update_stake()
+                self._wipeout_check()
                 self.db.sql('DELETE FROM diagnostics WHERE ts<?',(time.time()-7*86400,))
                 self.db.sql('DELETE FROM candles WHERE epoch<?',(time.time()-30*86400,))
             except Exception as e: self.error='Metadata/balance: '+type(e).__name__
             await asyncio.sleep(5)
+    WIPEOUT_CONFIRMATIONS=3
+    def _wipeout_check(self):
+        """Turn master OFF when the account can no longer fund a trade.
+
+        User, 09-13: "if account is wiped out, turn off master".
+
+        "Wiped out" is defined as spendable cash, after deducting what live
+        orders are already holding, being unable to cover one stake - the point
+        at which the engine cannot place another trade and is only going to keep
+        refusing. The venue balance is the source of truth, as everywhere else.
+
+        Confirmed over consecutive checks rather than acted on once, because the
+        balance dips transiently while an order is in flight and a single low
+        read is a race, not a wipeout. Same standard the reconciler applies
+        before declaring a no-fill.
+
+        Turns master off and halts. It never turns anything back ON, so it
+        cannot resurrect a lane the operator disabled.
+        """
+        if not self.a.live or self.cash is None: return
+        stake=float(self.db.get('next_stake',1.) or 1.)
+        spendable=self.cash-self.db.live_reserve()
+        if spendable+1e-9>=stake:
+            self._wipeout_seen=0; return
+        self._wipeout_seen=getattr(self,'_wipeout_seen',0)+1
+        if self._wipeout_seen<self.WIPEOUT_CONFIRMATIONS: return
+        if self.db.get('master'):
+            why=(f'Account wiped out: spendable {spendable:.2f} below stake {stake:.2f} '
+                 f'on {self._wipeout_seen} consecutive checks')
+            self.db.set('master',False)
+            if not self.db.get('halt'): self.db.set('halt',why)
+            print('[WIPEOUT] '+why+' - master OFF',flush=True)
     async def reconcile_loop(self):
         while True: await self.executor.reconcile(); await asyncio.sleep(1)
     async def grade_loop(self):

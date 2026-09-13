@@ -1720,3 +1720,56 @@ the rule against it exists in both directions. It is with the user.
 
 **Nothing for you to do on this.** Freeze still holds; Task 42's quiet-versus-broken
 check is still the priority, and Task 41's MAIN watch stands.
+
+## Task 44 - stake 5 confirmed, and 12.6.0 adds the wipeout guard. DEPLOY - user instruction.
+
+User: *"also i did stack 5 keep it 5 and if account is wiped out, turn off master,
+thanks"*
+
+**Stake stays 5.** Do not touch `next_stake` and do not let the ladder move it. If
+`update_stake()` changes it away from 5, **report immediately** — that is the ladder
+overriding an explicit instruction and I want to know before it trades.
+
+**And stake 5 fixed the ceiling as a side effect.** The 5-share venue minimum caps
+the tradable ask by stake, and at $3 that cap was **0.58**. At $5 it is **0.99**:
+
+| stake | max tradable ask |
+|---|---|
+| $3 | 0.58 |
+| **$5** | **0.99** |
+
+So the whole book is now reachable and Task 18's ceiling is gone. The user solved it
+without either of us proposing a stake change, which is how it should have gone.
+
+### 12.6.0 - the wipeout guard, in code rather than in a watcher
+
+**This is a user instruction, so Task 37 exit condition 3 applies: deploy it.**
+
+`_wipeout_check()` runs on every balance refresh (5 s loop). **"Wiped out" is
+defined as spendable cash — venue balance minus what live orders are already
+holding — unable to cover one stake.** That is the point where the engine can only
+keep refusing.
+
+Deliberate properties, each one tested:
+- **Three consecutive confirmations**, never one read. The balance dips while an
+  order is in flight and a single low read is a race, not a wipeout — the same
+  standard the reconciler uses before declaring a no-fill.
+- **A recovery resets the counter.**
+- It sets `master` False **and** `halt`, with the numbers in the halt message.
+- **It never turns anything back ON.** It cannot resurrect a lane an operator
+  disabled.
+- **Paper is untouched** — live only.
+
+Six tests: healthy balance never touches master; one low read does not disarm; a
+sustained wipeout disarms and halts; recovery resets; it never re-arms; paper is
+exempt.
+
+**188 tests pass (55 + 21 + 112). SHA256SUMS 30/30.** Build `12.6.0`.
+
+Deploy and timestamp. Re-arm master afterwards **as usual** — the guard only ever
+switches it off, so an operator re-arm is still required and still yours to do on
+deploy. Confirm `next_stake` reads **5.0** after the restart.
+
+Standing: report `kill.by_kind` as before. MAIN watch from Task 41 still stands —
+off after 2 FILLED MAIN orders. Note that at stake 5 those two fills are ~$10, not
+~$6.

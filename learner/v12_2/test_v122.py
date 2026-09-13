@@ -1,6 +1,6 @@
 """Tests for the v12.2 changes: venue-sourced money, honest feed staleness,
 clock-skew tolerance and per-attempt latency."""
-import json, os, pathlib, sqlite3, tempfile, time, unittest
+import json, os, pathlib, sqlite3, tempfile, time, unittest, types
 import poly_core as C
 import poly_feeds as F
 
@@ -1279,3 +1279,57 @@ class TickGridRounding(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=1)
+
+
+class WipeoutTurnsMasterOff(unittest.TestCase):
+    """User, 09-13: "if account is wiped out, turn off master".
+
+    Wiped out means spendable cash cannot fund one stake - the point at which
+    the engine can only keep refusing. Confirmed over consecutive checks,
+    because the balance dips while an order is in flight.
+    """
+    def setUp(self):
+        import btc_model_v12_polymarket as E
+        self.E=E
+        self.temp=tempfile.TemporaryDirectory()
+        self.db=C.Journal(str(pathlib.Path(self.temp.name)/'w.db'),'LIVE','h')
+        self.db.set('master',True); self.db.set('next_stake',5.0)
+        r=E.PolyRunner.__new__(E.PolyRunner)
+        r.db=self.db; r.a=types.SimpleNamespace(live=True); r.cash=100.0
+        self.r=r
+
+    def tearDown(self): self.db.c.close(); self.temp.cleanup()
+
+    def test_healthy_balance_never_touches_master(self):
+        for _ in range(10): self.r._wipeout_check()
+        self.assertTrue(self.db.get('master'))
+        self.assertIsNone(self.db.get('halt'))
+
+    def test_one_low_read_is_a_race_not_a_wipeout(self):
+        self.r.cash=1.0
+        self.r._wipeout_check()
+        self.assertTrue(self.db.get('master'), 'a single dip must not disarm the engine')
+
+    def test_sustained_wipeout_turns_master_off_and_halts(self):
+        self.r.cash=1.0
+        for _ in range(self.r.WIPEOUT_CONFIRMATIONS): self.r._wipeout_check()
+        self.assertFalse(self.db.get('master'))
+        self.assertIn('wiped out', (self.db.get('halt') or '').lower())
+
+    def test_recovery_resets_the_counter(self):
+        self.r.cash=1.0
+        self.r._wipeout_check(); self.r._wipeout_check()
+        self.r.cash=100.0; self.r._wipeout_check()      # balance came back
+        self.r.cash=1.0; self.r._wipeout_check()        # count restarts
+        self.assertTrue(self.db.get('master'))
+
+    def test_it_never_turns_master_back_on(self):
+        self.db.set('master',False)
+        self.r.cash=100.0
+        for _ in range(10): self.r._wipeout_check()
+        self.assertFalse(self.db.get('master'), 'must never resurrect a disabled lane')
+
+    def test_paper_is_untouched(self):
+        self.r.a=types.SimpleNamespace(live=False); self.r.cash=0.0
+        for _ in range(10): self.r._wipeout_check()
+        self.assertTrue(self.db.get('master'))
