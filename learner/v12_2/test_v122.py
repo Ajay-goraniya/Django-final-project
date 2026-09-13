@@ -1763,3 +1763,51 @@ class ArmingMasterIsAudited(unittest.TestCase):
         src = pathlib.Path(C.__file__).parent.joinpath('poly_dashboard.py').read_text()
         self.assertNotIn('INSERT OR REPLACE INTO meta', src,
                          'control writes go through the journal so they are audited')
+
+
+class AmbientBookAgeIsSampled(unittest.TestCase):
+    """Task 75 could not be answered: age_ms was only ever persisted on the
+    submit path, which the seq gate at poly_core.py:928 has already filtered.
+    Nothing recorded the ambient age. This samples it from the raw arrival
+    stamp - not quote(), so the 2 s filter cannot hide the tail - once per
+    housekeeping tick. Instrumentation only; it must never raise.
+    """
+    def setUp(self):
+        import btc_model_v12_polymarket as E
+        self.temp=tempfile.TemporaryDirectory()
+        self.db=C.Journal(str(pathlib.Path(self.temp.name)/'a.db'),'LIVE','h')
+        r=E.PolyRunner.__new__(E.PolyRunner)
+        r.db=self.db; r.market={600:('tokUP','tokDN')}
+        r.books=types.SimpleNamespace(books={'tokUP':{'arrival':time.monotonic()-0.150},
+                                             'tokDN':{'arrival':time.monotonic()-0.420}})
+        self.r=r
+
+    def tearDown(self): self.db.c.close(); self.temp.cleanup()
+
+    def rows(self):
+        return [json.loads(x[0]) for x in self.db.sql("SELECT detail FROM diagnostics WHERE detail LIKE '%AMBIENT_AGE%'")]
+
+    def test_one_row_with_both_tokens_ages(self):
+        self.r._sample_ambient_age(600)
+        rows=self.rows(); self.assertEqual(len(rows),1)
+        self.assertAlmostEqual(rows[0]['age_up_ms'],150,delta=40)
+        self.assertAlmostEqual(rows[0]['age_dn_ms'],420,delta=40)
+
+    def test_a_token_with_no_book_yet_is_null_not_an_error(self):
+        del self.r.books.books['tokDN']
+        self.r._sample_ambient_age(600)
+        self.assertIsNone(self.rows()[0]['age_dn_ms'])
+
+    def test_no_market_for_the_epoch_writes_nothing(self):
+        self.r._sample_ambient_age(999)
+        self.assertEqual(self.rows(),[])
+
+    def test_it_cannot_raise_into_housekeeping(self):
+        self.r.books=None                          # worst case: nothing wired
+        self.r._sample_ambient_age(600)            # must not raise
+        self.assertEqual(self.rows(),[])
+
+    def test_housekeeping_calls_it(self):
+        import btc_model_v12_polymarket as E
+        src=pathlib.Path(E.__file__).read_text()
+        self.assertIn('self._sample_ambient_age(',src)

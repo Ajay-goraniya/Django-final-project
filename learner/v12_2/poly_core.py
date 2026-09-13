@@ -390,10 +390,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.8.5')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.8.6')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -781,7 +781,12 @@ class Journal:
         # holding open positions. Currently armed and unfired: the live DB has 13
         # results, and this needs 20.
         vals=[x[0] for x in r if x[0] is not None]
-        if len(vals)==20 and sum(vals)/20>.03: self.set('halt','Average slippage > $0.03 over 20 fills')
+        # A halt that is already set keeps its FIRST reason. Before 12.8.6 this
+        # method wrote every reason whose condition held, every reconcile pass,
+        # so with two conditions true `halt` alternated between two strings
+        # ~1.3x/s and each swap emitted an audit row: 2,035 of the 2,060 audit
+        # rows on 09-13 were this, burying the 25 that mattered. Found by AWS.
+        if len(vals)==20 and sum(vals)/20>.03 and not self.get('halt'): self.set('halt','Average slippage > $0.03 over 20 fills')
         # PER LANE, not blended. The rule as written is "a lane goes off if
         # cumulative PnL over its LAST 20 FILLS is below -3.00", and this used to
         # group by epoch alone, mixing every kind into one window.
@@ -806,14 +811,14 @@ class Journal:
         # sooner than before, never later.
         rows=self.kill_window()
         blended=[x['unit'] for x in rows[:20] if x['unit'] is not None]
-        if len(blended)==20 and sum(blended)<-3:
+        if len(blended)==20 and sum(blended)<-3 and not self.get('halt'):
             self.set('halt','20 settled unit returns sum below -3')
         # An epoch traded by two lanes cannot be attributed to either, so it is
         # left out of the per-lane windows rather than counted twice.
         for k in sorted({x['kind'] for x in rows if (x['kinds'] or 1)==1}):
             own=[x['unit'] for x in rows
                  if (x['kinds'] or 1)==1 and x['kind']==k and x['unit'] is not None][:20]
-            if len(own)==20 and sum(own)<-3:
+            if len(own)==20 and sum(own)<-3 and not self.get('halt'):
                 self.set('halt',f'{k}: 20 settled unit returns sum below -3')
 
 

@@ -3136,3 +3136,33 @@ rule at **-2.0000**; Monday per-candle submissions / retries / DEADLINEs / rejec
 
 **Also from §1a, for the user, not for you to act on:** at the $3 stake the 5-share venue minimum refuses
 every ask above 0.59. That was 3% of paper's fires, and those ten ran +0.272/$1. Their call.
+
+
+## Task 77 - 76 accepted in full. 12.8.6 built from your halt finding and HELD. Standing watch.
+
+**Task 76 is the piece of work the remake turned on, and it was done right** - Row 0 first, your own void
+run caught and discarded before it reached me, every cell marked under 60, both engines on
+`candles.actual`, and the oracle mismatch in paper's own table named rather than passed through. It is
+recorded in `REMAKE_PLAN.md` §2a and `NOTES_v12.md`.
+
+**What it decided:** the EV gate refused a **break-even** set (net +0.08) and stays. The **31 venue
+rejects at net +0.25/$1** are the money and the sole target of step 2. The 42 no-signals are decision-
+second timing. **"Beat the paper" means beat 56.4% on `candles.actual`**, not paper's table.
+
+### 12.8.6 - your halt finding, fixed; and the Task 75 instrumentation. HELD.
+
+1. **`halt_check` writes once, keeps its first reason** - all three `set('halt', ...)` guarded by
+   `not self.get('halt')`. 50 passes -> one audit row. Test fails against the old file.
+2. **`_sample_ambient_age(ep)`** every housekeeping tick: raw `arrival` for both tokens, **not** via
+   `quote()`, one `AMBIENT_AGE` diagnostics row, cannot raise. **This is what you said was missing for 75.**
+
+**240 tests, 30/30. Held with 12.8.5. Do NOT deploy** - restart forces master OFF and the user is armed.
+Both go in at the next natural restart; if the engine restarts for any other reason, take them then.
+
+**Once 12.8.6 is live, Task 75 becomes answerable from the box's own data:** after a few hours, compare
+the `AMBIENT_AGE` distribution against submit-time `age_ms` (88.0 filled / 174.8 rejected). Submits older
+than ambient -> the `seq` gate selects; matching -> the feed. That answer ranks the step-2 candidates.
+**Not before it is deployed, and not reconstructed.**
+
+**Standing watch unchanged:** hand rule (**-1.1818**, n=3), kill window, `LOW_BALANCE`, and from 00:00 UTC
+Monday **submissions / retries / DEADLINEs / rejects per candle**. Nothing else tonight.

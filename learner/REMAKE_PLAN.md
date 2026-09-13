@@ -86,6 +86,38 @@ this number. It is real data on both sides, not a reconstruction.**
 AWS runs it (Task 76). It is the highest-value thing that session can do, because it holds the live journal
 and nothing else does.
 
+### 2a. RESULT, 22:25 — the number is in, and it names the target
+
+**Row 0: same model, same decision.** On 114 candles both fired: side agreement **97.4%**, |Δp| median
+**0.0000** (p90 0.055), EV median 0.173 on both. Across 2,705 time-matched decision rows: side 93.7%,
+|Δp| median 0.0013. §1a confirmed. (AWS's first Row 0 run paired a mid-candle paper row with an end-of-
+candle live row — 73% / 0.16 — caught and voided by AWS itself before reporting.)
+
+**The grid, 333 shared candles, 156 paper fires, everything graded on `candles.actual`:**
+
+| paper fired → live did | n | paper $/1 on those | reading |
+|---|---|---|---|
+| **filled** | **29** | won 15 / lost 15 | live's actual trades — 19% of paper's fires |
+| **skipped: EV at padded price** | **56** | 32 won +0.524, 24 lost −0.506 → **net ≈ +0.08** | the gate refused a break-even set. **It is working.** |
+| **REJECTED by venue** | **31** | 16 won ≈+0.99, 15 lost −0.50 → **net ≈ +0.25** | **the money. This is the fill-rate target.** |
+| no signal | 42 | ~26 are quote/timing at the decision second, 9 "warming up" | mostly timing, not logic |
+
+**Every cell is under 60 and is marked insufficient.** But the shape is decisive: **of 156 paper fires
+live filled 29**, and the bucket with the money is not the EV gate (net +0.08 — it is correctly declining
+coin-flips) but **the 31 venue rejects at ≈+0.25/$1 on paper**. That is the unfilled half, priced.
+
+**Two corrections to the user's own framing, in their favour to know:**
+1. **The EV gate is not the problem.** The 56 it refused were break-even on paper. Leave it.
+2. **Paper's headline is oracle-flattered.** Paper's `trades.win` disagrees with `candles.actual` on
+   **32 of 156** fires — it grades on its own resolution. On the honest oracle, paper on shared candles
+   is **88W/68L = 56.4%**, not what its table shows. Live filled on the same candles: 15W/15L, n=30,
+   too small to read. So "beat the paper" means beat **56%** on `candles.actual`, not the table.
+
+**Step 2 is therefore the fill-rate fix and nothing else.** The 42 "no signal" are decision-second timing
+— paper decided at second *s*, live at *s+11* (p90) and the quote had moved — and that is the same
+mechanism as the rejects viewed from the other side: **live is slower to the quote than paper's
+bookkeeping is.** One target.
+
 ## 3. The remake — sequenced so every change is rechecked before the next
 
 The user: *"after every change everything should be rechecked, its effects, and all the other things
@@ -101,8 +133,11 @@ those are affected by it."* Binding on every step.
 | **5** | after 4 | wire the adaptive layer (11.4 autopilot §E2: regime cells self-verdicted from live outcomes) | same standard: twin first, then live |
 | **MAIN/REV** | after 5 | rebuild from the Build 11 source **only if** a paper twin of them earns. Paper wins without them. **Not a precondition for beating paper.** | twin, 60+ graded, both halves |
 
-**Frozen while this runs:** no further execution-mechanism builds. 12.8.5 (audit) ships at the step-4
-restart, not separately. The reject mechanism (gate vs feed) is instrumented at step 4, not before.
+**Frozen while this runs:** no further execution-mechanism builds. **12.8.5 (master-arming audit) and
+12.8.6 (halt flip-flop fix + ambient book-age sampling) are built, tested and HELD**; both ship at the
+next natural restart. 12.8.6's sampling is what resolves the gate-vs-feed question (Task 75) - it needs a
+few hours of live data after it is deployed, which makes the step-4 restart the earliest that question can
+be answered, and the answer ranks the step-2 candidates.
 
 ## 4. Monday — the honest statement
 

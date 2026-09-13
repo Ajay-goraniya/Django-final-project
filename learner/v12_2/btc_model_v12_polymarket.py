@@ -426,6 +426,7 @@ class PolyRunner(Runner):
                     self.cash=max(0.,self.a.capital+self.db.metrics()['pnl']-held)
                 self.cash_at=time.monotonic(); self.ui.update_stake()
                 self._wipeout_check()
+                self._sample_ambient_age(int(time.time()//300)*300)
                 self.db.sql('DELETE FROM diagnostics WHERE ts<?',(time.time()-7*86400,))
                 self.db.sql('DELETE FROM candles WHERE epoch<?',(time.time()-30*86400,))
             except Exception as e: self.error='Metadata/balance: '+type(e).__name__
@@ -478,6 +479,30 @@ class PolyRunner(Runner):
               ' - MONITOR ONLY, nothing stopped'
               %(spendable,stake,self._wipeout_seen,
                 'n/a' if opened is None else '%.2f'%opened),flush=True)
+    def _sample_ambient_age(self,ep):
+        """Log the book's age for both tokens, unfiltered, once per housekeeping tick.
+
+        Task 73 measured that rejected orders sit on a book twice as old as
+        filled ones at submit (174.8 vs 86.6 ms, p~0.0003). Task 75 asked
+        whether that is the feed being slow or the submit gate at
+        poly_core.py:928 selecting quiet books - and it could not be answered,
+        because `age_ms` was only ever persisted on the submit path, which the
+        gate has already filtered. Nothing on the box recorded the AMBIENT age.
+
+        This does. It reads the raw arrival stamp, not `quote()`, so the 2 s
+        staleness filter cannot hide the tail. Submits older than ambient means
+        the gate selects; matching ambient means the feed. Instrumentation only,
+        same shape as 12.8.1; it commits to nothing and cannot raise.
+        """
+        try:
+            toks=self.market.get(ep)
+            if not toks: return
+            now=time.monotonic(); row={}
+            for side,token in (('up',toks[0]),('dn',toks[1])):
+                b=self.books.books.get(token)
+                row['age_%s_ms'%side]=(round((now-b['arrival'])*1000,1) if b and b.get('arrival') else None)
+            self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(dict(kind='AMBIENT_AGE',**row))))
+        except Exception: pass
     def _main_oneshot_check(self):
         """MAIN disarms itself after ONE filled order.
 

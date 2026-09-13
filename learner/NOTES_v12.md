@@ -4257,6 +4257,52 @@ FAIR STATES 21:24 UTC | window opens with the NEWEST run: Polymarket paper (v10)
 Tokyo **up**, master OFF, `{'MAIN': False, 'REVERSAL': False, 'EF': False}`, no revert; wallet 0.00 eighth
 hour. **12** processes. Polymarket v12 live: armed, cash 40.35, stake 3, unit sum **-2.0000**, kill 2 of 20.
 
+## 22:40 UTC (Sun 09-13) - Task 76 decided the remake. 12.8.6 built and HELD.
+
+### The decision diff (AWS, Task 76/76a) - full result in `REMAKE_PLAN.md` §2a
+
+**Row 0: same model, same decision.** 114 co-fired candles: side **97.4%**, |Δp| median **0.0000**. §1a
+confirmed by data. **Of 156 paper fires, live filled 29.** Where the rest went, all graded on
+`candles.actual`, every cell under 60 and marked so:
+
+| paper fired -> live | n | paper $/1 on those | reading |
+|---|---|---|---|
+| filled | 29 | 15W/15L | live's real trades |
+| skipped: EV at padded price | 56 | **net +0.08** | the gate refused a break-even set - **it is working** |
+| **REJECTED by venue** | **31** | **net +0.25** | **the money. The fill-rate target.** |
+| no signal | 42 | ~26 quote/timing at the decision second | timing, not logic |
+
+**Two corrections to the framing, both in the user's favour:** the EV gate is **not** costing money (leave
+it); and paper's headline is oracle-flattered - `trades.win` disagrees with `candles.actual` on **32 of
+156**, so on the honest oracle paper is **56.4%**, and "beat the paper" means beat 56% on
+`candles.actual`, not the table.
+
+**Step 2 = the fill-rate fix, nothing else.** The signal and EV are untouched.
+
+### 12.8.6 - HELD with 12.8.5, deploy both at the next natural restart
+
+Two bounded changes, both found by verification tonight, neither touching trading behaviour:
+
+1. **`halt_check` writes a halt once, keeping its first reason.** AWS found `halt` alternating between two
+   strings ~1.3x/s whenever both the blended and the per-lane window were below -3 - **2,035 of the 2,060
+   audit rows on 09-13** were this, burying the 25 real ones. Three writes now guarded by
+   `not self.get('halt')`. Test: 50 passes -> exactly one audit row; **fails against the old file.**
+2. **Ambient book age is sampled** every housekeeping tick (`_sample_ambient_age`): raw arrival stamp for
+   both tokens, **not** through `quote()` so the 2 s filter cannot hide the tail, one `AMBIENT_AGE`
+   diagnostics row, cannot raise. **This is the instrumentation Task 75 said was missing** - submits older
+   than ambient means the `seq` gate selects quiet books; matching ambient means the feed. Instrumentation
+   only, same shape as 12.8.1. 4 of 5 tests fail against the old file.
+
+**240 tests (157 + 62 + 21). SHA256SUMS 30/30.** Held: a deploy restarts the engine and forces master OFF,
+and the user is armed. **Nothing deployed.**
+
+**One process note against myself:** I bumped the build number before the new halt tests were green - a
+`tail` pipe masked a red exit under `set -e`. The tests were a harness error (`C.Journal` in a file that
+imports `Journal`), fixed, re-proven against the old code, and the suite is green. Recorded because "after
+every change everything should be rechecked" cuts both ways.
+
+Hand rule: **-1.1818** on n=3 (a fill won). 86 orders / 39 fills / 38 results. Kill 17 to arm.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |

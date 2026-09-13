@@ -428,7 +428,7 @@ class Tests(unittest.TestCase):
     def test_v120_database_migrates_additively(self):
         self.db.reserve(123,decision(),'up','condition')
         self.db.set('build','12.0'); self.db.c.close(); self.db=Journal(self.path,'PAPER','abc')
-        self.assertEqual(self.db.get('build'),'12.8.5')
+        self.assertEqual(self.db.get('build'),'12.8.6')
         self.assertEqual(self.db.sql('SELECT count(*) FROM signals WHERE epoch=123')[0][0],1)
         cols={r[1] for r in self.db.c.execute('PRAGMA table_info(orders)')}
         self.assertTrue({'error_json','timing_json','request_reached','reconcile_count','venue_live'}<=cols)
@@ -620,3 +620,48 @@ class DashboardTests(unittest.TestCase):
                 with urllib.request.urlopen(f'http://127.0.0.1:{server.server_port}'+path) as response:self.assertEqual(response.status,200)
         finally:server.shutdown();server.server_close();thread.join()
 if __name__=='__main__':unittest.main(verbosity=2)
+
+
+class HaltKeepsItsFirstReason(unittest.TestCase):
+    """AWS, 09-13 22:2x: `halt` alternated between two strings ~1.3x/s.
+
+    halt_check wrote every reason whose condition held, every reconcile pass.
+    With the blended window AND EF's own window both below -3, that is two
+    different strings written in turn, each swap an audited "change": 2,035 of
+    the 2,060 audit rows on 09-13 were this, burying the 25 real ones.
+    Harmless to trading - halt stayed set - but the audit exists to answer
+    "who changed this", and it could not.
+    """
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory()
+        self.db=Journal(str(pathlib.Path(self.temp.name)/'h.db'),'LIVE','h')
+        f=dict(shares=10.,spent=5.,fees=0.,price=.5,fee_bps=0)
+        for i in range(20):                       # EF sum -20: blended AND per-lane both trip
+            ep=5000+i
+            self.db.sql("INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,reason,kind)"
+                        " VALUES(?,?,1,'FILLED','{}',0,0,'','EF')",(f'o{ep}',ep))
+            self.db.fill(f'o{ep}',ep,f't{ep}',f,'paper')
+            self.db.sql('INSERT INTO results(epoch,actual,payout,pnl,ts) VALUES(?,?,?,?,0)',(ep,'UP',0.,-1.0))
+        self.db.sql('DELETE FROM diagnostics')
+
+    def tearDown(self): self.db.c.close(); self.temp.cleanup()
+
+    def halt_writes(self):
+        return [json.loads(r[0]) for r in self.db.sql("SELECT detail FROM diagnostics WHERE detail LIKE '%control_write%'")
+                if json.loads(r[0]).get('key')=='halt']
+
+    def test_fifty_passes_write_the_halt_once(self):
+        for _ in range(50): self.db.halt_check()
+        self.assertTrue(self.db.get('halt'))
+        self.assertEqual(len(self.halt_writes()),1,'one halt, one audit row - not one per pass')
+
+    def test_the_reason_recorded_is_the_first_one_and_it_sticks(self):
+        self.db.halt_check(); first=self.db.get('halt')
+        for _ in range(20): self.db.halt_check()
+        self.assertEqual(self.db.get('halt'),first,'a set halt must not be overwritten by a later reason')
+
+    def test_a_cleared_halt_can_be_set_again(self):
+        self.db.halt_check(); self.db.set('halt',None); self.db.sql('DELETE FROM diagnostics')
+        self.db.set('halt_cleared_at',-1.0)       # keep the window open so the rule still trips
+        self.db.halt_check()
+        self.assertTrue(self.db.get('halt'),'the guard is against overwriting, not against halting')
