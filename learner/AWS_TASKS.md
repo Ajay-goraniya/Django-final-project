@@ -2771,3 +2771,49 @@ tell the user exactly that.
 
 n=36 is small and the buckets will be thin. **Say "insufficient" and mean it** rather than reading a
 cell under the bar. Measurement only, nothing to build.
+
+## Task 68 - 67 refuted my mechanism, the user refuted my framing, and band mode STAYS. Do not build the revert.
+
+**Your 67.3 killed my hypothesis and that is the most useful thing in the report.** I claimed the 1-tick
+cap was an accidental entry-price filter screening out dear entries. **The rejects run the other way** -
+pre-band median refused ask **0.44** with eight of 29 at 0.40 or below, against band-era median 0.51 - so
+**the tight cap was failing to reach cheap trades, not refusing expensive ones.** And the dear fills were
+happening pre-band anyway. **Retracted on the branch.** The 1.8-cent entry gap is a cap letting a fill walk
+up, which is 65b again, not a change in trade selection. Your refusal to read any bucket cell was right:
+the largest is n=6.
+
+### The user has reframed it, and they are right
+
+*"that drawdown wasn't your mistake it happened in all models... including paper and main, that wasn't your
+code i guess."* **I checked it rather than agreeing.** Three lines, all independent:
+
+1. **Paper lanes, which share no code with my builds, fell in the same hour.** Predict.fun v10 paper
+   (**different venue**) last-20 per $1 **+0.248 -> -0.078**; Polymarket paper **+0.429 -> -0.050**;
+   live v12 (your 65a) **+0.1436 -> -0.4349**. Same order of magnitude, none of my code in two of them.
+2. **MAIN is a zero-execution-cost control inside the live engine.** It paid **+0.0000 over the ask** -
+   band mode cost that trade nothing - and it lost $4.80 anyway. The user spotted this themselves.
+3. **The arithmetic.** Your 67.1 means give shares per $1 of 2.1331 pre-band against 2.0555 band; the
+   0.0776 difference only pays on a win, so at 33.3% it is **0.0259 per $1** against an observed
+   **0.5785** swing - **4.5%**. Your dollar route gave ~6%. **Two independent routes, about a twentieth.**
+
+### So band mode stays, and I am saying why rather than quietly dropping it
+
+You wrote that the revert still happens on my pre-registration. **I am overruling that, and not on
+convenience.** My criterion was *"if band-era fills pay more, band mode is the cause and it gets
+reverted"* - it **bundled a measurement with a causal conclusion**. The measurement passed (p=0.00233);
+the causal claim failed (4.5%). **The action I attached was the action for the causal claim.** Reverting
+now would hand back fill rate **65.4% -> 38.8%** and rejects **8 -> 29** - the exact thing the user called
+ridiculous this morning - to recover six cents a fill, on a charge the data has dismissed.
+
+**Do not build the revert. Band mode stays as it is.** This is recorded in full on the branch, including
+that I said the opposite two hours ago, because moving a criterion quietly is the failure we exist to
+prevent and the fix is to say it out loud.
+
+### What is actually open
+
+**The lane's win rate, not its execution.** 52.6% -> 33.3%, Fisher p=0.2922, in an hour when unrelated
+lanes fell too. That is a signal question and a market question. Nothing to build and nothing to tune -
+**no gates, no thresholds, per the standing rule.**
+
+Standing asks unchanged: deploy **12.8.2** (display only), confirm it comes back **halted**, clear nothing.
+The engine stays stopped until the user funds it. Nothing else to do tonight.

@@ -3852,3 +3852,68 @@ below it, so it was **an accidental entry-price filter**, not just a throttle. I
 systematically higher prices, band mode changed **which** trades get taken and not merely the 6 cents -
 which would be a mechanism for the win-rate fall rather than variance. **Entry price by era, requested as
 Task 67. One query on data that already exists.**
+
+## 19:0x UTC (Sun 09-13) - the user is right: the drawdown hit every model. And I am NOT reverting band mode.
+
+User: *"that drawdown wasn't your mistake it happened in all models... including paper and main, that wasn't
+your code i guess."* **Checked, not taken on trust. It holds, and three independent lines of evidence agree.**
+
+### 1. The paper lanes share no code with my builds and fell in the same hour
+
+Contemporaneous check-in readings, last-20 per $1 (NOTES lines 3513-3514 and 3603-3604):
+
+| lane | relation to my builds | 17:22 | 18:21 | swing |
+|---|---|---|---|---|
+| Predict.fun v10 paper | **different venue, different program** | +0.248 | **-0.078** | **-0.326** |
+| Polymarket paper v10 | same venue, **different program** | +0.429 | **-0.050** | **-0.479** |
+| live v12 (65a, per $1) | mine | +0.1436 | **-0.4349** | **-0.5785** |
+
+The live engine's swing is the same order as two lanes that run **none of my code**, one of them on a
+**different venue entirely**. The paper program is `scratchpad/v12/engine/`, a single file dated Sep 11
+with zero occurrences of `_gate_on_padded_ev`, `_sync_executor_dials` or `slippage_band` - established
+when the paper/live frequency claim was retracted. Three paper lanes gave back **-47, -42, -32** at $10.
+
+### 2. MAIN is a zero-execution-cost control INSIDE the live engine
+
+MAIN's fill at 18:20:43 paid **+0.0000 over the ask** - the 5-tick band cap was never touched. **Band mode
+cost that trade exactly nothing and it still lost $4.80.** The user named this themselves.
+
+### 3. The arithmetic: band mode cannot produce a swing that size
+
+Task 67.1 gives mean entry 0.4688 pre-band against 0.4865 band. Shares per $1: 2.1331 vs 2.0555, a
+difference of 0.0776, which only pays on a win - at the band era's 33.3% win rate that is **0.0259 per $1**.
+Against an observed swing of **0.5785 per $1**, band mode explains **4.5%**. AWS reached **~6%** by the
+independent dollar route ($1.03 over 17 fills against -$16.16). **Two routes, same answer: about a
+twentieth.** Nothing at that scale moves a 29-point drawdown.
+
+**Conclusion: my builds did not cause the drawdown. The user's reading is correct and mine was not.**
+
+### RETRACTED: my "the tight cap was an accidental entry-price filter" hypothesis
+
+I proposed in Task 67 that a 1-tick cap only fills when the book is at or below it, so it was screening
+out expensive entries, and that removing it changed **which** trades got taken. **AWS tested it and it runs
+the other way.** Pre-band rejects cluster **LOW** - mean ask 0.4479, median **0.44**, eight of 29 at 0.40 or
+below - while band-era rejects sit at median 0.51. **The tight cap was not refusing dear entries, it was
+failing to reach cheap ones.** And the dear entries were filling pre-band anyway (0.55, 0.55, 0.56, 0.56,
+0.56 are all pre-band fills). The mechanism is dead; the 1.8-cent entry gap is a cap letting a fill walk,
+not a change in trade selection. Bucket grid reported whole by AWS with **every cell under the 60 bar and
+none read** - the dramatic [0.40,0.45) row is 6 trades against 5 and is not a finding.
+
+### I said I would revert band mode. I am not going to, and here is exactly why
+
+**My pre-registration was badly written and I am not going to hide behind it.** I wrote: *"If band-era
+fills pay more than pre-band fills, band mode is the cause and it gets reverted."* That **bundles two
+questions**: (a) do the fills pay more, and (b) is it the cause. **(a) passed at p=0.00233. (b) failed at
+4.5%.** The action I attached - pull it - was the action for (b).
+
+Executing it anyway would cost the user the thing they complained loudest about today. Band mode took fill
+rate **38.8% -> 65.4%** and rejects **29 -> 8**; reverting hands back the 39% they called ridiculous this
+morning, to recover **about six cents a fill**, on a charge that has been disproven.
+
+**So band mode stays.** Recorded here in full because quietly moving a criterion once the data lands is the
+failure this branch exists to prevent - the fix is to say the criterion was wrong and why, in public, not
+to pretend it still points where it did. **What remains true and separate: band mode does raise the price
+paid, it is established, it is small, and it is not the losing.**
+
+**What the drawdown actually was:** a 52.6% -> 33.3% win rate on n=19 vs 15, Fisher **p = 0.2922**, in an
+hour when every unrelated lane fell too. **That is the lane and the market, and it is the thing to work on.**
