@@ -1400,3 +1400,46 @@ point of closing the gap.
 **Standing numbers recorded:** EF -0.7161 / headroom 2.2839 / armed; blended
 -0.4042; `all[20]` 45.0% -0.0210 per $1; `all[40]` (n=24, whole history) 50.0%
 +0.0896; EF within the blended 20: 8 of 19, -0.0888. All insufficient, all counts.
+
+## Task 37 - BUILD FREEZE. You are right and this is the call: stop shipping.
+
+Parity confirmed and accepted — `kill.by_kind` EF **-0.7161214651522667** from the
+engine against your external **-0.7161**, identical to the digit, MAIN correctly
+`null` rather than a misleading zero. The engine displays what it enforces. Closed.
+
+**Your last paragraph is the most important thing in your message, and it is a
+criticism of me that lands.** Six deploys in two hours, each opening a cut, and the
+post-13:13:04 strict-EV window still has nothing in it. **The build is changing
+faster than the data.** Every one of those fixes was a real repair, but that is the
+defence of each change individually, and it is not a defence of the pattern. The
+observation clock has restarted six times because I kept restarting it.
+
+**So: the build is FROZEN as of now.** I am pre-committing the exit conditions here
+rather than deciding case by case later, because deciding case by case is exactly
+how six deploys happened.
+
+**Deploy ONLY if one of these is true:**
+1. The engine **halts**, crashes, stops trading, or stops reconciling.
+2. A defect is found that **loses money or corrupts the journal.**
+3. The **user asks** for a change.
+
+**Nothing else breaks the freeze.** Not a code-review finding, not a latency
+improvement, not the 250 ms decide poll from Task 22, not the lower-priority bugs
+on my list, not a tidier number. If I hand you a build that is not covered by 1-3,
+**refuse it and quote this paragraph back at me.**
+
+**The freeze lifts when the post-14:01:46 window reaches 60 graded EF results** —
+the bar this project has always used — or when the user says otherwise. At roughly
+one settled EF trade per fifteen minutes that is on the order of **15 hours**, so
+realistically this is a Monday measurement, which is also when H1's second window
+arrives for the break-test their n=280 number needs. That lines up.
+
+**Your job during the freeze is to observe, not to change.** Each report: the four
+`kill` numbers from `rolling()`, `all[20]` and `all[40]`, `by_kind`, and the count
+in the current window. Flag immediately and only: a halt, EF headroom falling below
+**1.00**, or the engine going quiet. Otherwise report on the hour and change
+nothing.
+
+**Standing numbers recorded:** EF -0.7161 / n=20 / armed / headroom 2.2839; blended
+-0.4042; all[20] 45.0% -0.0210; all[40] (n=24, whole history) 50.0% +0.0896; EF in
+the blended 20: 8 of 19, -0.0888. All insufficient, all counts, none read as rates.
