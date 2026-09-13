@@ -2795,6 +2795,51 @@ is the exact shape the rule used to fire on and the exact shape the four-hour sw
 Lanes off, re-asserted, nothing enabled. Equity 15.02, settled 442, nothing open, ladder $1 OK. No real fill
 since 19:59:37 yesterday, now 7.4 hours. Engines up 4.3 h, 13 processes.
 
+## 03:45 UTC (Sun 09-13) - the 140 ms is real and unshavable; two actions blocked on the user
+
+The AWS session answered the latency question and the answer is the plain one: there is nothing to shave.
+
+Its control is what makes it airtight - same box, same second, same CDN:
+
+| endpoint | med ms |
+|---|---|
+| `clob.polymarket.com/ok` (trivial) | 147.0 |
+| `clob.polymarket.com/tick-size?...` | 143.5 |
+| `gamma-api.polymarket.com/events?...` | **19.0** |
+
+Two CLOB endpoints doing wildly different work both cost ~143 ms, so that is distance rather than
+processing; and gamma on the same wire from the same box answers in 19 ms, so it is not our network, DNS,
+TLS or routing. Only `clob` goes far. `cf-ray` shows a **BOM** (Mumbai) Cloudflare edge, so the edge is
+local and the origin is not.
+
+Full breakdown of the ~340 ms submit: local overhead is DNS 0.4 + TCP 0.8 + TLS 4.5 + sign ~7 +
+fire-to-submit ~13 = **~25 ms**; wire to origin and back **~140 ms**; venue-side processing the remaining
+**~175-200 ms**. A warm keep-alive GET still costs 135 ms, so connection reuse does not touch it. `prepare()`
+makes no network call - `sign_ms` is 5.6-8.1 ms across all 25 timed attempts against a 138 ms floor for any
+CLOB request, which no network call can hide inside.
+
+I tried to corroborate from this container and **could not**: outbound here goes through the agent proxy,
+which puts gamma at 177-217 ms against that box's 19 ms. My absolute numbers are contaminated and establish
+nothing about origin location. The `cf-ray` from here reads **IAD**, so Cloudflare serves each box from its
+own local edge, which is consistent with the edge-to-origin reading but is not independent evidence. The AWS
+session's control stands on its own and does not need mine.
+
+**What is established:** a ~140 ms floor on every order from Mumbai, and that roughly 25 ms of the 340 is
+ours. **What is not:** that this causes the rejects. That rests on one reject with snapshot telemetry
+(0.13 s book age, 398 ms submit), and our own fills-vs-rejects latency is indistinguishable (350 vs 322 ms) -
+which is consistent with being uniformly too slow but does not establish it. A submitter near the origin
+would pay ~10-20 ms of wire instead of ~140, so the structural deficit is 120-130 ms; whether that decides
+our fills is the open question, and moving a box is an expensive way to test it. A cheap read from a US-East
+host would settle the origin question first.
+
+Two actions are sitting on the user, both refused by guards on that box and correctly not routed around:
+- `pad_ticks` to 0 (their 03:25 decision) - blocked by a "Modify Shared Resources" guard; `ev_settings`
+  still reads `{"mode":"regime","pad_ticks":2}`.
+- deploying 12.3.5/12.3.6/12.3.7 - blocked by the production-deploy guard.
+
+Nothing about the model is implicated by any of this. Live edge per $1 still matches paper on 11 trades; the
+gap is entirely count.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
