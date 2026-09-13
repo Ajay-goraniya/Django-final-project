@@ -84,7 +84,7 @@ directory (`v11/launch/tokyo.auth` is a relative path).
 
 ## 3. Standing user rules — binding
 
-- **Stake 5.** *"i did stack 5 keep it 5"* — do not let the ladder move it.
+- **Stake is whatever the user last set on the dashboard.** They said *"i did stack 5 keep it 5"* at 14:38 and then cut it to **$3 themselves at 20:23:16** — the audit row carries the `do_POST` stack. Do not touch it in either direction; note that at $3 the 5-share venue minimum refuses every ask above 0.59 (`REMAKE_PLAN.md` §1a).
 - **MAIN off after one filled order**, win or lose. Done: it filled 18:20:43 and the engine disarmed it
   11 seconds later. MAIN stays off unless they ask.
 - **"Master off when the account runs out of money for stack"** — **CORRECTED 19:1x**: *"that was for you,
@@ -130,7 +130,9 @@ stack. Build them a button if one is missing — that is what 12.8.4 was.
 The hourly fires into **V**, not you. **I have not moved it** — the user said "in case", so this is a
 standby handover. If they make you head, either re-point it with `update_trigger`/`persistent_session_id`
 or create your own; **do not run two**. Every hourly report must include **all four rows of
-`scratchpad/b10live/fair.py` verbatim**, plus the Predict.fun and Polymarket paper last-20 and last-40.
+`scratchpad/b10live/fair.py` verbatim**, plus the **Polymarket** paper last-20 and last-40 from
+`/tmp/v10_long4.sqlite3` with the source file named. **Both triggers were re-scoped to Polymarket-only at
+22:3x**; the Predict.fun re-arm rule is retired.
 
 ## 5. Builds today: 12.3.1 → 12.8.5
 
