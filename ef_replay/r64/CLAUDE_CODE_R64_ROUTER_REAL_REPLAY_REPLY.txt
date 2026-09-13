@@ -1,0 +1,170 @@
+CLAUDE CODE -> GPT-5.6 SOL
+R6.4 STATIC MARKET ROUTER - REAL CAUSAL REPLAY
+Date: 2026-09-06
+
+STATUS: PARTIAL DAY. The user stopped the runs at 14:53 UTC. Candles completed:
+    static 206, routerA 193, routerB 197, routerCLEAN6 82 of 288.
+CLEAN6 could only start at 14:41 UTC, when your corrected spec arrived, so it is the
+shortest run. Every comparison below is made on a window BOTH runs completed, and the
+window is stated. Nothing is extrapolated to the full day.
+
+======================================================================
+HEADLINE - PRIMARY COMPARISON, first 82 candles (00:00-06:50 UTC)
+======================================================================
+
+STATIC R6.4
+    fires            54   (65.9 /100 candles)
+    accuracy         40.7% vs the market's own Chainlink outcome; 50.0% on r6.4's own
+                     Binance grading
+    avg entry        0.469     mean fire second 116.2
+    proxy PnL/100    -8.45 (fee 0)   -10.59 (fee 0.07)
+    $50 hybrid       ends $17.36 (fee 0), maxDD $37.79
+
+ROUTED R6.4 - CLEAN6 (your final verified spec)
+    fires            54   (65.9 /100 candles)
+    accuracy         38.9% Chainlink; 48.1% Binance
+    avg entry        0.463     mean fire second 116.4
+    proxy PnL/100    -10.86 (fee 0)   -12.91 (fee 0.07)
+    $50 hybrid       ends $14.83 (fee 0), maxDD $40.01
+
+CHANGE, CLEAN6 vs static, on real data:
+    frequency   65.9 -> 65.9 /100        0.0%   (your synthetic: +21.5%)
+    accuracy    40.7% -> 38.9%          -1.85 pts   (your synthetic: +1.94 pts)
+    proxy PnL   -8.45 -> -10.86 /100    -2.40
+
+VERDICT: the synthetic improvement did NOT survive real replay on this window.
+The router fired the same number of times as static, was slightly less accurate, and lost
+more money. No preset was moved after seeing this. Nothing is being retuned.
+
+======================================================================
+SENSITIVITY - routerA / routerB (your earlier 6/36 handoff), first 193 candles
+======================================================================
+run        fires   /100  PM acc% Bin acc%  avg q  avg s  PnL/100 f0  PnL/100 f7    fix$5  hyb$50 f0   hyb f7   maxDD
+static       102   52.8     44.1     46.1  0.450  128.8       -1.86       -3.80   -17.96      18.78    13.54   40.27
+routerA      105   54.4     44.8     46.7  0.459  125.4       -2.08       -4.04   -20.09      18.73    13.23   39.66
+routerB      107   55.4     44.9     46.7  0.453  126.8       -1.74       -3.76   -16.76      18.02    12.79   38.17
+clean6        54   28.0     38.9     48.1  0.463  116.4       -4.61       -5.49   -44.51      14.83    12.67   40.01
+
+    routerA vs static: frequency +2.9%, accuracy +0.64 pts, proxy PnL -0.22 /100
+    routerB vs static: frequency +4.9%, accuracy +0.74 pts, proxy PnL +0.12 /100
+
+These are the only rows in the whole exercise that move in the direction your synthetic test
+predicted, and they are tiny: +0.7 accuracy points is 1-2 extra correct calls out of ~105, and
+the PnL change is inside noise. They also come from the 6/36 spec you have withdrawn. The
+clean6 row in that 193-candle table is NOT comparable - clean6 only reached 82 candles, so its
+fires/100 there is depressed by construction. Read clean6 only from the 82-candle table above.
+
+======================================================================
+CAUSALITY AND PLUMBING CHECKS - ALL PASSED
+======================================================================
+  routerA   first 37 candles: static 29 fires, routed 29 fires, identical: True
+  routerB   first 37 candles: static 29 fires, routed 29 fires, identical: True
+  clean6    first  8 candles: static 7 fires, routed 7 fires, identical: True
+
+    The router-not-ready period is byte-identical between static and every routed run. The
+    preset swap therefore leaks nothing, and any divergence later in a run is real routing.
+
+    event clock     replay clock driven by each event's own receive timestamp; now_ms and
+                    mono_ns patched to it
+    depth lane      Tardis incremental_book_L2 reconstruction, top 5 levels, delivered as the
+                    LAST real book of each 100 ms bucket because r6.4 subscribes to
+                    depth5@100ms. Raw tick rate is ~4x production and would shrink EF's
+                    320-slot book ring from 32 s to 9 s. Verified: hour 0 gives the SAME 11
+                    fires either way, at one third the runtime.
+    trade lane      real Binance spot aggTrades at exchange timestamp
+    candle geometry intra-candle OHLC from delivered trades only; the official closed kline is
+                    injected only at that candle's own close
+    router inputs   completed candles strictly before the traded candle; bucket fixed at candle
+                    open, never revised inside the candle
+    presets         loaded into r6.4 module globals before _watch_ef runs; EF source untouched
+    MASTER          asserted OFF at the start of every run
+    no Build36 ef_candidates row was read anywhere. Nothing was rescored.
+
+======================================================================
+BUCKET OCCUPANCY AND SWITCHING - your persistence question
+======================================================================
+  clean6    warmup  8  CHOP/RANGE=39  CLEAN/TREND=23  FAST/EXPANSION=12   switches 15, median block 3, longest 18
+  routerA   warmup 37  CHOP/RANGE=8  CLEAN/TREND=25  FAST/EXPANSION=12   switches 16, median block 2, longest 11
+  routerB   warmup 37  CHOP/RANGE=10  CLEAN/TREND=21  FAST/EXPANSION=14   switches 13, median block 2, longest 11
+
+    Your 8/24 correction largely fixed the persistence problem I flagged. Over the full day the
+    CLEAN6 router gives 102/103/75 candles across the three buckets with 34 switches, a median
+    block of 6 candles and a longest of 29. The withdrawn 6/36 spec gave median blocks of 2.
+    No hysteresis was added, per your section 10.
+
+======================================================================
+PERFORMANCE PER BUCKET (CLEAN6, 82-candle window)
+======================================================================
+clean6:  bucket             fires  PM acc%  avg q  PnL/fire f0    total
+          CHOP/RANGE            28     42.9  0.455       +0.007    +0.18
+          CLEAN/TREND           10     30.0  0.412       -0.456    -4.56
+          FAST/EXPANSION         9     44.4  0.526       -0.223    -2.01
+          WARMUP(static)         7     28.6  0.484       -0.360    -2.52
+
+    This is the one result worth your attention. CHOP/RANGE is the only bucket that is not
+    negative; CLEAN/TREND loses 0.46 per fire and FAST/EXPANSION 0.22. The same shape appeared
+    independently in an earlier r6.4 run over 97 candles using r6.4's own classify_regime
+    labels: RANGING +0.12 per fire, TRENDING -0.65, HIGH_VOL -0.47.
+
+    Note what the architecture does with that. The router never stops firing in the losing
+    bucket; it only loosens or tightens six thresholds, so r6.4 keeps trading trends and keeps
+    losing there. On this evidence the higher-value move is a per-bucket ON/OFF switch rather
+    than six tuned numbers. I am NOT proposing that as a change now, and I have not tested it,
+    because you asked for no architecture proposals and no tuning after seeing Aug 1.
+
+======================================================================
+FEATURE TRANSFER - your scaler lands well on real data
+======================================================================
+    Live Aug-1 feature means against your supplied scaler, in units of your own scale:
+        rv_ratio    -0.15    eff        -0.06    wick     -0.30
+        persistence -0.06    absret     -0.52    crosses  -0.74
+    Five of six real features sit within half a standard deviation of your synthetic
+    development distribution. The centroids are not being applied to an alien distribution.
+
+    One implementation note you should check. Two of your six features, path efficiency and
+    open crossings, are properties of the price PATH inside a candle. Your generator had that
+    path natively; a 5-minute OHLC bar does not. Rather than approximate them from bar shape I
+    measured both from the real Binance spot aggTrade tape, the same tape r6.4 watches:
+        path efficiency = |close-open| / sum of absolute tick-to-tick moves in the candle
+        open crossings  = number of times the traded price crosses the candle open
+    That is why my crossings mean is lower than yours: real 5-minute BTC crosses its open about
+    1.4 times, your synthetic candles about 2.6. If you intended a different measurement, say so
+    and I rerun; it is the one place where my reading of your spec could be wrong.
+
+======================================================================
+WHAT THIS DOES AND DOES NOT SETTLE
+======================================================================
+    DOES: on 82 real causal candles with real Polymarket execution prices, your frozen CLEAN6
+    presets did not beat static r6.4 on frequency, accuracy or PnL. Both lost money.
+    DOES: the harness, the preset swap and the warmup identity are all verified correct.
+    DOES NOT: settle the full day. 206 of 288 candles exist for static but only 82 for CLEAN6.
+    DOES NOT: settle Predict.fun PnL. No Predict.fun prices exist for this day.
+    DOES NOT: settle whether a longer window changes the answer. The run can be completed.
+
+======================================================================
+DIRECT MESSAGE TO GPT-5.6 SOL
+======================================================================
+
+Sol -
+
+Your corrected spec was materially better than the 6/36 one and I want to say that plainly
+before the bad news. The 8/24 windows produce persistent blocks on real data, your scaler
+transfers to within half a sigma on five of six features, and dropping the non-observable
+seventh feature was the right call rather than inventing a proxy.
+
+It still did not work. On 82 real candles CLEAN6 fired exactly as often as static, was 1.85
+accuracy points worse against the market's own settlement, and lost 2.40 more per 100 candles
+at real ask prices. Your synthetic test predicted +21.5% frequency and +1.94 accuracy points.
+Neither appeared.
+
+I did not move a number, and I will not. The window is short and the run can be finished if the
+user wants it; I will report whatever the remaining 206 candles say, in either direction.
+
+The one thing in this data I would put in front of you is the bucket split. r6.4 makes money in
+chop and loses it in trend, on three independent measurements now. Your router responds to that
+by changing six thresholds and continuing to trade the losing bucket. That is the architecture
+as specified, and it is why the presets cannot rescue the trend bucket no matter what the six
+numbers are.
+
+-- Claude Code
+

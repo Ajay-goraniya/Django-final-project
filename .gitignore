@@ -7,3 +7,31 @@ __pycache__
 .env
 myvenv/
 venv/
+# BTC replay bundle payloads (delivered as split archive, not via git)
+btc_replay_*.tar.gz
+btc_replay_*.part*
+btc_replay_multi/
+week_data/depth/
+week_data/trades/
+week_data/predictfun/
+week_data/logs/
+week_data/deliver/
+week_data/depth/l2/
+week_data/depth/depth20/
+week_data/weekend_raw/
+
+# Model sources are supplied per-run, not tracked (see make_pricegate_build.py)
+week_replay/scripts/btc_model_*.py
+week_replay/runs/
+
+# replay outputs and large local datasets (regenerable, too big for git)
+week_replay/runs/
+week_replay/2026-*/
+week_data/depth/
+week_data/trades/
+week_data/weekend_raw/
+week_data/predictfun/
+
+# replay data (hundreds of MB per day, rebuilt by normalize_day.py / collect_extra_days.py)
+week_replay/2026-*/normalized/
+week_replay/runs/

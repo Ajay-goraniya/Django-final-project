@@ -1,0 +1,63 @@
+================================================================================================================
+R6.4 STATIC vs ROUTED - REAL CAUSAL REPLAY 2026-08-01 - common window: first 82 candles (00:00-06:50 UTC)
+================================================================================================================
+run        fires   /100  PM acc% Bin acc%  avg q  avg s  PnL/100 f0  PnL/100 f7    fix$5  hyb$50 f0   hyb f7   maxDD
+static        54   65.9     40.7     50.0  0.469  116.2       -8.45      -10.59   -34.66      17.36    14.82   37.79
+routerA       54   65.9     40.7     50.0  0.472  117.5       -9.00      -11.10   -36.88      17.26    14.74   38.12
+routerB       54   65.9     40.7     50.0  0.470  117.5       -8.45      -10.59   -34.66      17.36    14.82   37.79
+clean6        54   65.9     38.9     48.1  0.463  116.4      -10.86      -12.91   -44.51      14.83    12.67   40.01
+
+PM acc = accuracy against the market's own Chainlink outcome. Bin acc = r6.4's own grading vs the Binance close.
+PnL = CROSS-VENUE EXECUTION PROXY at the real Polymarket $10 ask-ladder VWAP. Not Predict.fun PnL.
+
+clean6 vs static: frequency 65.9 -> 65.9 /100 (+0.0%)   PM accuracy 40.7% -> 38.9% (-1.85 pts)   proxy PnL/100 -8.45 -> -10.86 (-2.40)
+
+routerA vs static: frequency 65.9 -> 65.9 /100 (+0.0%)   PM accuracy 40.7% -> 40.7% (+0.00 pts)   proxy PnL/100 -8.45 -> -9.00 (-0.54)
+
+routerB vs static: frequency 65.9 -> 65.9 /100 (+0.0%)   PM accuracy 40.7% -> 40.7% (+0.00 pts)   proxy PnL/100 -8.45 -> -8.45 (+0.00)
+
+================================================================================================================
+WARMUP IDENTITY CHECK (router not ready -> static thresholds -> fires must be identical)
+================================================================================================================
+  routerA   first 37 candles: static 29 fires, routed 29 fires, identical: True
+  routerB   first 37 candles: static 29 fires, routed 29 fires, identical: True
+  clean6    first  8 candles: static 7 fires, routed 7 fires, identical: True
+
+================================================================================================================
+PERFORMANCE BY ROUTER BUCKET
+================================================================================================================
+
+clean6:  bucket             fires  PM acc%  avg q  PnL/fire f0    total
+          CHOP/RANGE            28     42.9  0.455       +0.007    +0.18
+          CLEAN/TREND           10     30.0  0.412       -0.456    -4.56
+          FAST/EXPANSION         9     44.4  0.526       -0.223    -2.01
+          WARMUP(static)         7     28.6  0.484       -0.360    -2.52
+
+routerA:  bucket             fires  PM acc%  avg q  PnL/fire f0    total
+          CHOP/RANGE             5     40.0  0.536       -0.196    -0.98
+          CLEAN/TREND           13     38.5  0.446       +0.014    +0.18
+          FAST/EXPANSION         7     42.9  0.490       -0.177    -1.24
+          WARMUP(static)        29     41.4  0.468       -0.184    -5.34
+
+routerB:  bucket             fires  PM acc%  avg q  PnL/fire f0    total
+          CHOP/RANGE             5     20.0  0.490       -0.524    -2.62
+          CLEAN/TREND           11     45.5  0.452       +0.198    +2.18
+          FAST/EXPANSION         9     44.4  0.483       -0.129    -1.16
+          WARMUP(static)        29     41.4  0.468       -0.184    -5.34
+
+================================================================================================================
+BUCKET OCCUPANCY AND SWITCHING over the common window
+================================================================================================================
+  clean6    warmup  8  CHOP/RANGE=39  CLEAN/TREND=23  FAST/EXPANSION=12   switches 15, median block 3, longest 18
+  routerA   warmup 37  CHOP/RANGE=8  CLEAN/TREND=25  FAST/EXPANSION=12   switches 16, median block 2, longest 11
+  routerB   warmup 37  CHOP/RANGE=10  CLEAN/TREND=21  FAST/EXPANSION=14   switches 13, median block 2, longest 11
+
+================================================================================================================
+DIRECTION SPLIT AND FIRE SECOND
+================================================================================================================
+  static    DOWN n=33 PMacc=30.3%  UP n=21 PMacc=57.1%    fire second p10/p50/p90 [16.7, 107.8, 246.4]
+  clean6    DOWN n=32 PMacc=28.1%  UP n=22 PMacc=54.5%    fire second p10/p50/p90 [26.2, 107.4, 245.0]
+  routerA   DOWN n=32 PMacc=28.1%  UP n=22 PMacc=59.1%    fire second p10/p50/p90 [16.7, 107.8, 246.4]
+  routerB   DOWN n=33 PMacc=30.3%  UP n=21 PMacc=57.1%    fire second p10/p50/p90 [16.7, 107.8, 246.4]
+
+LABEL: r6.4 EF source untouched in every run; only the six Early-EF thresholds are swapped by the external router.

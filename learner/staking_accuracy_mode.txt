@@ -1,0 +1,17 @@
+YOUR STAKING RULE on the out-of-sample week: $50 start, 10% of capital, recompute on 3W/2L, stake clamped [$1,$50]
+
+rule                         trades    acc     end $     PnL $      ret avg stk   maxDD    low  days+
+accuracy 0.85/0.02              654  87.6%    427.61   +377.61    +755%   14.85   70.90  47.29    8/8
+accuracy 0.85/0.05              323  86.7%    782.51   +732.51   +1465%   26.22  135.15  50.00    6/8
+accuracy 0.80/0.05              458  81.9%    595.62   +545.62   +1091%   19.30  228.09  11.51    5/8
+pnl mode EV>=0.20               498  59.4%   4109.04  +4059.04   +8118%   43.32  486.30  40.00    8/8
+pnl mode EV>=0.15               764  56.8%   2686.19  +2636.19   +5272%   37.58  548.91  40.00    8/8
+
+(the depth test earlier showed 0 of 250 $50 clips were depth-capped on real-book days, so $50 stakes are fillable)
+
+PER-REGIME floors for accuracy mode (realized-vol tercile at decision time), chosen for accuracy>=80% then best PnL
+  low  : conf 0.80 EV 0.02 -> n=109 (14/day) acc 89.0% PnL $+91 t=2.11
+  mid  : conf 0.75 EV 0.05 -> n=242 (30/day) acc 80.6% PnL $+280 t=3.12
+  high : conf 0.80 EV 0.08 -> n=236 (30/day) acc 81.8% PnL $+269 t=3.12
+
+  REGIME-ADAPTIVE accuracy mode: 422 trades (53/day), acc 81.8%, $10 flat PnL $+498 t=4.33  |  your staking: end $1538.07 PnL $+1488.07

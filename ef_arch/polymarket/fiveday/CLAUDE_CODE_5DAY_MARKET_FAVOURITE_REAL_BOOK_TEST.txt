@@ -1,0 +1,289 @@
+CLAUDE CODE -> GPT-5.6 SOL
+5-DAY MARKET-FAVOURITE REAL-BOOK TEST
+Date: 2026-09-06
+
+HYBRID START CAPITAL: $50
+
+for 120s (independent days, $50 fresh each day, fee 0.07 PRIMARY, TRADE-TAPE PROXY fills -- see Section 1 for why not ladders):
+  2026-08-22: $13.09   (PnL -36.91, -73.8%)
+  2026-08-24: $4.08   (PnL -45.92, -91.8%)
+  2026-08-27: $11.65   (PnL -38.35, -76.7%)
+  2026-08-31: $7.03   (PnL -42.97, -85.9%)
+  2026-09-05: $64.25   (PnL +14.25, +28.5%)
+
+continuous 5-day path (120s, fee 0.07, capital and stake carried Aug 22 -> Aug 24 -> Aug 27 -> Aug 31 -> Sep 05):
+  $50 -> $0.98    (bankrupt on 2026-08-24; below $1 stops the path)
+
+REAL-LADDER result on the requested dates (PolyOrderbooks open files, 1-second L2, PARTIAL days only):
+  Aug 22: 15 markets, 120s, fee 0.07 -> -12.59/100 ;  Aug 24: 11 markets -> -3.01/100 ;  both pooled: 25 markets, win 72.0%, -8.79/100
+  Aug 27 / Aug 31 / Sep 05: DATA UNAVAILABLE for real ladders (no open archive reaches them; see Section 1)
+
+======================================================================
+0. VERDICT IN THREE LINES
+======================================================================
+  The Aug-1 favourite result did not repeat. On five out-of-sample days the frozen 120 s market-favourite
+  rule is negative on 4/5 days at the official fee (median -3.67/100, worst -6.97/100), positive only on Sep 05
+  (+3.16/100), and the user's $50 hybrid path is bankrupt on day two. The calibration edge (favourite
+  underpriced 1-2.5 pts on Aug 1) is gone: pooled 5-day diff is within +-0.012 in every bucket, EV/$ after fee
+  negative in 4/5 buckets. This was a lucky day, not a repeatable real-book edge.
+
+======================================================================
+1. DATA SOURCES -- WHAT WAS TRIED, WHAT WORKED (per your Section 1-2, 21)
+======================================================================
+  pmxt v2 (r2v2.pmxt.dev)          confirmed: last file 2026-08-10T00, 404 from 08-10T01 on. Not used for these dates.
+  Rocklabs (poly-raw R2)            README: access by email request with institutional affiliation. No public URL. NOT accessible.
+  hahahaha.online                   site hosts only an Aug-10 sample; full daily archive (btc_5m_YYYYMMDD.zip) is posted on
+                                    Telegram @polymarketbookdata (files for our dates exist there, e.g. btc_5m_20260905.zip) but
+                                    Telegram documents cannot be fetched without a Telegram client/account. NOT reachable non-interactively.
+  DepthFeed (api.depthfeed.com)     AUTH_MISSING without a key; requires account. NOT used.
+  PolyOrderbooks (polyorderbooks.com) API needs a free-tier account + key (1-second L2, archive of 781M snapshots, covers our
+                                    dates). NOT used (no credentials). BUT their open CC-BY files were used:
+                                      Zenodo 10.5281/zenodo.22084114 updown_5m.parquet  (BTC 5m: Aug 21 00:24 -> Aug 24 10:35, 62 markets)
+                                      HF polyorderbooks/polymarket-crypto-5min-l2 btc.parquet (Aug 23 09:04 -> 12:44, 44 markets)
+                                    = 101 BTC 5m markets with REAL 1-second L2 ladders, 48,563 snapshots. Aug 22: 16, Aug 24: 11 of ours.
+  HuggingFace sweep                 DineshKumar8399/polymarket-orderbook-dataset (Jul 10 -> Sep 04) is top-of-book only and contains
+                                    ZERO btc-updown-5m markets (checked). Joseph3222/polymarket-orderbook ends 08-10. Others end Apr-Jul.
+  Polymarket itself                 Gamma: all 5 x 288 markets mapped (1440/1440), resolved, outcomePrices used as the outcome.
+                                    CLOB prices-history: 1-minute buckets, not usable for a 5 s grid, not executable.
+                                    data-api /trades: the FULL executed trade tape per market (taker side, token, price, size,
+                                    1-second ts). 2.52M fills over the 5 days. Median 1,100-1,900 fills per 5-minute window.
+                                    Aug 31: 44 consecutive markets (06:50-10:30 UTC) return an empty tape from the API -> 225/288 usable.
+
+  So: REAL LADDERS for full days = DATA UNAVAILABLE on all five requested dates without credentials.
+      The full-day numbers below are a TRADE-TAPE PROXY. It is labelled that on every table.
+      The partial-day numbers are REAL LADDERS (labelled).
+  To turn this into a full real-ladder run: a PolyOrderbooks free Starter key (no card) or a Telegram client
+  would do it; the pipeline here consumes 1-second L2 rows directly (real_book_partial.py).
+
+======================================================================
+2. STRATEGY AS RUN (frozen, no per-day tuning)
+======================================================================
+  favourite at T = open + X   : TAPE PROXY: token whose last executed price before T is higher (tie / one side
+                                untraded -> abstain: 29 of 8,238 decision rows).  REAL LADDERS: higher (bid+ask)/2, tie or
+                                one-sided book on either token -> abstain (56 of 606).  NOT ask > 0.50.
+  fill                        : TAPE PROXY: VWAP of the actual taker-BUY prints on that token from T(+delay) until their
+                                notional covers the stake, max 15 s; no cover -> unexecutable, no trade.
+                                REAL LADDERS: walk the favourite's ask ladder at the latest snapshot <= T(+delay).
+  one trade per market, hold to settlement, outcome = Gamma outcomePrices (market's own Chainlink resolution).
+  offsets 30/60/90/120/180/240 s on every date; 120 s is the primary. Nothing retuned.
+  resolution wording check (your Section 14): ALL FIVE dates' markets carry the Chainlink TWAP wording
+  ("time-weighted average price ... BTC/USD TWAP data stream"); Aug 1 carried the point end-vs-start wording.
+  We used the market's own resolution on every date, never Binance.
+
+======================================================================
+3. FEES (your Section 5)
+======================================================================
+  Gamma + CLOB metadata on every one of the 5 dates: feesEnabled=True, takerBaseFee=1000, makerBaseFee=1000, identical to Aug 1.
+  The data-api tape carries no per-fill fee field, so the Aug-1 "0 bps on the stream" observation cannot be repeated here.
+  PRIMARY = r 0.07, BUY semantics exactly as you wrote: win return per $1 = (1 - r(1-q))/q - 1, loss = -1.
+  fee 0 shown as the stress in the other direction. Both labelled.
+
+======================================================================
+4. PRIMARY MULTI-DAY TABLE -- 120 s, $5 stake, TRADE-TAPE PROXY, fee 0.07
+======================================================================
+  DATE | markets(with tape) | trades | win% | avg fill | fee | PnL/100 | fixed-$10 PnL | hybrid start | hybrid end | hybrid PnL | maxDD | worst1h | worst3h | Asia | London | US | +300ms | +1s PnL/100 | +5s PnL/100
+  2026-08-22 | 284 | 282 | 74.8 | 0.748 | 0.07 | -2.67 | -75.41 | 50.00 | 13.09 | -36.91 | 57.80 | -3.99 | -5.85 | -1.02 | -0.67 | -5.85 | n/a | -2.29 | -1.93
+  2026-08-24 | 288 | 288 | 72.9 | 0.764 | 0.07 | -6.34 | -182.52 | 50.00 | 4.08 | -45.92 | 50.43 | -5.02 | -6.85 | -4.80 | -6.86 | -6.58 | n/a | -6.55 | -6.84
+  2026-08-27 | 288 | 285 | 74.7 | 0.758 | 0.07 | -3.67 | -104.59 | 50.00 | 11.65 | -38.35 | 42.21 | -3.53 | -4.94 | -1.03 | -9.19 | -0.24 | n/a | -3.86 | -3.42
+  2026-08-31 | 225 | 223 | 73.1 | 0.760 | 0.07 | -6.97 | -155.43 | 50.00 | 7.03 | -42.97 | 51.84 | -3.72 | -5.40 | -5.85 | -6.11 | -3.58 | n/a | -6.09 | -6.60
+  2026-09-05 | 288 | 287 | 77.4 | 0.749 | 0.07 | +3.16 | +90.69 | 50.00 | 64.25 | +14.25 | 303.58 | -3.98 | -5.11 | +18.89 | -3.95 | -5.88 | n/a | +4.28 | +4.81
+  (+300 ms = n/a: the tape has 1-second timestamps, +1 s is the floor. Latency variants buy the SAME side chosen at T.)
+
+  COMBINED 5-DAY (120 s): markets 1373  trades 1365  win 74.7%  weighted avg fill 0.756
+    PnL/100 fee 0.07 -3.13   fee 0 -1.46
+    total fixed-stake PnL fee 0.07:  $2 -85.45   $5 -213.63   $10 -427.26
+    hybrid continuous: $50 -> $0.98  (bankrupt 2026-08-24)
+    positive days 1/5   negative days 4/5   worst day -6.97/100   median day -3.67/100   best day +3.16/100
+    worst session 2026-08-27 london -9.19
+
+  ALL OFFSETS, PnL/100 fee 0.07 (robustness comparison only; 120 s stays primary):
+   30s  +3.59 |  60s  +0.39 |  90s  -3.43 | 120s  -2.67 | 180s  -0.70 | 240s  -2.07   <- 2026-08-22
+   30s  -6.38 |  60s  -5.46 |  90s  -8.20 | 120s  -6.34 | 180s  -1.24 | 240s  -6.76   <- 2026-08-24
+   30s  -1.23 |  60s  -2.51 |  90s  -3.62 | 120s  -3.67 | 180s  -1.64 | 240s  +0.82   <- 2026-08-27
+   30s -10.05 |  60s  +0.19 |  90s  -7.33 | 120s  -6.97 | 180s  -4.16 | 240s  +0.18   <- 2026-08-31
+   30s  -0.38 |  60s  -2.18 |  90s  +3.46 | 120s  +3.16 | 180s  +1.84 | 240s  +2.26   <- 2026-09-05
+
+======================================================================
+5. HYBRID-STAKING REPORT, 120 s, fee 0.07 (your Section 8-9) -- A. INDEPENDENT DAYS
+======================================================================
+  Rule as implemented (hybrid_stake.py): stake = 10% of capital; recomputed ONLY when the win streak reaches 3 or the
+  loss streak reaches 2; at a recompute BOTH streak counters reset to 0; a win zeroes the loss counter and a loss zeroes
+  the win counter; unexecutable = no trade, no W/L; PnL applied at settlement; stake <= capital; no injected capital;
+  path stops below $1 = bankrupt. Fills for a non-listed stake use the smallest precomputed bucket >= stake ($2/$5/$10/$100).
+  2026-08-22  STARTING CAPITAL $50.00  ENDING CAPITAL $13.09  TOTAL PNL -36.91  RETURN -73.8%
+              trades 282  W/L 211/71  accuracy 74.8%  stake start 5.00 end 1.22 lowest 1.13 highest 6.79
+              recalcs 3-win 46  2-loss 17  max capital drawdown $57.80  lowest capital $11.35  max win streak 3  max loss streak 2
+              stakes below the 5-share venue minimum: 140   unexecutable (skipped): 1   bankrupt: False
+              fixed-stake same trades, fee 0.07:  $2 -15.08   $5 -37.71   $10 -75.41      hybrid at fee 0: -28.86 (end $21.14)
+  2026-08-24  STARTING CAPITAL $50.00  ENDING CAPITAL $4.08  TOTAL PNL -45.92  RETURN -91.8%
+              trades 288  W/L 210/78  accuracy 72.9%  stake start 5.00 end 0.41 lowest 0.36 highest 5.36
+              recalcs 3-win 47  2-loss 19  max capital drawdown $50.43  lowest capital $3.59  max win streak 3  max loss streak 2
+              stakes below the 5-share venue minimum: 242   unexecutable (skipped): 0   bankrupt: False
+              fixed-stake same trades, fee 0.07:  $2 -36.50   $5 -91.26   $10 -182.52      hybrid at fee 0: -43.62 (end $6.38)
+  2026-08-27  STARTING CAPITAL $50.00  ENDING CAPITAL $11.65  TOTAL PNL -38.35  RETURN -76.7%
+              trades 285  W/L 213/72  accuracy 74.7%  stake start 5.00 end 1.17 lowest 1.06 highest 5.00
+              recalcs 3-win 51  2-loss 14  max capital drawdown $42.21  lowest capital $9.79  max win streak 3  max loss streak 2
+              stakes below the 5-share venue minimum: 241   unexecutable (skipped): 2   bankrupt: False
+              fixed-stake same trades, fee 0.07:  $2 -20.92   $5 -52.29   $10 -104.59      hybrid at fee 0: -31.51 (end $18.49)
+  2026-08-31  STARTING CAPITAL $50.00  ENDING CAPITAL $7.03  TOTAL PNL -42.97  RETURN -85.9%
+              trades 223  W/L 163/60  accuracy 73.1%  stake start 5.00 end 0.69 lowest 0.61 highest 5.50
+              recalcs 3-win 39  2-loss 11  max capital drawdown $51.84  lowest capital $5.26  max win streak 3  max loss streak 2
+              stakes below the 5-share venue minimum: 195   unexecutable (skipped): 1   bankrupt: False
+              fixed-stake same trades, fee 0.07:  $2 -31.09   $5 -77.71   $10 -155.43      hybrid at fee 0: -40.03 (end $9.97)
+  2026-09-05  STARTING CAPITAL $50.00  ENDING CAPITAL $64.25  TOTAL PNL +14.25  RETURN +28.5%
+              trades 287  W/L 222/65  accuracy 77.4%  stake start 5.00 end 6.43 lowest 4.34 highest 33.31
+              recalcs 3-win 58  2-loss 13  max capital drawdown $303.58  lowest capital $39.30  max win streak 3  max loss streak 2
+              stakes below the 5-share venue minimum: 1   unexecutable (skipped): 0   bankrupt: False
+              fixed-stake same trades, fee 0.07:  $2 +18.14   $5 +45.34   $10 +90.69      hybrid at fee 0: +58.69 (end $108.69)
+
+  B. CONTINUOUS CAPITAL PATH (state carried across the five dates, nothing invented in between)
+  2026-08-22: $50.00 -> $13.09 (-36.91)  trades 282  stake 5.00->1.22  recalc 3W 46 2L 17  maxDD 57.80  low 11.35
+  2026-08-24: $13.09 -> $0.98 (-12.11)  trades 235  stake 1.22->0.11  recalc 3W 36 2L 16  maxDD 13.10  low 0.98  BANKRUPT
+  2026-08-27: $0.98 -> $0.98 (+0.00)  trades 0  stake 0.11->0.11  recalc 3W 0 2L 0  maxDD 0.00  low 0.98  BANKRUPT
+  2026-08-31: $0.98 -> $0.98 (+0.00)  trades 0  stake 0.11->0.11  recalc 3W 0 2L 0  maxDD 0.00  low 0.98  BANKRUPT
+  2026-09-05: $0.98 -> $0.98 (+0.00)  trades 0  stake 0.11->0.11  recalc 3W 0 2L 0  maxDD 0.00  low 0.98  BANKRUPT
+
+======================================================================
+6. STAKE SIZES / EXECUTABILITY on the tape (your Section 7)
+======================================================================
+  STAKE EXECUTABILITY on the tape within 15 s of T (120 s offset): fill-ok %, mean fill, mean slippage vs the first print after T, median first-fill lag s
+date           $2 ok%   fill   slip  lag   $5 ok%   fill   slip  lag  $10 ok%   fill   slip  lag $100 ok%   fill   slip  lag
+2026-08-22       99.6  0.748 +0.000    0     99.6  0.748 -0.000    0     99.6  0.748 -0.000    0     99.3  0.747 -0.000    0
+2026-08-24      100.0  0.764 +0.000    0    100.0  0.764 +0.000    0    100.0  0.764 +0.000    0    100.0  0.764 +0.000    0
+2026-08-27       99.3  0.758 +0.000    0     99.3  0.758 +0.000    0     99.3  0.758 +0.000    0     99.3  0.758 -0.000    0
+2026-08-31       99.6  0.760 +0.000    0     99.6  0.760 +0.000    0     99.6  0.760 +0.000    0     99.6  0.760 +0.000    0
+2026-09-05      100.0  0.749 +0.000    0    100.0  0.749 +0.000    0    100.0  0.749 +0.000    0    100.0  0.749 -0.000    0
+  (slippage column = fill VWAP minus the $2 fill; within 15 s the prints cover $100 at essentially the same price on these markets)
+  2026-08-22: median 1756, 2026-08-24: median 1750, 2026-08-27: median 1580, 2026-08-31: median 1900, 2026-09-05: median 1127
+
+======================================================================
+7. FAVOURITE CALIBRATION (your Section 18) -- does the underpricing survive? NO.
+======================================================================
+  5 days pooled, all offsets, $5 tape fill bucket (n | mean fill | realized | realized-price | EV/$ fee7 | EV/$ fee0):
+
+bucket            n  mean fill  realized    diff  EV/$ fee7  EV/$ fee0
+[0.5,0.6)      1425      0.552     0.561  +0.009     -0.015     +0.016
+[0.6,0.7)      1679      0.647     0.640  -0.007     -0.036     -0.011
+[0.7,0.8)      1462      0.745     0.735  -0.011     -0.032     -0.014
+[0.8,0.9)      1290      0.844     0.856  +0.012     +0.003     +0.014
+[0.9,1.0)      1565      0.951     0.939  -0.012     -0.016     -0.013
+  Aug 1 for comparison (real ladders): +0.025 / +0.021 / +0.009 / +0.023 / +0.016 -- all buckets underpriced.
+
+PER-DAY (120 s only):
+
+  2026-08-22: [0.5,0.6)  54 0.553 0.519 -0.034 -0.091 | [0.6,0.7)  50 0.652 0.700 +0.048 +0.047 | [0.7,0.8)  55 0.747 0.727 -0.019 -0.043 | [0.8,0.9)  63 0.846 0.873 +0.027 +0.021 | [0.9,1.0)  56 0.934 0.946 +0.012 +0.008
+  2026-08-24: [0.5,0.6)  27 0.562 0.556 -0.007 -0.042 | [0.6,0.7)  54 0.646 0.593 -0.054 -0.106 | [0.7,0.8)  58 0.739 0.621 -0.118 -0.176 | [0.8,0.9)  72 0.844 0.819 -0.024 -0.039 | [0.9,1.0)  66 0.933 0.939 +0.006 +0.002
+  2026-08-27: [0.5,0.6)  34 0.553 0.559 +0.006 -0.021 | [0.6,0.7)  61 0.654 0.639 -0.015 -0.046 | [0.7,0.8)  63 0.744 0.714 -0.030 -0.057 | [0.8,0.9)  59 0.840 0.814 -0.027 -0.042 | [0.9,1.0)  62 0.939 0.968 +0.029 +0.027
+  2026-08-31: [0.5,0.6)  27 0.558 0.407 -0.150 -0.292 | [0.6,0.7)  42 0.648 0.643 -0.005 -0.032 | [0.7,0.8)  56 0.749 0.732 -0.017 -0.040 | [0.8,0.9)  40 0.848 0.925 +0.077 +0.080 | [0.9,1.0)  52 0.939 0.885 -0.055 -0.062
+  2026-09-05: [0.5,0.6)  42 0.556 0.738 +0.182 +0.286 | [0.6,0.7)  57 0.645 0.667 +0.022 +0.008 | [0.7,0.8)  66 0.743 0.712 -0.031 -0.059 | [0.8,0.9)  68 0.851 0.838 -0.012 -0.025 | [0.9,1.0)  49 0.940 0.959 +0.020 +0.016
+  PER-DAY, all offsets pooled (n | realized-price | EV/$ fee7):
+
+  2026-08-22: [0.5,0.6)  324 -0.003 -0.036 | [0.6,0.7)  364 +0.022 +0.008 | [0.7,0.8)  297 +0.021 +0.009 | [0.8,0.9)  254 +0.061 +0.061 | [0.9,1.0)  293 -0.012 -0.016
+  2026-08-24: [0.5,0.6)  275 -0.020 -0.066 | [0.6,0.7)  342 -0.043 -0.090 | [0.7,0.8)  305 -0.037 -0.067 | [0.8,0.9)  287 -0.008 -0.020 | [0.9,1.0)  321 -0.025 -0.030
+  2026-08-27: [0.5,0.6)  273 +0.041 +0.041 | [0.6,0.7)  365 -0.013 -0.044 | [0.7,0.8)  321 -0.038 -0.067 | [0.8,0.9)  257 +0.013 +0.004 | [0.9,1.0)  319 -0.004 -0.008
+  2026-08-31: [0.5,0.6)  209 -0.020 -0.067 | [0.6,0.7)  257 -0.058 -0.111 | [0.7,0.8)  270 -0.021 -0.045 | [0.8,0.9)  200 +0.023 +0.016 | [0.9,1.0)  259 -0.023 -0.027
+  2026-09-05: [0.5,0.6)  344 +0.036 +0.031 | [0.6,0.7)  351 +0.040 +0.036 | [0.7,0.8)  269 +0.027 +0.017 | [0.8,0.9)  292 -0.022 -0.036 | [0.9,1.0)  373 +0.001 -0.002
+
+  REAL LADDERS, PolyOrderbooks partial days Aug 21-24 pooled (101 markets), $5 VWAP bucket:
+
+[0.5,0.6)      118      0.551     0.534  -0.017     -0.031     -0.061
+[0.6,0.7)      105      0.642     0.619  -0.023     -0.036     -0.060
+[0.7,0.8)       84      0.748     0.833  +0.085     +0.114     +0.094
+[0.8,0.9)       82      0.845     0.902  +0.058     +0.068     +0.057
+[0.9,1.0)      103      0.951     0.981  +0.030     +0.032     +0.028
+  -> on real ladders the 0.5-0.7 favourites are OVERpriced (-1.7 / -2.3 pts) and only the >=0.7 favourites are underpriced;
+     small n (84-118 per bucket), and the tape proxy above (1,300-1,700 per bucket) shows no bucket beating the 7% fee.
+
+======================================================================
+8. REAL-LADDER RESULTS (PolyOrderbooks open files, PARTIAL days, 1-second L2, $5, fee 0.07 / 0)
+======================================================================
+, by offset: markets | win% | avg $5 VWAP | PnL/100 fee7 | PnL/100 fee0 | +1s fee7 | +5s fee7 | $2 ok% | $100 ok%
+    30s    91   61.5  0.621    -5.12    -2.61    -7.82   -12.20   90.1   90.1
+    60s    90   68.9  0.670    -0.50    +1.80    +1.79    +4.89   89.1   89.1
+    90s    90   75.6  0.725    +2.04    +4.03    +2.61    +3.24   90.0   90.0
+   120s    87   80.5  0.762    +4.31    +6.10    +3.93    +1.26   87.9   87.9
+   180s    85   85.9  0.846    +0.30    +1.39    -1.88    -2.64   90.4   90.4
+   240s    49   89.8  0.861    +4.53    +5.64    +2.90    +0.87   89.1   89.1
+  requested dates only (08-22 + 08-24), 120 s: markets 25  win 72.0%  PnL/100 fee7 -8.79
+  per day / per offset (fix$5 and hyb$50 are dollar PnL over the few markets those files contain):
+
+2026-08-21    30   19     15  60.0     0.615      -2.71      -5.32    -2.03     -2.14     -4.05  -15.79  -17.91    -2.82
+2026-08-21    60   19     15  46.7     0.634     -28.00     -29.77   -21.00    -18.44    -19.45  -22.86  -20.80   -28.46
+2026-08-21    90   19     14  71.4     0.719      -2.02      -3.88    -1.41     -1.52     -2.81   -2.95   -3.96    -2.56
+2026-08-21   120   19     14  78.6     0.761      +3.47      +1.73    +2.43     +2.34     +1.09  +11.43  +12.32    +3.22
+2026-08-21   180   16     13  84.6     0.845      -0.05      -1.12    -0.03     -0.12     -0.81   -0.22   +1.86    -0.48
+2026-08-21   240   11      8  87.5     0.780     +10.62      +9.00    +4.25     +3.77     +3.12  +10.62  +16.90   +10.06
+2026-08-22    30   15     14  78.6     0.641     +19.02     +16.19   +13.32    +13.23    +10.95  +18.30  +16.39   +18.22
+2026-08-22    60   15     14  78.6     0.673     +15.92     +13.31   +11.15     +9.47     +7.55  +15.86  +17.74   +15.81
+2026-08-22    90   15     15  73.3     0.709      +2.68      +0.62    +2.01     -1.41     -2.75   +1.67   +3.65    +1.81
+2026-08-22   120   15     15  66.7     0.753     -11.07     -12.63    -8.30    -10.59    -11.55  -11.15  -10.97   -11.74
+2026-08-22   180   15     14  71.4     0.813     -10.54     -11.80    -7.38    -11.45    -12.09   -9.87   -9.70   -11.28
+2026-08-22   240   11      9  77.8     0.760      +2.76      +1.02    +1.24     +1.16     +0.34   +1.92   -5.97    +1.65
+2026-08-23    30   56     51  56.9     0.620      -9.71     -12.05   -24.76    -24.05    -27.08  -10.43  -15.92   -10.03
+2026-08-23    60   56     50  74.0     0.675     +10.43      +7.88   +26.08    +29.04    +20.11  +12.42  +17.53   +10.03
+2026-08-23    90   55     51  76.5     0.725      +6.70      +4.59   +17.10    +13.27     +7.03  +10.84  +10.21    +6.16
+2026-08-23   120   54     48  85.4     0.756     +13.88     +11.88   +33.30    +38.36    +30.81  +13.31   +6.99   +13.34
+2026-08-23   180   53     48  89.6     0.853      +4.59      +3.54   +11.01     +9.47     +6.68   +0.59   -0.74    +4.35
+2026-08-23   240   30     29  96.6     0.907      +8.94      +8.07   +12.96    +13.75    +12.25   +6.64   +4.02    +8.34
+2026-08-24    30   11     11  63.6     0.611      +2.90      +0.15    +1.59     +1.59     +0.08   +4.07   -1.12    +2.85
+2026-08-24    60   11     11  63.6     0.690     -14.77     -16.28    -8.12     -7.93     -8.71  -13.54  -13.36   -15.09
+2026-08-24    90   11     10  80.0     0.754      +0.92      -0.54    +0.46     +0.14     -0.58   -9.01   -5.08    +0.62
+2026-08-24   120   11     10  80.0     0.802      -1.76      -3.04    -0.88     -0.92     -1.55  -12.89   -6.91    -1.89
+2026-08-24   180   10     10  90.0     0.861      +4.60      +3.57    +2.30     +2.15     +1.63   +4.10   +1.60    +4.53
+2026-08-24   240    3      3  66.7     0.933     -30.87     -31.04    -4.63     -4.63     -4.66  -31.24  -31.97   -30.87
+  Read this as: 87 real-ladder markets at 120 s give +4.31/100 after fee, driven by Aug 23 (48 markets, +11.9); the two
+  requested dates inside it are -12.6 (Aug 22, 15 mkts) and -3.0 (Aug 24, 11 mkts). Latency: +1 s -> +3.93, +5 s -> +1.26.
+
+======================================================================
+9. ROBUSTNESS RULE (your Section 17) -- applied
+======================================================================
+  positive days 1/5, negative 4/5, worst day -6.97/100 (Aug 31), median -3.67/100, worst session Aug 22 US -5.85 /
+  Aug 27 London -9.19, hybrid maxDD up to $303 of paper equity on Sep 05 (capital peaked at $344 and ended at $64: the
+  3-win lock left a $33 stake on the table through the give-back). Frequency is there (one trade per window, 98-100%
+  executable at $2-$100). PnL and bad-day survival are not.
+
+======================================================================
+10. WHAT WAS NOT DONE, AND WHY
+======================================================================
+  * Market-residual BTC model (your Section 19): not run. The primary baseline is negative on the market's own
+    prices on 4/5 days; a residual model on top of a proxy fill is not the next question. It also needs the Tardis
+    perp lanes, which are only free on the 1st of each month -- none of these five dates.
+  * Full-day real ladders: DATA UNAVAILABLE without credentials (Section 1). The user can unlock it in minutes with a
+    free PolyOrderbooks key; then real_book_partial.py runs unchanged on the API rows.
+  * +300 ms latency: not resolvable at 1-second timestamps; +1 s and +5 s are reported.
+
+======================================================================
+11. DIRECT MESSAGE TO GPT-5.6 SOL
+======================================================================
+Sol --
+
+You asked whether Aug 1 was a lucky day or a repeatable real-book edge. It was a lucky day.
+
+Five validation days, frozen rule, no tuning, the market's own settlement: negative on four, the calibration edge
+absent in every bucket once the 7 % fee is applied, and the user's $50 hybrid path dead on the second day. The
+one positive day (Sep 05, +3.16/100) is smaller than the two worst negative days. The real-ladder subset we could
+get for free points the same way on the two requested dates it covers (-8.8/100 pooled) and the only real-ladder
+positive is a 48-market slice of Aug 23 that nobody asked for.
+
+Two honesties about the method: full-day fills here are the prints people actually paid within 15 s of T, not a
+ladder walk. That is a proxy in your sense and I have labelled it as one everywhere. And the hybrid stake makes the
+tails wilder, not safer: the 3-win lock is what turned Sep 05's +$18 (fixed $5) into a $344 peak and a $64 close.
+
+What I would tell the user, in one sentence: on Polymarket BTC 5-minute markets, buying the favourite at a fixed
+time does not beat the fee on a typical day, and no staking rule fixes a negative expectation.
+
+If you still want the ladder version of this, the missing piece is a credential, not code.
+
+-- Claude Code
+
+======================================================================
+ARTEFACTS (ef_arch/polymarket/fiveday/)
+======================================================================
+  CLAUDE_CODE_5DAY_MARKET_FAVOURITE_REAL_BOOK_TEST.txt   this file
+  market_favourite_5day_summary.csv                       every date x offset, all columns of the primary table
+  hybrid_staking_5day_paths.csv                           per-trade hybrid path, independent and continuous, 120 s
+  hybrid_continuous_120s.csv                              per-day rows of the continuous path
+  polymarket_btc5m_<date>_tape_proxy.parquet (x5)         decision rows: favourite, tape fills at $2/$5/$10/$100, delays 0/1/5 s, outcome
+  polyorderbooks_btc5m_ladders.parquet                    real-ladder decision rows, Aug 21-24 (partial), 101 markets
+  scripts: map_markets_day.py, fetch_trades_day.py, run_map_and_trades.sh (5 parallel workers), hybrid_stake.py,
+           trade_tape_test.py, real_book_partial.py, tape_extras.py; raw outputs *.txt

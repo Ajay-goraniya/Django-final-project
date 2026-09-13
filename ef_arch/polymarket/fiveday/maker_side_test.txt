@@ -1,0 +1,66 @@
+
+2026-08-22: windows 277  avg bid 0.726  avg last ask-side print 0.741  favourite win rate (all) 74.7%
+  fill window  30s  fee 0.00: filled  71.1%  win% on fills  70.6  PnL/100 windows  -2.13  fixed$5  -29.48  hybrid$50 ->  19.16 (maxDD 34.71)
+  fill window  30s  fee 0.07: filled  71.1%  win% on fills  70.6  PnL/100 windows  -3.45  fixed$5  -47.72  hybrid$50 ->  13.27 (maxDD 39.22)
+  fill window  60s  fee 0.00: filled  77.6%  win% on fills  71.2  PnL/100 windows  -2.02  fixed$5  -27.96  hybrid$50 ->  16.92 (maxDD 41.28)
+  fill window  60s  fee 0.07: filled  77.6%  win% on fills  71.2  PnL/100 windows  -3.44  fixed$5  -47.70  hybrid$50 ->  11.43 (maxDD 40.68)
+  fill window 120s  fee 0.00: filled  81.6%  win% on fills  69.0  PnL/100 windows  -4.61  fixed$5  -63.84  hybrid$50 ->   7.58 (maxDD 51.17)
+  fill window 120s  fee 0.07: filled  81.6%  win% on fills  69.0  PnL/100 windows  -6.06  fixed$5  -83.87  hybrid$50 ->   5.05 (maxDD 48.03)
+  adverse selection @60s: win% filled 71.2 vs unfilled 87.1  (fills happen when the favourite is being sold)
+
+2026-08-24: windows 288  avg bid 0.748  avg last ask-side print 0.764  favourite win rate (all) 73.3%
+  fill window  30s  fee 0.00: filled  71.5%  win% on fills  68.4  PnL/100 windows  -6.46  fixed$5  -93.00  hybrid$50 ->   3.59 (maxDD 47.02)
+  fill window  30s  fee 0.07: filled  71.5%  win% on fills  68.4  PnL/100 windows  -7.59  fixed$5 -109.24  hybrid$50 ->   2.59 (maxDD 47.62)
+  fill window  60s  fee 0.00: filled  76.0%  win% on fills  68.5  PnL/100 windows  -6.62  fixed$5  -95.27  hybrid$50 ->   3.31 (maxDD 47.47)
+  fill window  60s  fee 0.07: filled  76.0%  win% on fills  68.5  PnL/100 windows  -7.83  fixed$5 -112.75  hybrid$50 ->   2.32 (maxDD 47.98)
+  fill window 120s  fee 0.00: filled  80.9%  win% on fills  67.4  PnL/100 windows  -8.24  fixed$5 -118.67  hybrid$50 ->   2.09 (maxDD 49.35)
+  fill window 120s  fee 0.07: filled  80.9%  win% on fills  67.4  PnL/100 windows  -9.51  fixed$5 -136.96  hybrid$50 ->   1.44 (maxDD 49.47)
+  adverse selection @60s: win% filled 68.5 vs unfilled 88.4  (fills happen when the favourite is being sold)
+
+2026-08-27: windows 283  avg bid 0.736  avg last ask-side print 0.754  favourite win rate (all) 76.0%
+  fill window  30s  fee 0.00: filled  72.4%  win% on fills  72.7  PnL/100 windows  -1.34  fixed$5  -18.92  hybrid$50 ->  24.85 (maxDD 39.83)
+  fill window  30s  fee 0.07: filled  72.4%  win% on fills  72.7  PnL/100 windows  -2.63  fixed$5  -37.19  hybrid$50 ->  17.22 (maxDD 41.84)
+  fill window  60s  fee 0.00: filled  77.7%  win% on fills  71.4  PnL/100 windows  -2.18  fixed$5  -30.80  hybrid$50 ->  18.33 (maxDD 43.42)
+  fill window  60s  fee 0.07: filled  77.7%  win% on fills  71.4  PnL/100 windows  -3.58  fixed$5  -50.69  hybrid$50 ->  12.27 (maxDD 45.06)
+  fill window 120s  fee 0.00: filled  80.6%  win% on fills  70.2  PnL/100 windows  -3.76  fixed$5  -53.19  hybrid$50 ->  11.59 (maxDD 43.85)
+  fill window 120s  fee 0.07: filled  80.6%  win% on fills  70.2  PnL/100 windows  -5.18  fixed$5  -73.26  hybrid$50 ->   7.70 (maxDD 45.99)
+  adverse selection @60s: win% filled 71.4 vs unfilled 92.1  (fills happen when the favourite is being sold)
+
+2026-08-31: windows 222  avg bid 0.742  avg last ask-side print 0.755  favourite win rate (all) 73.4%
+  fill window  30s  fee 0.00: filled  73.9%  win% on fills  68.9  PnL/100 windows  -6.81  fixed$5  -75.59  hybrid$50 ->   6.82 (maxDD 48.01)
+  fill window  30s  fee 0.07: filled  73.9%  win% on fills  68.9  PnL/100 windows  -7.94  fixed$5  -88.15  hybrid$50 ->   5.25 (maxDD 48.17)
+  fill window  60s  fee 0.00: filled  79.7%  win% on fills  68.4  PnL/100 windows  -7.22  fixed$5  -80.14  hybrid$50 ->   6.24 (maxDD 48.88)
+  fill window  60s  fee 0.07: filled  79.7%  win% on fills  68.4  PnL/100 windows  -8.48  fixed$5  -94.13  hybrid$50 ->   4.68 (maxDD 48.96)
+  fill window 120s  fee 0.00: filled  83.8%  win% on fills  68.3  PnL/100 windows  -7.96  fixed$5  -88.35  hybrid$50 ->   5.11 (maxDD 49.77)
+  fill window 120s  fee 0.07: filled  83.8%  win% on fills  68.3  PnL/100 windows  -9.26  fixed$5 -102.82  hybrid$50 ->   3.78 (maxDD 49.73)
+  adverse selection @60s: win% filled 68.4 vs unfilled 93.3  (fills happen when the favourite is being sold)
+
+2026-09-05: windows 287  avg bid 0.730  avg last ask-side print 0.747  favourite win rate (all) 77.4%
+  fill window  30s  fee 0.00: filled  63.8%  win% on fills  73.2  PnL/100 windows  +0.85  fixed$5  +12.23  hybrid$50 ->  41.11 (maxDD 167.59)
+  fill window  30s  fee 0.07: filled  63.8%  win% on fills  73.2  PnL/100 windows  -0.40  fixed$5   -5.77  hybrid$50 ->  29.14 (maxDD 156.17)
+  fill window  60s  fee 0.00: filled  70.0%  win% on fills  72.1  PnL/100 windows  +0.21  fixed$5   +3.08  hybrid$50 ->  34.83 (maxDD 177.07)
+  fill window  60s  fee 0.07: filled  70.0%  win% on fills  72.1  PnL/100 windows  -1.17  fixed$5  -16.74  hybrid$50 ->  23.79 (maxDD 156.79)
+  fill window 120s  fee 0.00: filled  75.3%  win% on fills  70.8  PnL/100 windows  -1.65  fixed$5  -23.64  hybrid$50 ->  20.23 (maxDD 182.84)
+  fill window 120s  fee 0.07: filled  75.3%  win% on fills  70.8  PnL/100 windows  -3.07  fixed$5  -44.03  hybrid$50 ->  13.61 (maxDD 163.20)
+  adverse selection @60s: win% filled 72.1 vs unfilled 89.5  (fills happen when the favourite is being sold)
+
+pmxt trade side values: {'BUY': 401143, 'SELL': 47681}
+
+2026-08-01 (pmxt prints + REAL best_bid at T): windows 283  avg bid 0.687  avg last ask-side print 0.698  favourite win rate (all) 74.9%
+  fill window  30s  fee 0.00: filled  60.1%  win% on fills  68.8  PnL/100 windows  +0.84  fixed$5  +11.91  hybrid$50 ->  42.15 (maxDD 41.46)
+  fill window  30s  fee 0.07: filled  60.1%  win% on fills  68.8  PnL/100 windows  -0.53  fixed$5   -7.47  hybrid$50 ->  28.70 (maxDD 44.42)
+  fill window  60s  fee 0.00: filled  70.7%  win% on fills  69.5  PnL/100 windows  +2.46  fixed$5  +34.75  hybrid$50 ->  60.14 (maxDD 35.65)
+  fill window  60s  fee 0.07: filled  70.7%  win% on fills  69.5  PnL/100 windows  +0.78  fixed$5  +10.97  hybrid$50 ->  37.70 (maxDD 40.85)
+  fill window 120s  fee 0.00: filled  77.7%  win% on fills  69.5  PnL/100 windows  +2.40  fixed$5  +33.96  hybrid$50 ->  50.90 (maxDD 36.73)
+  fill window 120s  fee 0.07: filled  77.7%  win% on fills  69.5  PnL/100 windows  +0.57  fixed$5   +8.13  hybrid$50 ->  30.54 (maxDD 42.54)
+  adverse selection @60s: win% filled 69.5 vs unfilled 88.0  (fills happen when the favourite is being sold)
+
+SUMMARY maker-side favourite, 60 s fill window, fee 0 (primary for a resting order) | fee 0.07:
+  2026-08-22: filled  77.6%  win  71.2%  PnL/100  -2.02 | fee7  -3.44   hybrid$50 -> 16.92
+  2026-08-24: filled  76.0%  win  68.5%  PnL/100  -6.62 | fee7  -7.83   hybrid$50 -> 3.31
+  2026-08-27: filled  77.7%  win  71.4%  PnL/100  -2.18 | fee7  -3.58   hybrid$50 -> 18.33
+  2026-08-31: filled  79.7%  win  68.4%  PnL/100  -7.22 | fee7  -8.48   hybrid$50 -> 6.24
+  2026-09-05: filled  70.0%  win  72.1%  PnL/100  +0.21 | fee7  -1.17   hybrid$50 -> 34.83
+  2026-08-01: filled  70.7%  win  69.5%  PnL/100  +2.46 | fee7  +0.78   hybrid$50 -> 60.14
+
+LABEL: maker-side proxy. Fill = an actual taker-SELL print at or below our bid after T; queue position and partial fills not modelled (optimistic). Not Predict.fun.

@@ -1,0 +1,55 @@
+model final   EV threshold 0.2   2272 candles
+
+1. CHEAP-ENTRY DEPENDENCE (the artifact that killed r6.4's +$465)
+  all trades                         n= 498  acc  59.4%  ask 0.481  PnL $+1040.97  /trade +2.090  t=4.46
+  entries >= 0.15                    n= 498  acc  59.4%  ask 0.481  PnL $+1040.97  /trade +2.090  t=4.46
+  entries >= 0.25                    n= 498  acc  59.4%  ask 0.481  PnL $+1040.97  /trade +2.090  t=4.46
+  entries 0.25 - 0.75                n= 493  acc  59.0%  ask 0.478  PnL $+1027.68  /trade +2.085  t=4.41
+  share of PnL from entries < 0.15: 0%   (r6.4 was 90%)
+
+2. REAL ORDER BOOK ONLY (no inferred prices anywhere in the fill)
+  book fills                         n= 154  acc  66.2%  ask 0.497  PnL $ +436.70  /trade +2.836  t=3.65
+  book fills, entries >= 0.15        n= 154  acc  66.2%  ask 0.497  PnL $ +436.70  /trade +2.836  t=3.65
+
+3. DAY BY DAY (each day predicted by a model that never saw it)
+  day          trades     acc    ask    PnL $
+  2026-08-29       44   65.9%  0.475  +183.40
+  2026-08-30       46   60.9%  0.488   +76.87
+  2026-08-31       53   58.5%  0.465  +144.10
+  2026-09-02       52   61.5%  0.495  +108.50
+  2026-09-03      129   67.4%  0.499  +395.40
+  2026-09-04       91   49.5%  0.489    +4.64
+  2026-09-05       45   48.9%  0.437   +40.74
+  2026-09-06       38   57.9%  0.452   +87.30
+  positive days: 8/8
+
+4. BY DECISION SECOND
+   offset trades     acc    ask    PnL $
+      15s     49   57.1%  0.487   +76.18
+      30s     51   62.7%  0.469  +166.78
+      45s     47   53.2%  0.465   +53.79
+      60s     58   50.0%  0.463   +18.99
+      90s     63   60.3%  0.461  +184.00
+     120s     65   66.2%  0.481  +236.51
+     150s     62   54.8%  0.516    +2.25
+     180s     42   64.3%  0.506  +120.09
+     210s     32   53.1%  0.494   -19.60
+     240s     29   79.3%  0.468  +201.96
+
+5. THE FIXED 100-CANDLE SAMPLE (same candles r6.4 and v9.6 were scored on)
+  thr 0.00                           n=  95  acc  65.3%  ask 0.586  PnL $  +80.90  /trade +0.852  t=1.02
+  thr 0.15                           n=  37  acc  54.1%  ask 0.506  PnL $  +17.90  /trade +0.484  t=0.29
+  thr 0.20                           n=  20  acc  40.0%  ask 0.474  PnL $  -31.57  /trade -1.578  t=-0.64
+
+  for reference on the same 100 candles:  r6.4  99 trades 39.4% +$465 (+$48 excl <0.15)   v9.6  73 trades 46.6% +$0.67
+
+6. FREQUENCY DIAL  (what each threshold gives you per day)
+    thr trades/day     acc  PnL/day     t
+   0.00      251.5   60.5%    -1.53 -0.03
+   0.05      204.4   59.1%   +68.39  1.52
+   0.10      147.9   56.5%   +68.36  1.67
+   0.15       95.5   56.8%  +102.96  2.97
+   0.20       62.2   59.4%  +130.12  4.46
+   0.25       38.9   60.1%  +115.84  4.77
+   0.30       29.6   59.5%   +94.92  4.34
+   0.40       17.2   63.8%   +75.58  4.48

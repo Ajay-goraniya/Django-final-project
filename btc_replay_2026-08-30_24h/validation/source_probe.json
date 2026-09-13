@@ -1,0 +1,192 @@
+{
+  "probed_at_utc": "2026-09-05T22:27:49.207999+00:00",
+  "target_window_utc": {
+    "start": "2026-08-30T00:00:00Z",
+    "end": "2026-08-31T00:00:00Z",
+    "end_exclusive": true
+  },
+  "preroll_utc": {
+    "start": "2026-08-29T23:45:00Z",
+    "minutes": 15
+  },
+  "binance_vision": {
+    "spot_dataset_families": [
+      "aggTrades",
+      "klines",
+      "trades"
+    ],
+    "futures_um_dataset_families": [
+      "aggTrades",
+      "bookDepth",
+      "bookTicker",
+      "indexPriceKlines",
+      "klines",
+      "markPriceKlines",
+      "metrics",
+      "premiumIndexKlines",
+      "trades"
+    ],
+    "futures_um_monthly_dataset_families": [
+      "aggTrades",
+      "bookTicker",
+      "fundingRate",
+      "indexPriceKlines",
+      "klines",
+      "markPriceKlines",
+      "premiumIndexKlines",
+      "trades"
+    ],
+    "spot_klines_5m": {
+      "key": "data/spot/daily/klines/BTCUSDT/5m/BTCUSDT-5m-2026-08-30.zip",
+      "listed_in_s3": true,
+      "http_code": "200",
+      "bytes": 15103
+    },
+    "spot_aggtrades": {
+      "key": "data/spot/daily/aggTrades/BTCUSDT/BTCUSDT-aggTrades-2026-08-30.zip",
+      "listed_in_s3": true,
+      "http_code": "200",
+      "bytes": 10930462
+    },
+    "perp_aggtrades": {
+      "key": "data/futures/um/daily/aggTrades/BTCUSDT/BTCUSDT-aggTrades-2026-08-30.zip",
+      "listed_in_s3": true,
+      "http_code": "200",
+      "bytes": 0
+    },
+    "perp_bookticker": {
+      "key": "data/futures/um/daily/bookTicker/BTCUSDT/BTCUSDT-bookTicker-2026-08-30.zip",
+      "listed_in_s3": false,
+      "http_code": "404",
+      "bytes": 365
+    },
+    "perp_bookdepth": {
+      "key": "data/futures/um/daily/bookDepth/BTCUSDT/BTCUSDT-bookDepth-2026-08-30.zip",
+      "listed_in_s3": true,
+      "http_code": "200",
+      "bytes": 560445
+    },
+    "l2_depth_path_probes": {
+      "data/futures/um/daily/depth/BTCUSDT/": {
+        "keys_found": 0
+      },
+      "data/futures/um/daily/bookSnapshot/BTCUSDT/": {
+        "keys_found": 0
+      },
+      "data/futures/um/daily/incrementalDepth/BTCUSDT/": {
+        "keys_found": 0
+      },
+      "data/spot/daily/depth/BTCUSDT/": {
+        "keys_found": 0
+      }
+    }
+  },
+  "third_party": {
+    "tardis_book_snapshot_25_target_day": {
+      "url": "https://datasets.tardis.dev/v1/binance-futures/book_snapshot_25/2026/08/30/BTCUSDT.csv.gz",
+      "http_code": "401",
+      "bytes": 366,
+      "body_head": "{\n  \"code\": 10,\n  \"message\": \"For unauthorized requests, only historical CSV market datasets for the first day of each month are available (dataset for '2026-08-30' has been reques"
+    },
+    "tardis_incremental_book_L2_target_day": {
+      "url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/08/30/BTCUSDT.csv.gz",
+      "http_code": "401",
+      "bytes": 369,
+      "body_head": "{\n  \"code\": 10,\n  \"message\": \"For unauthorized requests, only historical CSV market datasets for the first day of each month are available (dataset for '2026-08-30' has been reques"
+    },
+    "tardis_free_sample_first_of_month": {
+      "url": "https://datasets.tardis.dev/v1/binance-futures/book_snapshot_25/2026/08/01/BTCUSDT.csv.gz",
+      "http_code": "200",
+      "bytes": 47692009,
+      "body_head": "\u001f\ufffd\b\u0000\u0000\u0000\u0000\u0000\u0002\u0003\ufffd\ufffd\u06ee+\ufffdo \ufffd\ufffd<\ufffdN\ufffdx\ufffd\"o\ufffd\ufffdA&WA\u0010x\u001c'12\ufffd\f\ufffd\u001e y\ufffd\ufffduh\u0015\ufffd\ufffd\ufffd--\ufffdZ\ufffd\ufffd0\ufffd\ufffd\ufffd\ufffd:H?R\ufffd\u0013\ufffd\ufffd\ufffd\u007f\ufffd\ufffd\ufffd\ufffd_\ufffd\ufffd\u007f\ufffd\ufffdo\ufffd\u07ff\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd?\ufffd\ufffd?\ufffd\u06ff\ufffd\u00ff\ufffd\ufffd?\ufffd\ufffd?\ufffd\ufffd?\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd?\ufffd\ufffd\ufffd\ufffdo\ufffdk\ufffd\u07c6\ufffd\ufffd_\ufffd\ufffd\u001f\ufffdi\ufffd\ufffd\u001f\ufffd\ufffd?\ufffd\ufffd\u007f\ufffd\ufffd?\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffdW\ufffd\u0007\u000f\ufffd\u0016\ufffd3\ufffd?\u0013\ufffd3\ufffd?\u0013\ufffd3\ufffd?\u0013\ufffd3\ufffd?"
+    },
+    "coinapi_orderbook_history": {
+      "url": "https://rest.coinapi.io/v1/orderbooks/BINANCEFTS_PERP_BTC_USDT/history?time_start=2026-08-30T00:00:00",
+      "http_code": "401",
+      "bytes": 291,
+      "body_head": "{\n  \"error\": \"You did not provided API Key or it is incorrectly formatted. You should do it in: query string parameter [apikey], in http header named [X-CoinAPI-Key], [X-APIBricks-"
+    },
+    "kaiko_order_book_snapshots": {
+      "url": "https://us.market-api.kaiko.io/v2/data/order_book_snapshots.v1/exchanges/bnce/spot/btc-usdt/snapshots/full",
+      "http_code": "403",
+      "bytes": 88,
+      "body_head": "{\"err\":\"rpc error: code = Unauthenticated desc = Please provide authentication details\"}"
+    },
+    "cryptohftdata_api": {
+      "url": "https://api.cryptohftdata.com/v1/datasets",
+      "http_code": "404",
+      "bytes": 40,
+      "body_head": "{\"error\":\"Not found\",\"code\":\"not_found\"}"
+    },
+    "binance_rest_futures_depth": {
+      "url": "https://fapi.binance.com/fapi/v1/depth?symbol=BTCUSDT&limit=20",
+      "http_code": "451",
+      "bytes": 224,
+      "body_head": "{\n  \"code\": 0,\n  \"msg\": \"Service unavailable from a restricted location according to 'b. Eligibility' in https://www.binance.com/en/terms. Please contact customer service if you be"
+    }
+  },
+  "predict_fun": {
+    "root": {
+      "url": "https://api.predict.fun/",
+      "http_code": "404",
+      "bytes": 158,
+      "body_head": "{\"success\":false,\"code\":404,\"error\":\"not_found\",\"message\":\"not found\",\"timestamp\":\"2026-09-05T22:28:32.853477627Z\",\"trace\":\"ed84a8119f3510f446ef335c434c2def\"}"
+    },
+    "v1_markets": {
+      "url": "https://api.predict.fun/v1/markets",
+      "http_code": "401",
+      "bytes": 171,
+      "body_head": "{\"success\":false,\"code\":401,\"error\":\"unauthorized\",\"message\":\"authorization error\",\"timestamp\":\"2026-09-05T22:28:33.223616722Z\",\"trace\":\"544bf42ea26c28432bc175280def6074\"}"
+    },
+    "docs": {
+      "url": "https://api.predict.fun/docs",
+      "http_code": "200",
+      "bytes": 1515215,
+      "body_head": "\n<!DOCTYPE html>\n<html>\n  <head>\n    <title>OpenAPI Explorer</title>\n    <!-- needed for adaptive design -->\n    <meta charset=\"utf-8\"/>\n    <meta name=\"viewport\" content=\"width=de"
+    }
+  },
+  "requirements": {
+    "spot_klines_5m": {
+      "spec_section": "A.1",
+      "description": "5-minute klines, 288 completed candles",
+      "required": true,
+      "obtainable": true
+    },
+    "spot_aggtrades": {
+      "spec_section": "A.2",
+      "description": "spot aggTrades, every event in window",
+      "required": true,
+      "obtainable": true
+    },
+    "spot_depth5": {
+      "spec_section": "A.3",
+      "description": "spot depth5@100ms equivalent, price levels",
+      "required": true,
+      "obtainable": false
+    },
+    "perp_aggtrades": {
+      "spec_section": "B.1",
+      "description": "perp aggTrades, every event in window",
+      "required": true,
+      "obtainable": true
+    },
+    "perp_depth20": {
+      "spec_section": "B.2",
+      "description": "perp depth20@100ms, top-20 bids+asks price levels",
+      "required": true,
+      "obtainable": false
+    },
+    "predict_books": {
+      "spec_section": "C",
+      "description": "Predict.fun 5m market order books / quote VWAP",
+      "required": true,
+      "obtainable": false
+    }
+  },
+  "blocking_requirements": [
+    "spot_depth5",
+    "perp_depth20",
+    "predict_books"
+  ],
+  "verdict": "NOT_REPLAY_READY"
+}

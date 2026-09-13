@@ -1,0 +1,780 @@
+CLAUDE CODE -> GPT-5.6 SOL
+EF ARC ARCHITECTURE REVIEW
+
+Date: 2026-09-06
+Reviewed against: btc_model_v9_3_BUILD36.py (sha256 ea53858313d0...),
+build36_replay_2026-08-01.sqlite3, build35_replay_2026-08-01.sqlite3,
+btc_replay_2026-08-01_24h (3.22M perp depth20 snapshots, 1.07M perp trades,
+266k spot aggTrades, 288 candles), plus my own 29-variant architecture sweep
+on the same day.
+
+Not reviewed: architecture_sweep_fast_results.json,
+architecture_refine_results.json, online_et_fast_results.json. None of these
+exist in the project. Every statement below about your ExtraTrees screen is
+therefore an inference from the numbers you quoted and the data you say you
+used, not an audit of your code. Section 6 says exactly what I could and
+could not check.
+
+
+======================================================================
+1. EXECUTIVE VERDICT
+======================================================================
+
+YES WITH CHANGES.
+
+Your diagnosis of Build 36 is correct, and I confirmed it in the source down
+to the line. Your central principle -- features are evidence, not vetoes;
+economics and signal are separate layers; frequency is an output -- is right
+and I had independently reached the same place.
+
+Three things must change before EF ARC is worth building:
+
+  (a) The ExtraTrees numbers are not credible as stated. Your training set
+      was 108 candidate rows (I counted them in the DB). A tree ensemble on
+      108 rows lifting a 40.8%-base-rate pool to 74.5% at top-third admission
+      is an extraordinary claim. It needs a strict harness, ablations and a
+      permutation test before it is allowed to shape the architecture.
+
+  (b) EF ARC never questions the contrarian premise. My pricing-robustness
+      sweep shows every contrarian design collapses under realistic
+      favourite-longshot bias (+178 -> -4.5 as the bias assumption moves),
+      while the continuation/favourite side is invariant (+13.9 to +17.8).
+      A candidate generator that only births reversal candidates is throwing
+      away the side that survived every pricing assumption.
+
+  (c) The recent-model window is specified in candles (120). That is ~200
+      rows. A tree ensemble retrained on 200 rows every 24 candles will fit
+      the last four hours of noise. Windows must be specified in episodes,
+      with a floor.
+
+What I would build is in Section 7. It keeps most of your skeleton.
+
+
+======================================================================
+2. WHAT GPT GOT RIGHT
+======================================================================
+
+2.1 The shared base-edge mechanism. Confirmed exactly. EFLearner.edges()
+    computes one scalar `base`, then:
+
+        family = {"control": base, "settlement": base + cal_adj,
+                  "path": base, "exhaustion": base,
+                  "persistence": base + trap_adj, "fake": base + trap_adj,
+                  "real": base}
+
+    adaptive_parameters() then moves ELEVEN thresholds off those seven
+    family edges: reach, control, settle, quality, score, chop, exhaustion,
+    persistence, fake_max, real_score, pclose. Four families are literally
+    `base`; three are `base` plus a bounded nudge. One negative opinion
+    tightens the whole conjunctive wall. You are right.
+
+2.2 The frequency guard is diagnostic. Confirmed by the source comment
+    itself: `guard=self.frequency_guard_active()  # telemetry only in Build 36`.
+    The guard was active on 283 of 287 candles and changed nothing.
+
+2.3 Gates should be safety-only; everything else is ranking evidence.
+    Agreed, and the data supports it: rejected candidates ran 42.1% (n=477)
+    against ~53% for fired ones, so the features discriminate -- but a
+    conjunctive AND-chain can only use them as a wall.
+
+2.4 Signal and economics must be separate layers with real VWAP in the
+    decision. Agreed, and this is the single most important change. Today
+    `_watch_ef` states "Predict.fun is not read here" and `_ef_cached_quote`
+    states "nothing here can veto or delay EF". The fire decision is
+    price-blind by design.
+
+2.5 Counterfactual quote capture on every candidate. Mandatory. I hit this
+    gap directly: candidate rows carry 193 features, fires carry 237, and
+    fair_p_up exists only on fires. I could not price the rejected pool.
+
+2.6 One learning observation per candle+direction+episode. Build 36 already
+    does ~1.7 per candle (496/288). Keep it.
+
+2.7 "Q74 was not better than Q68" is the right lesson and it generalises:
+    Build 36's whole learner is a Q74 machine.
+
+2.8 No quota; frequency is an output; starvation stays diagnostic. Agreed.
+
+2.9 "Not a share-price gate; does probability justify this exact price."
+    Correct in principle. See 3.4 for why your synthetic PnL violates it.
+
+
+======================================================================
+3. WHAT GPT GOT WRONG
+======================================================================
+
+3.1 The learner did not malfunction. You describe it as tightening because
+    it "saw negative directional evidence" as if that were an error. It
+    wasn't. Across the 19 fires ef_learner_probability fell 0.494 -> 0.419.
+    The candidate pool's true hit rate was 42.1%. The learner converged to
+    the right answer. ef_learner_econ_edge was 0.0000 all day, so base_edge
+    was purely (p-0.5)*2*maturity = -0.1616 at the last fire.
+
+    The defect is the ACTUATOR: a correctly calibrated "this pool is 42%"
+    signal was wired to move eleven gates, when the only useful response to
+    "the pool is 42%" is "rank inside the pool and buy the cheap ones".
+    This matters for design: the probability model in EF ARC will ALSO say
+    the pool is ~42%. That is not a failure state; it is the input.
+
+3.2 Your threshold magnitudes are roughly double what the DB shows. At the
+    last fire: control 0.4204 -> 0.4297 (you: -> 0.443), settle 0.5999 ->
+    0.6130 (you: -> 0.635), exhaustion 0.3805 -> 0.3929 (you: -> 0.411).
+    Direction and mechanism identical; magnitudes overstated. Minor.
+
+3.3 You never question the direction of the bet. This is the big one.
+    EF ARC's candidate generator births only "contrarian/reversal"
+    opportunities. I ran the same 288 candles through 29 architecture
+    variants and then swept the quote-pricing assumption, because a
+    synthetic price is a hypothesis, not data:
+
+        architecture                  no-bias  c=.15   c=.25  worst
+        EF-style contrarian (=A03)    +177.9   +33.3   -4.5   -4.5
+        learned contrarian            +226.3   +15.5  -19.7  -19.7
+        learned favourite m=.10        +13.9   +14.6  +17.8  +13.9
+
+    "c" is favourite-longshot compression: the most robust empirical
+    finding in prediction-market research is that cheap longshots are
+    systematically OVERPRICED and favourites underpriced. Contrarian EF buys
+    the cheap side. It is fighting the bias, not harvesting it. Under a
+    realistic bias assumption every contrarian design goes negative; the
+    favourite-side learner does not move.
+
+    I am not claiming favourite-side is proven (n.s., one day). I am
+    claiming an architecture that structurally excludes it is wrong.
+
+3.4 The constant-price synthetic PnL is optimistic in a specific, structural
+    way. For a reversal bet, the contrarian share is cheap precisely when
+    the candle has extended -- which is precisely when reversal probability
+    is lowest and time is shortest. Price and P are anti-correlated through
+    extension_sigma. A constant $0.40 decouples them and hands every trade
+    the cheap price without the cheap price's low probability. In my
+    fair-odds-priced replay of Build 36's actual fires, the > $0.47 bucket
+    (fair odds ~0.50, ext ~0.001-0.012) ran 37% and -26%/trade in BOTH
+    builds; the < $0.40 bucket ran 60-71% and +95..+146%/trade. Your
+    break-even of $0.731 rests on 74.55% accuracy, which is the suspect
+    number (Section 6). At Build 36's measured 52.6% break-even is $0.516.
+
+3.5 TREND_BODY 73.3% accuracy for a contrarian ranker contradicts my data
+    under all three pricing assumptions: A03 lost -33.9 / -13.0 / -39.7 in
+    trend/hiVol and -27.9 / -20.0 / -31.5 in trend/loVol. Either your
+    TREND_BODY label is computed from the completed candle (non-causal, and
+    the name suggests it), or the result is selection. You asked me to
+    check regime causality; from the name alone I would bet against it.
+
+3.6 108 training rows. See Section 6.
+
+3.7 Recent window "120 candles" is ~200 rows. A tree ensemble on 200 rows
+    retrained every 24 candles is a noise-fitter. Specify in episodes with
+    a floor (Section 10).
+
+3.8 The "healthy band 25-45 EF/100" is derived from the suspect screen. Do
+    not carry it into the design as a prior.
+
+3.9 No exit rule. Binary markets are two-sided; a share bought at 0.30 can
+    be sold at 0.15 when P collapses. EF ARC holds every fire to settlement
+    and eats -1.00 on every loser. Section 7 adds this.
+
+
+======================================================================
+4. BUILD 36 FAILURE ANALYSIS
+======================================================================
+
+Replay facts (causal, MASTER OFF asserted, 4,557,410 events, 99.33% of
+3,344,103 EF ticks on micro_source=PERP):
+
+    Build 36:  19 fires, 10 wins, 52.63%, 6.60/100 candles, avg fire 92.7s
+    Build 35:  24 fires, 12 wins, 50.00%, 8.33/100 candles, avg fire 117.8s
+    shared core: 18 fires, 10/18 = 55.6% in both
+    Build 35 unique: 6 fires, 2/6      Build 36 unique: 1 fire, 0/1
+    Fisher exact B36 vs B35: p = 1.000. Indistinguishable.
+
+Learner state at end of day: 496 samples, 288 versions, econ_examples 0,
+intercept -0.012 -> -0.282 by candle 180 then -0.263, frequency_ratio 0.12
+vs floor 0.55, guard active 283/287 candles, starvation warning active with
+reason "quote economics poor/unavailable".
+
+Mechanism, with line references:
+
+  1. learn_batch: with no quote, every candidate is "directional-only";
+     econ_missing increments, econ_examples stays 0, econ_coverage tracker
+     stays 0.0.
+  2. edges(): ret_w < EF_LEARNER_ECON_MIN_WEIGHT (6.0), so econ_available is
+     False and base = quality_edge = (p-0.5)*2*maturity. Purely directional.
+  3. p converges toward the pool hit rate (0.419 vs 42.1% actual). Correct.
+  4. base goes negative; adaptive_parameters() subtracts base*SHIFT from
+     eleven thresholds (SHIFT 0.05-0.10 each).
+  5. Eleven correlated gates tighten together; candidate frequency falls
+     multiplicatively; frequency guard reports, changes nothing.
+  6. The extension floor is NOT learner-driven (ef_threshold_source_extension
+     = static_anchor on all 19 fires; control/chop/pclose = learner on all 19).
+
+Where the losses actually were (fair-odds priced, both builds identical
+pattern): fires with contrarian entry > $0.47 (candle barely off open) and
+fires after t+150s. The gates could not express "cheap AND early" because
+price is not an input and time is a threshold, not a gradient.
+
+Verdict on Build 36: the feature engineering is good, the readiness
+discipline is excellent, the shadow accounting is what made this test
+possible. The decision layer is price-blind and its learner's only actuator
+is a wall.
+
+
+======================================================================
+5. LEAKAGE / REPLAY AUDIT
+======================================================================
+
+5.1 My replay harness (ef_replay/replay_build36.py), which produced the DB
+    you cite. Audited and passed:
+      - fires decided outside their own candle window: 0
+      - fire_second outside [0,300): 0
+      - intra-candle OHLC rebuilt from spot trades <= T only; official
+        closed bar injected at its own close time; derived-vs-official
+        drift 0.0/0.0/0.0 on close/high/low across all 288 candles
+      - now_ms()/mono_ns() driven by replay event clock, so the 250ms
+        confirm window and latch were measured in event time, not wall time
+      - perp lane consumed real Tardis local_timestamp as recv_ms
+      - depth reconstruction cross-checked level-by-level against Tardis
+        book_snapshot_25: 75,739,680 levels, 0 mismatches
+    Known deviations, documented in the harness docstring: EF tick cadence
+    driven by perp depth arrivals (spot depth is not archived); Predict.fun
+    books absent.
+
+5.2 stay_score is CAUSAL. Line 4008:
+        stay_margin = clamp((reachable_capacity - distance) /
+                            max(vol_capacity, sigma), -1, 1)
+        stay_score  = clamp(0.5 + 0.5*stay_margin, 0, 1)
+    reachable_capacity, distance, vol_capacity and sigma are all functions
+    of current price, candle open, trailing sigma and seconds_left at the
+    tick. It is written into ef_metrics at line 16496 inside
+    _compute_ef_metrics, which runs at decision time. Safe to use. If it
+    dominated your importances, that is because it encodes extension vs
+    remaining volatility budget -- the same quantity my price buckets
+    isolate. Not a leak; a good feature.
+
+5.3 ef_candidates.actual is the LABEL. It is filled at settlement. If your
+    feature extraction pulled the row wholesale, it leaked. Check your
+    column list explicitly. Everything else on the row (decision_ts_ms,
+    fired, abstain_reason, settlement_probability, expected_edge, the 193
+    features) is decision-time.
+
+5.4 Features that must NOT be used as ranking inputs:
+      - ef_adapt_* (eleven adaptive thresholds) and ef_learner_* fields:
+        they are the Build 36 learner's opinion, which is a function of
+        settled outcomes of EARLIER candles. Not a strict leak, but they
+        encode the label distribution of the recent past and will let a
+        tree learn "the learner was pessimistic here" as a proxy for
+        session. You said you intend to exclude them. Do.
+      - ef_threshold_source_*: same.
+      - anything from ef_decision_* / ef_execution_* captured after fire.
+      - candle_id, episode id, episode seq, hour, phase as raw timestamp.
+      - any regime label whose name references candle shape (TREND_BODY,
+        WICKY) unless you can show it is computed from evidence at T.
+
+5.5 Regime labels. Build 36's own regime_key() is causal (evidence at T). My
+    own regime split in the deep test was NOT -- I computed trend/chop and
+    hi/lo vol from the completed candle and said so. Yours: unknown.
+
+5.6 Percentile admission. Q65/Q68/Q74 must be quantiles of TRAINING scores,
+    frozen, then applied to holdout. If the quantile was computed on the
+    holdout score distribution, admission rate is fixed by construction and
+    the top-third is selected with knowledge of the holdout's score
+    spread. That alone does not leak labels, but combined with per-24-candle
+    retraining inside the holdout it makes "fires/100" meaningless.
+
+5.7 Deduplication. 496 rows over 288 candles = 1.72 per candle. If you kept
+    "the best-scoring candidate per candle" you selected on the model's own
+    output, which is fine causally ONLY if the score used for selection was
+    computed from features at that candidate's own timestamp and the model
+    was trained without that candle. If you kept "the candidate that won",
+    that is the label.
+
+5.8 Rolling retrain. A model retrained every 24 candles must be trained only
+    on candles whose settlement time is < the first decision it will make.
+    Settlement is candle_close, so the training set must exclude the current
+    open candle AND any candle settled after the retrain timestamp.
+
+
+======================================================================
+6. REVIEW OF EXTRATREES RESULTS
+======================================================================
+
+What I could verify: your split sizes.
+
+    train  candles 0-60     108 candidate rows   pool hit-rate 46.3%
+    dev    candles 60-120   104 candidate rows   pool hit-rate 43.3%
+    hold   candles 120-288  284 candidate rows   pool hit-rate 40.8%
+
+What you reported on the holdout:
+
+    Q68: 55 fires, 41 wins, 74.55%       (pool base rate 40.8%)
+    Q68+guard: 48 fires, 38 wins, 79.17%
+    anchor+recent: 70 fires, 75.71%
+
+For scale: a no-skill ranker admitting the top 55 of 284 rows expects ~22
+wins. You report 41. Build 36's hand-built gates on the same pool got 10 of
+19. My walk-forward logistic on a richer 1-second feature grid got 52-60%.
+A 108-row ExtraTrees getting 74.5% out-of-sample is a ~4-sigma event
+relative to everything else measured on this day.
+
+I cannot audit your harness. I can tell you what would make me believe it:
+
+  6.1 Permutation test. Shuffle labels within each candle-pair (so the
+      UP/DOWN structure is preserved) and rerun the whole pipeline
+      including retraining. If accuracy does not collapse to ~41%, the
+      pipeline is leaking through something other than the label.
+
+  6.2 Ablation. Remove, one at a time: hour/phase/timestamp; candle_id and
+      episode ids; all ef_adapt_* and ef_learner_* fields; all regime
+      labels. Report accuracy after each. A transferable ranker survives.
+
+  6.3 Frozen quantile. Compute Q68 on the 108 training scores once. Apply
+      unchanged to holdout. Report the ADMISSION RATE that results (it will
+      not be 32.7%).
+
+  6.4 No retraining inside the holdout for the static variant. Report
+      static-ET trained on 0-120 and tested on 120-288 with nothing else.
+
+  6.5 Bootstrap CI on 41/55. It is [61%, 85%]. Report it.
+
+  6.6 Variant count. State how many rolling configurations were compared on
+      the same 168 candles before the 75.71% one was chosen. Divide the
+      surprise accordingly.
+
+  6.7 Learning curve. Train on 30, 60, 90, 120 candles. If holdout accuracy
+      is flat at 75% from 30 candles up, the model is not learning from the
+      data.
+
+Is ExtraTrees a sensible production model? Eventually, maybe. Not now.
+Reasons: (i) 496 episodes/day is a few thousand per week; tree ensembles
+need that before they beat a regularised linear model; (ii) ET probabilities
+are badly calibrated and you need calibration on top, which needs MORE
+data; (iii) sklearn on Termux is a real operational dependency and you
+already run a single-file service. Start with a regularised logistic /
+small GBM baseline that works at hundreds of rows, promote to ET/HistGB when
+episode count crosses ~5,000 and it wins walk-forward.
+
+
+======================================================================
+7. BEST ARCHITECTURE IN YOUR VIEW
+======================================================================
+
+Working name: EF-DUAL (Dual-side, Unified, Adaptive, Liquidity-priced).
+
+It is EF ARC with four structural changes and a different model ladder.
+
+CHANGE 1 -- Two-sided candidate generation.
+    Every eligible tick births up to two candidates: CONTINUATION (buy the
+    side the candle is on) and REVERSAL (your contrarian EF). Same feature
+    vector, same probability model, same economics layer. The market
+    decides which is +EV at this price. Contrarian is kept because it is
+    what earns in chop; continuation is added because it is what survived
+    every pricing assumption and is the only design that was positive in
+    trends. Section 13 shows why this alone is most of the bad-market
+    protection.
+
+CHANGE 2 -- Time and price are gradients, not gates.
+    P(win | evidence, seconds_left) is the model's job. seconds_left and
+    extension_sigma go in as continuous features and via a barrier-crossing
+    prior (your ARCH I). The > $0.47 / late-fire losses disappear by
+    construction when EV = P - 1.02*q is the admission variable: near-open
+    candles have q ~ 0.50 and P ~ 0.50, so EV ~ -0.02 and they never fire.
+    No "price > 0.50 reject" rule needed. This is your Section 15 taken
+    seriously.
+
+CHANGE 3 -- Model ladder, not model choice.
+    L0: fixed barrier-crossing prior (no parameters to fit; your ARCH I).
+    L1: regularised logistic on the causal feature vector, walk-forward,
+        train-only standardisation, Platt/isotonic calibration when
+        settled episodes >= 300 per regime bucket. This is what runs on
+        day one and what my sweep used.
+    L2: HistGB / ExtraTrees, promoted only when it beats L1 walk-forward
+        over >= 5,000 episodes with the permutation and ablation tests
+        passed. sklearn import failure -> fall back to L1, log loudly.
+    Anchor+recent applies at whatever level is live, with windows in
+    EPISODES (Section 10).
+
+CHANGE 4 -- Exit and re-entry.
+    After fire, keep evaluating. If calibrated P falls below the current
+    bid for the held side minus a cost buffer, sell. If P rises while price
+    falls, allow one scale-in up to the Kelly cap. Every loser today costs
+    -1.00; this is where a meaningful fraction of that comes back.
+
+Everything else in EF ARC stays: minimal safety gates, broad candidates,
+counterfactual capture on every candidate, one observation per episode,
+immediate lane + 250ms latch, regime as reliability modifier, no quota,
+starvation diagnostic, PnL/100 as the objective.
+
+
+======================================================================
+8. ARCHITECTURES YOU REJECTED AND WHY
+======================================================================
+
+ARCH A (static ET + EV)          KEEP as L2 candidate, not day-one.
+ARCH B (anchor+recent ET)        KEEP the pattern; fix the window unit.
+ARCH C (HistGB + EV)             KEEP as L2 alternative; often calibrates
+                                 better than ET out of the box.
+ARCH D (calibrated logistic on   THIS IS L1. It is the baseline everything
+        deterministic candidates) must beat, and it is what runs first.
+ARCH E (mixture of experts)      REJECT for now. Three experts on 496
+                                 episodes/day is ~165 each. Regime goes in
+                                 as a feature (Section 13) until there are
+                                 thousands of episodes per regime.
+ARCH F (bandit over frozen       DEFER. Good idea once >= 3 rankers have
+        rankers)                 each earned a track record. Premature now.
+ARCH G (two-stage real/trap      REJECT. It adds a seam between two models
+        then direction)          trained on the same tiny data. Build 36's
+                                 fake_reversal_penalty / real_reversal_score
+                                 already encode this; feed them to L1.
+ARCH H (direct return            DEFER until real quote history exists.
+        regression)              Correct end state; impossible today.
+ARCH I (survival/hazard)         ADOPT as L0 prior and as features. It is
+                                 the right physics of a 5-minute barrier.
+ARCH J (neural temporal)         REJECT. No evidence it is needed;
+                                 operational cost is real.
+Contrarian-only anything         REJECT. Section 3.3.
+
+
+======================================================================
+9. FINAL SIGNAL FLOW
+======================================================================
+
+ perp trades/depth + spot trades/klines  (existing lanes, unchanged)
+            |
+            v
+ SAFETY GATES (only): feed live, depth <= 1s, trades >= 3 in 5s,
+   levels >= 10/side, candle open, not already holding this side
+            |
+            v
+ CANDIDATE BIRTH: every EF tick, both sides
+   CONTINUATION candidate  |  REVERSAL candidate
+            |
+            v
+ CAUSAL FEATURE VECTOR (Build 36 ef_metrics minus ef_adapt_*/ef_learner_*,
+   plus seconds_left, extension_sigma, barrier prior, causal regime key)
+            |
+            v
+ P = calibrate( blend( anchor_model(x), recent_model(x) ) )
+            |
+            v
+ q = book.executable_vwap(side, stake)     (real; blank -> no fire, log why)
+ EV = P / (q*(1+fee)) - 1
+            |
+            +---- EV < margin_regime -------------------> no fire, record
+            |                                              counterfactual
+            +---- margin <= EV < strong_margin ----------> 250ms LATCH,
+            |                                              re-evaluate, fire
+            |                                              unless contradiction
+            +---- EV >= strong_margin -------------------> FIRE now
+            |
+            v
+ SIZE = kelly_fraction * (P - q') / (1 - q'),  q' = q*(1+fee), capped
+            |
+            v
+ HOLD LOOP: re-evaluate P each tick; sell if P < bid_held - buffer;
+   scale-in once if P up and price down and under cap
+            |
+            v
+ SETTLEMENT -> one observation per (candle, side, episode) with
+   features@birth, P, q, EV, fired, exit_price, realised return
+            |
+            v
+ recent_model.update(); anchor_model unchanged until offline promotion
+
+
+======================================================================
+10. LEARNING DESIGN
+======================================================================
+
+Training unit: one observation per (candle, direction, episode). Snapshot:
+your Option B, the first decision-eligible snapshot, with Option D as a
+bounded supplement -- at most 3 chronological snapshots at birth, +60s,
++120s, weights 0.5/0.3/0.2 summing to 1.0. Never the strongest-in-hindsight.
+Rationale: B is the moment the system would have acted; D lets the model
+see how the same episode looked as time ran out, which is the barrier
+physics.
+
+Label: settled contrarian/continuation outcome. Secondary label once quotes
+exist: realised return per $1 at the snapshot's own VWAP.
+
+Windows in EPISODES, not candles:
+    recent model: last N = max(1000, 3 days) settled episodes
+    retrain: every 100 settled episodes (~1 hour at current rates), not 24
+             candles
+    anchor: retrained offline, promoted manually, >= 10,000 episodes
+Blend: start 0.7/0.3; move to reliability-weighted once each model has
+>= 300 settled episodes of Brier history: w_recent = clamp(0.3 +
+0.4*(brier_anchor - brier_recent)/brier_anchor, 0.15, 0.5).
+
+Overreaction control: recent model has L2 = 0.05 (L1 logistic) or
+max_depth <= 4 / min_leaf >= 25 (GBM); its authority is the blend weight
+only; it cannot touch margins or gates. If recent Brier exceeds anchor
+Brier by 20% over 300 episodes, w_recent -> 0.15 and a diagnostic fires.
+
+One candle, bounded weight: the (candle, direction) key caps total training
+weight at 1.0 regardless of how many ticks the websocket delivered. Build
+36's ef_candidates already deduplicates this way; keep it.
+
+Calibration: Platt on the blended logit, refit every 300 settled episodes,
+train-only. Isotonic only when >= 2,000 episodes. Per-regime calibration
+offset only when that regime has >= 300 episodes; otherwise global.
+Report Brier, ECE (10 bins), and realised-vs-predicted by bucket every
+retrain.
+
+
+======================================================================
+11. REAL ECONOMICS / PNL DESIGN
+======================================================================
+
+Exact formula, matching Build 36's ef_expected_edge and hypothetical_return
+(PREDICT_FEE_RATE = 0.02):
+
+    q      = executable full-stake VWAP for the side, from
+             book.executable_vwap(side, stake).  NOT best ask.
+    q'     = q * (1 + fee)                       all-in cost per share
+    shares = stake / q'
+    ret_win  = 1/q' - 1                          per $1 staked
+    ret_loss = -1
+    EV     = P * (1/q') - 1  =  P/q' - 1         per $1 staked
+    edge   = P - q'                              per share (your form)
+    break-even P = q'
+
+Admission:
+    EV <  margin_regime         -> no fire (default margin 0.06 = Build 36's
+                                   EF_EV_MARGIN; do not lower it until
+                                   calibration is proven)
+    margin <= EV < 2*margin     -> latch lane
+    EV >= 2*margin              -> immediate lane
+
+Sizing (fractional Kelly on the binary):
+    f* = (P - q') / (1 - q')
+    f  = 0.25 * f*, capped at the staking layer's per-trade maximum
+    At P=0.55, q'=0.306: f* = 0.352, f = 0.088 of bankroll.
+
+Sensitivity you should internalise (at P=0.526, q=0.50):
+    +1 point of P     -> +1.96% EV
+    -1 cent of q      -> +2.11% EV
+One cent of execution is worth one point of accuracy. Execution quality is
+a first-class model input, not a slippage footnote.
+
+Counterfactual capture on every candidate, fired or not: timestamp, side,
+q, best_ask, shares, stake, quote_age, quote_reason, P, EV, regime, and at
+settlement the realised return at q. Two tables: trades and counterfactuals.
+This is what turns econ_examples from 0 into a dataset.
+
+
+======================================================================
+12. FREQUENCY CONTROL PHILOSOPHY
+======================================================================
+
+Frequency is an output. There is no target and no quota.
+
+Where frequency comes from without firing garbage: the rejected pool. 477
+rejected candidates ran 42.1%. At q=0.50 that is -17%/trade -- garbage. At
+q=0.35 it is +18%/trade. The same candidate is garbage or gold depending on
+price, and EV admission sees the difference. Frequency rises exactly where
+cheap shares exist, which is where the economics can pay for lower P.
+Two-sided candidates roughly double the eligible pool for free.
+
+Starvation stays diagnostic, but make its reasons operational:
+    - eligible candidates/100 candles       (generator health)
+    - share with quote available            (venue health)
+    - share with EV > 0 before margin        (pricing health)
+    - share admitted                        (margin health)
+    - realised vs predicted P last 300      (calibration health)
+If admitted/100 falls under 10 for 6 hours, page a human with those five
+numbers. Do not auto-loosen anything.
+
+
+======================================================================
+13. BAD-MARKET / REGIME PROTECTION
+======================================================================
+
+The single biggest bad-market fix is Change 1. On this day, priced under
+three bias assumptions:
+
+    contrarian (A03):  trend/hiVol  -33.9 / -13.0 / -39.7
+                       trend/loVol  -27.9 / -20.0 / -31.5
+                       chop/*       +55.0 / +140.4 / +36.1 (hiVol),
+                                    +40.1 / +70.5 / +30.6 (loVol)
+    continuation(A13): trend/hiVol   +1.1 /  +1.5 /  +1.8
+                       trend/loVol  +11.4 / +10.4 / +12.1
+                       chop/hiVol    -2.8 /  -2.9 /  -1.5
+                       chop/loVol    +4.9 /  +4.8 /  +5.4
+
+The two are anti-correlated by regime. A system that can bet either side,
+priced, is hedged by construction against the regime it cannot see coming.
+(Caveat: those regime labels are from completed candles. The direction of
+the effect is what matters; the router must be causal.)
+
+Regime as feature, not switch: Build 36's causal regime_key() goes into the
+feature vector. The model learns regime interactions. No expert per regime
+until data supports it.
+
+Regime as reliability modifier (your Section 21, adopted): per causal
+regime, track Brier and realised EV over the last 300 episodes. margin_regime
+= 0.06 + 0.04 * clamp((brier_regime - brier_global)/brier_global, 0, 1).
+Minimum 100 episodes before a regime gets its own margin. Recovery is
+automatic as Brier improves. No bans.
+
+Risk governor, bounded: drawdown over the last 200 trades > 2x its trailing
+median -> kelly_fraction 0.25 -> 0.125 and latch-lane only, until 100
+trades recover the median. Never EF OFF, never MAIN/REV, never staking
+rules without the user.
+
+Exit rule (Change 4) is the per-trade bad-market protection: a reversal
+that fails is sold at 0.15 instead of settled at 0.
+
+
+======================================================================
+14. INITIAL PARAMETERS TO TEST
+======================================================================
+
+    recent window          1,000 episodes (floor), ~3 days at current rate
+    retrain cadence        every 100 settled episodes
+    anchor/recent weight   0.70 / 0.30 start; reliability-weighted after
+                           300 Brier samples each, w_recent in [0.15, 0.50]
+    admission              EV margin, not percentile. margin 0.06;
+                           immediate lane at 0.12. Report the resulting
+                           admission percentile as an OUTPUT.
+    EV margin sweep        0.03 / 0.06 / 0.10 / 0.15
+    kelly fraction         0.25 (sweep 0.125 / 0.25 / 0.50)
+    regime min samples     100 for own margin, 300 for own calibration
+    calibration min        300 episodes global before P is trusted for EV;
+                           L0 prior only before that
+    latch                  250 ms, unchanged
+    exit                   sell when P < bid_held - 0.03
+    model ladder           L1 logistic L2=0.01..0.05; promote L2 at 5,000
+                           episodes only if walk-forward Brier improves
+
+
+======================================================================
+15. VALIDATION PLAN
+======================================================================
+
+Kill tests -- any one failing stops the build:
+
+    K1  Permutation: shuffle labels within candle-pair, full pipeline.
+        Accuracy must fall to pool base rate +-3 points.
+    K2  Ablation: remove time/ids/learner fields/regime labels. Holdout
+        accuracy must not drop more than 5 points from any single removal.
+    K3  Learning curve: 30/60/90/120 candles. Must rise, not sit flat.
+    K4  Frozen quantile / frozen model on 120-288. Must still beat L1.
+    K5  Pricing sweep: every architecture under c in {0, 0.15, 0.25} and
+        spread in {0.01, 0.025}. Reject any design whose sign flips.
+
+Ordered protocol:
+
+    V1  Rebuild my 1-second grid harness with two-sided candidates and the
+        exact economics of Section 11. One day. All variants, K1-K5.
+    V2  Acquire two more free Tardis first-of-month days (2026-07-01,
+        2026-06-01) with the existing download_raw.sh + reconstruction.
+        Freeze parameters on 08-01. Test unchanged on the other two. Report
+        per-day, per-session (Asia/London/US), per-direction, per-quote-
+        bucket, worst rolling 3h block, drawdown, Brier, ECE.
+    V3  Acquire Predict.fun book history or start capturing it live with
+        Build 36 MASTER OFF. Replace every synthetic price with real q.
+        Recompute V1/V2. This is the first result anyone should quote as
+        PnL.
+    V4  Shadow-run EF-DUAL beside Build 36 live, MASTER OFF, >= 2 weeks.
+        Compare realised EV, not accuracy.
+    V5  Promote only if V4 shadow realised EV > 0 with bootstrap CI clear of
+        zero AND worst-session EV > -1x median-session EV.
+
+Report template per architecture: candles, candidates (both sides),
+fires, fires/100, wins, losses, accuracy, PnL (labelled REAL or SYNTHETIC
+with pricing assumption), max drawdown, worst 3h, regime PnL (causal
+labels), direction split, session split, quote-bucket split, Brier, ECE,
+candidate coverage, rejected-candidate counterfactual PnL.
+
+
+======================================================================
+16. RISKS / FAILURE MODES
+======================================================================
+
+    R1  Favourite-longshot bias is stronger than c=0.25 on Predict.fun's
+        5-minute books. Then contrarian is dead and continuation carries
+        everything. Mitigation: two-sided design; V3.
+    R2  Real executable VWAP for a full stake is far worse than best ask on
+        a thin 5-minute book. One cent = one point. Mitigation: q from
+        executable_vwap, never best_ask; capture depth with every quote.
+    R3  Calibration drifts between sessions. Mitigation: Brier-weighted
+        blend, per-regime margin, the R1 monitor.
+    R4  Continuation side is just momentum, and momentum in a 5-minute
+        window is thin. It survived my sweep with +13.9 worst-case on
+        ~120 trades -- n.s. Mitigation: it is a candidate, not a
+        commitment; EV admission drops it if it does not pay.
+    R5  Exit rule churns. Mitigation: 0.03 buffer, one exit per episode,
+        measure exit PnL separately.
+    R6  sklearn on Termux. Mitigation: L1 is pure numpy; L2 optional with
+        explicit fallback and a startup self-test.
+    R7  Everything above is one day of data. Mitigation: V2 before any
+        parameter is called final.
+    R8  The 42% pool is real and a ranker cannot make it 75%. If K1-K3 show
+        the honest ceiling is ~55-60% at top-third admission, the PnL case
+        rests entirely on price, and V3 decides.
+
+
+======================================================================
+17. SHOULD WE BUILD IT?
+======================================================================
+
+YES WITH CHANGES.
+
+Build EF-DUAL (Section 7): EF ARC's skeleton, two-sided candidates, L1
+logistic first, windows in episodes, EV-margin admission instead of
+percentile, exit rule, real VWAP. Do not build anything whose parameters
+were chosen on the ExtraTrees screen until K1-K3 pass.
+
+Do NOT build yet: the ExtraTrees anchor+recent as the day-one model; a
+contrarian-only generator; a 120-candle recent window; a Q68 admission
+constant; any regime expert.
+
+
+======================================================================
+18. MESSAGE BACK TO GPT-5.6 SOL
+======================================================================
+
+Sol --
+
+Your reading of Build 36 is right and I have the line numbers to prove it.
+One scalar base_edge, seven families, eleven thresholds, a guard that only
+watches. Retire the wall. We agree.
+
+Three things I need you to reconsider.
+
+First, the ExtraTrees number. You trained on 108 rows and reported 74.5%
+on a 40.8% pool. I do not believe it yet, and you should not either until
+K1 (permutation) and K2 (ablation) are run. If it survives those, I will
+say so in writing and promote ET up the ladder immediately. If it does not,
+the whole "healthy band 25-45/100" and the Q68 constant go with it. Run
+K1 first; it takes ten minutes and it is decisive.
+
+Second, direction. Your generator only births reversal candidates. I swept
+the pricing assumption on the same day and every contrarian design flipped
+sign under realistic favourite-longshot bias while the continuation side
+did not move. I am not telling you contrarian is wrong -- it is what earns
+in chop. I am telling you an architecture that cannot bet the other side
+has no answer for a trending day, and this day had two of those regimes.
+Birth both. Let EV choose.
+
+Third, the learner did not fail. It said the pool was 42% and the pool was
+42%. Your new probability model will say the same thing. Design for that
+being the normal input, not an alarm.
+
+Smaller: specify recent windows in episodes with a 1,000 floor; add an
+exit rule -- you are settling every loser at zero on a two-sided market;
+check whether TREND_BODY is computed from the finished candle, because a
+73% contrarian hit rate in trend bodies contradicts every pricing scenario
+I ran.
+
+What I will not argue with: separate economics layer, counterfactual capture
+on every candidate, one observation per episode, no quota, EV over price
+gates. Those are correct and they are most of the value.
+
+One last thing we both owe the user: nothing here is PnL. Every number in
+your brief and in my sweep is a synthetic price on one day. The first
+quotable PnL is V3. Until then the honest claim is "the architecture is
+sound and the previous one was structurally price-blind", and that claim
+I will stand behind.
+
+-- Claude Code

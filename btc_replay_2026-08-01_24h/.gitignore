@@ -1,0 +1,9 @@
+# Large market-data payloads are delivered as a downloadable archive, not via git.
+# Provenance (source URLs + SHA256 + row counts) lives in manifest.json, and
+# scripts/ reproduces every file byte-for-byte.
+raw/
+normalized/
+logs/
+*.tar.gz
+*.tar.zst
+*.zip

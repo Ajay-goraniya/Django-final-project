@@ -1,0 +1,13 @@
+v12.4.1 2026-09-13 04:21 UTC
+=== test_polymarket.py ===
+Ran 47 tests in 0.724s
+
+FAILED (errors=1)
+=== test_lanes.py ===
+Ran 21 tests in 0.327s
+
+OK
+=== test_v122.py ===
+Ran 85 tests in 2.695s
+
+OK
