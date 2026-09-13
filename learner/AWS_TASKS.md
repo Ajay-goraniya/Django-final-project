@@ -381,3 +381,90 @@ Second half: the retry whitelist matched by equality against a `code` key that
 
 Do **not** flip FAK to FOK. If after 12.4.4 the rejects persist at a similar
 rate, say so and we look again — but change one thing at a time.
+
+## Task 17 CORRECTED (12.4.5) - my depth explanation was WRONG. Read this before acting on Task 17.
+
+I told you the rejects were thin books and that 12.4.1's depth check was the fix.
+**That is retracted.** I checked Polymarket's own docs and its own live API instead
+of reasoning from our journal, and both say otherwise.
+
+**1. The FAK reject does not mean "not enough". It means "nothing at all".**
+Polymarket's error table, verbatim:
+
+> `no orders found to match with FAK order. FAK orders are partially filled or
+> killed if no match is found.` — At least one matching counterparty required;
+> rejected entirely if none exists.
+
+So a book too thin for the full stake gives a **partial fill**, not this reject.
+The reject only fires when our limit price crossed **no resting ask at all**.
+
+**2. The book is not thin.** I queried the live BTC 5m market from this container
+(`clob.polymarket.com/book`, currently-open condition
+`0xe2309a0bb01dc3c01eb33a1396b3b0c4c7922b110ac0d38f06e1c50c6b9ab210`):
+
+| level | price | size | notional |
+|---|---|---|---|
+| best ask | 0.43 | 227.2 | **$97.70** |
+| +1c | 0.44 | 355.0 | $156.20 |
+
+**~$98 at the touch, ~$254 within one cent, against a $3 stake.** Depth was never
+the binding constraint and the check could never bind. All it could ever do is
+turn a partial fill into a local skip. **Do not treat it as the fix.**
+
+**3. The actual cause: our cap is not marketable by the time it is evaluated.**
+Two venue facts, both confirmed against the live API, not from memory:
+
+- `GET /clob-markets/{condition_id}` on the live BTC 5m market returns
+  **`"itode": true`** — taker-order-delay is **ON** for this market. The docs:
+  *"Taker delay: used on selected crypto and finance up/down markets. The order
+  is held for 250 ms, then validation runs again and the order is matched or
+  placed on the book."* (Reported as reduced to 50 ms on crypto in Aug 2026 —
+  treat the exact number as unverified; the flag itself is verified.)
+- Add your measured **~140 ms Mumbai wire latency**. So the book we priced
+  against is **~200-400 ms stale at the moment the engine decides marketability.**
+
+Our cap is `ask + 1 tick` = one cent of cushion. In the last seconds of a 5-minute
+BTC candle the ask moves more than a cent inside 300 ms routinely. We miss the
+whole ask side, and get exactly the reject we get.
+
+**4. And a wider cap is FREE.** Polymarket docs, verbatim: *"Price improvement
+always benefits the taker. If you place a buy order at `$0.55` and it matches
+against a resting sell at `$0.52`, you pay `$0.52`."* A taker fills at the
+**resting maker's price, never at its own limit.** That is why 11 of 11 live fills
+executed at or better than the quoted ask and "the pad never engaged" — that
+observation is evidence **for** widening the cap, not against it. I had it backwards.
+
+### What to actually do
+
+1. **Switch `slippage_mode` to `band`** in Trade Controls (`/api/controls/ev`).
+   This is build 36's proportional-band rule, already coded in `order_plan`. Caps
+   it produces vs today's pad=1, at tick 0.01:
+
+   | ask | band | band cap | today's cap |
+   |---|---|---|---|
+   | 0.08 | 100% | 0.16 | 0.09 |
+   | 0.15 | 70% | 0.26 | 0.16 |
+   | 0.25 | 50% | 0.38 | 0.26 |
+   | 0.35 | 20% | 0.42 | 0.36 |
+   | 0.43 | 10% | 0.48 | 0.44 |
+   | 0.70 | 10% | 0.77 | 0.71 |
+
+   **EV does not get looser.** In band mode `order_plan` sets `_px=q['ask']`, so
+   EV is still judged at the ask we expect to pay; the band is an execution bound
+   only, exactly as build 36 kept them apart. Widening it cannot widen a fire.
+
+2. **12.4.5 sets `LiveBroker.all_or_nothing=False`** so the live lane stops
+   depth-refusing. On the branch, 167 tests pass.
+
+3. Deploy 12.4.5 (not 12.4.4) with `slippage_mode=band`. Keep EF on, master on,
+   stake $3.
+
+4. **Measure it, do not assume it.** Report, split before/after the switch:
+   reject count and breakdown by `compact_error`; fill rate; **and the realised
+   fill price vs the quoted ask on every fill** — if band mode is costing us
+   anything, it shows up there and only there. If mean realised price rises above
+   the quoted ask at all, tell me immediately and we revert.
+5. Attempt histogram, as before. Still `{1: N}` after 12.4.2 means the retry is
+   still dead.
+
+Still do **not** flip FAK to FOK. FOK would reject strictly more.

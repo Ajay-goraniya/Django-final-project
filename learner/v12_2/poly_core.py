@@ -270,21 +270,19 @@ def order_plan(q,terms,stake,d,pad=1,band=False,require_depth=True):
     if d['p']/cost-1<d['threshold']: raise ValueError('price fails model EV')
     levels=[rate*(p*(1-p))**exp/p for p,size in q['asks'] if p<=cap]
     if not levels: raise ValueError('no executable ask at cap')
-    # Can the ladder actually absorb the whole stake at or under the cap?
+    # Can the ladder absorb the whole stake at or under the cap?
     #
-    # Until 12.4.1 this only checked that SOME ask existed at or below the cap,
-    # never that there was enough of it. So the engine signed and POSTed
-    # fill-or-kill orders against books that demonstrably could not fill them,
-    # and the venue answered "no orders found to match" - which is exactly the
-    # reject signature, and exactly why zero of 28 attempts partially filled.
+    # ONLY meaningful for a genuinely all-or-nothing broker. It is off for both
+    # live (FAK) and paper.
     #
-    # Build 36 walked the ladder locally and refused before the network, turning
-    # a venue reject into a free local skip. Doing the same here costs nothing:
-    # an order that cannot fill is not an opportunity we are declining.
-    # Only where the venue is all-or-nothing. Polymarket's FAK is: 28 live
-    # attempts produced zero partial fills. The PaperBroker DOES fill partially,
-    # which is itself a paper-vs-live divergence worth measuring - it lets the
-    # paper lane book trades the live venue would have refused outright.
+    # 12.4.1 turned this on for live on the theory that the rejects were thin
+    # books. That was wrong, and is retracted in 12.4.5. Polymarket's own error
+    # table says a FAK needs at least ONE match and partially fills otherwise -
+    # so a thin book is a partial fill, never the "no orders found to match"
+    # reject we actually get. And the book is not thin: the live BTC 5m ladder
+    # carries ~$98 at the touch and ~$254 within a cent against a $3 stake.
+    # The check could never bind, and could only convert a partial fill into a
+    # local skip. Kept for a real FOK broker, which we do not run.
     if require_depth:
         _depth=0.
         for _p,_n in q['asks']:

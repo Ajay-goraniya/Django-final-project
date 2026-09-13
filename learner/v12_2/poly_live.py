@@ -4,6 +4,15 @@ from types import SimpleNamespace
 from poly_core import fee, error_info
 
 class LiveBroker:
+    # FAK is NOT all-or-nothing. Polymarket's own error table:
+    #   "no orders found to match with FAK order. FAK orders are partially
+    #    filled or killed if no match is found."  -- at least ONE match is
+    # required, and a book too thin for the whole stake partially fills.
+    # 12.4.1 set this True on a theory that the rejects were thin books; the
+    # live BTC 5m book carries ~$98 at the touch and ~$254 within one cent
+    # against a $3 stake, so the check could never bind and could only ever
+    # convert a partial fill into a local skip. Retracted in 12.4.5.
+    all_or_nothing=False
     basis='VENUE_CONFIRMED_TRADE_AND_VENUE_FEE'
     def __init__(self,books): self.books=books; self.client=None; self.wallet=None
     async def open(self):

@@ -773,14 +773,26 @@ class BookDepthIsCheckedBeforeSending(unittest.TestCase):
     def test_a_partial_filling_venue_is_not_depth_checked(self):
         """The check reflects the venue, not a global policy.
 
-        Polymarket's FAK is all-or-nothing - 28 live attempts, zero partials -
-        so a book that cannot absorb the stake returns nothing and the order is
-        a wasted round trip. The PaperBroker fills whatever is there, which is
-        itself a paper-vs-live divergence: it books trades the live venue would
-        have refused outright.
+        Neither broker we run is all-or-nothing, so neither is depth-checked.
+        Polymarket's own error table: a FAK needs at least ONE match and is
+        "partially filled or killed if no match is found" - so a thin book is a
+        partial fill, not the "no orders found to match" reject. 12.4.1 set the
+        live broker True on the opposite belief; retracted in 12.4.5.
         """
         self.plan([(0.50, 2.0)], 3.0, pad=0, require_depth=False)
         self.assertFalse(C.PaperBroker.all_or_nothing)
+
+    def test_live_broker_is_not_all_or_nothing(self):
+        """FAK partially fills, so the live lane must not depth-refuse.
+
+        Locks the 12.4.5 retraction: a True here silently converts every
+        partial fill the venue would have given us into a local skip.
+        """
+        import poly_live
+        self.assertFalse(poly_live.LiveBroker.all_or_nothing)
+        # Executor reads it via getattr with a True default, so an absent
+        # attribute is as wrong as a True one.
+        self.assertIn('all_or_nothing', vars(poly_live.LiveBroker))
 
     def test_thin_book_is_refused_locally(self):
         # $3 wanted, one level holding 2 shares at 0.50 = $1.00 of depth
