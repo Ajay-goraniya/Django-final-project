@@ -686,3 +686,5 @@ Conclusion: regime handling must be venue-aware and learned, not a hand rule; th
 18:21 UTC 09-13: THE PAPER STREAK BROKE - Predict.fun last-20 -0.078 after fourteen consecutive positives and the best hour of the day one hour earlier; paper lanes gave back 47/42/32 at $10. Vindicates not arming. Tokyo wallet 0.00 a fifth hour, lanes all OFF per kind, 12 processes up.
 
 19:22 UTC 09-13: Tokyo master OFF, all three kinds False, no silent revert; wallet 0.00 sixth hour; re-arm rule does not fire (Predict.fun last-20 -0.054, second consecutive negative).
+
+20:22 UTC 09-13: Tokyo master OFF, all kinds False, no revert; wallet 0.00 seventh hour; rule does not fire (-0.225, third consecutive negative). Label problem raised: the per-$1 source file is the one fair.py calls Polymarket, not Predict.fun - unresolved.

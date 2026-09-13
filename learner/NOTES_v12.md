@@ -3722,6 +3722,48 @@ which is cheap and decides it.
 
 **Nothing built.** A deploy restarts the engine and forces master OFF, and they are live. 12.8.5 still held.
 
+## 20:22 UTC (Sun 09-13) - twenty-second reading. Third consecutive negative. AND A LABEL PROBLEM I CANNOT RESOLVE.
+
+Re-arm reading, **per $1 from `/tmp/v10_long4.sqlite3`**: last-20 **-0.225**, last-40 **+0.102**, **753
+graded**. **Third consecutive negative and the worst of the three** (-0.078, -0.054, -0.225). Rule 1 needs
+TWO CONSECUTIVE POSITIVES. **Does not fire.** REVERSAL, EF and MAIN all stay off.
+
+Tokyo checked per kind: `{'MAIN': False, 'REVERSAL': False, 'EF': False}`, master OFF, **no silent revert**.
+`realised -8.04`, `settled 442`, `open 0`, **wallet 0.00 and equity 0.00 for a seventh consecutive hour.**
+All **12** processes up.
+
+### The label problem - flagged now, not buried, and it must be fixed before the rule ever fires
+
+**I have been reporting that per-$1 number as "Predict.fun v10 paper". `fair.py` calls the same file
+`Polymarket paper (v10)`.**
+
+- `fair.py:23-24` and `:41-43` read **`/tmp/v10_long4.sqlite3`** for the row it labels **Polymarket paper
+  (v10)**.
+- Its **Predict.fun paper (v10)** row comes from **`b10live/b10.sqlite3`**, table `ef_predictions`, which
+  has **no `pnl` and no `stake` column at all** - only `correct`. So a per-$1 figure cannot come from it.
+- `/tmp/v10_long4.sqlite3` has one mode, `'pnl'`, 753 graded. It is the only source that can produce the
+  last-20 per $1 the rule is written against.
+
+**So either my label is wrong or `fair.py`'s is.** I cannot tell which from here and I am not going to
+guess - this is precisely the *"check what a label MEANS before you use it"* failure that produced a large
+fake edge on 09-11 when Predict.fun trades were graded with Polymarket's oracle.
+
+**It does not change tonight's decision** - the reading is -0.225 on either labelling, negative, and the
+rule does not fire. **But rule 1 names the Predict.fun run specifically**, so this must be resolved before
+the rule is ever satisfied, or a lane could be re-armed on the wrong venue's evidence. **First item at the
+21:21 check**: trace which process writes `/tmp/v10_long4.sqlite3` and which writes `b10.sqlite3`, from the
+running command lines, not from the filenames.
+
+The second number I have been reporting as "Polymarket paper" came from
+`v12/results/v10_long4_polymarket_paper.sqlite3`, which has read **+0.012 / -0.032 / 413 graded unchanged
+across two consecutive hours** while `fair.py`'s Polymarket row advanced 156/144 -> 160/147. **That file is
+stale and I am dropping it from the report** rather than printing a number that has not moved.
+
+### Polymarket v12 live
+
+Traded at 20:05:16 and lost; **cash 6.9027, one funded trade of runway at the $5 stake.** Kill window
+**1 of 20**. Build 12.8.4, master true, ef true. 12.8.5 still held.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
