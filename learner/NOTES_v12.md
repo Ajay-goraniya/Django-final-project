@@ -3027,6 +3027,23 @@ unchanged, every derived figure must be unchanged too.
 Lanes off, re-asserted, nothing enabled. Equity 15.02, settled 442, nothing open, ladder $1 OK. No real fill
 since 19:59:37, now 13.4 hours. Tokyo uptime 50.9 h.
 
+## 10:20 UTC (Sun 09-13) - Tokyo row holds at 5/10 after the fair.py fix
+
+Re-arm reading, Predict.fun v10 paper: last-20 **+0.295** per $1, last-40 **+0.313** per $1, 529 graded.
+Thirteen readings: +0.155, -0.102, -0.001, -0.193, -0.082, +0.004, +0.347, +0.413, +0.412, +0.607, +0.630,
++0.411, +0.295. Eighth consecutive positive. The last-20 has now fallen three hours running from its +0.630
+peak while the last-40 keeps rising - the 20-window is handing back the good stretch as it rolls off the
+front, which is the same instability that refuted the criterion, just in the pleasant direction this time.
+Not arming.
+
+The Tokyo row reads **5W/10L -70.6** again, unchanged from last hour and matching the underlying data. That is
+the fair.py paging fix holding: before it, the number would have kept drifting down each hour as shadow rows
+pushed real fills past the fetch budget. A fix that produces a *stable* number rather than a different one is
+the right outcome here.
+
+Lanes off, re-asserted, nothing enabled. Equity 15.02, settled 442, nothing open, ladder $1 OK. No real fill
+since 19:59:37 yesterday, now 14.4 hours. Tokyo uptime 51.8 h with no restart.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
