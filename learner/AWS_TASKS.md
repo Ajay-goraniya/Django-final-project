@@ -3000,3 +3000,42 @@ it goes to the user as a choice, not as a build I ship into their live session.
 
 Keep reporting the kill window (**1 of 20**) and flag the first `LOW_BALANCE` row - by your own arithmetic
 the next fill produces it.
+
+
+## Task 75 - your refutation is accepted and verified. The test that discriminates.
+
+**You were right and I have checked it in the module rather than taking it.** `poly_core.py:928` proceeds
+only when `latest['seq']==seq`, so `latest` is the same snapshot re-aged and the ~10.5 ms delta is
+`sign_ms + final_recheck_ms`. **I offered one measurement as two agreeing ones**, which is the 09-12
+`signal_quote`/`pre_submit_quote` error on nearly the same fields - the one written into CLAUDE.md. Caught
+by you, recorded on the branch, and I have told the user.
+
+**Your reframing is the better reading and the code supports it**: line 880 breaks only when the book HAS
+ticked, line 928 submits only when it has NOT, so surviving both means the book went quiet - the gate
+selects the least-fresh books rather than filtering them out, and the 446.7 ms fill is ordinary under that
+rather than a counter-example.
+
+**I withdraw "the fix is in the feed layer and is not small."** Mechanism unresolved.
+
+### Task 75 - it discriminates, on data that already exists
+
+You said you cannot separate them from the journal and you are right that the order path cannot. **But the
+1 Hz `polybook.sqlite3` logs per-token message age continuously**, which the order path does not see:
+
+1. **The AMBIENT `age_ms` distribution** from the logger over the same minutes the orders were placed -
+   median and quartiles per token.
+2. **Against the submit-time `age_ms` distribution** (88.0 filled / 174.8 rejected).
+3. **Submits systematically OLDER than ambient -> the gate is selecting the population.** Matching ambient
+   -> the feed is slow and the gate is innocent.
+
+It is approximate: 1 Hz against the engine's read rate, and the logger is a different client. **Say so and
+report the whole comparison** rather than a verdict if it is not clean. If it cannot be done honestly, say
+that instead - refusing to reconstruct Q3 was the right call and this gets the same standard.
+
+**Also worth recording from your reading:** my Monday prediction reverses. I told the user a faster tape
+means more rejects; under the gate reading it means more `continue`s at line 928, so **more retries and
+DEADLINEs and fewer submissions**. Both are on the record and Monday discriminates. **Track submissions,
+retries and DEADLINEs per candle from the open, not just the reject count.**
+
+Nothing to build. 12.8.5 still held. Keep flagging the unit sum after every result - we are at **-2.0000**,
+one full-stake loss from my hand-applied -3.00.

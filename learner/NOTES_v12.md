@@ -4064,6 +4064,67 @@ managing it actively - stated once, plainly, and not pressed.
 **Nothing touched.** `next_stake` 3.0, exactly one control write since 20:23:16 and it is theirs. 80 orders
 / 38 fills / 37 results. master true, ef true, build 12.8.4, 12.8.5 still held.
 
+## 21:00 UTC (Sun 09-13) - CORRECTION: `pre_submit_book_age_ms` is not a second measurement. AWS caught it and is right.
+
+**I told the user the reject mechanism was feed staleness and that the fix was a feed-layer change. AWS
+refuted the supporting half of that and I have verified it in the running module.**
+
+### What I claimed, and why it was wrong
+
+I offered two numbers as agreeing evidence: `age_ms` **86.6 filled / 174.8 rejected**, and
+`pre_submit_book_age_ms` **98.2 / 185.7**. **They are the same measurement, reported twice.**
+`poly_core.py:928`:
+
+```python
+latest=self.books.quote(token,self.age)
+if not latest or latest['seq']!=seq: continue
+```
+
+**The submit only proceeds when the book has NOT changed since the decision.** So `latest` is the *same
+snapshot* as `q`, merely re-aged. The delta is **+10.9 ms filled / +10.2 ms rejected**, equal to
+`sign_ms + final_recheck_ms` in both arms, 7.3-21.8 ms across all 77 orders. **There is no second sample of
+the feed in there.**
+
+**This is the error CLAUDE.md warns about, on nearly the same pair of fields** - the 09-12 slippage advice
+built on comparing `signal_quote` with `pre_submit_quote`, "two fields `order_plan` sets from the same read,
+identical in 25 of 25 live rows by construction". I read the warning today and walked into the adjacent
+version of it. **The 73 finding itself stands** - rejects really do carry an older book at submit, p~=0.0003
+- **but it rests on one measurement, not two.**
+
+### AWS's reframing, which the code supports and which points the opposite way
+
+Line **880**: the wait loop breaks only when the book **has** ticked (`q['seq']!=seq`).
+Line **928**: the submit proceeds only when it has **not** ticked since.
+
+**So a submit at `age_ms` 175 means "this book has been quiet for 175 ms and stayed quiet through decide and
+sign".** On an actively quoted market that is not a slow feed - it is **the gate selecting the books nothing
+is updating**, because those are the only ones that survive it. It also explains the counter-example I kept:
+the **446.7 ms fill** would be the worst case under a feed-slowness story and is ordinary under this one -
+a quiet book whose resting ask happened still to be there.
+
+**Consistent with `snapshot_age_s` not discriminating** (0.296 vs 0.329): full snapshots arrive at ~2/s
+regardless, so what varies is **per-token event recency** - exactly what the gate sorts on.
+
+### Honest state: the mechanism is NOT resolved, and it is not a feed-layer change
+
+**Neither of us can separate "slow feed" from "gate selects quiet books" from the journal** - it would need
+the book's age at the moment the order *arrives at the venue*, which nothing records. **So I withdraw
+"the fix is in the feed layer, it is not small".** I do not know where it is, and I have told the user so.
+
+**Task 75, and it does discriminate using data we already have:** the 1 Hz `polybook.sqlite3` logs per-token
+message age continuously. **Compare the `age_ms` distribution at submit against the AMBIENT distribution
+from the logger over the same minutes.** If submits are systematically older than ambient, the gate is
+selecting the population. If they match ambient, the feed is slow and the gate is innocent. Approximate -
+1 Hz against the engine's own read rate - but the direction is informative and it costs nothing.
+
+### And my Monday prediction reverses under this reading
+
+I told the user to expect **more rejects** on a faster Monday tape. **Under the gate reading the prediction
+flips**: a faster tape means the book ticks more often *during* decide-and-sign, so line 928 `continue`s
+more, producing **more retries and DEADLINEs and fewer submissions** rather than more rejects. **Both
+predictions are on the record; Monday discriminates between them.** Told to the user as an open question,
+not as advice.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
