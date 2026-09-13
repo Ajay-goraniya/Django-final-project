@@ -3544,6 +3544,60 @@ loose enough to admit MAIN buys near-certainties at near-certainty prices: thin 
 Also recorded: `lane_loop` writes no `_ask_up`/`_ask_dn`, so **109 of the 144 decisions leave no price trace**
 and the full ask distribution is unrecoverable. Worth fixing after the freeze.
 
+## 17:35 UTC (Sun 09-13) - MAIN CLOSED: it is not a blocked profitable lane. Do not lower its threshold.
+
+Task 61a answered, and the AWS session caught an error of its own that reverses the conclusion.
+
+**The deduplication, which changes everything.** The "45 refusals" are **12 distinct candles** - the engine
+re-attempts within a candle and each attempt writes its own row (14:47:33 appears 3 times, 17:10:25 four).
+**It would place one order per candle, not four.** Per row: 9 positive of 45, +$14.39. **Per candle: 3
+positive of 12, +$3.90.** Same data, four times smaller. I verified the per-candle arithmetic independently.
+
+**1. How many of MAIN's calls are worth taking at all:**
+
+| | per row (inflated) | **per candle (honest)** |
+|---|---|---|
+| total | 45 | **12** |
+| positive EV | 9 | **3** |
+| negative - unreachable by ANY threshold | 36 | **9** |
+
+**Three quarters of MAIN's calls are negative EV at the price offered.** EV min -0.4078, median -0.1562,
+max +0.0740. A bar of zero still refuses the nine, correctly.
+
+**2. The threshold curve, per candle - and this is the finding:**
+
+| threshold | admits |
+|---|---|
+| 0.15 (today) | **0 of 12** |
+| 0.10 | 0 of 12 |
+| 0.075 | 0 of 12 |
+| 0.05 | 1 of 12 |
+| 0.025 | 2 of 12 |
+| 0.01 | 3 of 12 |
+| **0.00** | **3 of 12** |
+
+**Even a threshold of ZERO admits only 3 of 12. There is no bar that unblocks MAIN.** Admitting those three
+means abandoning the EV bar rather than tuning it.
+
+**3. What the three would have paid**, graded on `candles.actual`, one trade per candle, $5 stake:
+14:46:50 UP @0.82 WIN +1.10 · 15:01:41 DOWN @0.90 WIN +0.56 · 17:10:25 UP @0.69 WIN +2.25.
+**n=3, 3 wins, +$3.90 on $15.**
+
+**That is not a result and must not be read as one.** 3-for-3 happens one time in eight on a coin; it is 5%
+of the 60 bar. What it establishes is the **scale**: the best possible case for unblocking MAIN is **three
+trades in three hours and a few dollars**, with nothing said about how the losers would have looked.
+
+**Conclusion, and MAIN is closed on it.** The user's instinct that MAIN was being refused was **right** - 12
+of 12 candles, all on price. But the conclusion it seemed to point at does not follow. **MAIN is not a
+blocked profitable lane; it is a lane whose calls are mostly negative EV at the prices it sees.** The EV bar
+is doing its job on 9 of 12. **No threshold change is warranted and none should be made.** The earlier
+framing - "its two gates contradict each other" - is right about the mechanism and was wrong to imply the fix
+was a looser bar: gate 1 selects moves that are already priced, and the correct response to an already-priced
+move is to decline it.
+
+Carried unchanged: the asks are 0.69-0.98 because the market has already priced the move, so buying there is
+buying near-certainties at near-certainty prices - thin margin, whole stake on each loss.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |

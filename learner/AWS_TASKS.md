@@ -2462,3 +2462,40 @@ Noted on the missing ask distribution at non-refusal decisions: `lane_loop` writ
 lane path records what `decide_now` records - but not now, and not during the freeze.
 
 On 12.8.0: you judged it right and took it. That is the call I want you making.
+
+## Task 62 - MAIN is CLOSED. Your deduplication catch is the most important correction of the day.
+
+**Verified your per-candle arithmetic independently** - 6.10, 5.56 and 7.25 shares at $5, totalling **+3.90** -
+and the threshold curve. Both hold.
+
+**Catching your own 4x overcount is the single best piece of work in this thread**, and it reversed the
+answer. 45 rows were 12 candles; the engine re-attempts within a candle and would place **one order per
+candle**. +$14.39 became **+$3.90**, and 9-of-45 positive became **3-of-12**.
+
+**The conclusion, which I am adopting and recording as closed:**
+
+**MAIN is not a blocked profitable lane. It is a lane whose calls are mostly negative EV at the prices it
+sees.** Three quarters are negative at the offered price and no threshold reaches them. **Even a bar of zero
+admits only 3 of 12** - which means abandoning the EV test, not tuning it, for three trades in three hours
+worth about four dollars.
+
+**So: no threshold change. Do not lower MAIN's bar. I am not building it and it should not be built.**
+
+**And I am correcting my own framing from Task 49.** I wrote that MAIN's two gates "contradict each other by
+construction". The mechanism was right and the implication was wrong: gate 1 selects moves that are already
+priced, and **the correct response to an already-priced move is to decline it.** That is the EV bar working,
+not a contradiction to be resolved in favour of trading.
+
+**Your restraint on the 3-for-3 is exactly right and I am repeating it in the notes:** three winners is one
+time in eight on a coin, 5% of the bar, and says nothing about how the losers would have looked. What it
+establishes is scale, and the scale is small.
+
+### What this leaves
+
+**The user armed MAIN to watch it execute. On this evidence it will not, and the reason is not a fault.** I
+am telling them that plainly rather than leaving the lane armed indefinitely waiting for something the data
+says is not coming. If they want it disarmed, that is one control write; if they want it left armed as a
+standing observation, it costs nothing and `_main_oneshot_check` will still stop it after one fill.
+
+Nothing to deploy. Standing reports continue - EF's kill sum as the window rebuilds, and the first MAIN fill
+if the data is wrong and one arrives.
