@@ -14,9 +14,49 @@ acceptable."* Every claim below was checked against the running code or journal 
 | **nothing is adaptive** | **YES for live** | live has calibration (inert), a stake ladder (user overrode to fixed), an EV "regime" mode. Nothing learns from outcomes. The adaptive layer that was designed — `btc_model_autopilot.py`, `AUTOPILOT_11.4.md` §E2 (regime cells as engine data, self-verdicted) — sits in the paper engine's directory and **was never wired into live.** |
 | **execution noise, book/feed staleness, slippage, accounting** | **YES, and it is where today went** | 17+ builds on execution mechanisms, several retracted. Reject mechanism still open (gate-vs-feed). Accounting: MAIN was charged to EF until 12.8.2; master arming unaudited until 12.8.5. |
 
-**The one-sentence diagnosis:** the model that wins is the Sep 11 program with EV inside the decision and
-no post-signal gates; the model that trades real money is that program plus 1,291 lines of gates and
-executor mechanisms, added one at a time, none of them tested against the paper baseline they diverged from.
+### 1a. CORRECTION, 22:10 — the decision path is IDENTICAL. The gap is fill rate.
+
+The table above stands, but its one-sentence reading was wrong and I am replacing it before it misleads
+anyone. Read line by line against both files, the **decision** — whether a candle is worth firing — is
+the same in paper and live:
+
+| component | paper (Sep 11) | live (12.8.4) | same? |
+|---|---|---|---|
+| model | `btc_model_v10.py`, `m.decide(...)` | same file, same call | **yes** |
+| EV formula | `p·(1/c−1) − (1−p)` | `p/c − 1` | **algebraically identical** |
+| fee model | `q/(1−0.07(1−q))` | `rate·(px(1−px))^exp`, r=0.07 e=1 | **numerically identical to 4 dp across 0.30–0.90** |
+| threshold | `--ev` not given → model's per-vol table | `mode=regime` → model's per-vol table | **yes** |
+| price EV is judged at | `ask + pad_ticks(1)·tick` | `ask + EV_REFERENCE_PAD(1)·tick` | **yes** |
+| EV inside the decision? | yes (`execute_live` re-judges per attempt) | **yes** — `_gate_on_padded_ev` runs inside `decide_now` before `fire` is claimed (12.4.0) | **yes** |
+
+**So "EV should be within the signal logic" is already how live works**, and paper and live should agree on
+side and `p` on every shared candle — Task 76 must confirm that number, and if it is not ~100% something
+above is wrong.
+
+**The post-decision gates that differ, each measured:**
+
+| gate | live | paper | cost, measured |
+|---|---|---|---|
+| quote-age clamp | **2.0 s** hard max (`quote_age_s`) | 5.0 s | books aged 2–5 s are **0.24%** of 139,418 logged seconds — negligible |
+| venue minimum (5 shares) | refuses `amount/cap < 5` → **at $3, every ask > 0.59** | `min_retry_usdc=0.10` only | **10 of 318 paper fires (3%)**, and those ten ran +0.272/$1 |
+| `require_depth` | **OFF** (`all_or_nothing=False`) | none | not a difference |
+| `no_terms` gap | skip while terms refetch (≤5 s) | none | unmeasured — Task 76 counts it |
+
+**And the one that is not a gate at all — paper's fill model:**
+
+```python
+if self.a.execution=="paper":
+    mark_execution(state="PAPER_FILLED", attempts=1, avg_fill_price=q.price, slippage=0.0, reason="paper_at_ws_ask")
+```
+
+**Paper fills every fire, instantly, at the websocket ask, with zero slippage, 100% of the time.**
+Live, lifetime: **82 orders → 38 fills, 40 rejected — a 49% reject rate.** Half of live's decisions never
+become trades, and (Task 73) the half that do are the ones on quieter books.
+
+**The corrected one-sentence diagnosis:** paper and live make the same decision on the same candle; paper
+then books a fill at the quote every time, and live gets one about half the time. **The +457 is a 100%-fill
+number. The remake target is fill rate, not the signal.** Task 76's job is now to price the unfilled half:
+what did paper earn on the candles where live decided the same thing and then got rejected?
 
 ## 2. The test that decides the remake — runs TONIGHT, it is a query not a build
 
@@ -55,7 +95,7 @@ those are affected by it."* Binding on every step.
 |---|---|---|---|
 | **0** | tonight | decision diff (§2) | it IS the check |
 | **1** | tonight | this plan on the branch | — |
-| **2** | Monday | **build the strip-back** (or the execution fix, per §2). Decision path = paper's `decisions` logic verbatim: EV computed inside the fire decision, not gated after. Executor kept. Remove what paper lacks and the diff says costs money. | every test that asserted the old behaviour is **inverted, not deleted**; every touched path's downstream (journal, kill rules, dashboard rows, audit, `rolling()`) re-run; 3 suites + checksums; each new test shown to **fail against the old file** |
+| **2** | Monday | **build the fill-rate fix** (per §1a the decision path needs no change). Candidates, in the order the evidence ranks them: (i) the `seq`-unchanged submit gate at `poly_core.py:928` that selects quiet books (AWS's reading, Task 75 — resolve gate-vs-feed with the `age_ms` instrumentation first); (ii) re-judge EV **per attempt at the live quote** the way paper's `execute_live` does, instead of `continue`-ing on any tick; (iii) the 2 s clamp → 5 s to match paper (0.24%, cheap, do it). **Not** a threshold on `age_ms`. **Not** touching the signal or EV. | every test that asserted the old behaviour is **inverted, not deleted**; every touched path's downstream (journal, kill rules, dashboard rows, audit, `rolling()`) re-run; 3 suites + checksums; each new test shown to **fail against the old file** |
 | **3** | Monday, all day | run it as a **paper twin beside live** on Monday's wide tape — same candles, both journals | it must **beat live AND match paper** on shared candles, whole grid, both halves. Under 60 graded = insufficient, not read. `verify.py` on the result. |
 | **4** | Tuesday | deploy if step 3 passes. **Not before.** | post-deploy: confirm it comes back with the user's flags, not safe-startup surprises |
 | **5** | after 4 | wire the adaptive layer (11.4 autopilot §E2: regime cells self-verdicted from live outcomes) | same standard: twin first, then live |

@@ -3091,3 +3091,48 @@ missing rows), say which and how many rather than reconstructing.
 **Also keep the standing watch:** hand-rule unit sum after every settled result (at **-2.0000**), kill
 window, and from 00:00 UTC Monday **submissions / retries / DEADLINEs / rejects per candle** so the two
 Monday predictions in REMAKE_PLAN §4 get tested.
+
+## Task 76a - REFINEMENT before you run 76. The diagnosis sharpened; the grid needs different columns.
+
+**Read `REMAKE_PLAN.md` §1a first.** Checked line by line: **the decision path is identical in paper and
+live** - same model file, same `p`, same EV formula, same fee model (numerically identical to 4 dp across
+0.30-0.90), same threshold (both fall through to the model's per-vol table), same reference price (ask +
+1 tick), and live already judges EV inside `decide_now` before `fire` is claimed. So **paper and live
+should decide the same thing on every shared candle.**
+
+**What actually differs is after the decision:** paper marks every fire `PAPER_FILLED` at the websocket
+ask, zero slippage, 100% of the time; live has a 49% lifetime reject rate (82 orders / 38 fills / 40
+rejects). **The +457 is a 100%-fill number.**
+
+### So run 76 with these columns, and this first row
+
+**Row 0, before the grid:** on shared candles that both evaluated, **side agreement** and **|p_paper −
+p_live|** (median, p90, max). This should be ~100% / ~0. **If it is not, stop and report that alone** -
+it means the models are not the same model and everything else is moot.
+
+**Then the grid, with live's non-fires broken out by cause**, because the remake targets whichever cause
+carries the money:
+
+| paper | live | n | paper PnL/$1 | live PnL/$1 |
+|---|---|---|---|---|
+| fired & won | filled & won | | | |
+| fired & won | **REJECTED** by venue | | | - |
+| fired & won | skipped: **EV at padded price** (diagnostics `order_plan_refused`, reason string) | | | - |
+| fired & won | skipped: **below venue minimum** | | | - |
+| fired & won | skipped: **no fresh quote** (2 s clamp) | | | - |
+| fired & won | skipped: **no_terms** | | | - |
+| fired & won | released: DEADLINE / SIGNAL_CHANGED / EV_CHANGED | | | - |
+| fired & won | did not fire at all (no signals row) | | | - |
+| fired & lost | (same breakdown) | | | |
+| did not fire | fired | | - | |
+
+**The row that decides the remake is now "paper fired & won, live REJECTED".** That is the unfilled half,
+priced. Measured, not the earlier "skipped on EV" guess - §1a shows the EV skip cannot differ much since
+the EV logic is the same.
+
+Everything else in Task 76 stands: grade with `candles.actual`, whole grid, under-60 cells marked and still
+reported, no build, no dial, no deploy, nothing that restarts the engine. Standing watch continues (hand
+rule at **-2.0000**; Monday per-candle submissions / retries / DEADLINEs / rejects from 00:00 UTC).
+
+**Also from §1a, for the user, not for you to act on:** at the $3 stake the 5-share venue minimum refuses
+every ask above 0.59. That was 3% of paper's fires, and those ten ran +0.272/$1. Their call.
