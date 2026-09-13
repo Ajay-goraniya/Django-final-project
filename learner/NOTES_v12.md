@@ -2879,6 +2879,30 @@ earlier tonight also ran pad 0 (00:18:01, 00:20:40) and pad 2 (01:18:47 onward).
 
 Engine is trading: 34 orders, 13 fills, 13 results, 106 signals, master on, stake $3, pad 1.
 
+## 04:22 UTC (Sun 09-13) - the old rule would ARM right now. Not arming, and this is the test of it.
+
+Re-arm reading, Predict.fun v10 paper: last-20 **+0.347** per $1, last-40 **+0.125** per $1, 507 graded. Both
+strongly positive and the best reading of the whole sequence.
+
+Seven hourly readings: +0.155, -0.102, -0.001, -0.193, -0.082, +0.004, +0.347.
+
+**The pre-committed rule's condition is satisfied.** Last-20 positive at two consecutive checks: +0.004 at
+03:21 and +0.347 now. Under the criterion as written, REVERSAL would be re-armed on live money this minute.
+
+Not arming, and this is exactly the hour that decides whether refuting it meant anything. The rule was
+refuted at 22:12 on 09-11 under its own pre-committed review condition, and the four-hour swing from +0.155
+to -0.193 earlier tonight is the demonstration: a 20-fire window moves further in an hour than the threshold
+it is judged against. A rule that fires on this shape fired on the same shape four hours ago and would have
+been carried into the worst stretch of the night. Nothing about +0.347 changes that - a bigger number from
+the same noisy estimator is a bigger draw from the same distribution, not new information.
+
+Recording it explicitly so the decision is falsifiable later: if the replacement rule, when written, would
+have armed here and that turns out to have been right, this note is the evidence that the hold cost
+something. If it would have armed and been wrong, this is the evidence it did not.
+
+Lanes off, re-asserted, nothing enabled. Equity 15.02, settled 442, nothing open, ladder $1 OK. No real fill
+since 19:59:37 yesterday, now 8.4 hours. Engines up 5.4 h, 13 processes.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
