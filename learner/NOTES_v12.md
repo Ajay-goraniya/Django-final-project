@@ -4445,6 +4445,17 @@ window 11 to arm. `LOW_BALANCE` 1. AWS reporting each result as it lands. Recomm
 
 **12** processes. Tokyo/Predict.fun out of scope; not checked.
 
+## 23:26 UTC (Sun 09-13) - result #10: the open position WON. Hand rule back to -1.43.
+
+`23:26:13 epoch 1789341300 pnl +4.3050 unit +1.5000` - the position that was going to decide the -3.00
+crossing paid out at 2.5x cost (a ~0.40 entry). **Running sum -2.9274 -> -1.4274 on n=10.** Headroom to
+the hand line is now **1.57**, i.e. more than one full-stake loss. Engine's own window: 10 to arm.
+
+The overnight-off recommendation was made at -2.93 with one loss to the line; **at -1.43 the arithmetic
+that drove it no longer holds and I am withdrawing the recommendation as urgent** - the other two reasons
+(untested Monday tape, no automatic stop for 10 more) still stand as facts the user has. Their call,
+unchanged; nothing touched. `DEPLOYED.md` at 4a0fb2f pulled clean on the box.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
