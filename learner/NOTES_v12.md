@@ -3473,6 +3473,41 @@ armed at -4.46 minutes after enforcement had reset. **An operator reading that w
 failed** - the wrong direction for a safety display to be wrong in. 12.7.1 gives both a single `kill_window()`
 and a test that they cannot diverge again.
 
+## 17:15 UTC (Sun 09-13) - why MAIN never fires: its two gates contradict each other by construction.
+
+User: *"all that and still no main is fired isnt that concerning?"* Yes, and the cause is structural rather
+than a frequency accident. Read from `poly_lanes.py` and `btc_model_v12_polymarket.py`.
+
+**Gate 1, the signal. `_watch_main` needs ALL of these, unbroken:**
+- `fair_p_up >= 0.60` (UP) or `<= 0.40` (DOWN) - `GATED_ODDS_UP/DOWN`
+- `|pressure_score| >= 0.15`, else `pressure_text` is BALANCED - `PRESSURE_FIRE`
+- `volume_ratio >= 0.70` - `GATED_VOL_MIN`
+- held for `MAIN_HOLD_MS` 12 s **and** `MAIN_HOLD_READS` **60 consecutive reads**. `lane_loop` runs off the
+  250 ms decide loop, so 60 reads is **~15 seconds**, and **one breaking read resets the counter to zero.**
+
+**Gate 2, the execution.** `lane_loop` gives MAIN the **v10 regime threshold**, 0.25 in mid/high vol. At a
+0.25 bar the most payable is `p/1.25`, so **even at p = 1.0 MAIN cannot buy above ask 0.78.**
+
+**The contradiction: gate 1 exists to wait until a move is CONFIRMED. A confirmed move is a priced move.
+Gate 2 then refuses to pay a priced move's price.** The harder gate 1 works, the more certainly gate 2 refuses.
+
+**Observed, and it fits exactly.** The user's 14:51 screenshot: `MAIN: DOWN strong ~$0 with fair 0.14 held
+17s` - gate 1 **passed**, after 17 seconds. The journal row for that candle: `price fails model EV`, ask
+**0.87**, p 0.6426, threshold **0.25**, max payable **0.514**. Gate 2 refused it by 69%. The dashboard read
+`called, not executed (6 attempts)` - `MAIN_MAX_ATTEMPTS` is 6, so it spent every attempt in the candle being
+refused on price.
+
+**So MAIN is not failing to signal. It signals, then is structurally refused**, and has been across four
+builds and three hours. n is small - one confirmed instance plus three more MAIN refusals at 14:46/14:47, all
+`price fails model EV` at asks 0.80-0.82 - and AWS is counting the rest under Task 60a. The mechanism is not
+in doubt; the frequency is.
+
+**The user's instinct on 09-13 was right:** *"mains logic is different so it's fine it can fire at 0.8 or 0.7
+or even at 0.9."* MAIN inherits EF's bar, and EF's bar is built for a lane that enters before a move. **The
+fix is MAIN's own EV threshold, and it needs the user's number, not mine.** At 0.10 MAIN could buy to 0.90; at
+0.05, to 0.94. Not built - a threshold on an unvalidated lane is exactly the thing that should not be chosen
+by me.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
