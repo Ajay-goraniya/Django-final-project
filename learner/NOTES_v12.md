@@ -3991,3 +3991,50 @@ whether the guard was wrong or merely early. **Measure first. Queued behind 69.*
 
 **What is fair to the guard:** it stopped a lane that had lost five in a row, and the per-lane kill rule
 could not (8 of 20 in its window). It was the only stop that worked. The name oversells what it found.
+
+## 19:05 UTC (Sun 09-13) - Task 69: the account was never wiped out. $11.90 spendable, nothing outstanding.
+
+**The hypothesis holds and the user does not need to send money.**
+
+**Venue reads** (`venue_state`, authenticated snapshot):
+
+| | time | cash | open_value | realized | unrealized |
+|---|---|---|---|---|---|
+| at halt | 18:41:09 | **2.0650** | 4.3773 | 52.50 | -74.63 |
+| now | 19:05:35 | **11.9017** | **0.0** | 57.34 | -74.19 |
+
+**Cash moved +9.8367 - exactly result #35's payout, to the cent.** Epoch 1789324800, settled 18:51:06,
+actual UP, **EF only**, pnl **+5.0167**, claim CONFIRMED. A winner that graded out after the engine had
+already stopped itself.
+
+**Spendable first crossed $5 at 18:46:44 - five and a half minutes after the guard fired** - and 55 of the
+70 venue snapshots since have been at or above $5. **So the halt was correct at 18:41:10 and has been stale
+since 18:46:44.** It measured a real inability to fund one trade at one instant; the instant passed.
+
+**Nothing outstanding:** 0 pending orders, 0 fills without a result, venue `open_value` **0.0**. Seven
+results sit in REVIEW with null `claim_id` - the auto-redeem bookkeeping artifact from this morning, and
+the venue's `open_value: 0.0` is the authority that they are **graded and paid, mis-recorded**, not money
+owed. AWS separated venue reads from journal views throughout, as asked.
+
+**This confirms the flaw recorded an hour ago and upgrades it from theory to measurement: the guard
+compares CASH against stake while up to five minutes of settled-but-unpaid value is invisible to it.**
+The account was solvent the whole time. Still not changing the rule tonight - but the case is now made
+with numbers rather than reasoning, and it is the first thing to fix when the engine is next worked on.
+
+### AWS declined to clear the halt on my relay, and its reasoning is sound
+
+The user said, live in session V: *"turn onnn master onnn"*. I relayed it through the only channel that
+works between these sessions - a one-shot Routine. **AWS refused**, on the grounds that the scheduler
+attests a prompt was **stored by an authorised session** but **does not attest that a user said anything
+just now**, and that clearing a wipeout guard to resume live-money trading needs real confirmation rather
+than an asserted one. **That is correct and I am not going to argue it by re-asserting the same quote.**
+The relay cannot carry liveness; repeating it louder does not add any.
+
+**AWS's substantive point is also right and the user needs it before they flip anything.** At $2.06 the
+clear was near-harmless - `_wipeout_check` would have re-fired within a minute. **At $11.90 it will
+genuinely trade**: two funded trades at the $5 stake, on a **fresh 0-of-20 kill window**, with the only
+backstop that worked last time reset to zero. That is the same rope position as the 16:12 clear, which
+then cost 16 points.
+
+**Route: the user has dashboard controls and has used them** - they armed `main_enabled` themselves at
+14:24:11. Clear-halt and master are both on the controls page. **One click, theirs, no attestation problem.**
