@@ -2944,6 +2944,37 @@ does mean the Sunday review should look at the whole window rather than only at 
 Lanes off, re-asserted, nothing enabled. Equity 15.02, settled 442, nothing open, ladder $1 OK. No real fill
 since 19:59:37 yesterday, now 10.4 hours. Engines up 7.3 h, 13 processes, Tokyo uptime 47.9 h with no restart.
 
+## 07:20 UTC (Sun 09-13) - the Polymarket runs look frozen and are not. Fifth consecutive positive.
+
+Re-arm reading, Predict.fun v10 paper: last-20 **+0.607** per $1, last-40 **+0.207** per $1, 516 graded. Ten
+readings: +0.155, -0.102, -0.001, -0.193, -0.082, +0.004, +0.347, +0.413, +0.412, +0.607. Fifth consecutive
+positive, new high. Not arming; the criterion is refuted and unreplaced, and nothing in the fifth reading is
+different in kind from the first.
+
+### Both Polymarket runs show identical numbers to 06:21 - checked, and it is correct behaviour
+
+Polymarket paper and the v12 lane both report exactly what they reported an hour ago (128/117 +231.3 and
+131/107 +408.4, nothing open), while Predict.fun moved 102/91 -> 104/91. Two runs freezing on the same candle
+is the shape of a stall, so I checked rather than assuming it was quiet.
+
+- Both last traded at **06:05:00**, 77 minutes earlier, and both have **zero ungraded** rows.
+- Feeds are sub-second fresh on both: 8788 spot 0.3 / venue 0.0, 8790 spot 0.291 / venue 0.005. No error
+  string on either.
+- The v12 lane's last decision is **0.2 minutes old**, and it has made **277 decisions since 06:05, every one
+  `fire=0`**. Recent EV: +0.025, +0.006, -0.012, +0.006 against a regime threshold of 0.15 to 0.25.
+
+So the engines are alive, fed, and deciding every 15 seconds; the model simply has not seen an edge worth
+taking on Polymarket for 77 minutes. Predict.fun kept firing because it prices against a different book, not
+because the model is behaving differently.
+
+Recording it because "two runs stopped at the same candle" reads as a fault and is not one, and the liveness
+watcher cannot tell the difference - it checks feed age and ports, not whether anything has fired. A stall
+and a quiet market look identical from outside. If a later check wants to distinguish them, the test is the
+decisions table, not the trades table.
+
+Lanes off, re-asserted, nothing enabled. Equity 15.02, settled 442, nothing open, ladder $1 OK. No real fill
+since 19:59:37 yesterday, now 11.4 hours. Engines up 8.3 h, 13 processes, Tokyo uptime 48.8 h.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
