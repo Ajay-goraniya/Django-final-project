@@ -225,6 +225,17 @@ class PolyRunner(Runner):
         while True:
             try:
                 ep=int(time.time()//300)*300
+                # Persist the feed counters. They lived only in memory, so a
+                # post-mortem could not tell how many events the clock guard
+                # dropped, or how stale the books had been running. Written once
+                # a cycle and diffable across restarts.
+                try:
+                    h=self.books.health()
+                    h['snapshot_age_s']={t:round(time.monotonic()-b.get('snapshot',b.get('arrival',0)),1)
+                                         for t,b in list(self.books.books.items())}
+                    self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',
+                                (time.time(),ep,json.dumps(dict(h,reason='feed_counters'))))
+                except Exception: pass
                 for token in [t for e in (ep,ep+300) for t in self.market.get(e,())]:
                     if token not in self.books.terms or time.monotonic()-self.terms_age.get(token,-1000)>30:
                         if self.a.live: terms=await asyncio.wait_for(self.broker.metadata(token),8)

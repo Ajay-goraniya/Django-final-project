@@ -136,7 +136,7 @@ class BookCache:
             token=str(e['asset_id'])
             if token in self.books and stamp<self.books[token]['event']: return
             b={s:{float(x['price']):float(x['size']) for x in e.get(s,[]) if 0<float(x['price'])<1 and math.isfinite(float(x['size'])) and float(x['size'])>0} for s in ('asks','bids')}
-            self.books[token]=b; self.seq+=1; b.update(event=stamp,arrival=time.monotonic(),seq=self.seq)
+            self.books[token]=b; self.seq+=1; b.update(event=stamp,arrival=time.monotonic(),seq=self.seq,snapshot=time.monotonic())
         elif k=='price_change':
             for c in e.get('price_changes',[]):
                 b=self.books.get(str(c.get('asset_id')))
@@ -146,6 +146,12 @@ class BookCache:
                 side=b['asks' if c['side']=='SELL' else 'bids']
                 if q: side[p]=q
                 else: side.pop(p,None)
+                # snapshot is deliberately NOT refreshed: a delta does not
+                # resync the book. There is no venue sequence number per token,
+                # so a dropped price_change is undetectable and leaves a phantom
+                # level that survives until the next full 'book' event. Age from
+                # the last snapshot is the only measure of how far our book may
+                # have drifted from the venue's.
                 self.seq+=1; b.update(event=stamp,arrival=time.monotonic(),seq=self.seq)
     def quote(self,t,max_age=.75):
         b=self.books.get(t)
@@ -159,7 +165,8 @@ class BookCache:
         if not 0<=age<=max_age: return None
         ask,bid=min(b['asks']),max(b['bids'])
         if bid>=ask: return None
-        return dict(ask=ask,bid=bid,asks=sorted(b['asks'].items()),seq=b['seq'],age_ms=age*1000)
+        return dict(ask=ask,bid=bid,asks=sorted(b['asks'].items()),seq=b['seq'],age_ms=age*1000,
+                    snapshot_age_s=time.monotonic()-b.get('snapshot',b['arrival']))
 
 
 def order_plan(q,terms,stake,d,pad=1):
@@ -227,10 +234,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.3.1')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.3.2')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -454,6 +461,13 @@ class PaperBroker:
     async def account_snapshot(self): return dict(cash=None,open_order_ids=set(),positions=[])
 
 
+# How long a book may run on deltas alone before we stop trusting it. The venue
+# sends no per-token sequence number, so a dropped price_change cannot be
+# detected - only aged out. Generous enough not to starve the lane, short enough
+# that a phantom level does not survive many candles.
+MAX_SNAPSHOT_AGE_S=90.0
+
+
 class Executor:
     def __init__(self,db,books,broker,age=.75,pad=1,budget_s=2.0,post_timeout_s=1.2,attempts=3):
         self.db=db; self.books=books; self.broker=broker; self.age=age; self.pad=pad
@@ -495,6 +509,18 @@ class Executor:
                 await asyncio.sleep(.005)
             else: self.db.status(ep,'DEADLINE',kind); return
             timing['quote_wait_ms']=1000*(time.monotonic()-t); timing['quote_read_ms']=timing['quote_wait_ms']; timing['book_age_ms']=q['age_ms']; seq=q['seq']
+            # A book built from deltas since the last full snapshot may carry a
+            # phantom level: there is no per-token venue sequence, so a dropped
+            # price_change is undetectable and persists until the next snapshot.
+            # Pricing a FAK against a phantom top-of-book is exactly the "no
+            # orders found to match" reject. Refuse rather than guess.
+            timing['snapshot_age_s']=q.get('snapshot_age_s')
+            if (q.get('snapshot_age_s') or 0)>MAX_SNAPSHOT_AGE_S:
+                self.db.status(ep,'BOOK_UNSYNCED',kind)
+                self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(dict(
+                    reason='book_unsynced',kind=kind,snapshot_age_s=round(q['snapshot_age_s'],1),
+                    limit_s=MAX_SNAPSHOT_AGE_S))))
+                return
             t=time.monotonic(); new=reassess(); timing['decision_ms']=1000*(time.monotonic()-t)
             if not new.get('fire') or new['side']!=d['side']: self.db.status(ep,'SIGNAL_CHANGED',kind); return
             try: plan=order_plan(q,self.books.terms[token],stake,new,self.pad)

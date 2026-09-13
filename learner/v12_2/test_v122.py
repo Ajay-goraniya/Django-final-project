@@ -556,6 +556,52 @@ class LaneCardMatchesBuild36(unittest.TestCase):
         self.assertIn('model EV', c['reason'])
 
 
+class SnapshotAgeTracking(unittest.TestCase):
+    """A book running on deltas alone is not a trustworthy book.
+
+    Polymarket sends no per-token sequence number, so a dropped price_change is
+    undetectable: it leaves a phantom level that survives until the next full
+    'book' snapshot. Age since the last snapshot is the only available measure
+    of how far our book may have drifted from the venue's. Found by the session
+    on the AWS box, 09-13, while explaining the "no orders found to match"
+    rejects.
+    """
+    def setUp(self):
+        self.bc = C.BookCache()
+
+    def book(self, token='t1', ts=None):
+        return dict(event_type='book', asset_id=token, timestamp=str(int((ts or time.time())*1000)),
+                    asks=[{'price':'0.55','size':'100'}], bids=[{'price':'0.53','size':'100'}])
+
+    def delta(self, token='t1', ts=None, price='0.56', size='50'):
+        return dict(event_type='price_change', timestamp=str(int((ts or time.time())*1000)),
+                    price_changes=[dict(asset_id=token, side='SELL', price=price, size=size)])
+
+    def test_snapshot_age_starts_near_zero(self):
+        self.bc.apply(self.book())
+        q = self.bc.quote('t1', 5.0)
+        self.assertIsNotNone(q)
+        self.assertLess(q['snapshot_age_s'], 1.0)
+
+    def test_a_delta_does_not_refresh_the_snapshot(self):
+        self.bc.apply(self.book())
+        self.bc.books['t1']['snapshot'] -= 120.0      # pretend the snapshot is old
+        self.bc.apply(self.delta())
+        q = self.bc.quote('t1', 5.0)
+        self.assertIsNotNone(q)
+        self.assertGreater(q['snapshot_age_s'], 100.0,
+                           'a price_change must not count as a resync')
+
+    def test_a_full_book_event_does_refresh_it(self):
+        self.bc.apply(self.book())
+        self.bc.books['t1']['snapshot'] -= 120.0
+        self.bc.apply(self.book())
+        self.assertLess(self.bc.quote('t1', 5.0)['snapshot_age_s'], 1.0)
+
+    def test_limit_is_set(self):
+        self.assertTrue(0 < C.MAX_SNAPSHOT_AGE_S <= 300)
+
+
 class TickGridRounding(unittest.TestCase):
     """The cap must land on the tick grid the venue quoted.
 

@@ -464,3 +464,59 @@ market.** On a 0.001-tick market, `pad_ticks=2` buys two tenths of a cent.
 Nothing here is a finding yet — 29 orders is well under the bar. The code-level
 facts (the two bugs, the structural quote identity) are deterministic and need
 no sample size. The staleness split does need one, and is marked accordingly.
+
+# 12.3.2 — the reject mechanism, and a retraction from the box
+
+## What the AWS session established
+
+It withdrew its own tick-size alarm before I could build on it: recounted over
+all 142 recorded book asks, **141 are exactly on the 0.01 grid**. The "eight
+one-decimal asks" were a float-repr artefact of its own binning. Tick is 0.01,
+`pad_ticks = n` did mean n cents, and the dial was **ineffective, not
+incoherent**. Good catch on itself; I had already written the incoherence into
+the 12.3.1 notes.
+
+It also measured the feed properly. `"Waiting for fresh UP and DOWN books"`
+covers **20.9% of a 12.4-hour session** — 290 gaps, median 15 s, max 166 s. But
+gap proximity does **not** separate fills from rejects: 73% of fills and 76% of
+rejects fall within 120 s of a gap. A real availability problem, not the reject
+mechanism.
+
+## The mechanism, and the fix
+
+The venue sends **no per-token sequence number**. `price_change` events apply
+deltas in place with only a timestamp guard and no continuity check. So a
+dropped delta is *undetectable by design*: it leaves a phantom level in our book
+that survives until the next full `book` snapshot for that token. A FAK priced
+against a phantom top-of-book gets exactly "no orders found to match".
+
+Since a gap cannot be detected, it can only be **aged out**. Each book now
+carries a `snapshot` stamp refreshed only by a full `book` event — never by a
+delta — and `quote()` reports `snapshot_age_s`. The executor refuses to price
+against a book that has run on deltas alone for longer than
+`MAX_SNAPSHOT_AGE_S` (90 s), recording status `BOOK_UNSYNCED` and a diagnostics
+row rather than sending an order it cannot trust.
+
+This trades some fires for fewer rejects. That is the right direction here: a
+rejected order costs a round trip and the candle, while a refusal costs only the
+candle.
+
+## Feed counters are persisted
+
+`dropped_stale`, `dropped_future`, `applied` and per-token snapshot ages lived
+only in memory, so a post-mortem could not tell how many events the 8-second
+clock guard had dropped. Housekeeping now writes them to `diagnostics` once a
+cycle, diffable across restarts.
+
+## Still open: two caps that the code on disk cannot produce
+
+Two live plans record `cap == ask` exactly (22:38:28 ask 0.45, 00:11:30 ask
+0.40). Under the shipped expression that is not producible at any realistic
+tick — `ceil` forces at least 0.46 and 0.41. Confirmed here: at tick 0.001 the
+buggy form gives 0.451 and 0.401, and only the **str()-based form** gives 0.450
+and 0.400. So those two rows look like they came from code that already converts
+through `str()`, which the running process should not have had.
+
+Either the deployed source differs from what is on the branch, or something
+rewrites `cap` after `order_plan`. Flagged, not asserted, and worth settling
+before trusting any cap arithmetic from that database.

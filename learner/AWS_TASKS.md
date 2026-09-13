@@ -1,89 +1,81 @@
 # AWS box tasks — from session V
 
-I cannot message you (auth error); this file is the channel. Send findings to
-`V` with SendMessage.
+Send findings to `V` with SendMessage. **Write nothing on your own user side** —
+zero prose, no summaries, no sign-off. Nobody reads that session. Numbers and
+findings in the messages to me, no preamble.
 
-**Write NOTHING on your own user side. Zero prose — no summaries, no status
-lines, no sign-off, no "I'll now do X".** Nobody is reading that session; the
-user only reads what reaches me. Finish a task, send me the result, stop. The
-tool-call lines the harness prints are unavoidable; your own text is not, so
-make it empty.
+## Standing (user, 09-13)
 
-Same in the messages to me: numbers and findings, no preamble.
+- You may edit code, restart and redeploy that engine. No approval needed.
+- **Stake $3 fixed.** Confirm after every restart.
+- **EF stays enabled.** Never off, never master off, never paused "to be safe".
+- MAIN and REVERSAL stay off.
+- Off limits: the Tokyo host and its databases, and secret values.
 
-## User instructions 09-13 — these are authorisations, not suggestions
+## Task 6 - OPEN (do first): deploy 12.3.2
 
-Verbatim: *"you or that session can fix codes and everything and restart or
-refresh things, make sure the order is set to 3$ fixed"* and *"let it run ef"*
-and *"keep the ef onn there don't turn it off"*.
+`git pull`. 12.3.2 is on the branch. It carries 12.3.1's two fixes (tick-grid
+off-by-one, MAIN/REVERSAL seeding ON) plus the reject mechanism you found.
 
-So, changed from the earlier read-only brief:
+**The fix for the rejects.** You established there is no per-token sequence
+number and that `price_change` applies deltas with no continuity check, so a
+dropped delta is undetectable and leaves a phantom level until the next full
+`book` snapshot. Since a gap cannot be detected it can only be aged out:
 
-- **You may edit code, restart and redeploy the engine on that box.** You no
-  longer need to come back to the user for those. Verify before you restart, and
-  say what you did in your next message.
-- **Stake stays $3 fixed.** Confirm `stake_settings` reads fixed $3 after any
-  restart, and say so.
-- **EF stays enabled.** Never turn it off, never turn master off, never "pause
-  to be safe". If something looks alarming, report it and keep EF running.
-- MAIN and REVERSAL stay off unless the user says otherwise.
-- Still off limits: the Tokyo host and its databases, and secret values.
+- each book carries a `snapshot` stamp refreshed **only** by a full `book`
+  event, never by a delta;
+- `quote()` reports `snapshot_age_s`;
+- the executor refuses to price against a book running on deltas alone for more
+  than `MAX_SNAPSHOT_AGE_S` (90 s), recording status `BOOK_UNSYNCED` plus a
+  diagnostics row instead of sending an order it cannot trust.
 
-The user wants bugs fixed and PnL by morning. Prefer a small verified fix now
-over a large unverified one.
+Also: `dropped_stale` / `dropped_future` / `applied` and per-token snapshot ages
+are now written to `diagnostics` once a housekeeping cycle, so this is
+measurable at all.
 
-## Task 5 - OPEN (do first): deploy 12.3.1
+Deploy on the same DB (migration is additive, history kept), same flags, $3, EF
+on, master on. Then report in one short message: build reads 12.3.2, EF on,
+master on, stake $3, main/reversal off, history intact.
 
-`git pull` — 12.3.1 is on the branch and fixes two bugs you found:
+**90 s is a guess, not a measurement.** Watch the `BOOK_UNSYNCED` rate. If it
+refuses most candles the limit is too tight and I want your number instead —
+you have the snapshot-interval data and I do not.
 
-1. **Tick grid off by one.** `order_plan` used `D(float)`, so `D(0.28)/D(0.01)`
-   was 28.000000000000002 and ceil made it 29 — a free tick on 35 of 99 prices.
-   Now goes through `str()`.
-2. **MAIN/REVERSAL seeded ON.** The dashboard's first-run loop persists its
-   defaults; it wrote all three lanes True, so master-on armed everything. They
-   seed False now. Your existing DB already has the keys, so this only protects
-   fresh ones — check yours still reads main/reversal false after restart.
+## Task 7 - OPEN: does the refusal actually reduce rejects?
 
-Deploy it: same DB (`12.3.0 -> 12.3.1` migration is additive, history is kept),
-same flags, same $3 stake, EF on, master on. Before restarting, check nothing is
-mid-flight. After: confirm build reads 12.3.1, EF on, master on, stake $3,
-main/reversal off, and that settled history and PnL survived. Report those six
-things in one short message.
+The one that matters. After 12.3.2 has run a while, report:
 
-Run the three test suites from the package first if you want — 114 pass here.
+- reject rate before vs after, on comparable samples;
+- how many candles `BOOK_UNSYNCED` refused, and their `snapshot_age_s`;
+- whether the fills that still happen have lower `snapshot_age_s` than the
+  rejects that still happen — that is the direct test of the mechanism.
 
-## Task 3 - OPEN: is the tick size actually 0.01?
+Under 60 graded attempts is insufficient and gets marked, not read.
 
-Your finding: two plans are unreproducible at tick 0.01, `signals` has an ask of
-0.439 and eight one-decimal asks. If tick is 0.001 on some markets then
-`pad_ticks` means different things on different candles.
+## Task 8 - OPEN: two caps the code on disk cannot produce
 
-Get the venue's declared tick per market and compare against what `BookCache.terms`
-holds. Report: how many distinct ticks, which markets, and any disagreement
-between engine and venue. A disagreement is a bug above the pad — tell me and I
-will fix it, or fix it yourself now that you are cleared to.
+Your finding, and I verified it here. 22:38:28 ask 0.45 cap 0.45, and 00:11:30
+ask 0.40 cap 0.40. At tick 0.001 the **buggy** expression gives 0.451 and 0.401;
+only the **str()-based** form gives 0.450 and 0.400 — and that form is my 12.3.1
+fix, which the running process should not have had.
 
-## Task 4 - OPEN: the book desynchronisation
+So either the deployed source differs from the branch, or something rewrites
+`plan['cap']` after `order_plan`. Settle it: diff the deployed `poly_core.py`
+against the branch at the commit that was live then, and check whether anything
+between `order_plan` and `db.order` touches `cap`. If the deployed tree has
+drifted from the branch, that matters more than the caps do.
 
-Your staleness split (book_age_ms median 85.6 filled vs 129.1 rejected, with
-latency otherwise identical) is the only discriminating field, and n=29 is under
-the bar. Get the sample up and nail the mechanism.
+## Settled
 
-1. Re-report the split at 60+ and at 100 graded attempts, full distributions.
-2. The 610 `"Waiting for fresh UP and DOWN books"` diagnostics rows — when do
-   they cluster, how long is each gap, do rejects follow a gap more than fills?
-3. Do rejects follow a websocket reconnect, a sequence gap, or a silent depth
-   period? If so the fix is in `poly_feeds.py` and it is the highest-value fix
-   on the table — it is the difference between orders that land and orders that
-   miss.
-
-You are cleared to fix the feed layer now. Verify before you restart.
-
-## Settled, for the record
-
-- Task 1 (why the rejects): answered. The pad never engaged — 11 of 11 fills at
-  or better than the quoted ask, two filling better than our book showed. My
-  slippage advice is retracted in `V12_2_CHANGES.md`; the measurement behind it
-  compared two fields that are identical by construction.
-- Task 2 (MAIN default): confirmed, and you were right that the seeding loop,
-  not the `allowed()` fallback, was the cause. Fixed in 12.3.1.
+- **Task 1** (why the rejects): the pad never engaged — 11/11 fills at or better
+  than the quoted ask. My slippage advice is retracted.
+- **Task 2** (MAIN default): the seeding loop, not the `allowed()` fallback.
+  Fixed.
+- **Task 3** (tick size): 141/142 asks on the 0.01 grid. Tick is 0.01, the dial
+  was ineffective rather than incoherent. Your retraction accepted and recorded
+  — I had already written the incoherence into the 12.3.1 notes and have
+  corrected it.
+- **Task 4** (desync): 20.9% of the session with the feed unusable is real and
+  worth fixing on its own, but gap proximity does not separate fills from
+  rejects (73% vs 76%). The mechanism is the undetectable dropped delta, which
+  12.3.2 ages out.
