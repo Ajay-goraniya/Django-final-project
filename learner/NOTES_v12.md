@@ -3333,6 +3333,50 @@ flat across hundreds of fills.
 recalibration, which is the *"trained brain"* the user asked for rather than a dial bolted on after the fact.
 Not started; recorded first.
 
+## 15:20 UTC (Sun 09-13) - the calibration fix VALIDATES out of sample. And the first version of it failed.
+
+Following the 14:45 root cause. **Walk-forward only: fitted on the chronological first half, judged on the
+second half it never saw.** 537 decided candles, train 268 / test 269.
+
+**Attempt 1 - a global shrink `p' = base + k(p - base)` - FAILED and is discarded.** Fitting k on train
+returned **k = 0.98**, essentially no change, and the out-of-sample Brier moved 0.2243 -> 0.2237 with the top
+gap barely stirring (-0.171 -> -0.165). Obvious afterwards: the model is **honest from 0.50 to 0.80**, so one
+global parameter would have to damage the good region to repair the bad one, and the optimiser correctly
+declines. **A miscalibration concentrated in one region cannot be fixed globally.**
+
+**Attempt 2 - a targeted map on p >= 0.80 only. This one holds.**
+
+Fitted on train alone: n=37, claimed **0.906**, realised **0.784**. The map is one number - any p at or above
+0.80 becomes **0.784**.
+
+| test set, p>=0.80 | n | claimed | realised | gap |
+|---|---|---|---|---|
+| **raw** | 55 | 0.916 | 0.745 | **-0.171** |
+| **after the map** | 55 | 0.784 | 0.745 | **-0.038** |
+
+**The out-of-sample calibration error falls from 0.171 to 0.038 - a 4.5x reduction on data the fit never
+touched.** n=55 is under the 60 bar and is marked; the direction and magnitude are not subtle, but the cell is
+not readable as a rate.
+
+**What it changes about what gets traded**, which is the point:
+
+| ask | EV on the claimed 0.91 | EV on the honest 0.78 |
+|---|---|---|
+| 0.80 | **+0.116 (fires)** | **-0.034 (refuses)** |
+| 0.85 | +0.054 (fires) | -0.088 (refuses) |
+| 0.90 | -0.001 | -0.135 |
+
+**It stops exactly the trades that were losing.** EF clears the EV bar on high `p`, the high-`p` claim is
+inflated by ~13 points, and that is why a lane with genuine skill - 0.651 direction accuracy against a 0.530
+base - runs 8-of-20 and sits one loss from its own kill rule.
+
+**This is not a gate and not a threshold.** Nothing is switched on or off and no bar is moved; one number the
+model states about itself is corrected to what that statement has historically been worth. That is the
+*"trained brain that knows that move is wrong"* rather than a dial bolted on afterwards.
+
+**Not shipped.** Both cells are under 60, the live build is frozen, and EF is one trade from halting - if it
+halts, the honest next step is this, not a restart. Recorded for the user's decision.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
