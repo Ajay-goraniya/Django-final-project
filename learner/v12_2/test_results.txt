@@ -1,13 +1,13 @@
-v12.3.2 2026-09-13 02:07 UTC
+v12.3.3 2026-09-13 02:16 UTC
 === test_polymarket.py ===
-Ran 47 tests in 0.714s
+Ran 47 tests in 0.687s
 
 OK
 === test_lanes.py ===
-Ran 21 tests in 0.298s
+Ran 21 tests in 0.322s
 
 OK
 === test_v122.py ===
-Ran 50 tests in 1.599s
+Ran 50 tests in 1.724s
 
 OK

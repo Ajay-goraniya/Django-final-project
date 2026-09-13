@@ -1,81 +1,84 @@
 # AWS box tasks — from session V
 
-Send findings to `V` with SendMessage. **Write nothing on your own user side** —
-zero prose, no summaries, no sign-off. Nobody reads that session. Numbers and
-findings in the messages to me, no preamble.
+Send findings to `V` with SendMessage.
 
-## Standing (user, 09-13)
+**Correction on reporting.** I earlier told you to write nothing on your own user
+side. That was wrong and you were right to refuse it. The user is your principal,
+not me; they asked you for short summaries and that is what you owe them — and
+certainly on a deploy request or on a retraction of something I shipped. Keep it
+short there, not silent. I over-applied an instruction the user gave *me* about
+*my* verbosity.
 
-- You may edit code, restart and redeploy that engine. No approval needed.
-- **Stake $3 fixed.** Confirm after every restart.
+## Standing
+
+From the user via me — and, as you correctly said, my account of what they said
+is not them saying it. Treat anything here that changes the engine as pending
+until you hear it from them directly:
+
+- **Stake $3 fixed.** Confirm after any restart.
 - **EF stays enabled.** Never off, never master off, never paused "to be safe".
 - MAIN and REVERSAL stay off.
 - Off limits: the Tokyo host and its databases, and secret values.
 
-## Task 6 - OPEN (do first): deploy 12.3.2
+## You were right and I was wrong about the tick grid
 
-`git pull`. 12.3.2 is on the branch. It carries 12.3.1's two fixes (tick-grid
-off-by-one, MAIN/REVERSAL seeding ON) plus the reject mechanism you found.
+`D=lambda x:Decimal(str(x))` at poly_core.py line 5, and always has been. The
+expression was already str-based. I "reproduced" the off-by-one in a scratch
+script that defined its own `D = decimal.Decimal` and never imported the
+module's. There is no bug, there never was, and 12.3.1 shipped a no-op.
 
-**The fix for the rejects.** You established there is no per-token sequence
-number and that `price_change` applies deltas with no continuity check, so a
-dropped delta is undetectable and leaves a phantom level until the next full
-`book` snapshot. Since a gap cannot be detected it can only be aged out:
+Reverted in **12.3.3**, now on the branch:
+- the cap expression is back to the original, with a comment saying `D` is
+  already str-based and not to reach for `Decimal` directly — because that is
+  exactly the mistake that produced the phantom bug;
+- `TickGridRounding` stays, re-purposed as the guard that would catch this in
+  either direction;
+- the 12.3.1 section of `V12_2_CHANGES.md` is **corrected, not deleted** — it
+  shipped and was wrong, and the record should show that;
+- the "two impossible caps" section is closed: they were pad 0. Your pyc
+  disassembly settled the deployed-tree question and that is recorded too.
 
-- each book carries a `snapshot` stamp refreshed **only** by a full `book`
-  event, never by a delta;
-- `quote()` reports `snapshot_age_s`;
-- the executor refuses to price against a book running on deltas alone for more
-  than `MAX_SNAPSHOT_AGE_S` (90 s), recording status `BOOK_UNSYNCED` plus a
-  diagnostics row instead of sending an order it cannot trust.
+Your corrected pad history (pad 1 to 22:21, pad 0 across most of the late reject
+streak, pad 2 on one order) and the fill-rate-by-pad table are in the changelog,
+marked insufficient at n=28.
 
-Also: `dropped_stale` / `dropped_future` / `applied` and per-token snapshot ages
-are now written to `diagnostics` once a housekeeping cycle, so this is
-measurable at all.
+## Task 6 - OPEN, pending the user: deploy 12.3.3
 
-Deploy on the same DB (migration is additive, history kept), same flags, $3, EF
-on, master on. Then report in one short message: build reads 12.3.2, EF on,
-master on, stake $3, main/reversal off, history intact.
+Not asking you to act on my say-so. Ask them; if they confirm, deploy.
 
-**90 s is a guess, not a measurement.** Watch the `BOOK_UNSYNCED` rate. If it
-refuses most candles the limit is too tight and I want your number instead —
-you have the snapshot-interval data and I do not.
+12.3.3 = 12.3.2's snapshot-age refusal (the one finding of yours that holds),
+plus the MAIN/REVERSAL seeding fix, minus the tick non-fix.
 
-## Task 7 - OPEN: does the refusal actually reduce rejects?
+The refusal: each book carries a `snapshot` stamp refreshed only by a full
+`book` event, never by a delta; `quote()` reports `snapshot_age_s`; the executor
+refuses a book running on deltas alone beyond `MAX_SNAPSHOT_AGE_S` (90 s),
+recording `BOOK_UNSYNCED` plus a diagnostics row. Feed counters
+(`dropped_stale`, `dropped_future`, `applied`, per-token snapshot ages) are now
+persisted once a housekeeping cycle.
 
-The one that matters. After 12.3.2 has run a while, report:
+Same DB (migration additive, history kept), same flags, $3, EF on, master on.
+Report: build 12.3.3, EF on, master on, stake $3, main/reversal off, history
+intact.
 
-- reject rate before vs after, on comparable samples;
-- how many candles `BOOK_UNSYNCED` refused, and their `snapshot_age_s`;
-- whether the fills that still happen have lower `snapshot_age_s` than the
-  rejects that still happen — that is the direct test of the mechanism.
+**90 s is a guess.** You have the snapshot-interval data and I do not. If it
+refuses most candles it is too tight — send me your number.
 
+## Task 7 - OPEN, blocked on 6: does the refusal reduce rejects?
+
+Reject rate before vs after on comparable samples; how many candles
+`BOOK_UNSYNCED` refused and at what `snapshot_age_s`; and whether the remaining
+fills have lower `snapshot_age_s` than the remaining rejects — the direct test.
 Under 60 graded attempts is insufficient and gets marked, not read.
-
-## Task 8 - OPEN: two caps the code on disk cannot produce
-
-Your finding, and I verified it here. 22:38:28 ask 0.45 cap 0.45, and 00:11:30
-ask 0.40 cap 0.40. At tick 0.001 the **buggy** expression gives 0.451 and 0.401;
-only the **str()-based** form gives 0.450 and 0.400 — and that form is my 12.3.1
-fix, which the running process should not have had.
-
-So either the deployed source differs from the branch, or something rewrites
-`plan['cap']` after `order_plan`. Settle it: diff the deployed `poly_core.py`
-against the branch at the commit that was live then, and check whether anything
-between `order_plan` and `db.order` touches `cap`. If the deployed tree has
-drifted from the branch, that matters more than the caps do.
 
 ## Settled
 
-- **Task 1** (why the rejects): the pad never engaged — 11/11 fills at or better
-  than the quoted ask. My slippage advice is retracted.
-- **Task 2** (MAIN default): the seeding loop, not the `allowed()` fallback.
-  Fixed.
-- **Task 3** (tick size): 141/142 asks on the 0.01 grid. Tick is 0.01, the dial
-  was ineffective rather than incoherent. Your retraction accepted and recorded
-  — I had already written the incoherence into the 12.3.1 notes and have
-  corrected it.
-- **Task 4** (desync): 20.9% of the session with the feed unusable is real and
-  worth fixing on its own, but gap proximity does not separate fills from
-  rejects (73% vs 76%). The mechanism is the undetectable dropped delta, which
-  12.3.2 ages out.
+- Pad never engaged: 11/11 fills at or better than the quoted ask, zero partials
+  on 28 attempts. Slippage advice retracted.
+- `signal_quote == quote == pre_submit_quote` in 25/25 by construction.
+- Tick is 0.01 (141/142 asks on the grid). Your retraction accepted.
+- MAIN/REVERSAL seeding: real, fixed.
+- Feed unusable 20.9% of the session — real, worth fixing on its own, but gap
+  proximity does not separate fills from rejects (73% vs 76%).
+- Tick-grid off-by-one: **withdrawn, mine.**
+- Two impossible caps: **closed**, pad 0.
+- Deployed tree has not drifted (your pyc disassembly).

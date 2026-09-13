@@ -383,31 +383,30 @@ to count how many MAIN signals clear the bar in paper before funding the lane.
 Lowering the EV bar to force it through would remove the only guard stopping the
 lane from buying near-resolved contracts.
 
-# 12.3.1 — two real bugs, found on the live box, and a retraction
+# 12.3.1 — one real bug, one imaginary one, and a retraction
 
-The session running on the AWS box audited the live engine's own database and
-found both of these. Neither was visible in my replay, and one of them makes an
-earlier claim of mine wrong.
+## RETRACTED IN 12.3.3: the tick-grid "off-by-one" never existed
 
-## The tick grid was off by one on 35 of 99 prices
+I claimed `order_plan` built the cap with a Decimal-from-float and gained a free
+tick on 35 of 99 prices. **That is wrong.** This module defines
 
-`order_plan` built the price cap with `D(q['ask'])` — a Decimal from a *float*,
-which carries the binary representation error. `D(0.28)/D(0.01)` is
-28.000000000000002, and `ROUND_CEILING` turns that into 29. The cap came out one
-tick above the intended price.
+```python
+D=lambda x:Decimal(str(x))
+```
 
-It hits 0.28, 0.33, 0.34, 0.39, 0.40, 0.45, 0.46, 0.52, 0.53, 0.54, 0.55, 0.56
-and 23 others — 35 of the 99 tick values, and 11 of the 32 prices between 0.28
-and 0.59. The rest are exact. So the effective pad was `pad_ticks` on some
-candles and `pad_ticks + 1` on others, with no way to tell from the outside
-which you were getting.
+at line 5, and always has. The expression was already str-based; the cap has
+always been exactly `ask + pad*tick` at every price. I "reproduced" the bug in a
+scratch script that defined its own `D = decimal.Decimal` and never imported the
+module's. Everything below about affected price lists, an effective pad of
+`pad_ticks` or `pad_ticks+1`, and the dial being unknowable is withdrawn.
 
-Fixed by converting through `str()`, so the decimal the venue quoted is the
-decimal that gets divided. `TickGridRounding` in `test_v122.py` now checks that
-the cap equals the ask exactly at pad 0 on every tick from 0.01 to 0.99, and
-that a pad of n adds exactly n ticks.
+The AWS session caught it by running the engine's own `order_plan` from the
+engine's own venv — which is what I should have done before shipping a fix for
+it. The 12.3.1 change was a no-op and is reverted in 12.3.3; the
+`TickGridRounding` tests stay, now as a guard against making this mistake in
+either direction.
 
-## MAIN and REVERSAL seeded themselves ON
+## MAIN and REVERSAL seeded themselves ON — this one is real
 
 The dashboard's first-run loop writes defaults for any key that is absent:
 
@@ -433,37 +432,34 @@ fixed nothing. The seeding loop was the one that mattered.
 
 ## Retraction: the slippage dial was the wrong advice
 
-In 12.3.0 I told the user to raise the slippage pad because orders were being
-rejected with "no orders found to match", and I said the measured trade-off was
-between EV refusals and venue misses. The live data does not support that.
+This one stands, and it never depended on the cap arithmetic.
 
 **Across all 11 fills on the live box, not one executed above the quoted ask.**
 Two filled *better* than our book showed, by 1 and 3 ticks. Not a single fill
 ever consumed a tick of pad. If the rejects were the ask outrunning the pad,
-some fills would land inside the pad band; none do. There is no demonstrated
-mechanism by which a bigger pad helps here.
+some fills would land inside the pad band; none do.
 
-Worse, the measurement I based the advice on could not have shown this. I
-compared `signal_quote` against `pre_submit_quote` — but `order_plan` sets
+And the measurement I based the advice on could not have shown this. I compared
+`signal_quote` against `pre_submit_quote` — but `order_plan` sets
 `pre_submit_quote=q['ask']` from the *same* read, and the submit path only
 proceeds when `latest['seq']==seq`, i.e. when the book has **not** ticked. The
 two quotes are identical in 25 of 25 live rows by construction. I was reading a
 structural identity as a market observation.
 
 What does separate fills from rejects is book age: median 85.6 ms on fills
-against 129.1 ms on rejects (pre-submit 96.5 against 139.1), while
-fire-to-submit, signing and total attempt time are indistinguishable. The
-rejects are not slower — they are working from an older book. That points at
-feed synchronisation between our book and the venue's, not at pricing.
+against 129.1 ms on rejects, while fire-to-submit, signing and total attempt
+time are indistinguishable. The rejects are not slower — they are working from
+an older book.
 
-Also unresolved, and it undercuts the dial further: two live plans are not
-reproducible at `tick=0.01` for any pad, and the signals table contains an ask
-of 0.439 and eight one-decimal asks. **The tick size is not 0.01 on every
-market.** On a 0.001-tick market, `pad_ticks=2` buys two tenths of a cent.
+Corrected fill rate by the pad actually in force (from the reconstructed dial
+history — pad 1 until 22:21, pad 0 across most of the late reject streak, pad 2
+on one order), n=28 and under the bar, marked not read:
 
-Nothing here is a finding yet — 29 orders is well under the bar. The code-level
-facts (the two bugs, the structural quote identity) are deterministic and need
-no sample size. The staleness split does need one, and is marked accordingly.
+| pad_ticks | fills | rejects | fill rate |
+|---|---|---|---|
+| 0 | 1 | 4 | 20% |
+| 1 | 10 | 12 | 45% |
+| 2 | 0 | 1 | 0% |
 
 # 12.3.2 — the reject mechanism, and a retraction from the box
 
@@ -508,15 +504,39 @@ only in memory, so a post-mortem could not tell how many events the 8-second
 clock guard had dropped. Housekeeping now writes them to `diagnostics` once a
 cycle, diffable across restarts.
 
-## Still open: two caps that the code on disk cannot produce
+## Closed: the two "impossible" caps were pad 0
 
-Two live plans record `cap == ask` exactly (22:38:28 ask 0.45, 00:11:30 ask
-0.40). Under the shipped expression that is not producible at any realistic
-tick — `ceil` forces at least 0.46 and 0.41. Confirmed here: at tick 0.001 the
-buggy form gives 0.451 and 0.401, and only the **str()-based form** gives 0.450
-and 0.400. So those two rows look like they came from code that already converts
-through `str()`, which the running process should not have had.
+They reproduce exactly. Both are `cap == ask` because the dial was at 0 when
+they fired. The whole puzzle was downstream of the imaginary off-by-one, and it
+dissolved with it.
 
-Either the deployed source differs from what is on the branch, or something
-rewrites `cap` after `order_plan`. Flagged, not asserted, and worth settling
-before trusting any cap arithmetic from that database.
+The AWS session settled the deployed-tree question properly while it was there:
+`__pycache__/poly_core.cpython-312.pyc` records source mtime 1789250439 and size
+38179, matching `poly_core.py` on disk exactly, timestamp-validated, written at
+22:23:59 — PID 23010's start. It disassembled `order_plan` out of that bytecode
+and confirmed the running process is that file. **The deployed tree has not
+drifted from the branch**, and nothing between `order_plan` and `db.order`
+touches `cap`.
+
+With the correct `D`, all 29 live rows reproduce at tick 0.01, and the implied
+dial history is coherent: pad 1 for every order to 22:21, pad 0 across most of
+the late reject streak, pad 2 on one order at 01:18:47.
+
+# 12.3.3 — reverting a fix for a bug that did not exist
+
+The tick-grid change in 12.3.1 is reverted. `D` in this module has always been
+`Decimal(str(x))`, so the cap expression was already correct and my "fix" was a
+no-op wrapped around an existing `str()`. The comment at the call site now says
+so, and says not to reach for `Decimal` directly, because that is precisely the
+mistake that produced the phantom bug.
+
+`TickGridRounding` stays. It was written to prove a fix that fixed nothing, but
+it pins real behaviour — `cap == ask + pad*tick` on every tick from 0.01 to
+0.99 — and it is the guard that would catch this being broken in either
+direction.
+
+The 12.3.1 section above is corrected rather than deleted. It shipped, it was
+wrong, and the record should show that.
+
+Nothing else changes. The snapshot-age refusal from 12.3.2 is untouched: it
+rests on the phantom-level mechanism, which does not depend on any of this.
