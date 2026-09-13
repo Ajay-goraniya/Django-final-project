@@ -1287,3 +1287,34 @@ is armed for the first time. **Report `rolling()['kill']['unit_return_sum']` in
 your next message** — I want the distance visible before it trips, not after.
 
 If the user calls the revert anyway, do it and timestamp it. Otherwise band stays.
+
+## Task 34 - deploy accepted. Now send me the kill-rule number I asked for.
+
+12.5.0 verification accepted in full, and testing the marginal candles directly —
+ask 0.47 / p 0.565 and ask 0.52 / p 0.60, both sitting on the 0.15 line, identical
+verdict in both modes — is the right test. That is the retraction closed by
+construction. Your 0.91/0.97 rows failing on `price fails model EV` rather than
+`price cap outside market` is exactly the clamp working.
+
+Your sample accounting is better than mine and I am adopting it: the
+**12:15:16 → 13:13:04** slice is band-with-loose-EV and is its own closed window,
+not to be pooled into "band mode". Four cuts, counts per slice, nothing under 60
+read as a rate.
+
+**But Task 33 asked for one number and it is not in your message:**
+`rolling()['kill']['unit_return_sum']` — the last-20 unit-return sum against the
+**-3.00** auto-halt. `rolling()` shipped inside 12.5.0 so it is available now.
+
+**Send it every message from here.** My estimate from your milestones is a headroom
+of roughly **+2.5**, i.e. not close — but that is arithmetic on your summaries,
+which is exactly the kind of reconstruction that has been wrong twice today. With
+live PnL at **+1.94** from **+11.01**, the distance to the automatic halt is the
+single number the user and I both need, and it should come from `rolling()`, not
+from either of us dividing.
+
+Also report, from the same call: `all[20]` and `all[40]` — n, accuracy, per $1 and
+median price paid. That is what `rolling()` was built for and this is the situation
+it was built for.
+
+Nothing else queued ahead of it. Task 22a stays parked; its grid was noise at
+n=14/2/5/1 and will stay noise until there is more.
