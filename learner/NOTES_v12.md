@@ -3508,6 +3508,42 @@ fix is MAIN's own EV threshold, and it needs the user's number, not mine.** At 0
 0.05, to 0.94. Not built - a threshold on an unvalidated lane is exactly the thing that should not be chosen
 by me.
 
+## 17:22 UTC (Sun 09-13) - nineteenth reading. Strongest paper hour of the day. Tokyo 0.00 a fourth hour.
+
+Re-arm reading, Predict.fun v10 paper: last-20 **+0.248**, last-40 **+0.220**, **554 graded**. Polymarket
+paper last-20 **+0.429**, last-40 **+0.209**. Fourteenth consecutive positive, and the last-20 turned back up
+after five hours of decline. **Still not arming** - the criterion was refuted 22:12 on 09-11 under its own
+review condition and has not been replaced, and a good hour is exactly when that matters. All **12** processes
+verified, no duplicates. The paper lanes put on their best hour of the day: +26.3, +51.5 and +51.9 at $10
+across the three.
+
+**Tokyo unchanged: wallet 0.00, equity 0.00, fourth consecutive hour.** `realised -8.04`, `settled 442`,
+`open 0`, all kinds and master OFF - checked per kind, no silent revert. Four hours of a zero balance with no
+trading and no movement in realised PnL, corroborated by the order backup holding at 442 real fills. Uptime
+58.9 h. Still with the user.
+
+**Polymarket v12 live: MAIN's blockage is now measured, and it is total.** Since the 14:24:11 authorisation:
+**144 lane decisions, 12 signals, 0 orders.** Every one of the **35** refusals is `price fails model EV` -
+no other cause appears once. Asks at refusal: min **0.69**, median **0.85**, max **0.98**. Thresholds seen are
+**0.15 and 0.25**, so my earlier "always 0.25" was wrong.
+
+**And against each decision's own ceiling `p/(1+thr)` it is 35 of 35** - my flat 0.78 test undercounted,
+because 0.78 is the bound only at p=1.0. **Not one MAIN call in three hours had a price its own confidence
+could justify.**
+
+**The question is not the threshold.** Computing the real EV of the four sampled rows: two are **negative**
+at the offered price (-0.384 and -0.339), which no threshold can reach - a bar of zero would still refuse
+them, correctly. Of the two positive, one needs a bar under **0.015**. MAIN's most confident call of the
+period, **p=0.92 on the looser 0.15 threshold**, was still refused at ask 0.90 against a 0.7998 ceiling.
+
+So: **MAIN is blocked, and that is established. Whether MAIN is profitable if unblocked is not.** Those are
+different claims. The refused candles have graded by now, so the realised PnL of the positive-EV subset is
+computable and is the only thing that bridges them; requested as Task 61a and not yet answered. A threshold
+loose enough to admit MAIN buys near-certainties at near-certainty prices: thin margin, whole stake on a loss.
+
+Also recorded: `lane_loop` writes no `_ask_up`/`_ask_dn`, so **109 of the 144 decisions leave no price trace**
+and the full ask distribution is unrecoverable. Worth fixing after the freeze.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
