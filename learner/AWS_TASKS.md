@@ -3039,3 +3039,55 @@ retries and DEADLINEs per candle from the open, not just the reject count.**
 
 Nothing to build. 12.8.5 still held. Keep flagging the unit sum after every result - we are at **-2.0000**,
 one full-stake loss from my hand-applied -3.00.
+
+## Task 76 - THE DECISION DIFF. The highest-value thing this session can do, and the only task tonight.
+
+The user, 21:4x: *"the paper model does very well, but the same model in live has different logics, that's
+not acceptable"* and *"work with aws Mumbai and remake the model."* **Read `learner/REMAKE_PLAN.md` first** -
+it is the diagnosis and the sequence, and §2 is this task.
+
+**Verified before writing it:** paper (the +457 fair-table row) is the **Sep 11 13:40** program, one 34.7 KB
+file, with **zero** of the gates and executor mechanisms in live - no `_gate_on_padded_ev`, no
+`EV_REFERENCE_PAD`, no band slippage, no `order_plan`, no MAIN/REV at all. `diff` against live = 1,291
+lines. Paper's `decisions` table carries `p, ask, ev, fire` on one row - EV **inside** the decision.
+
+### The task
+
+**`learner/live_backup/v12_poly_weekend.sqlite3.gz`** is on the branch as of this commit - paper's journal,
+snapshot 21:50 UTC, **317 graded trades, 7,280 `decisions` rows** (`ts_ms, candle_epoch, sec, side, p, ask,
+ev, fire, feat`). Live's journal is yours. **Join on epoch.**
+
+For every shared candle since Sep 11 13:40, four columns: **paper decided / live decided / paper earned /
+live earned.** Live's decision comes from `signals` + `diagnostics` (`order_plan_refused` rows carry the
+skip reason) + `orders` status. Paper's from `decisions.fire` and `trades`.
+
+**Report the whole grid, every cell, nothing selected:**
+
+| paper | live | n | paper PnL/$1 | live PnL/$1 |
+|---|---|---|---|---|
+| fired & won | fired & won | | | |
+| fired & won | **skipped on EV** | | | - |
+| fired & won | rejected by venue | | | - |
+| fired & won | DEADLINE / other release | | | - |
+| fired & lost | fired & lost | | | |
+| fired & lost | skipped / rejected | | | - |
+| did not fire | fired | | - | |
+| did not fire | did not fire | | - | - |
+
+**The cell that decides the remake: paper fired & won, live skipped on EV.** Its paper PnL is what the
+gates cost. Also give the **paper-vs-live agreement on `side`** on candles both evaluated, and **paper's `p`
+vs live's `p`** on the same candle - if those diverge, the models are not the same model and the user needs
+to know that before anything else.
+
+**Grade both with `candles.actual`** - same venue, so no oracle mismatch, but say so.
+
+### What is NOT asked
+
+No build. No dial. No deploy. **Nothing that restarts the engine** - the user is armed at $3 and Monday is
+12.8.4's day. No speculation about mechanism until the grid exists. If a cell is under 60, mark it
+insufficient and report it anyway. If the join cannot be done honestly on some candles (clock skew,
+missing rows), say which and how many rather than reconstructing.
+
+**Also keep the standing watch:** hand-rule unit sum after every settled result (at **-2.0000**), kill
+window, and from 00:00 UTC Monday **submissions / retries / DEADLINEs / rejects per candle** so the two
+Monday predictions in REMAKE_PLAN §4 get tested.
