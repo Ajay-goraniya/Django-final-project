@@ -17,6 +17,36 @@ that. If a brief here looks wrong, say so before acting; authority to instruct i
 The one thing that stays with the user regardless: anything that risks the funded account in a way
 a brief has not clearly authorised.
 
+## AFTER EVERY RESTART: turn master back ON, then watch it
+
+User, 09-13: *"if model stops and restarts then it will restart with master off
+be sure it's turned onn and observed later"*.
+
+This is not occasional. `btc_model_v12_polymarket.py:52` forces it on every live
+start:
+
+```python
+self.db.set('master',False) if a.live else None
+```
+
+So **any** restart - your deploy, a crash, a reboot, an OOM kill - comes back
+with master OFF and the engine silently trading nothing. It looks healthy: the
+dashboard answers, feeds are live, the process is up. Only the fill count tells
+you, and by then you have lost the candles.
+
+Every time the process restarts, for any reason:
+
+1. Turn **master ON**.
+2. Confirm **EF enabled**, **stake $3 fixed**, **MAIN and REVERSAL off**.
+3. Confirm the settled history and PnL survived the restart.
+4. Then **watch it actually fire**. Master on is not the same as trading - stay
+   with it until you see a real order attempt, and if none comes within a few
+   candles, say so rather than assuming it is fine.
+5. Report those five things to V in one short message.
+
+Check master on every poll, not only after a restart you performed. A restart
+you did not cause is exactly the case this instruction exists for.
+
 ## Standing (from the user)
 
 - Stake $3 fixed, confirmed after any restart.
