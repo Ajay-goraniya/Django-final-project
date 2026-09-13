@@ -290,6 +290,24 @@ class Dashboard:
                     reason='halt_cleared',was=was,window_restarts_at=now))))
                 return dict(ok=True,cleared=was,window_restarts_at=now,
                             note='kill rules re-arm after 20 results settled from now')
+            elif path=='/api/controls/calibration':
+                # Turns the p-correction on or off. Bounded here like every other
+                # trading control, and it can only ever LOWER a claim - a setting
+                # that raised one would make the model more confident by
+                # configuration, which is the opposite of the point.
+                cfg=dict(getattr(self.r,'CALIBRATION_DEFAULT',
+                                 dict(enabled=False,cut=0.80,to=0.784)))
+                cfg.update(self.db.get('calibration') or {})
+                if 'enabled' in p: cfg['enabled']=bool(p['enabled'])
+                for k in ('cut','to'):
+                    if k in p:
+                        try: cfg[k]=float(p[k])
+                        except (TypeError,ValueError): raise ValueError(f'{k} must be a number')
+                if not 0.5<cfg['cut']<1.0: raise ValueError('cut must be between 0.5 and 1.0')
+                if not 0.5<cfg['to']<=cfg['cut']:
+                    raise ValueError('to must be above 0.5 and at or below cut; it may only lower a claim')
+                self.db.set('calibration',cfg)
+                return dict(ok=True,calibration=cfg)
             elif path=='/api/controls/ev':
                 # Changes what the engine will pay and how often it fires, so it
                 # is confirmed like every other trading control and bounded here.

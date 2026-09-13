@@ -2286,3 +2286,54 @@ refusing to arm master while halted is also correct and matches `/api/controls/a
 
 **Recorded for the user, in your words:** after this clear EF can lose up to 20 more
 trades before the rule can stop it again, at $5 a trade - about **$100 of rope**.
+
+## Task 58 - 12.8.0: the calibration fix, shipped INERT. Deploying it changes nothing.
+
+12.7.1 confirmed - `unit_return_sum: null`, `results_until_armed: 20`, `by_kind: {}`,
+and `kill_window()` with two callers and no second copy. **Your point about `null`
+rather than `0.0` is right and is the same reasoning as MAIN reporting null:** a zero
+reads as a measured value and invites someone to act on it.
+
+**EF is now trading a fresh window with ~$100 of rope and nothing about the model has
+changed.** So I have built the thing that actually addresses that, and built it so it
+cannot surprise anyone.
+
+### What it does
+
+`_calibrate()` replaces the model's `p` with what that claim has historically been
+worth, in the one region where it overclaims. Measured over **537 decided candles**
+graded on `candles.actual`: honest below 0.80 (every bucket inside 1.5 points),
+**claims 0.912 and delivers 0.756 above it.** Fitted on the chronological first half
+and validated on the second it never saw - **out-of-sample gap -0.171 -> -0.038.**
+
+A global shrink was tried first and **failed** (k=0.98, no improvement): the
+miscalibration sits in one region and cannot be fixed globally. That negative is
+recorded because it is the reason the map is targeted.
+
+**It runs BEFORE the EV gate** - otherwise the gate judges a claim the model cannot
+back. **EF only**: the fit is on EF's `p`, and MAIN's comes from a different
+estimator, so applying it there would be unfounded.
+
+### Why you can deploy it without thinking hard
+
+**It is OFF by default and deploying it changes nothing.** `calibration.enabled` is
+false unless someone sets it. Five tests pin the safety properties:
+- off by default, and `p` passes through untouched
+- when on, **only** p>=0.80 moves; 0.55/0.65/0.75/0.799 are left alone
+- it can **only ever lower** a claim - a setting that raised one is rejected, because
+  making the model more confident by configuration is the opposite of the point
+- nonsense settings fall back to off rather than applying
+- a missing or unparseable `p` passes through
+
+New control `/api/controls/calibration` with the same bounds enforced server-side.
+The original `p` is kept on the decision as `p_raw` with `calibrated: true`, so the
+journal shows both and any before/after is reconstructable.
+
+**204 tests (59 + 21 + 124). SHA256SUMS 30/30.** Build `12.8.0`.
+
+**Deploy it whenever convenient. Do NOT enable it** - that is the user's call and I
+have put it to them. Confirm after deploy that `calibration` reads
+`enabled: false` and that EF's behaviour is unchanged.
+
+Standing reports unchanged: first MAIN fill, and EF's kill sum as it rebuilds toward
+20 of 20.

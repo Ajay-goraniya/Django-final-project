@@ -1411,3 +1411,55 @@ class MainDisarmsAfterOneFill(unittest.TestCase):
         self.db.set('main_enabled',False)
         self.r._main_oneshot_check()
         self.assertFalse(self.db.get('main_enabled'))
+
+
+class CalibrationIsOffUntilTurnedOn(unittest.TestCase):
+    """Correct what the model overclaims - EF only, and inert by default.
+
+    Measured over 537 decided candles: honest below p=0.80, claims 0.912 and
+    delivers 0.756 above it. Fitted on the first half, validated on the second,
+    out-of-sample gap -0.171 -> -0.038.
+    """
+    def setUp(self):
+        import btc_model_v12_polymarket as E
+        self.temp=tempfile.TemporaryDirectory()
+        self.db=C.Journal(str(pathlib.Path(self.temp.name)/'c.db'),'LIVE','h')
+        r=E.PolyRunner.__new__(E.PolyRunner); r.db=self.db
+        self.r=r
+
+    def tearDown(self): self.db.c.close(); self.temp.cleanup()
+
+    def test_it_is_off_by_default(self):
+        """Shipping it inert means deploying it changes nothing."""
+        self.assertFalse(self.r.calibration()['enabled'])
+        d=dict(fire=True,side='UP',p=0.95)
+        self.assertEqual(self.r._calibrate(d)['p'],0.95)
+        self.assertNotIn('calibrated',self.r._calibrate(d))
+
+    def test_when_on_it_only_touches_the_overclaimed_region(self):
+        self.db.set('calibration',dict(enabled=True,cut=0.80,to=0.784))
+        for p in (0.55,0.65,0.75,0.799):
+            self.assertEqual(self.r._calibrate(dict(p=p))['p'],p,f'{p} is honest, leave it')
+        for p in (0.80,0.912,0.99):
+            out=self.r._calibrate(dict(p=p))
+            self.assertAlmostEqual(out['p'],0.784)
+            self.assertAlmostEqual(out['p_raw'],p,msg='the original must stay on the record')
+            self.assertTrue(out['calibrated'])
+
+    def test_it_can_only_lower_a_claim(self):
+        self.db.set('calibration',dict(enabled=True,cut=0.80,to=0.784))
+        for p in (0.80,0.85,0.90,0.95,1.0):
+            self.assertLessEqual(self.r._calibrate(dict(p=p))['p'],p)
+
+    def test_a_nonsense_setting_falls_back_to_off(self):
+        for bad in (dict(enabled=True,cut=0.3,to=0.784),      # cut outside range
+                    dict(enabled=True,cut=0.80,to=1.5),       # to above 1
+                    dict(enabled=True,cut=0.80,to='x'),       # unparseable
+                    dict(enabled=True,cut=0.80,to=0.99)):     # a RAISE, not a shrink
+            self.db.set('calibration',bad)
+            self.assertFalse(self.r.calibration()['enabled'],f'{bad} must not apply')
+
+    def test_a_missing_or_bad_p_is_passed_through(self):
+        self.db.set('calibration',dict(enabled=True,cut=0.80,to=0.784))
+        self.assertEqual(self.r._calibrate(dict(fire=True)),dict(fire=True))
+        self.assertEqual(self.r._calibrate(dict(p=None))['p'],None)

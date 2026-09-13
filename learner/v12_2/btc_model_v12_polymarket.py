@@ -164,8 +164,53 @@ class PolyRunner(Runner):
         # single most misleading thing this build did. The same arithmetic now
         # runs here, at the price we would actually pay, and a signal that cannot
         # clear it never claims to have fired.
+        # Honesty about p comes BEFORE the EV gate, or the gate judges a claim
+        # the model cannot back. Off unless the operator turns it on.
+        d=self._calibrate(d)
         if d.get('fire'): d=self._gate_on_padded_ev(ep,d)
         return d
+    CALIBRATION_DEFAULT=dict(enabled=False,cut=0.80,to=0.784)
+    def calibration(self):
+        cfg=dict(self.CALIBRATION_DEFAULT); cfg.update(self.db.get('calibration') or {})
+        try:
+            cfg['cut']=float(cfg['cut']); cfg['to']=float(cfg['to'])
+            cfg['enabled']=bool(cfg['enabled'])
+        except (TypeError,ValueError): return dict(self.CALIBRATION_DEFAULT)
+        # `to` must be at or below `cut`: this may only ever LOWER a claim.
+        # A setting that raises one is a way to make the model more confident by
+        # configuration, which is the opposite of the point.
+        if not (0.5<cfg['cut']<1.0 and 0.5<cfg['to']<=cfg['cut']):
+            return dict(self.CALIBRATION_DEFAULT)
+        return cfg
+    def _calibrate(self,d):
+        """Correct what the model claims about itself, where it overclaims.
+
+        Measured 09-13 over 537 decided candles graded on `candles.actual`:
+        below p=0.80 the model is honest, every bucket inside 1.5 points. At
+        p>=0.80 it claims 0.912 and delivers 0.756. EV is p/cost-1, so the
+        trades that clear the bar are exactly the overstated ones - which is why
+        a lane with real skill (0.651 accuracy against a 0.530 base) ran 7-of-20
+        and hit its own kill rule.
+
+        Fitted on the chronological FIRST half and validated on the second it
+        never saw: the out-of-sample gap falls from -0.171 to -0.038. A global
+        shrink was tried first and failed (k=0.98, no improvement) - the
+        miscalibration is confined to one region and cannot be fixed globally.
+
+        This is not a gate and moves no threshold. One number the model states
+        about itself is replaced by what that statement has historically been
+        worth. EF only: the fit is on EF's p, and MAIN's probability comes from a
+        different estimator, so applying it there would be unfounded.
+
+        OFF by default. Shipping it inert lets it be deployed without changing
+        what trades, and turned on deliberately.
+        """
+        cfg=self.calibration()
+        if not cfg['enabled'] or d.get('p') is None: return d
+        try: p=float(d['p'])
+        except (TypeError,ValueError): return d
+        if p<cfg['cut']: return d
+        return dict(d,p=cfg['to'],p_raw=p,calibrated=True)
     def _gate_on_padded_ev(self,ep,d):
         """Re-decide against the price we would really pay. Never widens a fire."""
         toks=self.market.get(ep)
