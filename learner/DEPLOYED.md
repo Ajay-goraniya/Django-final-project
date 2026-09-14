@@ -85,3 +85,159 @@ None. What I checked: `controls()` adds `halt=self.db.get('halt')` and nothing e
 - audit: control writes since restart are all stacked through `do_POST` (clear-halt, halt_cleared_at, three next_stake writes) — the user's actions, nothing from the engine.
 - controls page / `controls()` / `apply`: **cannot exercise from here** — every dashboard endpoint answers 401 without `DASHBOARD_PASSWORD`, which I will not use. Evidence is the user's own use: the clear at 19:32:58 (`apply` line 294) and the stake changes at 20:22–20:23 (`apply` line 270).
 - dashboard rows: cannot (same 401). Not inferred.
+
+## 12.8.8
+
+Deployed 2026-09-14 00:54:14 UTC on the AWS Mumbai box, `/home/ubuntu/polymarket_v12`, PID **93377**
+(was 85116), `venv/bin/python btc_model_v12_polymarket.py --live --mode pnl --capital 50`. Carries
+**12.8.5 + 12.8.6 + 12.8.8** from commit `72dca5f`. **Not 12.8.7** — its four attempt-loop hunks are
+reverted to 12.8.6's text at this commit and preserved in `learner/v12_2/held/12.8.7_attempt_loop.patch`;
+`RETRY_DELAY_S`, `if q: break`, `if not latest: continue` and the 75 ms sleep are absent from the
+deployed `poly_core.py`, and `AttemptLoopIsPaperParity` does not exist in either test module (grep: 0/0).
+Deploy window: master was off since 23:55:41 by the user's own click; **the deploy did not arm it**.
+
+### Row 1 — commit and hashes in the running process's cwd
+
+Commit `72dca5f`. `/proc/93377/cwd` = `/home/ubuntu/polymarket_v12`, started 00:54:14 UTC.
+`rm -rf __pycache__` ran between the file swap and the start (wrapper printed `pycache removed: True`).
+
+| file | box sha256[:16] | 72dca5f | |
+|---|---|---|---|
+| btc_model_v12_polymarket.py | 2799eecb6baaf9c0 | 2799eecb6baaf9c0 | OK |
+| poly_core.py | 5ae4e926ad655321 | 5ae4e926ad655321 | OK |
+| poly_dashboard.py | aafe0d8ad9c7ebcd | aafe0d8ad9c7ebcd | OK |
+| poly_lanes.py | 89c5f058fa9c4484 | 89c5f058fa9c4484 | OK |
+| poly_live.py | ea47eee28fe5b217 | ea47eee28fe5b217 | OK |
+| poly_feeds.py | 85128b1cbac0f737 | 85128b1cbac0f737 | OK |
+| controls_html.html | 6bbe96f76dc5b8bc | 6bbe96f76dc5b8bc | OK |
+| dashboard_html.html | b62bff16f72450a0 | b62bff16f72450a0 | OK |
+| data_html.html | fa485a443d1fbad4 | fa485a443d1fbad4 | OK |
+
+Every regenerated `__pycache__/*.cpython-312.pyc` header (source mtime + size) matches its source
+(poly_core, poly_dashboard, poly_feeds, poly_lanes, poly_live, btc_model_v10, btc_model_v10_runner).
+Tree diff vs the commit: the only file on the box that is not at `72dca5f` is `start_live.sh` (my
+relaunch helper, never on the branch). `V12_2_CHANGES.md` and `SHA256SUMS.txt` were also swapped, so
+the documentation drift noted under 12.8.4 is gone. Backup of the previous tree and an online sqlite
+backup: `/home/ubuntu/polymarket_v12_backup_20260914_005414/`.
+
+### Row 2 — all three suites, staged `72dca5f`, box venv, before the restart
+
+```
+test_polymarket   Ran 64 tests in 0.963s    OK
+test_lanes        Ran 21 tests in 0.545s    OK
+test_v122         Ran 157 tests in 26.228s  OK
+```
+242 total, matching Task 82a's expectation. `tempfile` databases throughout; the live journal was not
+opened.
+
+### Row 3 — the new tests against the previous build's files, shown failing
+
+Previous tree = a fresh `tar` of the running 12.8.4 cwd taken before the swap (`'build','12.8.4'`
+confirmed in its `poly_core.py`), `72dca5f`'s three test modules copied in, box venv:
+
+```
+test_v122.ArmingMasterIsAudited          Ran 7 tests   FAILED (failures=3, errors=1)
+  ERROR test_the_row_names_the_caller_not_the_journal
+  FAIL  test_arming_master_leaves_an_audit_row
+  FAIL  test_disarming_is_still_audited
+  FAIL  test_no_raw_meta_writes_are_left_in_the_dashboard
+test_v122.AmbientBookAgeIsSampled        Ran 5 tests   FAILED (failures=1, errors=4)
+  ERROR test_one_row_with_both_tokens_ages
+  ERROR test_a_token_with_no_book_yet_is_null_not_an_error
+  ERROR test_no_market_for_the_epoch_writes_nothing
+  ERROR test_it_cannot_raise_into_housekeeping
+  FAIL  test_housekeeping_calls_it
+test_polymarket.PnLConditionsNeverHalt   Ran 5 tests   FAILED (failures=4)
+  FAIL  test_both_conditions_true_and_the_engine_does_not_stop
+  FAIL  test_each_condition_is_reported_once_per_episode_with_its_number
+  FAIL  test_the_only_engine_halt_left_is_the_order_identity_stop
+  FAIL  test_the_report_is_per_process_episode_and_a_recovery_re_arms_it
+  (the display test passes on both, as expected)
+the three inverted tests                 Ran 3 tests   FAILED (failures=3)
+  FAIL  test_kill_rule_is_per_lane_not_blended
+  FAIL  test_clearing_a_halt_actually_restarts_trading
+  FAIL  test_what_the_rule_enforces_is_what_the_screen_shows
+```
+
+### Row 4 — state after restart (`meta` and `venue_state`, 00:55 UTC)
+
+| key | value |
+|---|---|
+| build | 12.8.8 |
+| lane | LIVE |
+| **master** | **false — untouched by the deploy, and not armed by me** |
+| halt | null |
+| ef_enabled / main_enabled / reversal_enabled | true / false / false |
+| next_stake | 3.0 |
+| stake_settings | mode fixed, fixed_stake 3.0, min 1.0, max 50.0 |
+| ev_settings | {"mode":"regime","pad_ticks":1,"slippage_mode":"band"} (not rewritten this deploy) |
+| halt_cleared_at | 1789327978.281314 (19:32:58, unchanged) |
+| venue cash / open_value / portfolio_value | 37.529 / 0.00 / 0.00 |
+| open positions | none |
+
+### Row 5 — behavioural effect observed in the live journal
+
+**12.8.6 — `AMBIENT_AGE`.** 11 rows in the first ~10 minutes, one per housekeeping tick (~6 s), e.g.
+```
+00:55:17 ep=1789347300 {"kind": "AMBIENT_AGE", "age_up_ms": 18.6, "age_dn_ms": 18.6}
+00:55:11 ep=1789347300 {"kind": "AMBIENT_AGE", "age_up_ms": 32.5, "age_dn_ms": 32.5}
+00:55:05 ep=1789347300 {"kind": "AMBIENT_AGE", "age_up_ms": 24.3, "age_dn_ms": 24.3}
+```
+First reading of the number Task 75 needs: ambient book age is tens of milliseconds, well under the
+88.0 ms filled / 174.8 ms rejected submit-time `age_ms`. Not enough rows to answer 75 yet; that is a
+later report, not this one.
+
+**12.8.8 — the PnL kill is out.** `KILL_CONDITION` rows: **0**, which is the correct result — the
+`kill_window()` since `halt_cleared_at` holds **13** results and every condition needs 20. `halt` is
+null. Verified directly against the deployed module on a copy of the journal (never the live file):
+`inspect.getsource(Journal.halt_check)` contains **0** occurrences of `set('halt'` and 2 of
+`KILL_CONDITION`; calling `halt_check()` on that copy left `halt` None and wrote no row. The only
+`set('halt'` left in the deployed `poly_core.py` is line 985, the order-identity stop
+("Order hash mismatch; reconcile before resuming"); `poly_dashboard.py`'s single occurrence is the
+operator's clear-halt endpoint setting it to None.
+
+**12.8.5 — arming audited.** No `control_write` row since the restart, and that is correct: safe-start
+writes `master=False` over a value that was already False, and `_audit` only records when `old != v`.
+The first row will be the user's next control action. **Cannot show a `master False→True` row yet** —
+nobody has armed master since the deploy, and I will not.
+
+### Row 6 — AWS's reading of `git diff 6100822 72dca5f -- learner/v12_2/` (stated before Row 1)
+
+**One objection, raised before the deploy and acted on:** the first commit Task 82 named (`24d28a7`)
+contained 12.8.7 — `git merge-base --is-ancestor 5dbb8fa 24d28a7` was true and `RETRY_DELAY_S` /
+`if q: break` / `if not latest: continue` / the 75 ms sleep were in its `poly_core.py`. I held the
+deploy and asked for a commit without it; `72dca5f` is that commit and I re-ran Rows 2, 3 and 6
+against it. Nothing was deployed from `24d28a7`.
+
+On the remainder, no objection. What I checked: `_audit` uses `extract_stack()[:-2]` so the recorded
+frame is the caller of `set`/`set_many`, which is what `test_the_row_names_the_caller_not_the_journal`
+pins; `set_many` keeps the single-transaction write and adds the audit the bare
+`INSERT OR REPLACE` bypassed; `halt_check` still computes SLIPPAGE / ALL / per-lane and writes one
+`KILL_CONDITION` per rule per episode with `_kill_reported` cleared when a condition recovers
+(`_kill_reported` initialised at `poly_core.py:358`, per process, so a restart re-arms the report);
+`_sample_ambient_age` reads `books.books[token]['arrival']` directly rather than through `quote()`,
+so the 2 s staleness filter cannot hide the tail, and swallows every exception; `apply` calls
+`set_many` in both branches. **One note, already accepted by V and deferred:** `set_many` audits
+before the transaction commits, so a failed transaction would leave an audit row for a write that did
+not land.
+
+### Row 7 — downstream rechecked after restart
+
+- **reconcile / grade / release:** 48 results, 0 filled orders without a result, 6 candle rows written
+  since the restart. No orders or signals since the restart — correct, master is off.
+- **decide path:** 83 decide rows and 58 `decide` diagnostics in the first ten minutes; the engine is
+  evaluating every candle with master off, as designed. Also present: 223 `feed_counters`, 16
+  "Waiting for fresh UP and DOWN books" (startup), 4 "outside decision window".
+- **`rolling()` display unchanged:** called on a journal copy with the deployed module —
+  `keys = ['all','by_kind','kill','mixed_epochs']`, and
+  `kill = {'unit_return_sum': None, 'unit_return_limit': -3.0, 'results_until_armed': 7,
+  'armed': False, 'by_kind': {'EF': {'n': 13, ...}}}`. The screen still shows the rule; the engine no
+  longer acts on it.
+- **audit:** zero `control_write` rows since the restart (see Row 5). Every earlier row is stacked
+  through `do_POST`.
+- **dashboard pages:** **cannot check** — `/`, `/controls` and `/api/state` all answer 401 without
+  `DASHBOARD_PASSWORD`, which I will not use. The HTTP server is up and answering (401 is a served
+  response, and the log line `Polymarket v12.1 LIVE (master OFF) http://0.0.0.0:8787` is from this
+  process).
+- **engine.log:** the only tracebacks are `ConnectionResetError` on the HTTP socket, all written
+  before the restart line; nothing since.
