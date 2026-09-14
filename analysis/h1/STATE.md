@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-14 01:10 UTC. Update this file at the end of every check.
+Last updated: 2026-09-14 01:15 UTC. Update this file at the end of every check.
 
 ## 09-14 01:10 — my own 2-hourly trigger prompt REWRITTEN; it carried a retracted instruction
 The cron prompt still told future runs to "grade on candles.actual" — the instruction V retracted an
@@ -13,6 +13,13 @@ worthless" lesson with its 09-12 proof, and "paper fills at the quoted ask are u
 - **The user's usage-saver window ("every 2 hours till sundays night") has EXPIRED.** Cadence kept at
   2-hourly anyway: it costs little and V pings this session directly for real work. If the user wants
   the 30-minute cadence back they will say so.
+
+## 09-14 01:15 — USER RULE (via V): cross-session messages <= ~15 lines. My R-1/R-2 messages broke it.
+*"tell all model to not write big messages into chats, it's burning a lot of tokens."* Added to repo
+`CLAUDE.md` and to my 2-hourly trigger prompt. **This is a correction of my own behaviour:** the R-1 and
+R-2 messages I fired at V were ~40 lines each, and V merges the branch anyway — so the long version paid
+twice for the same words. From now: verdict, numbers, file path; detail stays in `analysis/h1/`.
+`learner/REQUEST.md` is V's file, so V annotates that one, not me.
 
 ## Task R-2 DONE 09-14 01:05 — the grid on the v10 777 set. `analysis/h1/task_r2_v10_polymarket_regime_grid.md`
 V accepted R-1 in full and retracted the `candles.actual` instruction (REMAKE_PLAN §2a); V shipped the
