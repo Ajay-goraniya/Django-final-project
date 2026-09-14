@@ -3336,3 +3336,15 @@ box venv) for 10 minutes BESIDE the engine, then line its per-second `maxgap_ms`
 standalone see (max gap, max lag)? If the probe stays < 200 ms while the engine reports stale, the stall is inside the
 engine process - then say what else the loop was doing at those seconds (reconcile HTTP, sqlite commits, housekeeping,
 GC) from the log/diagnostics timestamps. <=15 lines; tables to a file path.
+
+## Task 88 - USER SAID YES (22:4x): restart the live engine with `--quote-age-ms 2000`. No code change.
+
+Grid (both arms measured, NOTES 22:2x): decision-window seconds blocked by the bar - 0.75 s 16.2% (Mumbai) / 14.6%
+(Ohio); 2 s 1.4% / 0.9%. 34.7% of decide rows are "Waiting"; the bar is the CLI default nobody set. Code caps at 2000.
+Do: same argv as now plus `--quote-age-ms 2000`, same env, same journal (NOT a reset), `rm -rf __pycache__` not needed
+(no source change). Master goes off at safe-start - do not arm; tell me, the user re-arms. Record in `DEPLOYED.md` as
+`## 12.8.9 + quote-age 2000` with: cmdline from /proc, start time, build, master/halt/stake, and the before numbers
+(waiting % of decide rows 34.7%, fill 43.4% n=53, paid-ask on the 23 fills).
+After-measure, hourly: waiting rows as % of decide rows since the restart (expect ~2-5%), fires per hour, fill rate,
+and **paid - pre_submit_quote on every new fill vs the 23 before** - if it widens, say so and I roll the flag back.
+<=10 lines to me.
