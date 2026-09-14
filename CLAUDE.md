@@ -56,6 +56,8 @@ The two channels that work:
   the verdict, no narrative, no restating what the other side already knows. Anything longer than ~15 lines
   goes into a file on the branch and the message says the path. Verbatim-forwarding (DEPLOYED.md rows, scripts)
   goes straight to the file, not into the chat first. Reports state the token budget in one line when known.
+  **STRICT (user, 01:3x): everyone follows this, always. The only exception is a major matter that must be
+  delivered right now (a live-money fault, a wrong deploy, a stop condition) - and even then, the numbers first.**
 
 ## Session V is the head session, and that raises the bar on V
 
