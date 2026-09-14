@@ -68,3 +68,14 @@ Output: `analysis/h1/task_r2_v10_polymarket_regime_grid.md`. Measurement only; n
 
 Cross-session messages <= ~15 lines: the verdict, the numbers, the file path. The full write-up lives in
 `analysis/h1/`, never in the message. Applies to R-2 and everything after.
+
+## Task R-3 (09-14 13:4x UTC) — PAY-UP GRID on the real rejects. User: "what if we use our predict slippage? filled 100%... even 45/90$ is good"
+
+Question: for every live REJECTED submission (archive era 37 + reset era ~34+; AWS has the rows with `pre_submit_quote`,
+signed cap, ts; ask AWS by Routine `session_0128m2knBcqiTyAVoh7h994A` for a CSV of reject rows, no secrets), what
+did the ask do in the next 0.35 s / 1 s / 2 s (`live_backup/polybook.sqlite3.gz`, `book1s`/`poly1s` 1-Hz logs, whichever
+covers the timestamps — state which), and what is the per-$1 outcome (Polymarket oracle, `venues.outcome`) had we
+paid ask+1, +2, +3, +5 ticks. WHOLE GRID, every pad, fills-that-would-have-happened vs not, n per cell, both halves,
+`verify.py`. Also the same grid on the FILLED rows (what paying more would have cost on trades we already got).
+Report the grid, no recommendation. Under 60 per cell = insufficient. Output `analysis/h1/task_r3_payup_grid.md`.
+<= 15 lines in the message; the doc carries the rest.
