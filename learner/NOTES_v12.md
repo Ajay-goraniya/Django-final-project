@@ -4734,6 +4734,19 @@ The venue sends only on change; an unchanged book is not stale. Live runs `--quo
 path also reads `ev_settings.quote_age_ms`, both capped at 2000 in code); paper used 5 s and matched live decisions 97%.
 Proposal to the user: quote age 750 -> 2000 ms. eu-central-2 for the book: not supported by this data.
 
+## 23:1x UTC (Mon 09-14) - Zurich Z-1 in: wire 107 ms closer; and my quote-age grid was built on a POLLUTED metric. Retracted.
+
+Zurich (t3.xlarge, CH/ZH, geoblock not blocked, cf-ray ZRH): warm GET clob/time p50 29.9 ms vs Mumbai 137.0; edge
+0.8 ms from both, TLS 5.6 vs 5.4 - the whole 107 ms is edge->origin->edge. Order-URL POST proxy (401 from origin)
+p50 32.9 ms. WS maxlag p50 32 / p90 84 / max 1726 - best of three regions (Mumbai 89/250/2074, Ohio 60/173/1761).
+0 reconnects. Repo cloned read-only, cannot push; file committed by V verbatim: `analysis/zurich/task_z1_wire.md`.
+**Retraction (mine):** `ws_gap_probe` takes the max gap across ALL subscribed tokens, so its `>750 ms` rows are set
+by the illiquid NEXT-candle book (~2.25 s cadence), not the wire. Per-token on Zurich: ACTIVE tokens p50 1 ms, p90
+16 ms, **0.0% > 750 ms**. So the 22:2x "quiet seconds vs the 0.75 s bar" grid and the 2 s decision gate rest on a
+bad measurement. The split stays (exec 0.75 s, decide 2 s) as harmless until measured, but the cause of Mumbai's
+34.7% waiting rows is NOT settled. Next: in-engine instrumentation (quote_block by token role + age histogram at
+the quote() call), a build, not a threshold. 22:33 restart aftermath: 4/4 rejects at exec 2 s -> exec back to 750.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
