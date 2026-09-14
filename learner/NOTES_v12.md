@@ -4688,6 +4688,15 @@ compare per-$1 only, and only from 16:3x on for $ totals. Both twins now `mode=f
 live; `restart_all.sh` seeds it. Container restart ~16:0x killed all 14 processes again; relaunched 16:2x.
 Live 16:26 (AWS): 12.8.9 since arm 21 subs 11F/10R (52.4%, n=21 insufficient); day 40 res 22W/18L +27.34, cash 60.39.
 
+## 20:3x UTC (Mon 09-14) - 12.8.9 at n=48: fill 43.8%, baseline. Retries run; 19 of 23 retry-deaths are SIGNAL_CHANGED, 0 EV_CHANGED.
+
+AWS first reported the retry branch dead (exception path), then retracted on the stored rows: all 27 rejects are
+status=400 int, request_reached true - the dict branch, whitelist matched, loop ran. Attempt histogram {1:44, 2:4}.
+`candle_rearmed` since arm: 24 rows - 19 SIGNAL_CHANGED after a reject, 4 DEADLINE after a reject, 1 SIGNAL_CHANGED
+no-reject, 0 EV_CHANGED. So the re-check that kills retries is the MODEL withdrawing ~0.4 s after the reject, not EV
+or depth; 9 of those candles re-fired seconds later and filled. Next measurement, not a change: does the withdrawn
+side still win (n=19, insufficient; accumulates). Nothing shipped. Day 20:23: 50 res 28W/22L +33.99, cash 65.98.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
