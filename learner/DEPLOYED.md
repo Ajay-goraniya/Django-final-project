@@ -241,3 +241,18 @@ not land.
   process).
 - **engine.log:** the only tracebacks are `ConnectionResetError` on the HTTP socket, all written
   before the restart line; nothing since.
+
+## 12.8.9
+
+> AWS-authored summary (cross-session message 11:3x UTC 09-14), committed unedited by V. The full seven-row
+> write-up is on the box at the AWS session's scratchpad `DEPLOYED_12.8.9.md`; not pasted into chat (token rule).
+
+12.8.9 LIVE from 7457816. PID 98942, started 11:31:56 UTC. MASTER IS OFF — safe-start forced it, I did not re-arm; the user must click it or the fill-rate measurement cannot start.
+Row 6 (read first, no objection): the diff is exactly RETRY_DELAY_S=0.075, `if q: break`, `if not latest: continue`, the 75 ms sleep, plus the build string. order_plan(latest) re-check still releases EV_CHANGED. Note: signed cap comes from q, so a book that moves up between sign and submit now gives a cheap FAK reject instead of a wait — intended, matches paper.
+Row 1: all nine hashes = 7457816 (poly_core 26800c7ec67b7213, test_polymarket 8869082f51571921 as you gave). __pycache__ removed pre-start, 0 pyc header mismatches. Backup /home/ubuntu/polymarket_v12_backup_20260914_113125/.
+Row 2: 68 + 21 + 157 = 246, all OK.
+Row 3 vs the running 12.8.8 tree: AttemptLoopIsPaperParity Ran 4, FAILED (failures=4) — the four you named.
+Row 4: build 12.8.9, master false, halt null, ef true, main/rev false, stake 3.0, ev {regime, pad 1, band}; cash 54.09, open 0.00, no position.
+Row 5: attempt-loop effect NOT observable yet — no submissions since master went off. AMBIENT_AGE flowing (7 rows/2 min), KILL_CONDITION still 0.
+Row 7: 29 results and 67 orders (29F/37R/1U) carried across; decide path alive; one audit row since restart — safe-start master true→false, stacked to btc_model:52 __init__.
+Final 12.8.8 numbers for the comparison baseline: 29 results, 16W/13L, +19.77, unit +6.900; fill rate 29/66 = 43.9% on that build.
