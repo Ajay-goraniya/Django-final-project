@@ -23,7 +23,29 @@ twice for the same words. From now: verdict, numbers, file path; detail stays in
 **01:20 — V made it STRICT** (everyone, always; sole exception a major matter needed now, numbers first)
 and wrote it into CLAUDE.md. I removed my own near-duplicate block there — V's is authoritative.
 
-## Task R-3 IN PROGRESS 09-14 14:10, BLOCKED ON DATA — pay-up grid on the real live rejects
+## Task R-3 DONE 09-14 14:5x — pay-up grid. `analysis/h1/task_r3_payup_grid.md`
+Data landed: AWS sent the ledger in 3 chat parts, assembled and committed byte-exact as
+`analysis/h1/r3_submissions.csv` (md5 970d05b7…, 190 lines, 17587 B, CRLF as sent). 189 rows.
+- **The CSV has no venue column, so I established the venue from data before grading anything.**
+  `pre_submit_quote` vs polybook ask: median +0.000, MAD 0.010; vs book1s (Predict.fun): median
+  −0.100, MAD 0.100. Same split on the 5-s `venues.q` poly_* / pred_* columns. Lag scan peaks at
+  lag 0 on polybook only. **They are Polymarket orders → `venues.outcome`, 7% fee.**
+  Provenance 0/868 vs the poly lanes' own recorded `actual`. This corrected my own earlier note
+  below that the reject rows had to be Predict.fun because `tokyo_orders.json` is.
+- **Table 1 (the selection test, asked first):** FILLED n=78 win 48.7% **+0.038**/$1; REJECTED
+  n=102 win 55.9% **+0.181**. Gap +0.143 — rejects looked BETTER. **But halves flip
+  (+0.408 / −0.046) → verify.py FAILs → NOT A FINDING.** Inconclusive both directions. It does
+  not license paying up.
+- Ask move after submission: **+1.0c median at +1 s, +1.5c at +2 s, against the taker, 54% of
+  rows**. +0.35 s is NOT resolvable — both loggers are 1 Hz; said so rather than interpolating.
+- Pad grid: fill model validated (65/67 fills had ask ≤ cap). **56 of 93 rejects with a book had
+  ask ≤ cap already — the cap was not what rejected them.** Only 37 are cap-binding, so every pad
+  cell is n=4–16 → **INSUFFICIENT, whole grid printed, no cell read.**
+- **The decider, and it needs no grid:** the filled book earns **+0.004/$1** at the price actually
+  paid; **one tick of pad costs ~0.021/$1**. The margin is 5× smaller than the cheapest pad.
+- Re-run when cap-binding rejects pass 60.
+
+## Task R-3 ORIGINAL BRIEF (kept for the record) — pay-up grid on the real live rejects
 V's task (learner/REQUEST.md 13:4x). Deliverable `analysis/h1/task_r3_payup_grid.md`. Push verified.
 - **The reject rows are NOT on the branch.** `v12_poly_lane` and `v12_poly_weekend` both have
   `attempts` = 0 rows and every trade `PAPER_FILLED`; `tokyo_orders.json` is Predict.fun, not
