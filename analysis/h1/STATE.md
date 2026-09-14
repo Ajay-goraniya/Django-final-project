@@ -23,6 +23,28 @@ twice for the same words. From now: verdict, numbers, file path; detail stays in
 **01:20 — V made it STRICT** (everyone, always; sole exception a major matter needed now, numbers first)
 and wrote it into CLAUDE.md. I removed my own near-duplicate block there — V's is authoritative.
 
+## Task 25 DONE 09-14 15:1x — the v12 decision path is verified end to end. `analysis/h1/task25_decision_audit.md`
+V's ask (09-11 18:20), the audit my own forward ledger also depends on. Ran the ENGINE'S OWN
+`learner/v12_checkpoint/btc_model_v10.py` + its own `model_v10.json` (md5 b5088f15…), never a
+reconstruction.
+- **A. Model application VERIFIED.** Recorded `feat` → `Model.p_up` reproduces the recorded `p` to
+  max 6.6e-05 (the lane stores 4 dp, so that IS exact) and the side **9,806/9,806** across 420
+  trades + 9,386 decisions.
+- **B. Feature construction VERIFIED on the price block.** Rebuilt from Binance 1 s klines through
+  the engine's own `FeatureState`, all 420 trades, 0 skipped: median |diff| ~0.001 bps, p90 ~1 bps.
+  Residual is 1 s grid vs tick tape. `sec_left`/`hod_*` reproduce to floating point.
+- **B2. Venue block NOT AUDITABLE at 1 Hz** — my polybook ask vs the engine's `_ask_up` differs by a
+  median of **exactly one tick**, and R-3 §5 measured this book moving 1.0c/s. That is the
+  instrument's floor; reported as neither pass nor fail. Same conclusion V got from `poly1s`,
+  reached independently. Eleven perp/depth/trade-tape features unverified and listed as such.
+- **C. Decision arithmetic VERIFIED.** EV reproduces to 1.7e-04 via the engine's own `Model.cost()`;
+  `quote_ask` == the feat vector's own ask **420/420**; `sec` == `int(300-sec_left)` **420/420**.
+- **My own error, caught before reporting:** first pass said 206/420 `sec` mismatches. The engine
+  floors; I compared against `round()`. Exactly the manufactured discrepancy this project keeps
+  paying for — recorded in the doc rather than quietly fixed.
+- **Open, and it is instrumentation not suspicion:** closing the venue half needs a >1 Hz book
+  capture on the AWS box. Nothing on the branch can do it.
+
 ## Task R-3 DONE 09-14 14:5x — pay-up grid. `analysis/h1/task_r3_payup_grid.md`
 Data landed: AWS sent the ledger in 3 chat parts, assembled and committed byte-exact as
 `analysis/h1/r3_submissions.csv` (md5 970d05b7…, 190 lines, 17587 B, CRLF as sent). 189 rows.
