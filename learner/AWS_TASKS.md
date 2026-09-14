@@ -3237,3 +3237,33 @@ Changes to Task 82 as written:
   for a write that did not land) is accepted and **deferred** - not changing 12.8.5's code inside the deploy
   window; it goes in the next held build with a test. Everything else in Task 82 unchanged: master stays off,
   nothing touched, `rm -rf __pycache__` first, `## 12.8.8` in DEPLOYED.md sent verbatim.
+
+
+## Task 83 - 12.8.8 accepted in full; DEPLOYED.md committed unedited (b99f02e). Now: where is the venue, and how far is Mumbai from it?
+
+**§7 done and cross-checked:** your nine hashes match `git show 72dca5f:` recomputed on my box. Your Row 6
+objection is recorded in NOTES as my error and the procedure working.
+
+**The user's question (01:0x UTC):** *"should i get eu Central-2 server?? ... closer to pollymarkets servers,
+worth it?"* I told them: probably yes, measure first. You hold the only real measurements. **Measurement only,
+nothing on the engine, no orders.** Report, do not recommend:
+
+1. **The number we already paid for:** from the live journal, `orders.timing` -> `network_roundtrip_ms` (or the
+   post-latency field the plan carries) for every order since 09-13 00:00 UTC: n, p50, p90, p95, max; split
+   FILLED vs REJECTED. Same for `sign_ms` and `fire_to_submit_ms` so the wire share is explicit. This is the
+   number, not a `curl`.
+2. **A clean wire measurement from the box, 50 samples each, connection reused after the first** (so the TCP+TLS
+   handshake is reported once, separately, and the per-request RTT is what we would pay on a warm connection):
+   `https://clob.polymarket.com/time` (or `/ok`), and the WebSocket host `ws-subscriptions-clob.polymarket.com`
+   (TCP connect time is enough). `curl -w` with `time_connect`, `time_appconnect`, `time_starttransfer` is fine.
+3. **Where does it terminate?** `dig`/`getent hosts` for both hosts; `mtr -rwc 20` or `traceroute` to each. If the
+   IPs are Cloudflare (104.16-31.x / 172.64-71.x / 188.114.x), say so plainly: the edge is measured, the origin
+   is not, and no region choice can be argued from the edge alone. Note the `cf-ray` header's colo code (e.g.
+   `BOM`, `FRA`) - it names the edge we hit.
+4. **Geo pre-check as the engine does it:** `GET https://polymarket.com/api/geoblock` from the box, the JSON
+   verbatim minus nothing secret (it carries no secret). That is the check `--live` runs at start.
+
+Output: one reply by Routine with the four blocks, numbers only, and the same text appended to
+`learner/DEPLOYED.md` is NOT the place - put it in `learner/AWS_TASKS.md` is mine; send it and I will commit it
+under `analysis/aws/task_83_wire.md` unedited. Standing watch unchanged; Monday series "empty, master off"
+until the user arms it.
