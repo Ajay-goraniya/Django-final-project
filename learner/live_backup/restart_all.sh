@@ -24,6 +24,6 @@ alive() { ps -eo args | grep -cE "^python3 .*$1" ; }
 # forces master off, so re-seed master/next_stake after launch - the twins are paper, capital 50, stake 3.
 T=/tmp/claude-0/-home-user-Django-final-project/6e3b6e11-d14f-50d1-8719-c1998d0e6b9a/scratchpad/twins
 for L in ctrl:8791 cand:8792; do d=${L%%:*}; p=${L##*:}
-  [ "$(alive "btc_model_v12_polymarket.py --port $p")" -eq 0 ] && { (cd $T/$d && setsid nohup python3 btc_model_v12_polymarket.py --port $p --db twin.sqlite3 --capital 50 >> twin.log 2>&1 < /dev/null &); sleep 12; python3 -c "import sqlite3;c=sqlite3.connect('$T/$d/twin.sqlite3',timeout=10);c.execute(\"INSERT OR REPLACE INTO meta VALUES('master','true')\");c.execute(\"INSERT OR REPLACE INTO meta VALUES('next_stake','3.0')\");c.commit()"; echo "launched twin $d"; }
+  [ "$(alive "btc_model_v12_polymarket.py --port $p")" -eq 0 ] && { (cd $T/$d && setsid nohup python3 btc_model_v12_polymarket.py --port $p --db twin.sqlite3 --capital 50 >> twin.log 2>&1 < /dev/null &); sleep 12; python3 -c "import sqlite3;c=sqlite3.connect('$T/$d/twin.sqlite3',timeout=10);c.execute(\"INSERT OR REPLACE INTO meta VALUES('master','true')\");c.execute(\"INSERT OR REPLACE INTO meta VALUES('next_stake','3.0')\");c.execute(\"INSERT OR REPLACE INTO meta VALUES('stake_settings','{\\\"mode\\\": \\\"fixed\\\", \\\"fixed_stake\\\": 3.0, \\\"percent\\\": 10.0, \\\"current_stake\\\": 3.0, \\\"win_trigger\\\": 3, \\\"loss_trigger\\\": 2, \\\"min_stake\\\": 1.0, \\\"max_stake\\\": 50.0}')\");c.commit()"; echo "launched twin $d"; }
 done
 exit 0

@@ -4680,6 +4680,14 @@ paid price**; every pad tick on the filled set goes negative (+1: -0.017, +2: -0
 ask<=cap already - pad would not have filled them. Ask +1 s after a reject +0.020 vs +0.000 on fills (p=0.019).
 Verdict recorded: pad stays; 12.8.9 measured on n>=60. Live 14:43: since arm 14 subs 5F/9R; day 34 res 19W +21.83.
 
+## 16:3x UTC (Mon 09-14) - twins were on the LADDER stake, not fixed $3. Fixed now. Their PnL to date is ladder-inflated.
+
+Fresh-DB default is `stake_settings.mode=ladder`; my seed set only `next_stake=3.0`, and the ladder rewrote it on
+wins (ctrl at 16, cand at 12 by 16:2x). So ctrl +124.65 / cand +84.28 are compounding-stake numbers, not $3 flat -
+compare per-$1 only, and only from 16:3x on for $ totals. Both twins now `mode=fixed, fixed_stake 3.0`, same as
+live; `restart_all.sh` seeds it. Container restart ~16:0x killed all 14 processes again; relaunched 16:2x.
+Live 16:26 (AWS): 12.8.9 since arm 21 subs 11F/10R (52.4%, n=21 insufficient); day 40 res 22W/18L +27.34, cash 60.39.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
