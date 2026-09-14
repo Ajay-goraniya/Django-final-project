@@ -4659,6 +4659,14 @@ measure the venue-reject side, which is 15 of 28 live submissions. Recorded so t
 Container restart 02:2x killed all 14 local processes; relaunched, `restart_all.sh` now covers the twins. AWS
 has no scheduler: hourly comes on the 15-min poll nearest the hour.
 
+## 10:2x UTC (Mon 09-14) - live 09:22: 24 res 13W +13.75; 58 subs, 34 REJECTED, 5 retries, 0 DEADLINE. Rejects are the whole gap.
+
+AWS: zero DEADLINEs in 58 live submissions on 12.8.8, so the deadline half of the 12.8.7 case is not exercised
+live; the reject half is everything - and today's loop retries a reject only when the book ticks (5 retries for
+34 rejects). Twins cannot test it (paper never rejects; ctrl vs cand PnL level, n~40). Put to the user 09:3x:
+ship 12.8.7 as 12.8.9 under §7 and measure fill rate on the next 60 live submissions against 41-44%. Awaiting
+their yes/no; nothing shipped.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
