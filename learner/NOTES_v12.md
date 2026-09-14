@@ -4651,6 +4651,14 @@ Fri (+0.000, n=170). Weekday +0.086 n=511 passes - R-1's weekday fail was small-
 not market state. "Live when market is good": no cell to switch on. Step 5(b) not designed. Next evidence: the
 09-19 weekend, more certifiable rows. Short-messages rule STRICT, sent to AWS, H1, V2 (id recorded).
 
+## 07:2x UTC (Mon 09-14) - live since reset: 13 res 9W +16.49 (06:23), fill 13/28 = 46% - the reject gap is unchanged on 12.8.8. Twins cannot see it.
+
+The paper broker in both twins has rejected nothing (ctrl 16/16, cand 21/21 filled), so the ctrl-vs-cand A/B
+measures only the DEADLINE->fill side of 12.8.7 (cand fires more candles) and its decision quality; it cannot
+measure the venue-reject side, which is 15 of 28 live submissions. Recorded so the twin is not over-read.
+Container restart 02:2x killed all 14 local processes; relaunched, `restart_all.sh` now covers the twins. AWS
+has no scheduler: hourly comes on the 15-min poll nearest the hour.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
