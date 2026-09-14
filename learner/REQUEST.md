@@ -79,3 +79,7 @@ paid ask+1, +2, +3, +5 ticks. WHOLE GRID, every pad, fills-that-would-have-happe
 `verify.py`. Also the same grid on the FILLED rows (what paying more would have cost on trades we already got).
 Report the grid, no recommendation. Under 60 per cell = insufficient. Output `analysis/h1/task_r3_payup_grid.md`.
 <= 15 lines in the message; the doc carries the rest.
+
+**R-3 addendum (user, 14:1x):** report explicitly, first table: win rate and per-$1 of the REJECTED set vs the FILLED
+set (as decided, at paper price) — if the rejected ones lose more, paying up loses money; that is the decision. Then
+the pad grid. User's intent if the answer is good: raise the pad on the FIRST order so it fills without a retry.
