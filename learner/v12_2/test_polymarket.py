@@ -174,9 +174,12 @@ class Tests(unittest.TestCase):
         for i in range(20): settle(3000+i,'EF',-1.0)      # EF sum = -4.00
         settle(3100,'MAIN',+25.0)                          # one MAIN winner
         self.db.halt_check()
-        h=self.db.get('halt')
-        self.assertTrue(h,'a lane past its limit must halt even when the blend is fine')
-        self.assertIn('EF',h)
+        # 12.8.8: the lane's own window is still what is measured - but it is
+        # REPORTED, not acted on. User: "kill ?? bro we don't need that".
+        self.assertIsNone(self.db.get('halt'),'a PnL condition never halts the engine')
+        rows=[json.loads(r[0]) for r in self.db.sql("SELECT detail FROM diagnostics WHERE detail LIKE '%KILL_CONDITION%'")]
+        self.assertEqual([r['rule'] for r in rows],['EF'],"EF's own window tripped; the blend did not")
+        self.assertFalse(rows[0]['acted']); self.assertAlmostEqual(rows[0]['unit_sum'],-4.0)
 
     def test_rolling_reports_the_same_per_lane_rule_halt_check_enforces(self):
         """What the rule enforces is what the screen must show.
@@ -216,6 +219,8 @@ class Tests(unittest.TestCase):
                         (ep,'UP',10.,+5.))
         self.db.halt_check()
         self.assertIsNone(self.db.get('halt'))
+        self.assertEqual(self.db.sql("SELECT count(*) FROM diagnostics WHERE detail LIKE '%KILL_CONDITION%'")[0][0],0,
+                         'a healthy lane reports no condition')
 
     def test_a_skip_is_explained_in_numbers_not_just_named(self):
         """User: "i just don't see better with my eyes that's why i was concerned".
@@ -257,19 +262,27 @@ class Tests(unittest.TestCase):
             self.db.fill(f'o{ep}',ep,f't{ep}',f,'paper')
             self.db.sql('INSERT INTO results(epoch,actual,payout,pnl,ts) VALUES(?,?,?,?,?)',
                         (ep,'UP',0.,-5.,ts))
+        # 12.8.8: nothing halts any more, but the fresh-window semantics still
+        # govern WHEN the condition is reported: one row per episode, and a
+        # clear (halt_cleared_at) starts a new episode.
+        # One lane only, so the blended (ALL) and the per-lane (EF) conditions
+        # trip together: two rows per episode.
+        def cond(): return self.db.sql("SELECT count(*) FROM diagnostics WHERE detail LIKE '%KILL_CONDITION%'")[0][0]
         for i in range(20): loss(1000+i,100.0+i)
-        self.db.halt_check()
-        self.assertTrue(self.db.get('halt'))
+        self.db.halt_check(); self.db.halt_check()
+        self.assertIsNone(self.db.get('halt'),'a PnL condition never halts')
+        self.assertEqual(cond(),2,'each condition reported once, not once per pass')
 
-        self.db.set('halt',None); self.db.set('halt_cleared_at',500.0)
+        self.db.set('halt_cleared_at',500.0)
         self.db.halt_check()
-        self.assertIsNone(self.db.get('halt'),'the clear must survive the next check')
+        self.assertEqual(cond(),2,'the window is empty after the clear: nothing new to report')
 
         for i in range(19): loss(2000+i,600.0+i)
         self.db.halt_check()
-        self.assertIsNone(self.db.get('halt'),'19 fresh results must not re-arm it')
+        self.assertEqual(cond(),2,'19 fresh results are not a full window')
         loss(2100,700.0); self.db.halt_check()
-        self.assertTrue(self.db.get('halt'),'20 fresh bad results must halt it again')
+        self.assertEqual(cond(),4,'20 fresh bad results are a new episode, reported again')
+        self.assertIsNone(self.db.get('halt'))
 
     def test_what_the_rule_enforces_is_what_the_screen_shows(self):
         """Three times on 09-13 the acting code and the displayed code drifted.
@@ -291,14 +304,18 @@ class Tests(unittest.TestCase):
                         (ep,'UP',0.,-5.,ts))
         for i in range(20): loss(1000+i,100.0+i)
         self.db.halt_check()
-        self.assertTrue(self.db.get('halt'))
+        # 12.8.8: "armed" on the screen means the condition is met and REPORTED;
+        # the engine no longer acts on it, so halt stays None throughout.
+        self.assertIsNone(self.db.get('halt'))
         k=self.db.rolling()['kill']
-        self.assertTrue(k['by_kind']['EF']['armed'],'armed while it really is armed')
+        self.assertTrue(k['by_kind']['EF']['armed'],'the screen shows the condition the report is about')
+        self.assertEqual(sorted(json.loads(r[0])['rule'] for r in self.db.sql("SELECT detail FROM diagnostics WHERE detail LIKE '%KILL_CONDITION%'")),
+                         ['ALL','EF'],'one lane: the blend and the lane trip together, one row each')
 
-        # The clear resets enforcement. The display must reset with it.
-        self.db.set('halt',None); self.db.set('halt_cleared_at',500.0)
+        # The clear resets the window. The display must reset with it.
+        self.db.set('halt_cleared_at',500.0)
         self.db.halt_check()
-        self.assertIsNone(self.db.get('halt'),'enforcement reset')
+        self.assertIsNone(self.db.get('halt'))
         k=self.db.rolling()['kill']
         self.assertEqual(k['by_kind'],{},'no lane has results in the fresh window')
         self.assertIsNone(k['unit_return_sum'],'and no stale sum is displayed')
@@ -428,7 +445,7 @@ class Tests(unittest.TestCase):
     def test_v120_database_migrates_additively(self):
         self.db.reserve(123,decision(),'up','condition')
         self.db.set('build','12.0'); self.db.c.close(); self.db=Journal(self.path,'PAPER','abc')
-        self.assertEqual(self.db.get('build'),'12.8.7')
+        self.assertEqual(self.db.get('build'),'12.8.8')
         self.assertEqual(self.db.sql('SELECT count(*) FROM signals WHERE epoch=123')[0][0],1)
         cols={r[1] for r in self.db.c.execute('PRAGMA table_info(orders)')}
         self.assertTrue({'error_json','timing_json','request_reached','reconcile_count','venue_live'}<=cols)
@@ -622,15 +639,17 @@ class DashboardTests(unittest.TestCase):
 if __name__=='__main__':unittest.main(verbosity=2)
 
 
-class HaltKeepsItsFirstReason(unittest.TestCase):
-    """AWS, 09-13 22:2x: `halt` alternated between two strings ~1.3x/s.
+class PnLConditionsNeverHalt(unittest.TestCase):
+    """12.8.8. User, 09-13 23:5x: "kill ?? bro we don't need that, what i said was
+    you will turn off master when it will run out of money, it doesn't mean you
+    write a code block for that in model".
 
-    halt_check wrote every reason whose condition held, every reconcile pass.
-    With the blended window AND EF's own window both below -3, that is two
-    different strings written in turn, each swap an audited "change": 2,035 of
-    the 2,060 audit rows on 09-13 were this, burying the 25 real ones.
-    Harmless to trading - halt stayed set - but the audit exists to answer
-    "who changed this", and it could not.
+    The -3.00 rule was the operator's by-hand rule, and it had been written into
+    halt_check as a coded stop (since 12.4.x) - the same mistake 12.8.3 fixed for
+    the low-balance guard. The conditions are still measured and written to
+    diagnostics as KILL_CONDITION rows, once per episode, so the operator can see
+    them; the engine never sets `halt` on any of them. The one engine-set halt
+    that remains is the order-identity mismatch in Executor.fire.
     """
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory()
@@ -646,25 +665,58 @@ class HaltKeepsItsFirstReason(unittest.TestCase):
 
     def tearDown(self): self.db.c.close(); self.temp.cleanup()
 
+    def rows(self):
+        return [json.loads(r[0]) for r in self.db.sql("SELECT detail FROM diagnostics WHERE detail LIKE '%KILL_CONDITION%'")]
+
     def halt_writes(self):
         return [json.loads(r[0]) for r in self.db.sql("SELECT detail FROM diagnostics WHERE detail LIKE '%control_write%'")
                 if json.loads(r[0]).get('key')=='halt']
 
-    def test_fifty_passes_write_the_halt_once(self):
+    def test_both_conditions_true_and_the_engine_does_not_stop(self):
         for _ in range(50): self.db.halt_check()
-        self.assertTrue(self.db.get('halt'))
-        self.assertEqual(len(self.halt_writes()),1,'one halt, one audit row - not one per pass')
+        self.assertIsNone(self.db.get('halt'))
+        self.assertEqual(self.halt_writes(),[],'halt is not written by a PnL rule, not even once')
 
-    def test_the_reason_recorded_is_the_first_one_and_it_sticks(self):
-        self.db.halt_check(); first=self.db.get('halt')
-        for _ in range(20): self.db.halt_check()
-        self.assertEqual(self.db.get('halt'),first,'a set halt must not be overwritten by a later reason')
+    def test_each_condition_is_reported_once_per_episode_with_its_number(self):
+        for _ in range(50): self.db.halt_check()
+        rows=self.rows()
+        self.assertEqual(sorted(r['rule'] for r in rows),['ALL','EF'],'blended and per-lane both tripped, each reported once')
+        for r in rows:
+            self.assertFalse(r['acted']); self.assertEqual(r['n'],20)
+            self.assertAlmostEqual(r['unit_sum'],-4.0); self.assertEqual(r['limit'],-3.0)
 
-    def test_a_cleared_halt_can_be_set_again(self):
-        self.db.halt_check(); self.db.set('halt',None); self.db.sql('DELETE FROM diagnostics')
-        self.db.set('halt_cleared_at',-1.0)       # keep the window open so the rule still trips
+    def test_the_report_is_per_process_episode_and_a_recovery_re_arms_it(self):
+        self.db.halt_check(); self.assertEqual(len(self.rows()),2)
+        # Twenty winners on top push both windows back above the line...
+        f=dict(shares=10.,spent=5.,fees=0.,price=.5,fee_bps=0)
+        for i in range(20):
+            ep=6000+i
+            self.db.sql("INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,reason,kind)"
+                        " VALUES(?,?,1,'FILLED','{}',0,0,'','EF')",(f'o{ep}',ep))
+            self.db.fill(f'o{ep}',ep,f't{ep}',f,'paper')
+            self.db.sql('INSERT INTO results(epoch,actual,payout,pnl,ts) VALUES(?,?,?,?,0)',(ep,'UP',10.,+5.0))
+        self.db.halt_check(); self.assertEqual(len(self.rows()),2,'a cleared condition adds nothing')
+        # ...and twenty fresh losers are a NEW episode.
+        for i in range(20):
+            ep=7000+i
+            self.db.sql("INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,reason,kind)"
+                        " VALUES(?,?,1,'FILLED','{}',0,0,'','EF')",(f'o{ep}',ep))
+            self.db.fill(f'o{ep}',ep,f't{ep}',f,'paper')
+            self.db.sql('INSERT INTO results(epoch,actual,payout,pnl,ts) VALUES(?,?,?,?,0)',(ep,'UP',0.,-1.0))
+        self.db.halt_check(); self.assertEqual(len(self.rows()),4)
+        self.assertIsNone(self.db.get('halt'))
+
+    def test_the_screen_still_shows_the_condition(self):
         self.db.halt_check()
-        self.assertTrue(self.db.get('halt'),'the guard is against overwriting, not against halting')
+        k=self.db.rolling()['kill']
+        self.assertTrue(k['armed']); self.assertTrue(k['by_kind']['EF']['armed'])
+        self.assertLess(k['unit_return_sum'],-3.0)
+
+    def test_the_only_engine_halt_left_is_the_order_identity_stop(self):
+        src=pathlib.Path(__file__).with_name('poly_core.py').read_text()
+        sites=[l for l in src.splitlines() if "set('halt'" in l]
+        self.assertEqual(len(sites),1,sites)
+        self.assertIn('Order hash mismatch',sites[0])
 
 
 class AttemptLoopIsPaperParity(unittest.TestCase):

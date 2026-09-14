@@ -355,6 +355,7 @@ def walk_book(q,plan):
 class Journal:
     def __init__(self,path,lane,model_hash):
         self.c=sqlite3.connect(path,check_same_thread=False); self.c.row_factory=sqlite3.Row; self.lock=threading.RLock()
+        self._kill_reported=set()   # 12.8.8: KILL_CONDITION rules already written this episode
         self.c.executescript('''PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;
         CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY,v TEXT);
         CREATE TABLE IF NOT EXISTS signals(epoch INTEGER PRIMARY KEY,ts REAL,side TEXT,token TEXT,condition_id TEXT,decision TEXT,status TEXT,kind TEXT DEFAULT 'EF');
@@ -390,10 +391,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.8.7')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.8.8')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -781,46 +782,42 @@ class Journal:
         # holding open positions. Currently armed and unfired: the live DB has 13
         # results, and this needs 20.
         vals=[x[0] for x in r if x[0] is not None]
-        # A halt that is already set keeps its FIRST reason. Before 12.8.6 this
-        # method wrote every reason whose condition held, every reconcile pass,
-        # so with two conditions true `halt` alternated between two strings
-        # ~1.3x/s and each swap emitted an audit row: 2,035 of the 2,060 audit
-        # rows on 09-13 were this, burying the 25 that mattered. Found by AWS.
-        if len(vals)==20 and sum(vals)/20>.03 and not self.get('halt'): self.set('halt','Average slippage > $0.03 over 20 fills')
-        # PER LANE, not blended. The rule as written is "a lane goes off if
-        # cumulative PnL over its LAST 20 FILLS is below -3.00", and this used to
-        # group by epoch alone, mixing every kind into one window.
+        # 12.8.8: WATCHED, never acted on. User, 09-13 23:5x, on seeing the
+        # kill rule described: "kill ?? bro we don't need that, what i said was
+        # you will turn off master when it will run out of money, it doesn't
+        # mean you write a code block for that in model". Same correction as
+        # 12.8.3 (LOW_BALANCE): the rule was for the operator to watch, and it
+        # had been written into the engine. So the three conditions are still
+        # computed - slippage over the last 20 fills, the blended 20-result unit
+        # sum, and each lane's own 20-result unit sum - and each writes ONE
+        # KILL_CONDITION diagnostics row per episode with the number in it,
+        # `acted:false`. `halt` is never written here. The only engine-set halt
+        # left is the order-identity mismatch in Executor.fire, an integrity
+        # stop, not a PnL rule. rolling()['kill'] still shows every condition,
+        # from the same kill_window() rows, so the screen and this method
+        # cannot drift (12.5.x lesson) - it just no longer stops anything.
         #
-        # Measured on 09-13: blended -0.4042 (headroom 2.596) against EF's own
-        # -0.7161 (headroom 2.284). A difference of 0.31, about 12% - the MAIN
-        # winner of +3.67 from the 09-12 seeding bug was flattering EF, but
-        # modestly, NOT by the "more than double" this comment first claimed.
-        #
-        # The reason the effect is small is the same reason per-lane is correct:
-        # a lane's window is its own last 20 results, not the blended last 20
-        # with the other lanes deleted. Removing MAIN does not leave 19 - it
-        # pulls an older EF result into the twentieth slot, and that one won.
-        # Subtracting the intruder from the blend is the wrong arithmetic and it
-        # overstated the gap by a factor of three.
-        #
-        # The size of the effect is not why the fix is right. Counting another
-        # lane's result inside your window is wrong at any magnitude, and it can
-        # be arbitrarily large with a different mix.
-        #
-        # Both checks now run and either can halt, so this can only ever fire
-        # sooner than before, never later.
+        # Per-lane, not blended, is still the right arithmetic (see 12.5.1): an
+        # epoch traded by two lanes cannot be attributed to either and is left
+        # out of the per-lane windows rather than counted twice.
+        conds={}
+        if len(vals)==20: conds['SLIPPAGE']=(sum(vals)/20>.03, dict(avg_slippage=sum(vals)/20,n=20,limit=.03))
         rows=self.kill_window()
         blended=[x['unit'] for x in rows[:20] if x['unit'] is not None]
-        if len(blended)==20 and sum(blended)<-3 and not self.get('halt'):
-            self.set('halt','20 settled unit returns sum below -3')
-        # An epoch traded by two lanes cannot be attributed to either, so it is
-        # left out of the per-lane windows rather than counted twice.
+        if len(blended)==20: conds['ALL']=(sum(blended)<-3, dict(unit_sum=sum(blended),n=20,limit=-3.0))
         for k in sorted({x['kind'] for x in rows if (x['kinds'] or 1)==1}):
             own=[x['unit'] for x in rows
                  if (x['kinds'] or 1)==1 and x['kind']==k and x['unit'] is not None][:20]
-            if len(own)==20 and sum(own)<-3 and not self.get('halt'):
-                self.set('halt',f'{k}: 20 settled unit returns sum below -3')
-
+            if len(own)==20: conds[k]=(sum(own)<-3, dict(unit_sum=sum(own),n=20,limit=-3.0))
+        # One row per episode: a condition that clears (or whose window empties,
+        # e.g. after the operator clears halt_cleared_at) re-arms its report.
+        for rule in list(self._kill_reported):
+            if not conds.get(rule,(False,))[0]: self._kill_reported.discard(rule)
+        for rule,(hit,info) in conds.items():
+            if hit and rule not in self._kill_reported:
+                self._kill_reported.add(rule)
+                self.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),0,json.dumps(dict(
+                    kind='KILL_CONDITION',rule=rule,acted=False,**info))))
 
 class PaperBroker:
     # Fills whatever the ladder holds, so the pre-send depth check does not apply.

@@ -276,9 +276,11 @@ class Dashboard:
                 if not isinstance(p.get('manual_enabled'),bool): raise ValueError('Invalid signal toggle')
                 self.db.set({'MAIN':'main_enabled','REVERSAL':'reversal_enabled','EF':'ef_enabled'}[kind],p['manual_enabled'])
             elif path=='/api/controls/clear-halt':
-                # `halt` is set by three kill paths (avg slippage over 20 fills,
+                # `halt` was set by three kill paths (avg slippage over 20 fills,
                 # returns over 20 settled, order-hash mismatch) and until 12.4.1
-                # was cleared by NONE of them. allowed() is False for every lane
+                # was cleared by NONE of them. Since 12.8.8 only the order-hash
+                # mismatch (an integrity stop) sets it; the two PnL rules are
+                # watched and reported as KILL_CONDITION rows, never acted on. allowed() is False for every lane
                 # while it is set and /api/controls/apply refuses to turn master
                 # back on, so the first kill stopped the engine permanently and
                 # the only recovery was editing the database by hand. A kill
