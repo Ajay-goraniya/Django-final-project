@@ -1,5 +1,39 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-13 22:47 UTC. Update this file at the end of every check.
+Last updated: 2026-09-14 00:45 UTC. Update this file at the end of every check.
+
+## Task R-1 DONE 09-14 00:45 — Polymarket regime grid. `analysis/h1/task_r1_polymarket_regime_grid.md`
+V's task (learner/REQUEST.md 00:2x), measurement only, buckets fixed by V, whole grid reported.
+- **I DID NOT FOLLOW ONE INSTRUCTION.** The brief said grade on `candles.actual` and called the lane's
+  own column "oracle-flattered". For a POLYMARKET lane that is the 09-10 cross-venue error reversed:
+  the lane's `actual` matches **`venues.outcome` on 303/303 (0.0%)** and disagrees with `candles.actual`
+  on **61/303 (20.1%)**. Polymarket pays on its own oracle. Following the brief would have INFLATED
+  every cell: same 304 trades read **+0.132 on Polymarket's oracle vs +0.249 on Binance's**, ~90% more.
+  Graded on Polymarket's oracle; Binance version available via `ORACLE='BINANCE'` but must not decide.
+- **Two limits on every cell:** (1) this lane fills at the quoted ask with slippage exactly 0.0 by
+  construction, so all of it is an UPPER BOUND — the v10 certifiable +0.055 (Task 21b, n=280) is the
+  closer analogue; (2) 230 of 304 trades are one weekend, so the cells are re-slices of one contiguous
+  stretch — the structure that failed on 09-12.
+- **Q4 busiest (the cell V asked for first): n=35, −0.066, halves −0.286/+0.141 — INSUFFICIENT, not
+  read.** Task 13 had it negative at n=24; still negative, still under the bar.
+- **Readable cells (n>=60, halves pass, all positive):** Q1 calm 215 +0.132 · 00–08 80 +0.258 · 08–16
+  89 +0.138 · 16–24 135 +0.054 · weekend 230 +0.170 · flips 2–3 69 +0.047 · flips 4+ 226 +0.168 ·
+  tight book 262 +0.129. **Fails:** weekday 74 +0.016 halves FAIL. Under 60: Q2, Q3, Q4, flips 0–1, wide.
+- **The real answer: NO CELL SEPARATES.** Eight of eight readable cells pass in the same direction,
+  spread +0.054 to +0.258, pooled +0.132. A grid where everything passes is not evidence of a regime —
+  it is evidence this sample cannot find one. There is no "market is good" cell because there is no
+  readable "market is bad" cell to contrast it with.
+- **Bucket-cut clash resolved, not guessed:** V's 31.4/48.9/76.4 are trailing-12 **SPAN** quartiles
+  (my 73,703-candle set: 31.1/48.6/76.0). My Task 17.3's 8.6/13.0/19.8 are trailing-12 **mean
+  per-candle range** (mine: 8.5/12.9/19.7). Different features, both correct for their own; used V's
+  with the span definition. Do not conflate them.
+- Book width cut at the **median (0.0100), stated not tuned** — no prior H1 Polymarket width cut existed;
+  a separating cut would be the banned sweep. Cells land within 2c, so width separates nothing here.
+- **BLOCKED, not reconstructed:** the v10 Polymarket paper (776 graded, `/tmp/v10_long4.sqlite3`) is NOT
+  on the branch. It is the one set big enough to break the single-weekend problem and give Q4 a readable
+  n. Asked V to snapshot it to `learner/live_backup/`. Twins have ~1 h history, nothing to read.
+- Also fixed a fake pass in my own first run: I had checked grading provenance by comparing two dicts
+  I had built from the same `won` flag — 0/304 by construction, the "two fields from the same read"
+  error CLAUDE.md names. Replaced with an independent-file comparison.
 
 ## 04:47 09-13 — the new CLAUDE.md rule applies to MY OWN LEDGER. Read this before trusting it.
 Repo CLAUDE.md now carries the user's 09-13 rule: V is the head session and speaks with the user's
