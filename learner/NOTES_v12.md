@@ -4724,6 +4724,16 @@ is re-weighting onto cheap paper quotes. No stake modifier. `analysis/h1/task_r4
 Dashboard-lock hypothesis for the stale-book spans REFUTED by AWS (heaviest query holds the lock ~2 ms); probe on the
 box shows venue-side gaps 200-1,972 ms on its own socket vs 128 ms from V's container - awaiting the full table.
 
+## 22:2x UTC (Mon 09-14) - SETTLED: the stale-book spans are the venue's own quiet seconds vs our 0.75 s bar. Not the region, not the engine.
+
+Simultaneous probes 22:12:53-22:22:53, own sockets, same script: Mumbai maxgap p50 394 / p90 782 / max 3784 ms, 10.7% of
+seconds > 750 ms; Ohio (V) p50 399 / p90 792 / max 3561, 11.3%. Identical gap profile. Lag: Mumbai p50 89 / p90 250 /
+max 2074 vs Ohio 60 / 173 / 1761 - modestly worse, episodic tails (an earlier Mumbai run had lag max 16 s and 2 reconnects).
+Grid, decision-window seconds with gap > bar (Ohio): 0.75 s 14.6% | 1 s 7.1% | 2 s 0.9% | 3 s 0.2% | 5 s 0%. Monotone.
+The venue sends only on change; an unchanged book is not stale. Live runs `--quote-age-ms 750` (CLI default; execution
+path also reads `ev_settings.quote_age_ms`, both capped at 2000 in code); paper used 5 s and matched live decisions 97%.
+Proposal to the user: quote age 750 -> 2000 ms. eu-central-2 for the book: not supported by this data.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
