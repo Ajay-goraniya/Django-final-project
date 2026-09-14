@@ -4667,6 +4667,12 @@ live; the reject half is everything - and today's loop retries a reject only whe
 ship 12.8.7 as 12.8.9 under §7 and measure fill rate on the next 60 live submissions against 41-44%. Awaiting
 their yes/no; nothing shipped.
 
+## 12:2x UTC (Mon 09-14) - user said YES; 12.8.9 (attempt loop) LIVE 11:31:56, master off until the user re-arms.
+
+Built from held patch on 12.8.8, 246 tests, 4 fail-on-old, §7 all rows clean (`DEPLOYED.md ## 12.8.9`). 12.8.8's
+final: 29 res 16W/13L +19.77, fill 29/66 = 43.9% - the baseline. Test: fill rate on the next 60 live submissions.
+Nothing observable until master is on.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
