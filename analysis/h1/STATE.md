@@ -1,5 +1,30 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-14 00:45 UTC. Update this file at the end of every check.
+Last updated: 2026-09-14 01:05 UTC. Update this file at the end of every check.
+
+## Task R-2 DONE 09-14 01:05 — the grid on the v10 777 set. `analysis/h1/task_r2_v10_polymarket_regime_grid.md`
+V accepted R-1 in full and retracted the `candles.actual` instruction (REMAKE_PLAN §2a); V shipped the
+777-trade set as asked. Buckets unchanged. Measurement only.
+- **Provenance (V asked, did not assume): `v10 trades.actual` == `venues.outcome` on 776/776 (0.0%)**,
+  vs `candles.actual` 127/776 (16.4%). v10 also grades on Polymarket's oracle. No regrade needed.
+- **Pooled 759: +0.102, hit 52.2%, halves +0.132/+0.072, verify.py passes.** Zero-slippage paper fill,
+  so an upper bound; 17 rows excluded (no kline features), 1 (no oracle label).
+- **THE SPLIT I ADDED: quote-age certifiability.** unknown-age (pre-13:28) n=430 **+0.120** · known-age
+  n=346 +0.075 · **fresh ≤1 s n=316 +0.058, halves +0.054/+0.062**. That reproduces Task 21b's +0.055
+  (n=280) on a different slice. **+0.058 is the honest per-$1 for this runner.**
+- **Q4 busiest now readable: n=89, +0.088, halves +0.283/−0.103 — FAILS halves.** Task 13's "only
+  negative cell" is NOT negative at a readable n; it is unstable, which is weaker and different.
+- **Weekday now readable: n=511 +0.086, halves pass.** R-1's weekday halves-FAIL at n=74 was a
+  small-sample artifact — cleanly corrected.
+- **Weekend by day: Sat 148 +0.124 · Sun 100 +0.148, both pass.** But these are the two days of ONE
+  weekend — V asked for a second SEPARATE weekend and this set has none. **Second weekend = 09-19.**
+- **Fails halves at readable n:** Q2 196, Q4 89, 16–24 300, flips 2–3 97, Thu 159, **Fri 170 at exactly
+  +0.000** — the most informative row in the report.
+- **Still no cell separates, with a better reason:** every readable positive cell sits in a 7-cent band
+  (+0.078 to +0.148) around the +0.102 pooled, on 2.5× R-1's sample. The differing cells differ by being
+  UNSTABLE across their own halves, which is noise, not regime. The one large spread is
+  certifiable-vs-uncertifiable quotes — a measurement artifact, not a market state.
+- **On "make it live when Market is good": this grid does not identify a good-market cell.** Next honest
+  measurement is the 09-19 weekend plus more certifiable rows, not another slice of this one.
 
 ## Task R-1 DONE 09-14 00:45 — Polymarket regime grid. `analysis/h1/task_r1_polymarket_regime_grid.md`
 V's task (learner/REQUEST.md 00:2x), measurement only, buckets fixed by V, whole grid reported.
