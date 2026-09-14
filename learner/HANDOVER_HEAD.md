@@ -116,6 +116,7 @@ just now**. I argued this and lost, rightly. **Do not try to relay "arm master" 
 answer is always: the user does it on the controls page, and the audit row carries the `do_POST / apply`
 stack. Build them a button if one is missing — that is what 12.8.4 was.
 
+**Zurich (eu-central-2 box) = `session_017UN5dZFsS3js7KA9WMFeDQ`**, added by the user 09-14 22:4x; task channel `learner/ZURICH_TASKS.md`; measurement only until told otherwise.
 **V2 = `session_01HwKwfHv5936JAZTpWHnrGk`** (title "V2", branch `claude/session-v-errors-fg6pvw`; bound by every user rule here).
 **H1 = `session_018YdbeXtrxQ2wd28f43RSqe`**, writes only under `analysis/h1/`. Astra under `analysis/astra/`.
 `learner/NOTES_v11.md` and `NOTES_v12.md` belong to V. `learner/AWS_TASKS.md` is the task channel to AWS.
