@@ -3285,3 +3285,25 @@ plus a 3-line summary; I pull it from your message into the branch only when it 
 send it in one piece and I commit without reading it in chat. Hourly: 6 lines max (build/pid/master/halt/stake,
 cash vs stake, results since reset n W/L pnl unit, per-candle sub/retry/DEADLINE/reject counts, twins n/a,
 anything abnormal). Same rule is in CLAUDE.md now.
+
+
+## Task 85 - USER SAID YES (11:3x): deploy 12.8.9 = 12.8.8 + the attempt loop (was 12.8.7). §7, all rows.
+
+Why: your 09:22 numbers - 58 submissions, 34 REJECTED, 5 retries, 0 DEADLINE. Rejects are the whole gap, and the
+current loop retries a reject only when the book ticks. 12.8.9 retries every retryable reject at the current book
+after 75 ms, keeps a signed order on a tick during the sign, `order_plan(latest)` re-check is the guard. Signal, EV,
+band cap, stake, audit: untouched. Put to the user with those numbers; they said yes.
+
+Commit: HEAD of the branch titled "12.8.9". Hashes: `poly_core.py 26800c7ec67b7213`, `test_polymarket.py
+8869082f51571921`; the other seven deployed files unchanged from 72dca5f. SHA256SUMS 30 lines (held patch removed;
+it is applied). Row 2 expects 68 + 21 + 157 = 246. Row 3: `AttemptLoopIsPaperParity` (4) fail on 12.8.8's
+`poly_core.py` - stash-verified here. Row 6 before Row 1, as always.
+
+Master goes off at the restart (safe-start). **Do not arm it.** Tell the user via me, or they arm it on the
+controls page; the audit row will show which. `rm -rf __pycache__` first.
+
+**The measurement that decides whether 12.8.9 stays (Row 5 and the hourlies after):** on the next **60 live
+submissions**: fill rate vs 41.4% (reset era, n=58) and 43.7% (archive, n=87); retries per reject (today 5/34);
+DEADLINEs; attempts per candle; paid-ask vs the pre-12.8.9 fills; results n/W/L/pnl. State the file each number
+comes from. Under 60 is "insufficient". If fill rate is not up or paid-ask is up more than the fills are worth,
+say so and I roll it back the same way.
