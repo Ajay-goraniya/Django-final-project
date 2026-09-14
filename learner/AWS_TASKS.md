@@ -3275,3 +3275,13 @@ until the user arms it.
 2. **Hourly from now:** results since the reset (n, W/L, PnL, unit sum, cash vs stake), and the per-candle
    submissions / retries / DEADLINEs / rejects series from 01:03 - the fresh journal is the Monday series.
    The archive is the only source for anything earlier; say which file each number comes from.
+
+
+## Task 84 - STANDING RULE from the user (01:2x): short messages. Tokens are money.
+
+Every message to me is <= ~15 lines: numbers, state, verdict. No narrative, no repeating what I already have.
+Long material (DEPLOYED.md sections, scripts, grids) -> write it to a file path you name and send ONLY the path
+plus a 3-line summary; I pull it from your message into the branch only when it is under 40 lines, otherwise you
+send it in one piece and I commit without reading it in chat. Hourly: 6 lines max (build/pid/master/halt/stake,
+cash vs stake, results since reset n W/L pnl unit, per-candle sub/retry/DEADLINE/reject counts, twins n/a,
+anything abnormal). Same rule is in CLAUDE.md now.

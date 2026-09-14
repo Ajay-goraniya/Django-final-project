@@ -44,6 +44,11 @@ The two channels that work:
   then. A regime switch is itself a threshold — define buckets FIRST, test them all, report the full
   grid, **never the best cell**.
 - Answers to the user are **short and plain**: *"summarise it, I'm not reading all."*
+- **Tokens are money (user, 09-14 01:2x): "tell all model to not write big messages into chats, it's burning a
+  lot of tokens."** Every message - to the user, between sessions, in Routine prompts - is SHORT: numbers and
+  the verdict, no narrative, no restating what the other side already knows. Anything longer than ~15 lines
+  goes into a file on the branch and the message says the path. Verbatim-forwarding (DEPLOYED.md rows, scripts)
+  goes straight to the file, not into the chat first. Reports state the token budget in one line when known.
 
 ## Session V is the head session, and that raises the bar on V
 

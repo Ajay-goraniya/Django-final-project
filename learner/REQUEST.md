@@ -62,3 +62,9 @@ not pooled; (b) a readable n on **Q4 busiest** and on **weekday**. Zero-slippage
 at the top again.
 
 Output: `analysis/h1/task_r2_v10_polymarket_regime_grid.md`. Measurement only; no design.
+
+
+## Standing rule (user, 09-14 01:2x) - short messages
+
+Cross-session messages <= ~15 lines: the verdict, the numbers, the file path. The full write-up lives in
+`analysis/h1/`, never in the message. Applies to R-2 and everything after.
