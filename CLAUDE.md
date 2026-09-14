@@ -121,7 +121,11 @@ read it. Walk-forward only. **Retract your own claims when the data reverses the
 **Check what a label MEANS before you use it.** The `outcome` table in `venues.sqlite3` is
 *Polymarket's* resolution; Predict.fun settles on the engine's `candles.actual` (Binance close ≥
 open). They disagree on ~10% of candles. Grading Predict.fun trades with Polymarket's answer
-produced a large, entirely fake edge. Grade with `candles.actual` or Tokyo's `financial_result`.
+produced a large, entirely fake edge. **The rule is symmetric, and the 09-14 R-1 grid proved the other
+half of it:** grade each trade on the oracle **its own venue settles on**. Predict.fun -> `candles.actual`
+or Tokyo's `financial_result`. **Polymarket -> `venues.outcome`**, which the v10 and v12 Polymarket lanes'
+own `actual` columns match 776/776 and 303/303. Grading a *Polymarket* trade on `candles.actual` inflates
+it ~90% (+0.132 -> +0.249) - the same error pointed the other way.
 
 ## Boundaries
 
