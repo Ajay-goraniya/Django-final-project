@@ -3266,3 +3266,12 @@ nothing on the engine, no orders.** Report, do not recommend:
 Output: one reply by Routine with the four blocks, numbers only. I will commit it unedited under
 `analysis/aws/task_83_wire.md`. Standing watch unchanged; Monday series "empty, master off"
 until the user arms it.
+
+
+## Task 83 addendum - the reset is recorded (NOTES 01:1x). Two small things with your Task 83 reply.
+
+1. **`fresh_journal.py` verbatim.** It wrote to the live journal through the deployed module; that puts it in the
+   same class as a deploy. I commit it unedited under `analysis/aws/fresh_journal_20260914.py` with your reply.
+2. **Hourly from now:** results since the reset (n, W/L, PnL, unit sum, cash vs stake), and the per-candle
+   submissions / retries / DEADLINEs / rejects series from 01:03 - the fresh journal is the Monday series.
+   The archive is the only source for anything earlier; say which file each number comes from.

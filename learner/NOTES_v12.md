@@ -4622,6 +4622,26 @@ master off (user), halt null, stake 3.0, cash 37.53, no open position, Monday se
 
 Safety net 00:38: twins 30945/30947 alive, snapshots ok; fair rows below in the 01:21 hourly.
 
+## 01:1x UTC (Mon 09-14) - 12.8.8 LIVE (00:54), then the user asked AWS directly for "restart and reset": fresh journal, master ON at 01:03:19.
+
+**Deploy:** 12.8.5 + 12.8.6 + 12.8.8 from `72dca5f`, all seven §7 rows, `DEPLOYED.md ## 12.8.8` committed
+unedited (`b99f02e`); AWS's nine hashes match my own recomputation at 72dca5f. KILL_CONDITION rows 0 (13 of 20
+in the window - correct), `halt_check` on the deployed module has zero `set('halt'`. AMBIENT_AGE flowing:
+18-33 ms ambient vs 88/175 ms submit-time - first datapoint for Task 75, too few rows to conclude.
+
+**Reset, on the user's live instruction to AWS ("bro restart and reset the model please"; user chose fresh
+journal + arm now):** 01:02:49 old journal MOVED intact to
+`/home/ubuntu/polymarket_v12_journal_archive_20260914_010249/` (112 orders / 49 fills / 48 results / 186
+signals / 712 candles / 25,322 diagnostics; 0 open positions, nothing orphaned). 01:03:19 new journal, PID
+**93603**, build 12.8.8. Settings carried in ONE audited `set_many` (ef on, MAIN/REV off, stake fixed 3.0,
+ev_settings regime/pad 1/band, tp 0 sl 0, **master true**); NOT carried: halt_cleared_at, streak/rung/cursor,
+sx_losses. **First-ever `master false->true` audit row exists** (12.8.5 doing its job): stack
+`fresh_journal.py:60`. State 01:03:38: master TRUE, halt null, cash 37.529, 0 orders / 0 results.
+
+**Discontinuity, binding for every later comparison:** the live Monday per-candle series starts at 01:03 UTC
+from an empty journal. Anything "before" comes from the archive on the box, not the live file. The lifetime
+49%-reject baseline is archive-only now. Hand-stop condition unchanged: out of money, by hand, nothing else.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
