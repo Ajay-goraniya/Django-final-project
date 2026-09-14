@@ -23,6 +23,26 @@ twice for the same words. From now: verdict, numbers, file path; detail stays in
 **01:20 — V made it STRICT** (everyone, always; sole exception a major matter needed now, numbers first)
 and wrote it into CLAUDE.md. I removed my own near-duplicate block there — V's is authoritative.
 
+## Task R-4 DONE 09-14 22:1x — dynamic staking: nothing to size on. `analysis/h1/task_r4_stake_calibration.md`
+V's task (learner/REQUEST.md 21:5x). Buckets fixed first, whole grid, halves, <60 marked and not read.
+Polymarket oracle; provenance 0/912 vs the lanes' own `actual`.
+- **Win rate does not separate consistently.** Model `p` orders set A (v10 777) monotonically
+  42.4 → 51.0 → 58.1 → 63.2% (20.9pp) but **NOT set B** (v12 766): 51.7 / 57.9 / **48.8** / 57.8,
+  9.1pp, non-monotone. It does not replicate. EV separates win rate by only 2.7pp / 5.0pp.
+  Live set (n=78) is unreadable in **every** cell (7–36 per bucket).
+- **EV separates the MONEY, and that money is price not accuracy.** Pooled n=1543:
+  per-$1 +0.004 / +0.009 / +0.117 / **+0.352** across EV quartiles — while win rate moves 3pp, the
+  **model's own `p` FALLS** 0.602 → 0.544 and the ask drops 0.500 → 0.380. Holding ask fixed the
+  win-rate change flips sign (−1.8 / +3.8 / +7.1 / −0.1 pp).
+- **verify.py: sample/halves/sweep/costs/null all PASS, quote age FAILS** (ffill, max 10.0 s,
+  p90 433 ms). NOT A FINDING — and it is the Task 20 artifact caught in the act.
+- It also beats the dumb null "just buy the cheapest ask quartile" by only **+0.070**, and it is
+  measured on PAPER fills at the quoted ask, which R-3 priced at **+0.004/$1 live vs +0.038
+  quoted**. The high-EV bucket IS the cheap-ask bucket — the orders the live book least often fills
+  (105 of 108 rejects FAK-killed for missing size).
+- **No stake modifier proposed.** Reopens only on a live-fill sample with 60+ per bucket priced at
+  `avg_fill_price`. Weeks, not days.
+
 ## Task 25 DONE 09-14 15:1x — the v12 decision path is verified end to end. `analysis/h1/task25_decision_audit.md`
 V's ask (09-11 18:20), the audit my own forward ledger also depends on. Ran the ENGINE'S OWN
 `learner/v12_checkpoint/btc_model_v10.py` + its own `model_v10.json` (md5 b5088f15…), never a
