@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-14 12:47 UTC. Update this file at the end of every check.
+Last updated: 2026-09-14 14:10 UTC. Update this file at the end of every check.
 
 ## 09-14 01:10 — my own 2-hourly trigger prompt REWRITTEN; it carried a retracted instruction
 The cron prompt still told future runs to "grade on candles.actual" — the instruction V retracted an
@@ -22,6 +22,23 @@ twice for the same words. From now: verdict, numbers, file path; detail stays in
 `learner/REQUEST.md` is V's file, so V annotates that one, not me.
 **01:20 — V made it STRICT** (everyone, always; sole exception a major matter needed now, numbers first)
 and wrote it into CLAUDE.md. I removed my own near-duplicate block there — V's is authoritative.
+
+## Task R-3 IN PROGRESS 09-14 14:10, BLOCKED ON DATA — pay-up grid on the real live rejects
+V's task (learner/REQUEST.md 13:4x). Deliverable `analysis/h1/task_r3_payup_grid.md`. Push verified.
+- **The reject rows are NOT on the branch.** `v12_poly_lane` and `v12_poly_weekend` both have
+  `attempts` = 0 rows and every trade `PAPER_FILLED`; `tokyo_orders.json` is Predict.fun, not
+  Polymarket. So there is nothing local to measure and I did not reconstruct one.
+- Asked AWS (`session_0128m2knBcqiTyAVoh7h994A`) by Routine for
+  `learner/live_backup/r3_submissions.csv`: ts_ms, candle_epoch, side, pre_submit_quote,
+  signed_cap_price, tick_size, requested_usdc, result, avg_fill_price, attempt_seq, era — rejects AND
+  fills, numbers only, no secrets. Asked for tick_size explicitly because the pad grid is in ticks.
+- **Book coverage for the join, stated up front:** `polybook` 09-11 05:59:33 → 09-14 13:23 (279,065
+  rows); `book1s` 09-11 02:01 → 09-14 13:23 (284,946). **Any reject before 09-11 05:59 cannot be
+  measured on the Polymarket book** — those rows get marked insufficient, not reconstructed. AWS asked
+  to say how many fall there.
+- Plan once the file lands: ask move at +0.35 / +1 / +2 s from the 1-Hz log (stating which logger
+  covers each row), per-$1 at pads +1/+2/+3/+5 ticks on the Polymarket oracle, whole grid, fills vs
+  would-not-have-filled, n per cell, both halves, verify.py; same grid on the already-filled rows.
 
 ## Task R-2 DONE 09-14 01:05 — the grid on the v10 777 set. `analysis/h1/task_r2_v10_polymarket_regime_grid.md`
 V accepted R-1 in full and retracted the `candles.actual` instruction (REMAKE_PLAN §2a); V shipped the
