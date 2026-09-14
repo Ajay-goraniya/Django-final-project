@@ -4756,6 +4756,16 @@ Restart 22:33 with `--quote-age-ms 2000` gave 4/4 rejects in 36 min (exec path p
 (5 lines/315 B), tasks Z-2 (paper on 8787, 2 s gate) + master-OFF live pre-check on 8788 queued; no trading from
 Zurich until written go - one wallet, one live engine. Day: 54 res 30W/24L +37.19, cash 68.73.
 
+## 23:5x UTC (Mon 09-14) - LIVE MOVED TO ZURICH. Mumbai master off 23:47:5x (flat, audited), Zurich live up 23:49 on 8787.
+
+Zurich pre-check (user ran it by hand; Zurich session's sandbox blocks env/0.0.0.0/live): `--live` came up
+`LIVE (master OFF)` - geoblock false (CH/ZH), credentials accepted, reconcile ran, no orders. User's written go;
+AWS set Mumbai master FALSE via the module (open 0, in flight 0). Mumbai day final: 56 res 31W/25L **+37.09**, cash
+68.42 (+30.89 from the 01:03 reset). Mumbai engine left running master-off for the WAIT_CENSUS. Zurich live:
+build 12.8.9 @ 7457816, dir `/home/ubuntu/pm_paper_zurich`, db `polymarket_v12_live_zurich.sqlite3`, `--quote-age-ms
+2000` (CLI; ev_settings fresh so exec path also 2 s until set - NOTE: set ev_settings.quote_age_ms=750 on Zurich),
+user arms master + stake fixed 3.0 on the dashboard. Zurich paper (pid 6762) stopped. One wallet, one live engine.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
