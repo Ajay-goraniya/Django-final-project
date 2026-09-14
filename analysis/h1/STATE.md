@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-14 04:47 UTC. Update this file at the end of every check.
+Last updated: 2026-09-14 06:47 UTC. Update this file at the end of every check.
 
 ## 09-14 01:10 — my own 2-hourly trigger prompt REWRITTEN; it carried a retracted instruction
 The cron prompt still told future runs to "grade on candles.actual" — the instruction V retracted an
@@ -603,7 +603,7 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
   have shipped on nine fires of noise. Objection 2 was the operative one: the halves were
   morning-vs-afternoon of ONE Saturday, not a real out-of-sample split, and it broke as the afternoon
   extended. **The cleanest vindication of the 60/100 bars this project has produced.**
-- Grid 09-14 02:47: **all n=237 −0.075 · weekend n=179 −0.049 · weekday n=58 −0.155 (under the bar).**
+- Grid 09-14 06:47: **all n=238 −0.079 · weekend n=179 −0.049 · weekday n=59 −0.169 (under the bar).**
   Halves −0.039 / −0.111. Verdict unchanged at 2.4x its bar.
 - Sunday evening has produced 31 fires across two checks and moved the overall number −0.049 → −0.084
   → −0.088 and the weekend cell +0.001 → −0.052 → −0.059. Everything moves further from zero, so
