@@ -22,3 +22,15 @@ the repo is cloned on the box and at which commit, whether you can `git push` (d
    POST-shaped round trip you CAN make without credentials (e.g. an unauthenticated POST that returns 401 from
    `clob.polymarket.com`, 20 samples) and say what it is a proxy for.
 Output: `analysis/zurich/task_z1_wire.md` if you can push, else <= 15 lines to V and V commits it.
+
+## Task Z-2 (user, 22:5x) - deploy the model on Zurich, PAPER first. No keys yet.
+Follow `learner/v12_2/DEPLOY_MUMBAI.md` on this box: venv, `pip install` the SDK/deps it names, copy `learner/v12_2/*`
+from commit 7457816 (build 12.8.9) into your deploy dir, `sha256sum -c SHA256SUMS.txt` (30/30), `rm -rf __pycache__`,
+run the three suites (expect 68 + 21 + 157 = 246 OK). Then start PAPER:
+`python btc_model_v12_polymarket.py --mode pnl --capital 50 --db polymarket_v12_paper_zurich.sqlite3 --port 8787 --quote-age-ms 2000`
+(no `--live`, no credentials). Seed via the controls page or Journal.set_many: ef on, main/rev off, stake fixed 3.0,
+master on (paper). Report: hashes, suite counts, pid, first decide rows, AMBIENT_AGE, geoblock JSON. This is a
+paper twin of Mumbai's live build on the Zurich path - it measures decisions/fills at 2 s quote age from here.
+LIVE on Zurich: only after (a) the user's key transfer (never through chat) and (b) V's written go, because live on
+two boxes with one wallet double-trades. `--live` runs the geoblock pre-check first; that result is the answer the
+user wants.
