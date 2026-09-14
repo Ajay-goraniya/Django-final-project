@@ -4706,6 +4706,15 @@ the SDK convention). Engine pings every 5 s (docs: 10 s). Ambient age 18-33 ms. 
 books" = `quote()` needing both sides within 0.75 s - a rule, counted by `quote_block`; Task 86 to AWS measures it.
 (2) Task R-4 to H1: calibration grid (p, EV, sec, ask) on 777 + lane + live; sizing by edge vs flat, walk-forward.
 
+## 22:0x UTC (Mon 09-14) - "waiting for books" sized: book present by ~8 s, then STALE mid-window ~2.5 min in 222/252 candles; 148 never submitted.
+
+AWS Task 86: first book p50 8.4 s into candle; 1,724 waiting rows, mass in the tail (240+ s: 841) but 861 rows inside
+the 15-240 s window across 222 candles, span p50 151 s; only 90 candles submitted since reset. `quote_block`: stale
+6.97M vs ok 22.87M. AMBIENT_AGE in-wait p50 30 ms / p90 629 ms vs elsewhere 23 / 44 ms; 9.8% past the 0.75 s bar.
+`dropped_stale` 555k (3.4%): events applied > 8 s after their venue stamp. V on the wire (own socket, active tokens,
+60 s): 17.7k events, max gap 128 ms, 0 gaps > 0.75 s, lag p50 30 ms. Venue is dense; the engine's receive path is
+where the staleness is made. Task 87: `analysis/aws/ws_gap_probe.py` beside the engine, same seconds. No change yet.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |

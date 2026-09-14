@@ -3323,3 +3323,16 @@ live journal + engine.log since the 01:03 reset, numbers only:
 5. The `venue()` resubscribe cycle: ep+345 teardown - any reconnects logged mid-window (`Venue reconnect:` lines) since
    reset, count and times.
 <=15 lines; the full table to a file path if longer.
+
+## Task 87 - the venue feed is dense; the engine sees it stale. Prove which side, beside the engine.
+
+V, 22:0x, from V's container on the current candle's tokens, 60 s: 17,737 events, per-token max inter-event gap 128 ms,
+0 gaps > 0.75 s, now-minus-venue-timestamp p50 30 ms p99 230 ms, 0 events > 8 s. Your Task 86 numbers on the box:
+in-wait p90 629 ms, 9.8% past the bar, `dropped_stale` 555,261 (3.4% of applied - events processed > 8 s after their
+venue stamp). A 128 ms venue gap cannot produce an 8 s drop; a stalled receive loop can.
+Run `analysis/aws/ws_gap_probe.py` (committed; standalone, read-only, its own socket, from `learner/v12_2` with the
+box venv) for 10 minutes BESIDE the engine, then line its per-second `maxgap_ms`/`maxlag_ms` up against the engine's
+"Waiting for fresh" rows and AMBIENT_AGE in the same seconds. Report: during the engine's waiting spans, what did the
+standalone see (max gap, max lag)? If the probe stays < 200 ms while the engine reports stale, the stall is inside the
+engine process - then say what else the loop was doing at those seconds (reconcile HTTP, sqlite commits, housekeeping,
+GC) from the log/diagnostics timestamps. <=15 lines; tables to a file path.
