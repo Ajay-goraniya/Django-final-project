@@ -3263,7 +3263,6 @@ nothing on the engine, no orders.** Report, do not recommend:
 4. **Geo pre-check as the engine does it:** `GET https://polymarket.com/api/geoblock` from the box, the JSON
    verbatim minus nothing secret (it carries no secret). That is the check `--live` runs at start.
 
-Output: one reply by Routine with the four blocks, numbers only, and the same text appended to
-`learner/DEPLOYED.md` is NOT the place - put it in `learner/AWS_TASKS.md` is mine; send it and I will commit it
-under `analysis/aws/task_83_wire.md` unedited. Standing watch unchanged; Monday series "empty, master off"
+Output: one reply by Routine with the four blocks, numbers only. I will commit it unedited under
+`analysis/aws/task_83_wire.md`. Standing watch unchanged; Monday series "empty, master off"
 until the user arms it.
