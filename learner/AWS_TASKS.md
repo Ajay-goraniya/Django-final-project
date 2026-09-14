@@ -3348,3 +3348,13 @@ Do: same argv as now plus `--quote-age-ms 2000`, same env, same journal (NOT a r
 After-measure, hourly: waiting rows as % of decide rows since the restart (expect ~2-5%), fires per hour, fill rate,
 and **paid - pre_submit_quote on every new fill vs the 23 before** - if it widens, say so and I roll the flag back.
 <=10 lines to me.
+
+## Task 90 - 12.8.10 (WAIT_CENSUS): deploy under §7 at the next clean moment (no open position). Observation only.
+Commit: HEAD titled "12.8.10". Changes: `BookCache.quote()` records (reason, age) per refused token in
+`block_detail`; `publish()` counts side x reason x age-bucket (<0.75/0.75-1/1-2/2-5/5+/n/a) on every refusal and
+`ok` on success; housekeeping writes one `WAIT_CENSUS` diagnostics row a minute. Nothing in the decision or order
+path changes. Hashes: poly_core d1b2e423776e2a2b, btc_model 177dfdf1ab6ea20f, test_v122 7f055fcd87baf964,
+test_polymarket be05d2fdd6e7b27f. Suites 68 + 21 + 163 = 252. Fail-on-old: `test_v122.WaitCensusSaysWhichBookBlockedAndHowOld`
+(6) -> 3F/2E on 12.8.9. Keep argv incl. `--quote-age-ms 2000`; ev_settings.quote_age_ms 750 stays. `rm -rf __pycache__`.
+Master off at safe-start - do not arm; tell me. After 30 min: the WAIT_CENSUS rows summed - which side, which
+reason, which bucket. That is the answer to "why 34.7% waiting". <=10 lines; DEPLOYED.md section to a file path.

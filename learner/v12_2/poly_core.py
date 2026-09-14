@@ -110,6 +110,9 @@ class BookCache:
         # stale or crossed one, which the "waiting for fresh books" message does
         # not.
         self.quote_block=dict(no_book=0,no_asks=0,no_bids=0,stale=0,crossed=0,ok=0)
+        # 12.8.10: the last refusal per token, with the age quote() judged, so
+        # publish() can say WHICH token blocked a decision and HOW old it was.
+        self.block_detail={}
     def clear(self): self.books.clear()
     def prune(self,keep):
         """Drop books for tokens we are no longer subscribed to, keep the rest.
@@ -191,19 +194,19 @@ class BookCache:
         an argument.
         """
         b=self.books.get(t)
-        if not b: self.quote_block['no_book']+=1; return None
-        if not b['asks']: self.quote_block['no_asks']+=1; return None
-        if not b['bids']: self.quote_block['no_bids']+=1; return None
+        if not b: self.quote_block['no_book']+=1; self.block_detail[t]=('no_book',None); return None
+        if not b['asks']: self.quote_block['no_asks']+=1; self.block_detail[t]=('no_asks',time.monotonic()-b['arrival']); return None
+        if not b['bids']: self.quote_block['no_bids']+=1; self.block_detail[t]=('no_bids',time.monotonic()-b['arrival']); return None
         # Monotonic arrival is authoritative for age: it cannot be moved by clock
         # drift or NTP steps.  The wall-clock figure is corrected by the measured
         # offset and used only when it indicates the book is OLDER.
         mono=time.monotonic()-b['arrival']
         wall=(time.time()-b['event'])-self.clock_offset
         age=max(mono,min(wall,mono+max_age))
-        if not 0<=age<=max_age: self.quote_block['stale']+=1; return None
+        if not 0<=age<=max_age: self.quote_block['stale']+=1; self.block_detail[t]=('stale',age); return None
         ask,bid=min(b['asks']),max(b['bids'])
-        if bid>=ask: self.quote_block['crossed']+=1; return None
-        self.quote_block['ok']+=1
+        if bid>=ask: self.quote_block['crossed']+=1; self.block_detail[t]=('crossed',age); return None
+        self.quote_block['ok']+=1; self.block_detail.pop(t,None)
         return dict(ask=ask,bid=bid,asks=sorted(b['asks'].items()),seq=b['seq'],age_ms=age*1000,
                     snapshot_age_s=time.monotonic()-b.get('snapshot',b['arrival']))
 
@@ -391,10 +394,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.8.9')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.8.10')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):

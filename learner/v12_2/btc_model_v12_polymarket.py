@@ -48,6 +48,7 @@ class PolyRunner(Runner):
         self.lanes=poly_lanes.LaneEngine()
         self.lane_decision={}
         self.market={}; self.info={}; self.terms_age={}; self.last_decision={}; self.started=time.time()
+        self._wait_census={}; self._wait_flushed=time.monotonic()
         self.cash=None; self.cash_at=0.; self.account_snapshot={}; self.account_positions=[]; self.current_candle={}; self.revision=0; self.error=''
         self.db.set('master',False) if a.live else None # explicit arming through old controls
         from poly_dashboard import Dashboard
@@ -73,7 +74,9 @@ class PolyRunner(Runner):
         ep=int(time.time()//300)*300; toks=self.market.get(ep,())
         quotes=[self.books.quote(t,self.a.quote_age_ms/1000) for t in toks]
         if len(quotes)!=2 or not all(quotes):
+            self._count_wait(toks,quotes)
             self.st.on_venue_quote(None,None,None,None); self.age['venue']=0.; return False
+        self._wait_census['ok']=self._wait_census.get('ok',0)+1
         u,d=quotes; self.st.on_venue_quote(u['ask'],u['bid'],d['ask'],d['bid'])
         self.age['venue']=time.time()-max(u['age_ms'],d['age_ms'])/1000
         self.health.arrival['venue']=time.time(); self.health.lag['venue']=max(u['age_ms'],d['age_ms'])/1000.
@@ -427,6 +430,7 @@ class PolyRunner(Runner):
                 self.cash_at=time.monotonic(); self.ui.update_stake()
                 self._wipeout_check()
                 self._sample_ambient_age(int(time.time()//300)*300)
+                self._flush_wait_census(int(time.time()//300)*300)
                 self.db.sql('DELETE FROM diagnostics WHERE ts<?',(time.time()-7*86400,))
                 self.db.sql('DELETE FROM candles WHERE epoch<?',(time.time()-30*86400,))
             except Exception as e: self.error='Metadata/balance: '+type(e).__name__
@@ -479,6 +483,31 @@ class PolyRunner(Runner):
               ' - MONITOR ONLY, nothing stopped'
               %(spendable,stake,self._wipeout_seen,
                 'n/a' if opened is None else '%.2f'%opened),flush=True)
+    # 12.8.10. AWS Task 86: 34.7% of decide rows were "Waiting for fresh UP and
+    # DOWN books" and the journal could not say which token blocked or how old
+    # it was; the process-wide quote_block counters are not keyed by token, and
+    # ws_gap_probe's number turned out to measure the NEXT candle's illiquid
+    # book, not the traded one (Zurich Z-1). This counts, per publish() refusal,
+    # side x reason x age bucket, and housekeeping writes one WAIT_CENSUS row a
+    # minute. Observation only; the rule itself is unchanged.
+    WAIT_BUCKETS=((0.75,'<0.75'),(1.0,'0.75-1'),(2.0,'1-2'),(5.0,'2-5'),(float('inf'),'5+'))
+    def _count_wait(self,toks,quotes):
+        try:
+            c=self._wait_census
+            if len(toks)!=2: c['no_market']=c.get('no_market',0)+1; return
+            for side,tok,q in zip(('UP','DOWN'),toks,quotes):
+                if q is not None: continue
+                reason,age=self.books.block_detail.get(tok,('unknown',None))
+                b='n/a' if age is None else next(lab for lim,lab in self.WAIT_BUCKETS if age<lim)
+                k=f'{side}:{reason}:{b}'; c[k]=c.get(k,0)+1
+        except Exception: pass
+    def _flush_wait_census(self,ep):
+        try:
+            if time.monotonic()-self._wait_flushed<60 or not self._wait_census: return
+            row=dict(kind='WAIT_CENSUS',window_s=round(time.monotonic()-self._wait_flushed,1),**self._wait_census)
+            self._wait_census={}; self._wait_flushed=time.monotonic()
+            self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(row)))
+        except Exception: pass
     def _sample_ambient_age(self,ep):
         """Log the book's age for both tokens, unfiltered, once per housekeeping tick.
 

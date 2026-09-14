@@ -1811,3 +1811,68 @@ class AmbientBookAgeIsSampled(unittest.TestCase):
         import btc_model_v12_polymarket as E
         src=pathlib.Path(E.__file__).read_text()
         self.assertIn('self._sample_ambient_age(',src)
+
+
+from unittest import mock
+
+class WaitCensusSaysWhichBookBlockedAndHowOld(unittest.TestCase):
+    """12.8.10. Task 86: 34.7% of decide rows were "Waiting for fresh UP and DOWN
+    books" and nothing recorded which token or what age. quote() now leaves a
+    (reason, age) per refused token; publish() counts side x reason x bucket;
+    housekeeping writes one WAIT_CENSUS row a minute. Observation only.
+    """
+    def setUp(self):
+        import btc_model_v12_polymarket as E
+        self.temp=tempfile.TemporaryDirectory()
+        self.db=C.Journal(str(pathlib.Path(self.temp.name)/'w.db'),'PAPER','h')
+        self.books=C.BookCache(); now=time.time()
+        # UP: fresh two-sided book. DOWN: one-sided (no asks), 1.5 s old.
+        self.books.apply(dict(event_type='book',asset_id='tokUP',timestamp=str(int(now*1000)),bids=[dict(price='0.40',size='10')],asks=[dict(price='0.42',size='10')]))
+        self.books.apply(dict(event_type='book',asset_id='tokDN',timestamp=str(int(now*1000)),bids=[dict(price='0.55',size='10')],asks=[]))
+        self.books.books['tokDN']['arrival']-=1.5
+        r=E.PolyRunner.__new__(E.PolyRunner)
+        r.db=self.db; r.books=self.books; r.market={600:('tokUP','tokDN')}
+        r.a=types.SimpleNamespace(quote_age_ms=2000); r.age={}; r.health=types.SimpleNamespace(arrival={},lag={},msgs={})
+        r.st=types.SimpleNamespace(on_venue_quote=lambda *a: None)
+        r._wait_census={}; r._wait_flushed=time.monotonic()-61
+        self.r=r; self.E=E
+    def tearDown(self): self.db.c.close(); self.temp.cleanup()
+    def rows(self):
+        return [json.loads(x[0]) for x in self.db.sql("SELECT detail FROM diagnostics WHERE detail LIKE '%WAIT_CENSUS%'")]
+
+    def test_quote_leaves_the_reason_and_age_per_token(self):
+        self.assertIsNone(self.books.quote('tokDN',2.0))
+        reason,age=self.books.block_detail['tokDN']
+        self.assertEqual(reason,'no_asks'); self.assertAlmostEqual(age,1.5,delta=0.2)
+        self.assertIsNotNone(self.books.quote('tokUP',2.0)); self.assertNotIn('tokUP',self.books.block_detail)
+
+    def test_publish_counts_side_reason_bucket(self):
+        with mock.patch('time.time',return_value=600.0+30):
+            self.assertFalse(self.r.publish())
+        self.assertEqual(self.r._wait_census,{'DOWN:no_asks:1-2':1})
+
+    def test_stale_is_bucketed_by_the_age_quote_judged(self):
+        self.books.books['tokDN']['asks']={0.57:10.}; self.books.books['tokDN']['arrival']-=2.0   # 3.5 s old
+        with mock.patch('time.time',return_value=600.0+30):
+            self.r.publish()
+        self.assertEqual(list(self.r._wait_census),['DOWN:stale:2-5'])
+
+    def test_housekeeping_writes_one_row_a_minute_and_resets(self):
+        with mock.patch('time.time',return_value=600.0+30):
+            self.r.publish(); self.r.publish()
+        self.r._flush_wait_census(600)
+        rows=self.rows(); self.assertEqual(len(rows),1)
+        self.assertEqual(rows[0]['DOWN:no_asks:1-2'],2); self.assertGreaterEqual(rows[0]['window_s'],60)
+        self.assertEqual(self.r._wait_census,{})
+        self.r._flush_wait_census(600); self.assertEqual(len(self.rows()),1,'nothing to flush, no row')
+
+    def test_ok_publishes_are_counted_too(self):
+        self.books.books['tokDN']['asks']={0.57:10.}; self.books.books['tokDN']['arrival']=time.monotonic()
+        with mock.patch('time.time',return_value=600.0+30):
+            self.assertTrue(self.r.publish())
+        self.assertEqual(self.r._wait_census,{'ok':1})
+
+    def test_it_cannot_raise_into_the_decide_path(self):
+        self.r.books=types.SimpleNamespace(quote=lambda *a: None)   # no block_detail attribute at all
+        with mock.patch('time.time',return_value=600.0+30):
+            self.assertFalse(self.r.publish())
