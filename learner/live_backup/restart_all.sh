@@ -20,4 +20,10 @@ alive() { ps -eo args | grep -cE "^python3 .*$1" ; }
 # this one was missed, because it lived only in restart_v12_lane.sh. One script
 # has to restore everything or the gap is found by noticing a stale number.
 [ "$(alive 'btc_model_v12_polymarket.py')" -eq 0 ] && { cd /tmp/claude-0/-home-user-Django-final-project/6e3b6e11-d14f-50d1-8719-c1998d0e6b9a/scratchpad/v12/engine && setsid nohup python3 btc_model_v12_polymarket.py --execution paper --mode pnl --fixed-stake 10 --port 8790 --db ../results/v12_poly_weekend.sqlite3 >> /tmp/v12poly.log 2>&1 < /dev/null & echo "launched v12 lane"; }
+# 12.8.6-vs-12.8.7 paper twins (added 09-14 02:3x after a container restart killed both). Safe-start
+# forces master off, so re-seed master/next_stake after launch - the twins are paper, capital 50, stake 3.
+T=/tmp/claude-0/-home-user-Django-final-project/6e3b6e11-d14f-50d1-8719-c1998d0e6b9a/scratchpad/twins
+for L in ctrl:8791 cand:8792; do d=${L%%:*}; p=${L##*:}
+  [ "$(alive "btc_model_v12_polymarket.py --port $p")" -eq 0 ] && { (cd $T/$d && setsid nohup python3 btc_model_v12_polymarket.py --port $p --db twin.sqlite3 --capital 50 >> twin.log 2>&1 < /dev/null &); sleep 12; python3 -c "import sqlite3;c=sqlite3.connect('$T/$d/twin.sqlite3',timeout=10);c.execute(\"INSERT OR REPLACE INTO meta VALUES('master','true')\");c.execute(\"INSERT OR REPLACE INTO meta VALUES('next_stake','3.0')\");c.commit()"; echo "launched twin $d"; }
+done
 exit 0
