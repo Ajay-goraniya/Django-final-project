@@ -4747,6 +4747,15 @@ bad measurement. The split stays (exec 0.75 s, decide 2 s) as harmless until mea
 34.7% waiting rows is NOT settled. Next: in-engine instrumentation (quote_block by token role + age histogram at
 the quote() call), a build, not a threshold. 22:33 restart aftermath: 4/4 rejects at exec 2 s -> exec back to 750.
 
+## 23:2x UTC (Mon 09-14) - 12.8.10 (WAIT_CENSUS) LIVE 23:16:04 on Mumbai; Zurich onboarded, paper deploy in progress.
+
+Restart 22:33 with `--quote-age-ms 2000` gave 4/4 rejects in 36 min (exec path priced on a 2 s book); split applied
+23:1x: ev_settings.quote_age_ms=750 (exec) / CLI 2000 (decide gate). 12.8.10 deployed 23:16 under §7 (252 tests,
+6 fail-on-old, hashes match 771bc87), master off until the user re-arms; census in ~30 min. Zurich
+(`session_017UN5dZFsS3js7KA9WMFeDQ`, 16.62.65.190, t3.xlarge): repo cloned read-only, deploy.env placed by the user
+(5 lines/315 B), tasks Z-2 (paper on 8787, 2 s gate) + master-OFF live pre-check on 8788 queued; no trading from
+Zurich until written go - one wallet, one live engine. Day: 54 res 30W/24L +37.19, cash 68.73.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
