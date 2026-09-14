@@ -4715,6 +4715,15 @@ the 15-240 s window across 222 candles, span p50 151 s; only 90 candles submitte
 60 s): 17.7k events, max gap 128 ms, 0 gaps > 0.75 s, lag p50 30 ms. Venue is dense; the engine's receive path is
 where the staleness is made. Task 87: `analysis/aws/ws_gap_probe.py` beside the engine, same seconds. No change yet.
 
+## 22:1x UTC (Mon 09-14) - R-4 (H1): dynamic staking has nothing to size on. Closed until 60+ live fills per bucket.
+
+Model p separates win rate on the v10 777 (42->63%) but NOT on the v12 766 (non-monotone, 9 pp): does not replicate.
+EV separates money (+0.004..+0.352/$1 by quartile) but it is PRICE - the high-EV bucket is the cheap-ask bucket, win
+rate moves 3 pp, and those are the orders live fills least. Quote-age check FAILS. Walk-forward EV-weighting "+0.11"
+is re-weighting onto cheap paper quotes. No stake modifier. `analysis/h1/task_r4_stake_calibration.md`.
+Dashboard-lock hypothesis for the stale-book spans REFUTED by AWS (heaviest query holds the lock ~2 ms); probe on the
+box shows venue-side gaps 200-1,972 ms on its own socket vs 128 ms from V's container - awaiting the full table.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
