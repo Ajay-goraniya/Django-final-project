@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-14 14:10 UTC. Update this file at the end of every check.
+Last updated: 2026-09-14 14:15 UTC. Update this file at the end of every check.
 
 ## 09-14 01:10 — my own 2-hourly trigger prompt REWRITTEN; it carried a retracted instruction
 The cron prompt still told future runs to "grade on candles.actual" — the instruction V retracted an
@@ -36,9 +36,14 @@ V's task (learner/REQUEST.md 13:4x). Deliverable `analysis/h1/task_r3_payup_grid
   rows); `book1s` 09-11 02:01 → 09-14 13:23 (284,946). **Any reject before 09-11 05:59 cannot be
   measured on the Polymarket book** — those rows get marked insufficient, not reconstructed. AWS asked
   to say how many fall there.
-- Plan once the file lands: ask move at +0.35 / +1 / +2 s from the 1-Hz log (stating which logger
-  covers each row), per-$1 at pads +1/+2/+3/+5 ticks on the Polymarket oracle, whole grid, fills vs
-  would-not-have-filled, n per cell, both halves, verify.py; same grid on the already-filled rows.
+- **ADDENDUM (user, via V 14:09) — and it is the right first question:** table 1 is the win rate and
+  per-$1 of the **REJECTED set vs the FILLED set at paper price**, Polymarket oracle. If the rejected
+  candles lose more, then paying up buys losses and the whole pad grid is moot. That is a selection
+  test, not a cost test, and it comes before the grid.
+- Plan once the file lands: (1) rejected-vs-filled at paper price, both halves, verify.py; (2) ask
+  move at +0.35 / +1 / +2 s from the 1-Hz log, stating which logger covers each row; (3) per-$1 at
+  pads +1/+2/+3/+5 ticks on the Polymarket oracle, whole grid, would-fill vs would-not, n per cell,
+  both halves, verify.py; (4) the same pad grid on the already-filled rows. No recommendation.
 
 ## Task R-2 DONE 09-14 01:05 — the grid on the v10 777 set. `analysis/h1/task_r2_v10_polymarket_regime_grid.md`
 V accepted R-1 in full and retracted the `candles.actual` instruction (REMAKE_PLAN §2a); V shipped the
