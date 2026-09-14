@@ -4538,6 +4538,54 @@ live being on adds nothing to the twin test - ctrl and cand are collecting Monda
 
 AWS has push-notified the user. master true, halt null, EF on, stake 3.0, all untouched.
 
+## 00:0x-00:22 UTC (Mon 09-14) - user: "okokay stop it, but also make it live when Market is good." And the first twin reading.
+
+### The instruction, and what it means operationally
+
+**"stop it"** = master OFF now. **I cannot flip it** (no route to the box; AWS does not act on relayed
+control writes, correctly). **The user clicks master OFF on the controls page**; the audit row will
+carry the `do_POST` stack and AWS will confirm it. This supersedes "let it work" from 23:5x - later
+instruction, said to the head session directly.
+
+**"make it live when Market is good"** = the adaptive layer, REMAKE_PLAN step 5, pulled forward. This is a
+regime switch, and the standing rule is exact about how it is allowed to exist: **define the buckets
+FIRST, test them all, report the whole grid, never the best cell** - and the engine self-verdicts each cell
+from live outcomes (AUTOPILOT 11.4 §E2), so neither the user nor I flips it by hand on a hunch. **Not a
+threshold I invent tonight.** Tonight: the measurement. **H1 gets the Polymarket regime grid** (Task 13's
+pre-defined buckets on the v12 paper lane 317+ graded, the v10 Polymarket paper 776 graded, and the twins
+as they grow; `candles.actual`; >= 60 per cell or "insufficient"; both halves; `verify.py`). The
+self-arming design follows the grid, then a twin, then §7. **Order: grid -> design -> twin -> deploy.**
+
+**The hand rule stays withdrawn** (23:5x); drawdowns are reported. The only by-hand stop is out-of-money.
+**12.8.8** (halt_check monitor-only) is still owed and is next in the build queue after this.
+
+### 00:22 check-in
+
+```
+FAIR STATES 00:22 UTC | window opens with the NEWEST run: Polymarket paper (v10), 09-11 15:15 UTC (57.1 h)
+| run | W/L | acc | open | PnL @$10 |
+| Predict.fun paper (v10) | 154/129 | 54% | 0 | +262.5 |
+| Polymarket paper (v10) | 173/157 | 52% | 0 | +322.8 |
+| Polymarket v12 lane (paper exec) | 177/148 | 54% | 0 | +490.4 |
+| Tokyo live (v11) | 5/10 | 33% | 0 | -70.6 (real -7.06 at $1; wallet 0.00 equity 0.00) |
+```
+
+**Polymarket paper (v10), source `/tmp/v10_long4.sqlite3`: last-20 +0.199, last-40 +0.034, 776 graded.**
+The paper rows recovered this hour (+294 -> +323, +458 -> +490). **14** processes.
+
+**Twins, first 45 minutes (n too small to read - recorded only):**
+
+| twin | build | orders | attempts | results | pnl |
+|---|---|---|---|---|---|
+| ctrl | 12.8.6 | 1 FILLED | {1:1} | 1 | +2.93 |
+| cand | 12.8.7 | 2 FILLED | {1:2} | 2 | -1.06 |
+
+Both alive, both filling, no rejects or DEADLINEs yet. cand has fired on two candles to ctrl's one - the
+direction the change predicts, at an n that means nothing. Verdict not before 60.
+
+**Live (AWS, last report 23:47):** master ON, EF on, stake 3.0, 12 results since the clear, net -3.43
+units. Awaiting the user's master-off click and AWS's confirmation.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
