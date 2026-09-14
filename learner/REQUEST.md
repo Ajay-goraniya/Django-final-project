@@ -83,3 +83,15 @@ Report the grid, no recommendation. Under 60 per cell = insufficient. Output `an
 **R-3 addendum (user, 14:1x):** report explicitly, first table: win rate and per-$1 of the REJECTED set vs the FILLED
 set (as decided, at paper price) — if the rejected ones lose more, paying up loses money; that is the decision. Then
 the pad grid. User's intent if the answer is good: raise the pad on the FIRST order so it fills without a retry.
+
+## Task R-4 (09-14 21:5x) — DYNAMIC STAKING: is there anything to size on? Calibration grid, whole grid.
+
+User: *"what if the staking is dynamic? less capital in losing trades, more in winning ones... it needs to be very
+sure."* Sizing can only work if something known AT FIRE TIME predicts the win. Candidates, each its own grid:
+model `p` (buckets 0.50-0.55/0.55-0.60/0.60-0.65/0.65+ and the mirror for DOWN), EV = p/ask−1 (quartiles of the
+data, state the cuts), `sec` into candle (0-60/60-120/120-180/180-240), and ask price (quartiles). Sets: v10 777
+(`live_backup/v10_poly_long4.sqlite3.gz`), v12 lane (`v12_poly_weekend`/`v12_poly_lane`), live fills (H1's
+`r3_submissions.csv` + outcomes). Polymarket oracle. Per cell: n, win%, per-$1, both halves, `verify.py`; <60 =
+insufficient. Then the one number that decides: per-$1 of a stake proportional to the bucket's edge vs flat stake,
+on the SAME trades, walk-forward (bucket edges estimated on the first half, applied to the second). If the buckets
+do not separate win rate, say so - that closes it. Output `analysis/h1/task_r4_stake_calibration.md`; <=15 lines back.

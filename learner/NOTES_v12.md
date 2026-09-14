@@ -4697,6 +4697,15 @@ no-reject, 0 EV_CHANGED. So the re-check that kills retries is the MODEL withdra
 or depth; 9 of those candles re-fired seconds later and filled. Next measurement, not a change: does the withdrawn
 side still win (n=19, insufficient; accumulates). Nothing shipped. Day 20:23: 50 res 28W/22L +33.99, cash 65.98.
 
+## 21:5x UTC (Mon 09-14) - user asks: (1) is the Polymarket book websocket, live, fresh? (2) dynamic staking?
+
+(1) Verified against the real socket from this container (20 s, current tokens): `wss://ws-subscriptions-clob.polymarket.com/ws/market`,
+subscribe `{assets_ids,type:market}`, `book` snapshot on subscribe then `price_change` at ~78 ev/s; wire keys are
+`event_type`/`asset_id`/`price_changes`/`timestamp` = exactly what `BookCache.apply` parses (the docs' camelCase is
+the SDK convention). Engine pings every 5 s (docs: 10 s). Ambient age 18-33 ms. "Waiting for fresh UP and DOWN
+books" = `quote()` needing both sides within 0.75 s - a rule, counted by `quote_block`; Task 86 to AWS measures it.
+(2) Task R-4 to H1: calibration grid (p, EV, sec, ask) on 777 + lane + live; sizing by edge vs flat, walk-forward.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |

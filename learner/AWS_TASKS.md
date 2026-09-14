@@ -3307,3 +3307,19 @@ submissions**: fill rate vs 41.4% (reset era, n=58) and 43.7% (archive, n=87); r
 DEADLINEs; attempts per candle; paid-ask vs the pre-12.8.9 fills; results n/W/L/pnl. State the file each number
 comes from. Under 60 is "insufficient". If fill rate is not up or paid-ask is up more than the fills are worth,
 say so and I roll it back the same way.
+
+## Task 86 - the user: "the polymarket book arrives late, many candles just say waiting for a book". Measure it.
+
+V verified the wire 21:4x from V's container: raw format (`event_type`/`asset_id`/`price_changes`), `book` snapshot on
+subscribe, ~78 events/s, matches `BookCache.apply`. So the question is the engine's rule, not the socket. From the
+live journal + engine.log since the 01:03 reset, numbers only:
+1. `quote_block` counters (no_book / no_asks / no_bids / stale) - totals, and split ACTIVE token vs NEXT-candle token.
+2. Per candle: seconds from candle open to the first `book` event for the ACTIVE token's UP and DOWN (from
+   `feed_counters`/diagnostics or the log); distribution p50/p90/max; how many candles had no book by sec 15 (decision
+   window opens) and by sec 60.
+3. "Waiting for fresh UP and DOWN books" rows: count, and seconds-into-candle histogram (0-15/15-60/60-240/240+).
+4. How many decide rows were blocked by waiting while `fire=true` would have held (decision made, no quote) - if the
+   decide diagnostics carry it; else say not measurable.
+5. The `venue()` resubscribe cycle: ep+345 teardown - any reconnects logged mid-window (`Venue reconnect:` lines) since
+   reset, count and times.
+<=15 lines; the full table to a file path if longer.
