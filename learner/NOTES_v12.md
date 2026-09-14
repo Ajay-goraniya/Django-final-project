@@ -4673,6 +4673,13 @@ Built from held patch on 12.8.8, 246 tests, 4 fail-on-old, §7 all rows clean (`
 final: 29 res 16W/13L +19.77, fill 29/66 = 43.9% - the baseline. Test: fill rate on the next 60 live submissions.
 Nothing observable until master is on.
 
+## 15:0x UTC (Mon 09-14) - R-3 (H1): NO pad increase. Rejects are late, not mispriced; 12.8.9 is the right lever.
+
+Rejected 102: win 55.9% +0.181/$1 but halves FAIL (+0.408/-0.046) - not a finding. Filled 78: 48.7%, **+0.004/$1 at
+paid price**; every pad tick on the filled set goes negative (+1: -0.017, +2: -0.037, +5: -0.091). 56/93 rejects had
+ask<=cap already - pad would not have filled them. Ask +1 s after a reject +0.020 vs +0.000 on fills (p=0.019).
+Verdict recorded: pad stays; 12.8.9 measured on n>=60. Live 14:43: since arm 14 subs 5F/9R; day 34 res 19W +21.83.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
