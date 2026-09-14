@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-14 10:47 UTC. Update this file at the end of every check.
+Last updated: 2026-09-14 12:47 UTC. Update this file at the end of every check.
 
 ## 09-14 01:10 — my own 2-hourly trigger prompt REWRITTEN; it carried a retracted instruction
 The cron prompt still told future runs to "grade on candles.actual" — the instruction V retracted an
@@ -603,7 +603,7 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
   have shipped on nine fires of noise. Objection 2 was the operative one: the halves were
   morning-vs-afternoon of ONE Saturday, not a real out-of-sample split, and it broke as the afternoon
   extended. **The cleanest vindication of the 60/100 bars this project has produced.**
-- Grid 09-14 08:47: **all n=240 −0.077 · weekend n=179 −0.049 · weekday n=61 −0.158.**
+- Grid 09-14 12:47: **all n=242 −0.076 · weekend n=179 −0.049 · weekday n=63 −0.152.**
 - **The WEEKDAY cell crossed 60 and is now readable — and it is negative both halves.** n=61,
   −0.158/fire, hit 44.3%, halves −0.307 / −0.014. verify.py: quote age PASS, sample PASS, **halves
   PASS (both negative)**, beats-the-null FAIL vs +0.018. So the weekday/weekend grid is finally
