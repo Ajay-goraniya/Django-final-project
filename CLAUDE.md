@@ -27,13 +27,6 @@ It is the single source of truth: what is done, what is open, what is **CLOSED**
 **retracted**. A session once independently re-derived "no EF gate passes both-halves validation" —
 already closed *and* explicitly banned by the user. The CLOSED table exists to stop exactly that.
 
-## Keep cross-session messages SHORT — user rule, 09-14, binding
-
-User: *"tell all model to not write big messages into chats, it's burning a lot of tokens."* So a
-Routine fired at another session is **<= ~15 lines: verdict, numbers, file path.** The write-up lives
-in `analysis/h1/` and the other session reads it there — it merges the branch anyway, so a long
-message pays twice for the same words. Same for answers to the user: one or two lines.
-
 ## 3. `SendMessage` does not work between these sessions
 
 It fails by name, by alias, and by full session ID, **in both directions**. Do not burn turns on it.

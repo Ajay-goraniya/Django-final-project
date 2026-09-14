@@ -1,5 +1,5 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-14 01:15 UTC. Update this file at the end of every check.
+Last updated: 2026-09-14 01:20 UTC. Update this file at the end of every check.
 
 ## 09-14 01:10 — my own 2-hourly trigger prompt REWRITTEN; it carried a retracted instruction
 The cron prompt still told future runs to "grade on candles.actual" — the instruction V retracted an
@@ -20,6 +20,8 @@ worthless" lesson with its 09-12 proof, and "paper fills at the quoted ask are u
 R-2 messages I fired at V were ~40 lines each, and V merges the branch anyway — so the long version paid
 twice for the same words. From now: verdict, numbers, file path; detail stays in `analysis/h1/`.
 `learner/REQUEST.md` is V's file, so V annotates that one, not me.
+**01:20 — V made it STRICT** (everyone, always; sole exception a major matter needed now, numbers first)
+and wrote it into CLAUDE.md. I removed my own near-duplicate block there — V's is authoritative.
 
 ## Task R-2 DONE 09-14 01:05 — the grid on the v10 777 set. `analysis/h1/task_r2_v10_polymarket_regime_grid.md`
 V accepted R-1 in full and retracted the `candles.actual` instruction (REMAKE_PLAN §2a); V shipped the
