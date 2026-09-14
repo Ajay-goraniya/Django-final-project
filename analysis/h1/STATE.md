@@ -43,6 +43,15 @@ Data landed: AWS sent the ledger in 3 chat parts, assembled and committed byte-e
   cell is n=4–16 → **INSUFFICIENT, whole grid printed, no cell read.**
 - **The decider, and it needs no grid:** the filled book earns **+0.004/$1** at the price actually
   paid; **one tick of pad costs ~0.021/$1**. The margin is 5× smaller than the cheapest pad.
+- **§5 added 15:0x after AWS sent the reject census.** All 105 rejects are ONE error: FAK
+  "no orders found to match", `phase=post, request_reached=true` — killed at the matching engine,
+  no detail returned. Tested both mechanisms on the 1 Hz book. **Size is not it:** displayed size
+  over shares needed is 12.8× on fills, 13.2× on the non-cap-binding rejects, and size *grows*
+  over the next second in both. **Price is:** ask moves **+0.020 median on rejects vs +0.000 on
+  fills**, label-permutation p=0.019 (5,000 draws), same sign both halves (+0.025/+0.010; half
+  cells 33–47, under the bar, directional only). **Diagnostic, NOT tradeable** — the +1 s ask is
+  measured after the decision. Declined AWS's offer of `plan.max_shares`: the proxy already shows
+  a 13× surplus and no proxy error closes 13×.
 - Re-run when cap-binding rejects pass 60.
 
 ## Task R-3 ORIGINAL BRIEF (kept for the record) — pay-up grid on the real live rejects
