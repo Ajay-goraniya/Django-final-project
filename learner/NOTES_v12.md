@@ -4642,6 +4642,15 @@ sx_losses. **First-ever `master false->true` audit row exists** (12.8.5 doing it
 from an empty journal. Anything "before" comes from the archive on the box, not the live file. The lifetime
 49%-reject baseline is archive-only now. Hand-stop condition unchanged: out of money, by hand, nothing else.
 
+## 01:2x UTC (Mon 09-14) - R-2 done (H1): 759 v10 trades, Polymarket oracle 776/776. NO regime cell. Q4 story retired.
+
+Pooled +0.102/$1 (halves +0.132/+0.072). Readable positives all within +0.078..+0.148. Failing halves at readable
+n: Q2, Q4 (+0.088, n=89 - Task 13's "only negative cell" is not negative, it is unstable), 16-24, flips 2-3, Thu,
+Fri (+0.000, n=170). Weekday +0.086 n=511 passes - R-1's weekday fail was small-sample. Certifiable-quote rows
+(<=1 s, n=316) **+0.058/$1**, reproducing Task 21b's +0.055; uncertifiable rows worth ~2x - measurement artifact,
+not market state. "Live when market is good": no cell to switch on. Step 5(b) not designed. Next evidence: the
+09-19 weekend, more certifiable rows. Short-messages rule STRICT, sent to AWS, H1, V2 (id recorded).
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
