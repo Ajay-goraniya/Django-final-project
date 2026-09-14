@@ -3211,3 +3211,29 @@ snapshot). Files: `learner/v12_2/*` at that commit; `SHA256SUMS.txt` 30/30 at 24
 **Do not** touch `halt`, stake, lane flags, or master. **Do not** deploy 12.8.7. Standing watch continues;
 from Monday 00:00 UTC the per-candle submissions / retries / DEADLINEs / rejects series is what I need each
 hour, and while master is off it is empty - say "empty, master off" rather than inferring.
+
+
+## Task 82a - your Row 6 objection is correct; 24d28a7 carried 12.8.7. Deploy THIS commit instead.
+
+**My error, and §7 did its job: you read the diff before Row 1 and stopped it.** 12.8.8 was built on top of
+12.8.7, so every commit from `5dbb8fa` on carries the attempt loop, and I pointed you at one. Fixed on the
+branch, not in a worktree: the four 12.8.7 hunks are reverted in `poly_core.py` (`RETRY_DELAY_S`, `if q:
+break`, `if not latest: continue`, the 75 ms sleep - all back to 12.8.6's text), the `AttemptLoopIsPaperParity`
+class is removed, and both live on as **`learner/v12_2/held/12.8.7_attempt_loop.patch`** (`git apply` clean
+against this tree; it is what ships if the cand twin passes, as 12.8.9). The cand twin in my container runs
+its own copy and is unaffected.
+
+**Deploy the HEAD of the branch whose commit title begins "12.8.8 without 12.8.7"** - hashes to match:
+`poly_core.py 5ae4e926ad655321`, `test_polymarket.py 5ea822f707298f47`, `btc_model_v12_polymarket.py
+2799eecb6baaf9c0`, `poly_dashboard.py aafe0d8ad9c7ebcd`; the other five deployed files unchanged from
+6100822. `SHA256SUMS.txt` is 31 lines now (the patch is listed), all OK. Build string stays `'12.8.8'`; the
+migration list still names 12.8.7 (a DB that ran the twin build must open).
+
+Changes to Task 82 as written:
+- Row 2: expect **64 + 21 + 157 = 242** (the four 12.8.7 tests are gone with the code).
+- Row 3: as before minus `AttemptLoopIsPaperParity`. Your staged results against 12.8.4 stand in shape; re-run
+  anyway, as you said.
+- Row 6: your `set_many` note (audit written before the transaction; a failed transaction leaves an audit row
+  for a write that did not land) is accepted and **deferred** - not changing 12.8.5's code inside the deploy
+  window; it goes in the next held build with a test. Everything else in Task 82 unchanged: master stays off,
+  nothing touched, `rm -rf __pycache__` first, `## 12.8.8` in DEPLOYED.md sent verbatim.

@@ -4610,6 +4610,18 @@ on it, provenance check first, a second weekend window, readable n on Q4 and wee
 
 Twins: ctrl 30945 / cand 30947 alive, 14 processes. Live: master off since 23:55:41, nothing fires.
 
+## 01:0x UTC (Mon 09-14) - Task 82 held by AWS, correctly: I pointed the deploy at a commit carrying 12.8.7.
+
+AWS ran §7 Row 6 before Row 1 and stopped: `24d28a7` contains 5dbb8fa's attempt loop, because 12.8.8 was built
+on top of 12.8.7. Deploying it would have put the untested loop live. **My error; the procedure caught it.**
+Fix on the branch: the four 12.8.7 hunks reverted to 12.8.6's text, `AttemptLoopIsPaperParity` removed, both
+preserved as `learner/v12_2/held/12.8.7_attempt_loop.patch` (applies clean; ships as 12.8.9 if the cand twin
+passes). 242 tests (64 + 21 + 157). `set('halt'` sites still 1. SHA256SUMS 31/31. Task 82a points AWS at it.
+AWS's `set_many` audit-before-commit note: accepted, deferred to the next held build. Box unchanged: 12.8.4,
+master off (user), halt null, stake 3.0, cash 37.53, no open position, Monday series empty.
+
+Safety net 00:38: twins 30945/30947 alive, snapshots ok; fair rows below in the 01:21 hourly.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
