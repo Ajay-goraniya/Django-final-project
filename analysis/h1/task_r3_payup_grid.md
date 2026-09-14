@@ -107,3 +107,51 @@ No recommendation beyond what the numbers carry: **on this data paying up is not
 the pad grid cannot be read.** Re-run when the cap-binding reject count passes 60.
 
 Token budget: this report and its script, ~35k.
+
+---
+
+## 5. Why the other 56 rejected — added 09-14 15:0x after AWS sent the reject reasons
+
+AWS sent the census instead of a per-row column, because the string is identical on every reject:
+
+- **105 REJECTED** — all one error: `RequestRejectedError: no orders found to match with FAK order`,
+  HTTP 400, `{"phase":"post","request_reached":true}`. The order **reached the matching engine and
+  was killed there**; it was not refused locally, and the venue returns no size/price detail.
+- 2 UNKNOWN `TimeoutError`, 1 UNKNOWN bare `RequestRejectedError`. 81 FILLED carry no reason.
+
+So the venue gives one undifferentiated answer: nothing rested to match the FAK at submit. Two
+candidate mechanisms — **price moved** or **size pulled** — and the 1 Hz book can test both.
+
+**Size is not the discriminator.** Displayed size at the level, over shares needed
+(`requested_usdc / pre_submit_quote`), at the submission second:
+
+| set | n | displayed/needed, median | under 1× | under 2× |
+|---|---|---|---|---|
+| FILLED | 67 | 12.8 | 4% | 12% |
+| REJECTED, cap not binding | 58 | 13.2 | 10% | 16% |
+| REJECTED, cap binding | 37 | 7.2 | 8% | 19% |
+
+The rejects had ~13× the size they needed, the same as the fills. Size also *grew* over the next
+second in both sets (median ×1.35 filled, ×1.54 rejected).
+
+**Price is.** Ask on the traded side, submission second → +1 s:
+
+| set | n | median move | mean | ≥1c against | h1 | h2 |
+|---|---|---|---|---|---|---|
+| FILLED | 67 | **+0.000** | +0.009 | 48% | +0.000 | +0.010 |
+| REJECTED | 93 | **+0.020** | +0.026 | 58% | +0.025 | +0.020 |
+
+Difference of medians +0.020, **label-permutation p = 0.019** over 5,000 draws, same sign in both
+halves (+0.025 / +0.010 — each half cell is 33–47, under the 60 bar, so the halves are
+directional corroboration only, not a second measurement).
+
+**Reading:** a reject is a candle where the book was moving away inside the ~350 ms round trip.
+That is the same phenomenon as §2 seen from the reject side, and it is **diagnostic, not
+tradeable** — the +1 s ask is measured *after* the decision, so it can never be an input to one.
+
+It also settles the pay-up question from the other direction: the rejects are not orders that were
+priced one tick too low against a stable book. They are orders that arrived after the price had
+already gone. A pad chases that, and §4 shows the margin cannot pay for the chase.
+
+`plan.max_shares` was offered and **declined**: the `requested_usdc / quote` proxy above already
+shows a ~13× surplus, and no plausible error in the proxy closes a 13× gap.
