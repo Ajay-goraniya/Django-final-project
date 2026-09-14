@@ -113,6 +113,17 @@ coin-flips) but **the 31 venue rejects at ≈+0.25/$1 on paper**. That is the un
    is **88W/68L = 56.4%**, not what its table shows. Live filled on the same candles: 15W/15L, n=30,
    too small to read. So "beat the paper" means beat **56%** on `candles.actual`, not the table.
 
+   **RETRACTED 09-14 00:5x — H1, Task R-1 §1.** Correction 2 is wrong, and it is the 09-10 cross-venue
+   error pointed the other way. Polymarket pays on **its own** oracle, not Binance close ≥ open. H1
+   checked on the committed files: the v12 lane's `actual` matches `venues.outcome` (Polymarket's
+   resolution) **303 of 303**, and disagrees with `candles.actual` on 61 of 303 (20.1%). Paper's `win`
+   is not oracle-flattered — it is oracle-**correct** for the venue that pays it, and so is live's
+   `results.pnl`, which is venue settlement. Grading a Polymarket trade on Binance inflates it (+0.249
+   vs +0.132 per $1 on the same 304). **Every Polymarket number in this plan is to be graded on
+   Polymarket's oracle** (`venues.outcome`, or the journal's own settled result). The 56.4% target below
+   is replaced by paper's own table on the shared candles, re-read on the correct oracle. My brief to H1
+   instructed the wrong oracle; H1 did not follow it and was right not to.
+
 **Step 2 is therefore the fill-rate fix and nothing else.** The 42 "no signal" are decision-second timing
 — paper decided at second *s*, live at *s+11* (p90) and the quote had moved — and that is the same
 mechanism as the rejects viewed from the other side: **live is slower to the quote than paper's
@@ -187,8 +198,9 @@ Task 73's submit-time `age_ms` distribution (will shift — that is the point, a
 is the control); per-fill paid−ask (may rise slightly; band cap bounds it; **measure on the twin**).
 
 **What qualifies it (step 3, Monday, paper twin beside live, same candles):** fill rate up from 49%;
-DEADLINEs down; **PnL/$1 on filled ≥ live's AND the twin's decided-and-filled set ≥ 56.4% on
-`candles.actual`**; both halves; ≥60 graded or "insufficient". `verify.py` by H1. If paid−ask rises
+DEADLINEs down; **PnL/$1 on filled ≥ live's AND the twin's decided-and-filled set ≥ paper's hit rate on
+the same candles, both graded on Polymarket's oracle** (`venues.outcome` / the journal's own settlement —
+NOT `candles.actual`; §2a retraction); both halves; ≥60 graded or "insufficient". `verify.py` by H1. If paid−ask rises
 more than the fill-rate gain is worth, the twin says so and it does not ship.
 
 **Frozen while this runs:** no further execution-mechanism builds. **12.8.5 (master-arming audit) and
@@ -226,7 +238,8 @@ re-arm criterion was met at 22:22 (Predict.fun paper +0.140 then +0.478 on the v
 **deliberately not acted on** — the wallet read 0.00 for eight hours — and is now retired with it. The
 fair table's Polymarket paper (v10) and Polymarket v12 lane rows are the comparators; the Predict.fun and
 Tokyo rows are reported verbatim and not read. Nothing in this plan depended on Predict.fun: the model is
-v10 on Binance features, `candles.actual` is Binance close≥open, and every step above targets the
+v10 on Binance features, `candles.actual` is Binance close≥open **and is the wrong oracle for grading a
+Polymarket trade (§2a retraction — grade on `venues.outcome`)**, and every step above targets the
 Polymarket engine on the AWS box.
 
 ## 6. Roles

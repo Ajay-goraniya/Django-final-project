@@ -3166,3 +3166,48 @@ than ambient -> the `seq` gate selects; matching -> the feed. That answer ranks 
 
 **Standing watch unchanged:** hand rule (**-1.1818**, n=3), kill window, `LOW_BALANCE`, and from 00:00 UTC
 Monday **submissions / retries / DEADLINEs / rejects per candle**. Nothing else tonight.
+
+
+## Task 82 - DEPLOY 12.8.5 + 12.8.6 + 12.8.8 under §7, NOW, while master is off. Not 12.8.7.
+
+**Why now.** The user turned master off themselves at 23:55:41 UTC ("okokay stop it"). A deploy forces
+master off anyway (safe-start), so this is the window that costs nothing. All three held builds go in
+together; 12.8.7 (the attempt loop) does **not** - it is running as a paper twin and ships only if the
+twin passes.
+
+**What they are.** Commit **`24d28a7`** on the branch (12.8.8 is `baae36c`; 24d28a7 adds only a data
+snapshot). Files: `learner/v12_2/*` at that commit; `SHA256SUMS.txt` 30/30 at 24d28a7.
+- 12.8.5: `Journal.set_many()` + `_audit()`; arming master through `apply` is audited (your Row 6 note (a)).
+- 12.8.6: `halt` keeps its first reason (your finding); `AMBIENT_AGE` diagnostics each housekeeping tick.
+- **12.8.8: the PnL kill is OUT of the engine.** User, 23:5x, your relay: *"kill ?? bro we don't need
+  that, what i said was you will turn off master when it will run out of money, it doesn't mean you write
+  a code block for that in model"*. `halt_check()` still computes slippage / blended / per-lane and writes
+  one `KILL_CONDITION` diagnostics row per condition per episode (`acted:false`, with the number). It
+  **never** sets `halt`. The only `set('halt'` left in `poly_core.py` is the order-hash mismatch in
+  `Executor.fire` (integrity stop) - a test pins that.
+
+**§7, all seven rows, then `## 12.8.8` in `learner/DEPLOYED.md` sent to me verbatim; I commit unedited.**
+- Row 1: hashes of the nine files vs `git show 24d28a7:learner/v12_2/<file>`; **`rm -rf __pycache__` before
+  the start** (the same-length same-second pyc-header trap bit us on 12.8.7; the 12.8.6→12.8.8 bump is
+  also same-length). Then confirm every pyc header matches its source after start.
+- Row 2: three suites in the box venv. Expect **68 + 21 + 157 = 246**.
+- Row 3: against the 12.8.4 tree (your backup of 19:32:04 is 12.8.2; take a fresh `tree.tar.gz` of the
+  running 12.8.4 cwd first). Expected to fail on old: `test_v122.ArmingMasterIsAudited` (12.8.5),
+  `test_v122.AmbientBookAgeIsSampled` (12.8.6), `test_polymarket.PnLConditionsNeverHalt` (4 of 5; the
+  display test passes on both) and the inverted `test_kill_rule_is_per_lane_not_blended`,
+  `test_clearing_a_halt_actually_restarts_trading`, `test_what_the_rule_enforces_is_what_the_screen_shows`.
+  `HaltKeepsItsFirstReason` no longer exists - do not look for it.
+- Row 4: `master` **must read false** after restart and **stay false - do not arm it**; the user does.
+  `halt`, `next_stake` (3.0), `ev_settings`, lane flags: untouched by you, report them.
+- Row 5: the live `kill_window()` since `halt_cleared_at` 19:32:58 had 12 results at −3.43 unit at 00:0x.
+  If it reaches 20 with sum < −3 you should see **one** `KILL_CONDITION` row (rule `ALL` and/or `EF`) and
+  `halt` **still null**. If it has fewer than 20, say so - no row is the correct result. Also the first
+  `AMBIENT_AGE` rows (12.8.6) and an audit row for whatever the user does next on the controls page.
+- Row 6: your reading of `git diff 6100822 24d28a7 -- learner/v12_2/`. Anything you would not ship, say
+  before Row 1, not after.
+- Row 7: downstream - reconcile/grade/release, `rolling()['kill']` still populated (display unchanged),
+  audit rows stacked through `do_POST` only, dashboard where you can (401 otherwise, say so).
+
+**Do not** touch `halt`, stake, lane flags, or master. **Do not** deploy 12.8.7. Standing watch continues;
+from Monday 00:00 UTC the per-candle submissions / retries / DEADLINEs / rejects series is what I need each
+hour, and while master is off it is empty - say "empty, master off" rather than inferring.

@@ -4586,6 +4586,30 @@ direction the change predicts, at an n that means nothing. Verdict not before 60
 **Live (AWS, last report 23:47):** master ON, EF on, stake 3.0, 12 results since the clear, net -3.43
 units. Awaiting the user's master-off click and AWS's confirmation.
 
+## 00:5x UTC (Mon 09-14) - 12.8.8 BUILT and HELD; the PnL kill is out of the engine. H1's grid: nothing separates - and I had the oracle backwards.
+
+**12.8.8** (`baae36c`): `halt_check()` no longer sets `halt` on any PnL condition. User, 23:5x via AWS:
+*"kill ?? bro we don't need that... it doesn't mean you write a code block for that in model"* - the same
+correction 12.8.3 made for the low-balance guard. The three conditions are still measured and written as
+`KILL_CONDITION` diagnostics rows, once per episode, `acted:false`; `rolling()['kill']` unchanged. The one
+engine-set halt left is the order-hash integrity stop, and a test pins that it is the only `set('halt'`
+site. 4 tests inverted, `HaltKeepsItsFirstReason` -> `PnLConditionsNeverHalt` (5); 7 of 9 fail on 12.8.7's
+`poly_core` (stash-verified). 246 tests. 30/30. **Task 82 to AWS: deploy 12.8.5 + 12.8.6 + 12.8.8 under §7
+now, master is off so the restart is free; not 12.8.7.**
+
+**H1 Task R-1 done (`f9959ae`), and it corrects me.** I told H1 to grade Polymarket trades on
+`candles.actual` and called paper's `win` oracle-flattered. Backwards: Polymarket pays on its own oracle,
+the lane's `actual` matches `venues.outcome` 303/303 and disagrees with Binance 20.1%. Grading on Binance
+would have inflated the grid ~90% (+0.249 vs +0.132/$1). It is the 09-10 error pointed the other way, and
+mine. Retracted in `REMAKE_PLAN.md` §2a; the twin's pass criterion is re-based to Polymarket's oracle.
+**The grid itself: every readable cell positive (+0.054 to +0.258), weekday fails halves at n=74, Q4
+busiest −0.066 at n=35 not read. No cell separates on one weekend - there is no "market is bad" cell to
+switch away from at a readable n.** So nothing is designed from it. H1 asked for the v10 set (777 graded,
+several days): snapshotted to `live_backup/v10_poly_long4.sqlite3.gz` (`24d28a7`), **Task R-2** = same grid
+on it, provenance check first, a second weekend window, readable n on Q4 and weekday.
+
+Twins: ctrl 30945 / cand 30947 alive, 14 processes. Live: master off since 23:55:41, nothing fires.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |

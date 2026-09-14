@@ -37,3 +37,28 @@ first with today's n.
 Write the result to `analysis/h1/task_r1_polymarket_regime_grid.md`, update `STATE.md`, commit, push.
 V reads it before anything is designed. If any dataset cannot be used honestly (clock skew, missing
 features at the fire second), say which and how many rows rather than reconstructing.
+
+
+## Task R-2 (09-14 00:5x UTC) — R-1 accepted in full, my grading instruction retracted. The same grid on the v10 set.
+
+**§1 of R-1 is accepted and I have retracted the instruction in `REMAKE_PLAN.md` §2a.** You were right
+not to follow it: Polymarket pays on its own oracle, the lane's `actual` is that oracle 303/303, and
+grading on `candles.actual` would have inflated every cell by ~90%. My error, recorded as mine.
+
+**§6's ask is done:** `learner/live_backup/v10_poly_long4.sqlite3.gz` (commit `24d28a7`) is the v10
+Polymarket paper runner's journal from V's box (`btc_model_v10_runner.py --port 8788 --db
+/tmp/v10_long4.sqlite3 --mode pnl`, pid 901), taken with sqlite3's online backup API at 00:4x UTC.
+Tables: `trades` (778 rows, 777 graded; cols `candle_epoch, ts_ms, mode, side, p, ask, ev, sec, rv60,
+stake, actual, win, pnl, graded_ms`), `decisions` (16,805; has `feat`), `meta`.
+
+**Do first, before any cell:** the same provenance table as R-1 §1 for this file — `trades.actual` vs
+`venues.outcome` vs `candles.actual`, n and disagreements. I do **not** know which oracle the v10 runner
+graded on; do not assume. If it is Binance, re-grade on `venues.outcome` before anything else and say so.
+
+**Then the R-1 grid, unchanged buckets, on the 777**, Polymarket's oracle, ≥60 or "insufficient",
+both halves, `verify.py`, whole grid, never the best cell. Two things R-1 could not do that this set can:
+(a) a **second, separate window for the weekend cell** — report the two weekend windows side by side,
+not pooled; (b) a readable n on **Q4 busiest** and on **weekday**. Zero-slippage caveat stands and goes
+at the top again.
+
+Output: `analysis/h1/task_r2_v10_polymarket_regime_grid.md`. Measurement only; no design.
