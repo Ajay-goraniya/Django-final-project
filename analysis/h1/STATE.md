@@ -1,5 +1,18 @@
 # H1 STATE — single source of truth for the check-in loop
-Last updated: 2026-09-14 01:05 UTC. Update this file at the end of every check.
+Last updated: 2026-09-14 01:10 UTC. Update this file at the end of every check.
+
+## 09-14 01:10 — my own 2-hourly trigger prompt REWRITTEN; it carried a retracted instruction
+The cron prompt still told future runs to "grade on candles.actual" — the instruction V retracted an
+hour ago and the one that would have inflated the R-1 grid ~90%. A stale rule sitting in an automated
+prompt is a live hazard, so it is replaced with the correct rule: **grade each trade on the oracle its
+own venue settles on** — Predict.fun on `candles.actual`, **Polymarket on `venues.outcome`** (matched
+by the lanes 776/776 and 303/303). Also added to the prompt: check `learner/REQUEST.md` as well as
+`analysis/h1/REQUEST.md` (V now sends tasks there), the fake-pass warning (both sides of a provenance
+check must come from independent files), the "halves pass inside one contiguous window is nearly
+worthless" lesson with its 09-12 proof, and "paper fills at the quoted ask are upper bounds".
+- **The user's usage-saver window ("every 2 hours till sundays night") has EXPIRED.** Cadence kept at
+  2-hourly anyway: it costs little and V pings this session directly for real work. If the user wants
+  the 30-minute cadence back they will say so.
 
 ## Task R-2 DONE 09-14 01:05 — the grid on the v10 777 set. `analysis/h1/task_r2_v10_polymarket_regime_grid.md`
 V accepted R-1 in full and retracted the `candles.actual` instruction (REMAKE_PLAN §2a); V shipped the
