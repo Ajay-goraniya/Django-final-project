@@ -5371,3 +5371,10 @@ HTTP/2, pooled, keepalive 30 s; the 5 s balance poll runs on the same CLOB pool 
 orders: attempt-1 RTT 264/323 ms (med/p90) vs attempt-2+ 247/298; idle >120 s 267 vs <30 s 262 -> NO idle-connection
 penalty. The order RTT floor is ~245-265 ms from Zurich = Polymarket's processing + path to its origin; no client
 change removes it. CLOSED: SDK execution path is not leaving latency on the table.
+**20:36 R-10 (H1, analysis/h1/task_r10_accuracy_mode.md): accuracy mode is NOT a safer mode in money.** Replay on
+940 pnl-rule fires' tick streams (7 days): pnl rule 134/day, 52.9% hit, +0.131/$1, +123, 6/7 days positive;
+accuracy 0.85/0.02: 51/day, 86.4% hit, +0.001/$1, +0.31, 4/7 days; the shipped regime_floors: 74% hit, -0.040/$1,
+2/7 days. The high-confidence fires are the expensive-price fires: right often, paid almost nothing when right,
+lose the full stake when wrong. Permutation: a random confidence through the same floors does as well (+0.034) -
+the floors select a price band, not skill. Whole grid in the file (p 0.70-0.90 x ev 0.02-0.08): no cell beats the
+pnl rule per $1. CLOSED as a safer mode; the model file's 87.6% accuracy claim reproduces, its $263 does not.
