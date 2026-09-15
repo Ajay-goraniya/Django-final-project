@@ -229,7 +229,86 @@ def main():
               % (nm, b['n'], 100 * b['win'], b['per1'], b['total']))
     print()
     stage_c(ok, p_new, p_old, f_new, f_old, b_new, b_old, oc)
+    stage_b2(ok, p_new, p_old, b_old, oc)
     return ok, p_new, p_old, f_new, f_old, b_new, b_old, oc, days
+
+
+def stage_b2(ok, p_hist, p_old, b_old, oc):
+    """The SECOND stage the brief specified and stage B alone does not include.
+
+    "train the microstructure part on the full history, fit the venue combination + isotonic on the
+    logged Polymarket window only, report both stages."
+
+    Stage B masked p_venue / lv / lv_x_sec - the market's own implied probability - and that is
+    almost certainly why it lost: v10's shipped feature set is BASE + p_venue, so the venue price
+    was known to carry weight at training time. Here the history model's output becomes ONE input
+    alongside the venue features, combined and re-calibrated on the logged window only, walk-forward
+    BY DAY (train on days < d, test on d). Nothing in-sample.
+    """
+    print('=' * 78)
+    print('STAGE B2  venue combination on the logged window, walk-forward by day')
+    print('=' * 78)
+    y = np.array([1.0 if r['actual'] == 'UP' else 0.0 for r in ok])
+    day = np.array([r['day'] for r in ok])
+    days = sorted(set(day.tolist()))
+    F = np.column_stack([
+        p_hist,
+        np.array([r['feat']['p_venue'] for r in ok]),
+        np.array([r['feat']['lv'] for r in ok]),
+        np.array([r['feat']['lv_x_sec'] for r in ok]),
+        np.array([r['feat']['sec_left'] for r in ok]),
+    ])
+    print('  inputs: p_hist (the big model), p_venue, lv, lv_x_sec, sec_left. %d rows, %d days.'
+          % (len(ok), len(days)))
+    p2 = np.full(len(ok), np.nan)
+    tested = []
+    for i, d in enumerate(days):
+        if i < 2:
+            continue
+        tr, te = day < d, day == d
+        if tr.sum() < 500 or te.sum() < 20:
+            continue
+        m, iso = fit(F[tr], y[tr], day[tr])
+        p2[te] = predict(m, iso, F[te])
+        tested.append(d)
+    m_ok = ~np.isnan(p2)
+    sub = [r for r, k in zip(ok, m_ok) if k]
+    print('  tested days: %s (%d rows)' % (', '.join(tested), int(m_ok.sum())))
+    print()
+    print('  %-16s %8s %9s %10s %10s %9s' % ('arm', 'fires', 'hit%', 'per $1', 'total', 'Brier'))
+    arms = {'frozen v10': p_old[m_ok], 'R-12 big alone': p_hist[m_ok], 'R-12 + venue': p2[m_ok]}
+    res = {}
+    for nm, p in arms.items():
+        b = book(fire_set(sub, p))
+        res[nm] = (b, p)
+        print('  %-16s %8d %8.1f%% %+10.3f %+10.2f %9.4f'
+              % (nm, b['n'], 100 * b['win'], b['per1'], b['total'],
+                 float(np.mean((p - y[m_ok]) ** 2))))
+    print()
+    fz = fire_set(sub, res['frozen v10'][1])
+    st = fire_set(sub, res['R-12 + venue'][1])
+    shared = sorted(set(fz) & set(st))
+    idx = {id(r): i for i, r in enumerate(sub)}
+    s2 = sorted(sub, key=lambda r: r['ts'])
+    h = len(s2) // 2
+    hv = []
+    for half in (s2[:h], s2[h:]):
+        mm = np.array([idx[id(r)] for r in half])
+        a, b = book(fire_set(half, res['R-12 + venue'][1][mm])), \
+               book(fire_set(half, res['frozen v10'][1][mm]))
+        hv.append((a['per1'] - b['per1']) if (a and b) else float('nan'))
+    costs = {k: book(st, k)['per1'] for k in (0, 0.01, 0.02, 0.03, 0.05)}
+    f = Finding('R-12 two-stage (history + venue) vs frozen v10',
+                per_fire=res['R-12 + venue'][0]['per1'] - res['frozen v10'][0]['per1'],
+                n=res['R-12 + venue'][0]['n'])
+    f.sample({'fires': res['R-12 + venue'][0]['n']})
+    f.halves(first=hv[0], second=hv[1])
+    f.paired(mine_right=[st[e]['side'] == st[e]['actual'] for e in shared],
+             theirs_right=[fz[e]['side'] == fz[e]['actual'] for e in shared])
+    f.costs(costs)
+    f.null(mine=res['R-12 + venue'][0]['total'], null_value=res['frozen v10'][0]['total'],
+           null_name='frozen v10 TOTAL PnL on the same candles')
+    f.verdict()
 
 
 def stage_c(ok, p_new, p_old, f_new, f_old, b_new, b_old, oc):
