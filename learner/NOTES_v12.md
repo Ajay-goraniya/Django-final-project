@@ -5338,3 +5338,7 @@ non-open orders, not just the POST-timeout case; harmless now, worth one line in
 Snapshots 93e7045. Twins since 03:50: ctrl 12.8.11 22 res +33.3 vs cand 12.9.0 21 res +37.5, same decisions.
 **11:2x user: fixed stake 3.0 -> 5.0 on Zurich (user sets it on the dashboard).** Half Kelly at ~55% hit on ~$100; $10
 refused as full Kelly on an uncalibrated p. Watch fill rate over the next 50 orders (bigger order needs more depth).
+**11:28 Zurich:** 25 res 19W/6L +54.41; 25 fills / 34 rejects (42%); cash 113.24. Stake audit: 3.0 -> 35.0 at 11:21:01
+(dashboard typo) -> 5.0 at 11:21:08; no order fired in those 7 s. Correction to my 11:2x claim: DEPLOYED.md `## 12.8.11`
+HAS been on origin since 02:1x (2026983). Zurich cannot self-schedule (create_trigger denied "Unauthorized
+Persistence"): V's hourly now always pokes it. Snapshot backups still intermittently denied on the box.
