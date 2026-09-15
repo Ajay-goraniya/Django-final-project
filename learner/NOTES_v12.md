@@ -5384,3 +5384,9 @@ stake_settings / next_stake audit rows on Zurich after 21:2x are the user's, not
 max 50** (dashboard, user's own). Dashboard "today" panel read -7.59 on 43 settled at 21:22.
 
 ### 09-15 22:4x - Task 95 done (Mumbai): 12.8.11 paper control on 8793 pid 119658 (db twin_12811, first decision 22:36:48), beside 12.9.0 paper 8787 pid 118302. Comparator no longer depends on V's container. Ledger analysis/aws/twin_1290_ledger.md carries both arms every 4 h.
+
+### 09-15 23:0x - drawdown cause (Zurich journal 2, snapshot 21:16)
+02-13 UTC: 29 res 22W +65.5 (+0.717/$1). 13-22: 36 res 13W -22.6 (-0.131/$1); hit 36% vs 76%; stake mostly $5 in this window.
+Regime: BTC 77918 -> 75762 (-2.8%), rv60 med 0.26 -> 0.75, candle range 10 -> 24 bps, fire reversal 37% -> 50%.
+Not a known bad bucket: rv60>0.75 historically +0.151/$1 (poly_pnl n=118) and +0.072 (v10_long4 n=80); every rv60 bucket positive, both halves where n>=60.
+Verdict: market regime + variance (13/36 at p=0.54, z=-2.1), same under 12.8.11 and 12.9.0, execution clean. No gate, no switch (rain-or-sun: no bucket to switch off). R-11 to H1: trend x vol grid.

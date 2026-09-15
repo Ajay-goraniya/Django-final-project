@@ -157,3 +157,11 @@ the same tick streams as R-6 (paper sets + live journals, Polymarket oracle), sa
 total, positive days / days, halves, permutation, paired() vs the pnl rule on shared candles, verify.py. Also the
 grid of conf_floor {0.70,0.75,0.80,0.85,0.90} x ev_floor {0.02,0.05,0.08} - whole grid, no best cell - so the user
 sees the frequency/accuracy trade-off. Reply ≤6 lines, file on the branch.
+
+## R-11 (09-15 23:0x) - trend x volatility regime grid. Today 13-22 UTC: 36 res 13W -0.131/$1 during a -2.8% BTC selloff
+with rv60 med 0.75 (vs +0.717/$1 on 29 res before 13:00). rv60 alone is not a losing bucket (every bucket positive in
+poly_pnl 1005 / v10_long4 777). Define FIRST, then grid ALL cells on the largest Polymarket-oracle sample plus today's
+Zurich rows: ret60 tercile (down/flat/up) x rv60 (<0.35 / 0.35-0.75 / >0.75) x side (UP/DOWN). Per cell n, hit, pnl/$1,
+halves, >=60 or "insufficient". Full grid, never the best cell. Question: is "selling into a selloff at high vol" a
+cell that loses every day (rain or sun) or is today variance. verify.py gates. Report ≤8 lines in analysis/h1/, one
+verdict line to NOTES.
