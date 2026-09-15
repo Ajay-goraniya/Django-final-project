@@ -23,7 +23,24 @@ twice for the same words. From now: verdict, numbers, file path; detail stays in
 **01:20 — V made it STRICT** (everyone, always; sole exception a major matter needed now, numbers first)
 and wrote it into CLAUDE.md. I removed my own near-duplicate block there — V's is authoritative.
 
-## Task R-5 pass 1 DONE 09-15 02:4x — trained Kelly sizing DOES NOT SHIP. `analysis/h1/task_r5_kelly_sizing.md`
+## Task R-5 run 1b DONE 09-15 02:5x — DOES NOT SHIP, and the bigger sample made it worse
+**`poly_pnl` is a SUPERSET of `v10_poly_long4`** — all 777 of v10's rows by (epoch, ts), 125 fresher
+(to 09-15 00:41). Run 1 used the stale subset. With `poly_acc` too the sample goes 1543 → **1872**,
+and every number moves against sizing:
+- per-$1 delta **+0.073 → −0.008**; ship condition **−381.51 → −480.44** vs fixed-3; the
+  equal-capital steelman flips **+168 → −21.54**, so Kelly now loses on *every* comparison.
+- verify.py now fails **four** checks (halves −0.146/+0.111, null, quote age, paired) where run 1
+  failed two. Ablation without `ask`: −0.008 → −0.138.
+- All three lanes confirmed **paper at the quoted ask** (recorded pnl == quoted-ask payout to
+  0.0000 on all 929 poly_pnl rows).
+- **My run-1 blocker wording was wrong and V corrected it.** The v12 journals DO record p/ev/rv60 —
+  this task reads exactly those for the paper set. The accurate blocker: **no Zurich live-journal
+  snapshot is on the branch** (18 snapshots in `learner/live_backup`, none named zurich, no
+  `signals`/`diagnostics` table in any). The only live-fill rows H1 can reach are
+  `r3_submissions.csv` (14 cols, no p/ev/rv60). One pushed snapshot unblocks pass 2.
+- Ledger row 1b appended (run 1 kept, not deleted). **Stake stays fixed 3.0.**
+
+## Task R-5 pass 1 (superseded by 1b) 09-15 02:4x — `analysis/h1/task_r5_kelly_sizing.md`
 STANDING task (V): re-run at every +100 graded live fires; one line per run in `analysis/h1/r5_ledger.md`;
 report to V only on a change of verdict. **Until it passes, stake stays fixed 3.0.**
 - Walk-forward ridge on per-$1 PnL from fire-time inputs (p, ev, ask, sec, rv60, lane), fit on the
