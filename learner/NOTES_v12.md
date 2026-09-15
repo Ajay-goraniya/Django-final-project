@@ -5382,3 +5382,5 @@ pnl rule per $1. CLOSED as a safer mode; the model file's 87.6% accuracy claim r
 stake_settings / next_stake audit rows on Zurich after 21:2x are the user's, not a fault. Report them, never revert.
 **21:2x user set Zurich staking: mode streak, 5% of free capital, current 5.0, recalc after 3 wins / 2 losses, min 3,
 max 50** (dashboard, user's own). Dashboard "today" panel read -7.59 on 43 settled at 21:22.
+
+### 09-15 22:4x - Task 95 done (Mumbai): 12.8.11 paper control on 8793 pid 119658 (db twin_12811, first decision 22:36:48), beside 12.9.0 paper 8787 pid 118302. Comparator no longer depends on V's container. Ledger analysis/aws/twin_1290_ledger.md carries both arms every 4 h.
