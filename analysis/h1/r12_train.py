@@ -228,7 +228,88 @@ def main():
         print('  %-14s %8d %8.1f%% %+10.3f %+10.2f'
               % (nm, b['n'], 100 * b['win'], b['per1'], b['total']))
     print()
+    stage_c(ok, p_new, p_old, f_new, f_old, b_new, b_old, oc)
     return ok, p_new, p_old, f_new, f_old, b_new, b_old, oc, days
+
+
+def stage_c(ok, p_new, p_old, f_new, f_old, b_new, b_old, oc):
+    y = np.array([1.0 if r['actual'] == 'UP' else 0.0 for r in ok])
+    print('=' * 78)
+    print('STAGE C  the test. Every number below is OUT OF SAMPLE by construction.')
+    print('=' * 78)
+    print('  forecast quality on all %d test rows (not just the fires):' % len(ok))
+    for nm, p in (('frozen v10', p_old), ('R-12 big', p_new)):
+        print('    %-12s Brier %.4f   logloss %.4f'
+              % (nm, float(np.mean((p - y) ** 2)),
+                 float(-np.mean(y * np.log(np.clip(p, 1e-6, 1 - 1e-6))
+                                + (1 - y) * np.log(np.clip(1 - p, 1e-6, 1 - 1e-6))))))
+    print()
+
+    idx = {id(r): i for i, r in enumerate(ok)}
+    s = sorted(ok, key=lambda r: r['ts'])
+    h = len(s) // 2
+    hv = []
+    for lab, half in (('h1', s[:h]), ('h2', s[h:])):
+        m = np.array([idx[id(r)] for r in half])
+        a, b = book(fire_set(half, p_new[m])), book(fire_set(half, p_old[m]))
+        hv.append((a['per1'] - b['per1']) if (a and b) else float('nan'))
+        print('  %s  R-12 n=%4d per $1 %+.3f   |   frozen n=%4d per $1 %+.3f'
+              % (lab, a['n'], a['per1'], b['n'], b['per1']))
+    print()
+
+    print('  costs - paying k ticks worse on every fill:')
+    print('    %-12s %s' % ('', '  '.join('%8s' % ('+%dc' % int(100 * k))
+                                          for k in (0, 0.01, 0.02, 0.03, 0.05))))
+    costs = {}
+    for nm, f in (('frozen v10', f_old), ('R-12 big', f_new)):
+        row = {k: book(f, k)['per1'] for k in (0, 0.01, 0.02, 0.03, 0.05)}
+        costs[nm] = row
+        print('    %-12s %s' % (nm, '  '.join('%+8.3f' % row[k]
+                                              for k in (0, 0.01, 0.02, 0.03, 0.05))))
+    print()
+
+    print('  REGIME GRID - every cell, never the best one. rv60 cuts 0.35/0.75, ret60 terciles.')
+    rc = sorted(r['feat']['ret60'] for r in ok)
+    RC = [rc[len(rc) // 3], rc[2 * len(rc) // 3]]
+    print('    %-11s %-13s %7s %8s %10s   %7s %8s %10s'
+          % ('ret60', 'rv60', 'n', 'hit%', 'per $1', 'n', 'hit%', 'per $1'))
+    print('    %-11s %-13s %-27s %s' % ('', '', '        frozen v10', '        R-12 big'))
+    for i, rn in enumerate(('down', 'flat', 'up')):
+        for j, vn in enumerate(('rv<0.35', 'rv0.35-0.75', 'rv>0.75')):
+            sel = [r for r in ok
+                   if (0 if r['feat']['ret60'] < RC[0] else (1 if r['feat']['ret60'] < RC[1] else 2)) == i
+                   and (0 if r['feat']['rv60'] < 0.35 else (1 if r['feat']['rv60'] <= 0.75 else 2)) == j]
+            if not sel:
+                continue
+            m = np.array([idx[id(r)] for r in sel])
+            bo, bn = book(fire_set(sel, p_old[m])), book(fire_set(sel, p_new[m]))
+            fmt = lambda b: ('%7d %7.1f%% %+10.3f' % (b['n'], 100 * b['win'], b['per1'])) if b \
+                else '%7s %8s %10s' % ('0', '-', '-')
+            mark = '' if (bn and bn['n'] >= MIN_CELL) else '  insufficient'
+            print('    %-11s %-13s %s   %s%s' % (rn, vn, fmt(bo), fmt(bn), mark))
+    print()
+
+    shared = sorted(set(f_new) & set(f_old))
+    rng = np.random.default_rng(7)
+    sims = []
+    for _ in range(200):
+        b = book(fire_set(ok, rng.permutation(p_new)))
+        if b:
+            sims.append(b['per1'])
+    sims = np.array(sims)
+    f = Finding('R-12 big-history model vs frozen v10',
+                per_fire=b_new['per1'] - b_old['per1'], n=b_new['n'])
+    f.sample({'R-12 fires': b_new['n']})
+    f.halves(first=hv[0], second=hv[1])
+    f.paired(mine_right=[f_new[e]['side'] == f_new[e]['actual'] for e in shared],
+             theirs_right=[f_old[e]['side'] == f_old[e]['actual'] for e in shared])
+    f._add('permutation control', float((sims >= b_new['per1']).mean()) <= 0.01,
+           'real %+.3f vs permuted mean %+.3f, p=%.3f over %d draws'
+           % (b_new['per1'], sims.mean(), float((sims >= b_new['per1']).mean()), len(sims)))
+    f.costs(costs['R-12 big'])
+    f.null(mine=b_new['total'], null_value=b_old['total'],
+           null_name='frozen v10 TOTAL PnL on the same candles')
+    f.verdict()
 
 
 if __name__ == '__main__':
