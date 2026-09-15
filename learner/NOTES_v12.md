@@ -5294,3 +5294,8 @@ verified no-fill once venue_absent>=3 and age>=60 s with no trade; one RECONCILE
 reason. Fail-on-old confirmed here (3 new tests fail on 12.8.10 modules, pass after). 255 tests. Z-5 = §7 on Zurich.
 Cross-session: triggers to Zurich must set environment_id=env_01Q4MxpRM42a9vjPSbtMj4av; with V's own env they mint
 orphan sessions since Zurich's remote-control restart (3 minted and archived 01:41-01:50).
+**02:06 UTC 12.8.11 LIVE on Zurich, fresh journal** (user: "restart and reset everything" -> fresh journal). pid 15581,
+2cf8b6d, hashes 30/30, 255 tests, fail-on-old 3/3 on the running 12.8.9. User armed master 02:06:20 and set stake
+fixed 3.0 at 02:06:51 (31 s on ladder with next_stake 1<->5, 0 orders in that window); ev quote_age_ms 750 02:06:57.
+Venue cash 61.62. Old journal kept (4 results 0W/4L -11.49; the UNKNOWN stays there, so the fix's effect is only
+testable on the next such order - RECONCILE_STUCK row + NO_FILL within ~1 min).
