@@ -19,3 +19,28 @@
    with those 9 at zero, then served where they are populated, is not the same model.
 5. **Order:** pipeline check first (retrain the 8 days with the new pipeline, must reproduce frozen v10
    within noise) → then the big run. No in-sample numbers in the final report.
+
+## Progress — stage 1 (data) running, stage A (parity) running
+
+**Plan approved 22:49 with the addendum "serve the 9 unbuildable zeroed too, feature mask in json,
+so train == serve". Taken, and extended by three — stated here rather than silently:**
+`basis_bps`, `ofi60`, `perp_n15` are **masked as well, not approximated.** Reply 1 said they would
+come from futures 1m klines. A 1m bar is minute-aligned rather than trailing, and `perp_n15` is a
+15-second count a 1m bar cannot express at all — so feeding them at train time while serve computes
+the precise value is exactly the skew the addendum exists to remove. **Mask is 12; 18 features are
+built.** Futures 1s klines do not exist (404), so there is no cheaper honest route.
+
+Built (18, exactly as `FeatureState` computes them): the 16 price-path features **plus
+`spot_imb15`/`spot_imb60`** — 1s klines carry taker-buy base volume, so taker sell = volume − taker
+buy, the same quantity the engine accumulates from the trade stream.
+
+- **stage 1 extraction:** running, ~8.8 s/month measured, 110 months, ~43k rows/month
+  (8,637 candles × 5 sampled decision seconds in the 15–240 s window). Streams one month at a time
+  and deletes the raw, so peak disk stays under 1 GB. Script `analysis/h1/r12_extract.py`.
+- **stage A parity — the check that decides whether any of this is worth reading:** V asked for
+  "retrain the 8 days, must reproduce v10 within noise". **That is not literally runnable** — v10
+  was built from 2026-08-29..09-06 with all 30 features and no 30-feature vectors exist for those
+  days on this branch (logged `feat` starts 09-08). The substitute is stronger for what can
+  actually be wrong: recompute my kline-derived features **at the engine's own decision seconds**
+  over the logged window and compare value-by-value against the `feat` it recorded at that instant.
+  Verify against the running artifact, not a re-derivation. Script `analysis/h1/r12_parity.py`.
