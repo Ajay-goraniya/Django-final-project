@@ -4766,6 +4766,14 @@ build 12.8.9 @ 7457816, dir `/home/ubuntu/pm_paper_zurich`, db `polymarket_v12_l
 2000` (CLI; ev_settings fresh so exec path also 2 s until set - NOTE: set ev_settings.quote_age_ms=750 on Zurich),
 user arms master + stake fixed 3.0 on the dashboard. Zurich paper (pid 6762) stopped. One wallet, one live engine.
 
+## 00:2x UTC (Tue 09-15) - WAIT_CENSUS (Task 90, 67.5 min on Mumbai): 17.9% of publishes blocked; 70% of blocks = a FRESH book with one EMPTY side.
+
+ok 1,495,108 / blocked 324,908. Side symmetric (UP 162,428 / DOWN 162,480). Reason: no_bids 113,092 = no_asks 113,092
+(complementary pair: UP-no-bids <=> DOWN-no-asks), stale 96,958 (all in the 2-5 s bucket - beyond BOTH bars), crossed
+1,762. Age: <0.75 s 70.1%, 2-5 s 28.5%. So the quote-age bar was never the lever (retraction 23:1x stands); the
+lever is `quote()` refusing a one-sided book although we only BUY (need the ask). Next: phase split (in-window vs
+tail) before any rule change; then a gridded `quote()` change, not a threshold. Zurich first hourly pending.
+
 # LIVE TEST LEDGER (every candidate runs as a paper twin beside the baseline; outcomes revised here at check-ins)
 Rule (user, 23:45 UTC 09-09): nothing goes into notes as a finding unless it is run and measured over time; entries are rewritten from outcomes, not kept as ideas.
 | id | start (UTC) | variant | hypothesis | verdict so far |
