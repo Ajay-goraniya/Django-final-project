@@ -3,6 +3,35 @@ import asyncio, dataclasses, importlib.metadata, json, os, time
 from types import SimpleNamespace
 from poly_core import fee, error_info
 
+class CoroutineSuspended(RuntimeError):
+    """run_sync() was handed a coroutine that really awaits something."""
+
+def run_sync(coro):
+    """Drive a coroutine that never suspends to completion on the calling thread.
+
+    polymarket-client 0.10.0's AsyncSecureClient._sign_order is `async def` but
+    awaits nothing (clients/async_secure.py:3458-3474: build typed data, sign
+    with secp256k1, wrap) - it is 5.3 ms of pure CPU on the event loop. This
+    runs that coroutine inside a worker thread without a second event loop. A
+    coroutine that does suspend is closed and reported, so the caller can fall
+    back to awaiting it on the loop; SigningOffTheLoop pins the SDK assumption."""
+    try: coro.send(None)
+    except StopIteration as e: return e.value
+    coro.close(); raise CoroutineSuspended('sign coroutine suspended; SDK changed shape')
+
+async def sign_off_loop(sign,hash_fn):
+    """12.9.0: EIP-712 sign + journal re-hash in a thread, off the fire path.
+
+    `sign()` returns the SDK's _sign_order coroutine; `hash_fn(signed)` is the
+    journal hash. Both run on one worker thread and come back together as
+    (signed, journal_hash), so the identity the executor checks against the
+    venue's response is computed from the very object that is posted."""
+    def work():
+        signed=run_sync(sign()); return signed,hash_fn(signed)
+    try: return await asyncio.to_thread(work)
+    except CoroutineSuspended:
+        signed=await sign(); return signed,hash_fn(signed)
+
 class LiveBroker:
     # 12.8.11: how many account open-orders listings must have shown an order
     # absent (Journal.mark_venue_open, ~20 s apart on the live box), and how old
@@ -27,13 +56,17 @@ class LiveBroker:
         from polymarket._internal.protocol import is_v2_position_id
         from eth_account.messages import encode_typed_data
         from eth_utils import keccak
+        def journal_hash(signed,draft):
+            fields=dataclasses.asdict(signed); fields.update(chain_id=draft.chain_id,exchange_address=draft.exchange_address)
+            version='3' if is_v2_position_id(signed.token_id) else '2'
+            msg=encode_typed_data(full_message=_build_standard_typed_data(SimpleNamespace(**fields),protocol_version=version))
+            return '0x'+keccak(b'\x19'+msg.version+msg.header+msg.body).hex()
         class TrackedClient(AsyncSecureClient):
             async def _sign_order(self,draft,*,post_only):
-                signed=await super()._sign_order(draft,post_only=post_only)
-                fields=dataclasses.asdict(signed); fields.update(chain_id=draft.chain_id,exchange_address=draft.exchange_address)
-                version='3' if is_v2_position_id(signed.token_id) else '2'
-                msg=encode_typed_data(full_message=_build_standard_typed_data(SimpleNamespace(**fields),protocol_version=version))
-                self.journal_hash='0x'+keccak(b'\x19'+msg.version+msg.header+msg.body).hex()
+                # 12.9.0: sign and re-hash on a worker thread (see sign_off_loop).
+                # The order-identity check in Executor.fire is unchanged.
+                parent=super()._sign_order
+                signed,self.journal_hash=await sign_off_loop(lambda: parent(draft,post_only=post_only),lambda s: journal_hash(s,draft))
                 return signed
         names=['POLYMARKET_PRIVATE_KEY','POLYMARKET_WALLET_ADDRESS','RELAYER_API_KEY','RELAYER_API_KEY_ADDRESS']
         missing=[n for n in names if not os.environ.get(n)]

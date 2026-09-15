@@ -1876,3 +1876,279 @@ class WaitCensusSaysWhichBookBlockedAndHowOld(unittest.TestCase):
         self.r.books=types.SimpleNamespace(quote=lambda *a: None)   # no block_detail attribute at all
         with mock.patch('time.time',return_value=600.0+30):
             self.assertFalse(self.r.publish())
+
+
+# ---------------------------------------------------------------- 12.9.0
+# Engine cleanup from analysis/v/audit_hotpath.md and audit_deadcode_overlap.md
+# (plan_12_9.md items 1-7). No decision logic, threshold, EV maths, pad or
+# execution shape changes; every test below FAILED on 12.8.11 unless noted.
+import asyncio, hashlib, math, threading
+
+def _snap(token='up', ask=.4, qty=100., ts=None):
+    return dict(event_type='book', asset_id=token, timestamp=str(int((ts or time.time())*1000)),
+                asks=[dict(price=str(ask), size=str(qty))], bids=[dict(price=str(ask-.01), size='100')])
+
+def _decision(): return dict(fire=True, side='UP', p=.8, threshold=.2, ask=.4, sec=30, ev=.9)
+
+def _paper_runner():
+    import sys, btc_model_v12_polymarket as E
+    sys.argv = ['x']
+    a = types.SimpleNamespace(live=False, port=0, host='127.0.0.1',
+        model=str(pathlib.Path(E.__file__).with_name('model_v10.json')),
+        db=tempfile.mktemp(suffix='.sqlite3'), capital=50, mode='pnl', ev=None,
+        quote_age_ms=750, pad_ticks=1, execution_budget_ms=2000,
+        post_timeout_ms=1200, max_attempts=3)
+    return E.PolyRunner(a), E
+
+
+class PostTimeoutFloor(unittest.TestCase):
+    """Item 1. audit_hotpath defect (i): wait_for(post, max(.001, deadline-start))
+    could send a real order with a few-ms timeout, cancel it mid-flight and leave
+    UNKNOWN. Under POST_FLOOR_S of budget left the attempt releases BUDGET instead."""
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.db = C.Journal(str(pathlib.Path(self.temp.name)/'f.db'), 'PAPER', 'abc')
+        self.books = C.BookCache(); self.books.apply(_snap()); self.books.terms['up'] = (.01, 1, .07, 1)
+    def tearDown(self): self.db.c.close(); self.temp.cleanup()
+    def _fire(self, prepare_delay):
+        posted = []
+        class Slow(C.PaperBroker):
+            async def prepare(self, t, plan):
+                await asyncio.sleep(prepare_delay)
+                books.apply(_snap())                      # same ask re-applied: PaperBroker.post reads a fresh book
+                return await super().prepare(t, plan)
+            async def post(self, s): posted.append(1); return await super().post(s)
+        books = self.books
+        ex = C.Executor(self.db, self.books, Slow(self.books), age=5.0, budget_s=2.0)
+        ep = int(time.time())-30
+        asyncio.run(ex.fire(ep, _decision(), 'up', 'c', 10, _decision))
+        rearmed = [json.loads(r[0])['after'] for r in self.db.sql("SELECT detail FROM diagnostics WHERE detail LIKE '%candle_rearmed%'")]
+        return len(posted), len(self.db.sql('SELECT * FROM orders')), rearmed, ex
+    def test_floor_is_400ms(self):
+        self.assertEqual(C.Executor.POST_FLOOR_S, 0.4)
+        self.assertIn('BUDGET', C.Journal.NO_ORDER_SENT, 'nothing was sent, so the candle re-arms like DEADLINE')
+    def test_above_the_floor_still_posts(self):
+        posted, orders, rearmed, ex = self._fire(1.4)          # ~0.6 s left
+        self.assertEqual((posted, orders, rearmed), (1, 1, []))
+    def test_below_the_floor_releases_budget_and_never_posts(self):
+        posted, orders, rearmed, ex = self._fire(1.75)         # ~0.25 s left
+        self.assertEqual((posted, orders), (0, 0), 'no order may leave with a sub-floor timeout')
+        self.assertEqual(rearmed, ['BUDGET'])
+        self.assertEqual(ex.latency_samples[-1]['outcome'], 'BUDGET', 'timing is recorded')
+        self.assertLess(ex.latency_samples[-1]['post_budget_left_ms'], 400)
+
+
+class FeatureCacheParity(unittest.TestCase):
+    """Item 2. features() rebuilt np.fromiter over the full 20-min deques on every
+    call (~15 ms x ~7 per fire). The array conversions are now cached on a
+    mutation counter; the numbers must be bit-identical with and without it."""
+    US = 1_000_000
+    def _feed(self, st, seed=7):
+        import random; rng = random.Random(seed)
+        open_us = 1_700_000_000*self.US; px = 60000.0; out = []
+        for s in range(700, 0, -1):                       # 700 s of pre-history, 1 trade/s
+            px *= 1+rng.uniform(-2e-4, 2e-4); st.on_spot_trade(open_us-s*self.US, px, rng.uniform(.01, 2), rng.random() < .5)
+            if s % 2 == 0: st.on_perp_trade(open_us-s*self.US, px*(1+rng.uniform(-1e-4, 1e-4)), 1., rng.uniform(-500, 500), 500.)
+        now = open_us + 15*self.US
+        for i in range(1000):                              # 1,000 ticks, 250 ms apart
+            now += 250_000
+            if i % 3: px *= 1+rng.uniform(-3e-4, 3e-4); st.on_spot_trade(now-rng.randint(0, 200_000), px, rng.uniform(.01, 3), rng.random() < .5)
+            if i % 2: st.on_perp_trade(now-rng.randint(0, 200_000), px*(1+rng.uniform(-1e-4, 1e-4)), 1., rng.uniform(-900, 900), 900.)
+            if i % 4 == 0: st.on_depth(now, px-1, 3., px+1, 2., 30., 28., 100., 90.)
+            if i % 5 == 0: st.on_venue_quote(.4+rng.uniform(-.1, .1), .38, .58, .56)
+            out.append((open_us, now))
+        return out
+    def _same(self, a, b):
+        self.assertEqual(a is None, b is None)
+        if a is None: return
+        self.assertEqual(set(a), set(b))
+        for k in a:
+            x, y = a[k], b[k]
+            if isinstance(x, float) and math.isnan(x): self.assertTrue(isinstance(y, float) and math.isnan(y), k); continue
+            self.assertEqual(x, y, k); self.assertEqual(type(x), type(y), k)
+    def test_cached_and_uncached_are_bit_identical_over_1000_ticks(self):
+        from btc_model_v10 import FeatureState
+        a, b = FeatureState(), FeatureState(cache=False)
+        import random
+        ta, tb = self._feed(a), self._feed(b)
+        self.assertEqual(ta, tb)
+        n = 0
+        for ep, now in ta:
+            fa = a.features(ep, now); fb = b.features(ep, now)
+            self._same(fa, fb); self._same(a.features(ep, now), fa)   # second call in the same tick = a hit
+            n += fa is not None
+        self.assertGreater(n, 900)
+        self.assertGreaterEqual(a.cache_hits, 1000, 'the second call per tick reuses the arrays')
+        self.assertEqual(b.cache_hits, 0)
+    def test_new_data_invalidates(self):
+        from btc_model_v10 import FeatureState
+        st = FeatureState(); self._feed(st); ep, now = 1_700_000_000*self.US, 1_700_000_000*self.US+100*self.US
+        st.features(ep, now); h = st.cache_hits; st.features(ep, now); self.assertEqual(st.cache_hits, h+1)
+        st.on_perp_trade(now, 60000., 1., 1., 1.); st.features(ep, now); self.assertEqual(st.cache_hits, h+1, 'a new print rebuilds')
+        st.on_spot_trade(now, 60000., 1., False); st.features(ep, now); self.assertEqual(st.cache_hits, h+1)
+
+
+class SigningOffTheLoop(unittest.TestCase):
+    """Item 3. The EIP-712 sign (5.3 ms) and the journal re-hash ran on the event
+    loop inside the fire path. They run in a worker thread now; same bytes."""
+    def test_thread_path_matches_the_synchronous_bytes(self):
+        from poly_live import sign_off_loop
+        from eth_account import Account
+        from eth_account.messages import encode_defunct
+        acct = Account.from_key('0x'+'11'*32); msg = encode_defunct(text='fixed draft 12.9.0'); threads = []
+        async def sign(): threads.append(threading.get_ident()); return acct.sign_message(msg)
+        hash_fn = lambda s: '0x'+hashlib.sha256(bytes(s.signature)).hexdigest()
+        ref = asyncio.run(sign())
+        signed, jh = asyncio.run(sign_off_loop(sign, hash_fn))
+        self.assertEqual(bytes(signed.signature), bytes(ref.signature))
+        self.assertEqual(jh, hash_fn(ref))
+        self.assertNotEqual(threads[1], threading.main_thread().ident, 'the sign ran off the loop thread')
+    def test_a_coroutine_that_really_suspends_falls_back_to_the_loop(self):
+        from poly_live import sign_off_loop
+        async def sign(): await asyncio.sleep(0); return 'sig'
+        self.assertEqual(asyncio.run(sign_off_loop(sign, lambda s: s+'-h')), ('sig', 'sig-h'))
+    def test_sdk_sign_order_awaits_nothing(self):
+        """The off-loop driver relies on polymarket-client 0.10.0's _sign_order never suspending."""
+        import inspect
+        from polymarket.clients.async_secure import AsyncSecureClient
+        self.assertNotIn('await', inspect.getsource(AsyncSecureClient._sign_order))
+
+
+class HousekeepingCadence(unittest.TestCase):
+    """Item 4. diagnostics(ts) indexed; retention DELETEs hourly, not every 5 s;
+    halt_check / _wipeout_check / _main_oneshot_check at most once a minute."""
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.db = C.Journal(str(pathlib.Path(self.temp.name)/'h.db'), 'LIVE', 'h')
+    def tearDown(self): self.db.c.close(); self.temp.cleanup()
+    def _twenty_losses(self):
+        f = dict(shares=10., spent=5., fees=0., price=.5, fee_bps=0)
+        for i in range(20):
+            ep = 5000+i
+            self.db.sql("INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,reason,kind) VALUES(?,?,1,'FILLED','{}',0,0,'','EF')", (f'o{ep}', ep))
+            self.db.fill(f'o{ep}', ep, f't{ep}', f, 'paper')
+            self.db.sql('INSERT INTO results(epoch,actual,payout,pnl,ts) VALUES(?,?,?,?,0)', (ep, 'UP', 0., -1.0))
+        self.db.sql('DELETE FROM diagnostics')
+    def test_diagnostics_ts_is_indexed(self):
+        names = [r[1] for r in self.db.c.execute('PRAGMA index_list(diagnostics)')]
+        self.assertIn('diagnostics_ts', names)
+    def test_halt_check_is_throttled_when_asked_and_not_otherwise(self):
+        self.assertEqual(C.Journal.HALT_CHECK_EVERY_S, 60.0)
+        self.assertTrue(self.db.halt_check(every_s=60))
+        calls = []; real = self.db.sql; self.db.sql = lambda *a, **k: (calls.append(a[0]), real(*a, **k))[1]
+        self.assertFalse(self.db.halt_check(every_s=60)); self.assertEqual(calls, [], 'no query inside the window')
+        self.assertTrue(self.db.halt_check()); self.assertTrue(calls, 'a bare call still runs (tests, operator)')
+    def test_kill_condition_rows_still_written_through_the_throttled_path(self):
+        self._twenty_losses(); self.assertTrue(self.db.halt_check(every_s=60))
+        rows = [json.loads(r[0]) for r in self.db.sql("SELECT detail FROM diagnostics WHERE detail LIKE '%KILL_CONDITION%'")]
+        self.assertEqual(sorted(r['rule'] for r in rows), ['ALL', 'EF']); self.assertTrue(all(r['acted'] is False for r in rows))
+        self.assertIsNone(self.db.get('halt'))
+    def test_due_helper(self):
+        import btc_model_v12_polymarket as E
+        r = E.PolyRunner.__new__(E.PolyRunner); clock = [0.]; r._clock = lambda: clock[0]
+        self.assertEqual((E.PolyRunner.MONITOR_EVERY_S, E.PolyRunner.RETENTION_EVERY_S), (60.0, 3600.0))
+        self.assertTrue(r._due('x', 60)); self.assertFalse(r._due('x', 60))
+        clock[0] = 59.9; self.assertFalse(r._due('x', 60)); clock[0] = 60.0; self.assertTrue(r._due('x', 60))
+        self.assertTrue(r._due('y', 60), 'names are independent')
+    def _run_loop(self, E, coro, step_s, iterations, clock):
+        class Stop(Exception): pass
+        n = [0]
+        async def fake_sleep(s):
+            clock[0] += step_s; n[0] += 1
+            if n[0] >= iterations: raise Stop()
+        with mock.patch.object(E.asyncio, 'sleep', fake_sleep), self.assertRaises(Stop): asyncio.run(coro)
+    def test_reconcile_loop_runs_main_oneshot_once_a_minute(self):
+        import btc_model_v12_polymarket as E
+        r = E.PolyRunner.__new__(E.PolyRunner); clock = [0.]; r._clock = lambda: clock[0]; r.error = ''
+        async def rec(): pass
+        r.executor = types.SimpleNamespace(reconcile=rec); calls = []; r._main_oneshot_check = lambda: calls.append(clock[0])
+        self._run_loop(E, r.reconcile_loop(), 1.0, 130, clock)
+        self.assertEqual(calls, [0., 60., 120.])
+    def test_main_oneshot_returns_at_once_when_main_is_off(self):
+        """Already true on 12.8.11 (kept as a pin): one meta read, no diagnostics scan."""
+        import btc_model_v12_polymarket as E
+        r = E.PolyRunner.__new__(E.PolyRunner); r.db = self.db; self.db.set('main_enabled', False)
+        calls = []; real = self.db.sql; self.db.sql = lambda *a, **k: (calls.append(a[0]), real(*a, **k))[1]
+        r._main_oneshot_check(); self.assertEqual(len(calls), 1); self.assertIn('meta', calls[0])
+    def test_housekeeping_deletes_hourly_and_wipeout_checks_once_a_minute(self):
+        r, E = _paper_runner(); clock = [0.]; r._clock = lambda: clock[0]
+        wip = []; r._wipeout_check = lambda: wip.append(clock[0])
+        deletes = []; real = r.db.sql
+        r.db.sql = lambda *a, **k: (deletes.append(a[0]) if a[0].startswith('DELETE') else None, real(*a, **k))[1]
+        self._run_loop(E, r.housekeeping(), 5.0, 13, clock)          # 13 passes = 60 s of housekeeping
+        self.assertEqual(r.error, '', 'the body ran to the end on every pass')
+        self.assertEqual(len(deletes), 2, 'one retention pass (diagnostics + candles), not one per 5 s')
+        self.assertEqual(wip, [0., 60.])
+        r.db.c.close()
+
+
+class OneQuoteAgeDial(unittest.TestCase):
+    """Item 5. audit_deadcode 2.1/2.2: publish() read the CLI quote age while the
+    gate and executor read meta; the gate ran the depth check the executor skips."""
+    def setUp(self):
+        self.r, self.E = _paper_runner(); self.ep = int(time.time()//300)*300
+        self.r.market = {self.ep: ('tokUP', 'tokDN')}
+        for t in ('tokUP', 'tokDN'): self.r.books.apply(_snap(t, .4 if t == 'tokUP' else .58))
+    def tearDown(self): self.r.db.c.close()
+    def _age_books(self, s):
+        for t in ('tokUP', 'tokDN'): self.r.books.books[t]['arrival'] -= s
+    def test_publish_follows_the_meta_dial(self):
+        self._age_books(1.0)                                    # CLI default is 750 ms
+        self.r.db.set('ev_settings', {'quote_age_ms': 1500}); self.assertTrue(self.r.publish())
+        self.r.db.set('ev_settings', {'quote_age_ms': 500}); self.assertFalse(self.r.publish())
+    def test_gate_cannot_refuse_on_depth_when_the_executor_would_send(self):
+        self.r.books.apply(_snap('tokUP', .4, qty=1.)); self.r.books.terms['tokUP'] = (.01, 1, .07, 1)
+        self.r.db.set('next_stake', 10.)
+        q = self.r.books.quote('tokUP', 2.0)
+        with self.assertRaises(ValueError) as e: C.order_plan(q, self.r.books.terms['tokUP'], 10., _decision(), 1)
+        self.assertIn('book too thin', str(e.exception), 'the book IS thin for a FOK broker')
+        self.assertFalse(self.r.executor.require_depth)
+        out = self.r._gate_on_padded_ev(self.ep, _decision())
+        self.assertEqual(out.get('ev_gate'), 'pass', out.get('reason'))
+    def test_dashboard_comment_is_now_true(self):
+        import poly_dashboard as D
+        src = pathlib.Path(D.__file__).read_text()
+        self.assertIn('12.9.0', src.split("if 'quote_age_ms' in p:")[1].split('qa=float')[0])
+
+
+class DashboardLatencyFields(unittest.TestCase):
+    """Item 6. exchange_latency_ms was read by the page and set nowhere; the
+    "N ms old" number is spot ARRIVAL age (trade silence), now labelled so."""
+    def test_exchange_latency_is_the_feeds_event_lag(self):
+        import btc_model_v12_polymarket as E, poly_dashboard as D
+        r = E.PolyRunner.__new__(E.PolyRunner); h = F.FeedHealth(); now = time.time()
+        for n, lag in (('spot', .123), ('perp', .050), ('depth', .080)): h.note(n, event_ms=(now-lag)*1000, now=now)
+        r.health = h; r.books = types.SimpleNamespace(health=lambda: {})
+        ui = D.Dashboard.__new__(D.Dashboard); ui.r = r
+        fs = ui.feed_state()
+        self.assertEqual(fs['exchange_latency_ms'], 123)
+        self.assertIn('last_event_age_ms', fs); self.assertIn('event_lag_s', fs)
+    def test_page_labels_and_poll_interval(self):
+        import poly_dashboard as D
+        html = pathlib.Path(D.__file__).with_name('dashboard_html.html').read_text()
+        self.assertIn("' ms since last trade'", html)
+        self.assertIn('setTimeout(pollState,1000)', html); self.assertNotIn('setTimeout(pollState,250)', html)
+
+
+class DeadCodeRemoved(unittest.TestCase):
+    """Item 7. audit_deadcode 1a / 1b / 3c."""
+    def test_paper_broker_account_snapshot_is_gone(self):
+        self.assertFalse(hasattr(C.PaperBroker, 'account_snapshot'))
+    def test_bookcache_clear_is_gone(self):
+        self.assertFalse(hasattr(C.BookCache, 'clear'))
+    def test_mode_flag_is_accepted_but_marked_vestigial(self):
+        import btc_model_v12_polymarket as E, sys
+        src = pathlib.Path(E.__file__).read_text(); line = [l for l in src.splitlines() if "'--mode'" in l][0]
+        self.assertIn('argparse.SUPPRESS', line)
+        sys.argv = ['x', '--mode', 'pnl']; self.assertEqual(E.args().mode, 'pnl', 'existing launch lines keep working')
+    def test_runner_header_marks_standalone_only_code(self):
+        import btc_model_v10_runner as U
+        head = pathlib.Path(U.__file__).read_text()[:4000]
+        for name in ('STANDALONE-ONLY', 'Store', 'Runner.decide_loop', 'Runner.venue', 'Runner.grade_loop'): self.assertIn(name, head)
+
+
+class Build1290(unittest.TestCase):
+    def test_a_12_8_11_database_opens_additively(self):
+        path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
+        db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
+        self.assertEqual(db.get('build'), '12.9.0'); db.c.close(); os.unlink(path)

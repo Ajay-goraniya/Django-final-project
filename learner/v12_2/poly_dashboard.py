@@ -88,8 +88,15 @@ class Dashboard:
         snap=h.snapshot(('spot','perp','depth','venue'))
         bad=h.stale(('spot','perp','depth'))
         spot_age=h.arrival_age('spot')
+        # 12.9.0: last_event_age_ms is spot ARRIVAL age (time since the last
+        # trade printed - silence, not lag; the page labels it "since last
+        # trade"). exchange_latency_ms is the feed's event lag: local receipt
+        # minus Binance event time on the last spot message (poly_feeds note()).
+        # The page read it since 12.2 and nothing set it, so it showed '--'.
+        spot_lag=h.event_lag('spot')
         snap.update(status=('LIVE' if not bad else 'STALE'),unusable=bad,
                     last_event_age_ms=int(1000*spot_age) if spot_age is not None else None,
+                    exchange_latency_ms=int(round(1000*spot_lag)) if spot_lag is not None else None,
                     book=self.r.books.health() if hasattr(self.r.books,'health') else {})
         return snap
     def pending_payout(self):
@@ -333,9 +340,12 @@ class Dashboard:
                 if 'quote_age_ms' in p:
                     # CLI-only until 12.4.1, so loosening or tightening the
                     # freshness requirement meant a restart - and a restart
-                    # returns master to OFF. It gates publish(), the EV gate and
-                    # the executor at once, so it is the main lever on "waiting
-                    # for fresh UP and DOWN books".
+                    # returns master to OFF. Since 12.9.0 it really does gate
+                    # publish(), the EV gate and the executor at once (through
+                    # PolyRunner.quote_age_s); 12.4.1-12.8.11 claimed that here
+                    # while publish() still read the CLI flag, so the two dials
+                    # could disagree. It is the main lever on "waiting for fresh
+                    # UP and DOWN books".
                     qa=float(p['quote_age_ms'])
                     if not (0<qa<=2000) or not math.isfinite(qa): raise ValueError('quote age must be 0..2000 ms')
                     cfg['quote_age_ms']=qa
@@ -480,7 +490,8 @@ class Dashboard:
         if self.cache is not None and time.monotonic()-self.cache_at<.5: return self.cache
         r=self.r; metrics=self.db.metrics(); ctr=self.controls(); pending=self.pending_payout()
         age=time.monotonic()-r.cash_at; d=r.last_decision; ep=int(time.time()//300)*300
-        pairs=r.market.get(ep,()); q=[r.books.quote(t,r.a.quote_age_ms/1000) for t in pairs]; book={}
+        qa=r.quote_age_s() if hasattr(r,'quote_age_s') else r.a.quote_age_ms/1000   # 12.9.0: same dial as publish()
+        pairs=r.market.get(ep,()); q=[r.books.quote(t,qa) for t in pairs]; book={}
         if len(q)==2 and all(q):
             book=dict(status='live',age_ms=max(x['age_ms'] for x in q),market=f'btc-updown-5m-{ep}',environment='live' if r.a.live else 'paper',api_key_configured=r.a.live)
             for key,x in zip(('up','down'),q): book[key]=dict(price=x['ask'],size=x['asks'][0][1],spread=x['ask']-x['bid'],break_even=r.m.cost(x['ask']))

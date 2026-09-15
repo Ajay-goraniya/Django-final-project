@@ -72,7 +72,11 @@ class PolyRunner(Runner):
         except (KeyError,TypeError,ValueError): return None
     def publish(self):
         ep=int(time.time()//300)*300; toks=self.market.get(ep,())
-        quotes=[self.books.quote(t,self.a.quote_age_ms/1000) for t in toks]
+        # 12.9.0: ONE quote-age dial. This read the CLI flag while the EV gate
+        # and the executor read ev_settings.quote_age_ms, so the model could
+        # decide on a quote the executor then waited on as stale (or the
+        # reverse). Meta value, CLI as the seed/fallback - see quote_age_s().
+        quotes=[self.books.quote(t,self.quote_age_s()) for t in toks]
         if len(quotes)!=2 or not all(quotes):
             self._count_wait(toks,quotes)
             self.st.on_venue_quote(None,None,None,None); self.age['venue']=0.; return False
@@ -225,8 +229,12 @@ class PolyRunner(Runner):
         q=self.books.quote(token,self.quote_age_s())
         if not q: return dict(d,fire=False,reason='No fresh quote to price against')
         pad=self.pad_ticks(); stake=self.db.get('next_stake',1.)
+        # 12.9.0: the same depth rule as the executor (poly_core Executor.fire
+        # passes require_depth=self.require_depth, False for both brokers). This
+        # call left it at order_plan's default True, so "book too thin at cap"
+        # could refuse here a fire the executor would have sent.
         try:
-            plan=order_plan(q,terms,stake,d,pad,band=self.slippage_mode()=='band')
+            plan=order_plan(q,terms,stake,d,pad,band=self.slippage_mode()=='band',require_depth=self.executor.require_depth)
         except ValueError as e:
             out=dict(d,fire=False,reason=f'EV at padded price: {e}',ev_gate=str(e),
                      ev_gate_pad=pad,ev_gate_ask=q['ask'])
@@ -397,6 +405,17 @@ class PolyRunner(Runner):
         """Seconds since this token's last tick_size_change, or None."""
         tc=getattr(self.books,'tick_changes',{}).get(str(token))
         return round(time.monotonic()-tc['at'],2) if tc else None
+    # 12.9.0 cadences. Monitors (halt_check, _wipeout_check, _main_oneshot_check)
+    # ran every 1-5 s for rows that change a few times an hour; the retention
+    # DELETEs ran every 5 s over an unindexed table. All on the loop thread.
+    MONITOR_EVERY_S=60.0
+    RETENTION_EVERY_S=3600.0
+    _clock=staticmethod(time.monotonic)
+    def _due(self,name,every_s):
+        """True at most once per every_s seconds for `name` (monotonic, first call True)."""
+        c=self.__dict__.setdefault('_cadence',{}); now=self._clock(); last=c.get(name)
+        if last is not None and now-last<every_s: return False
+        c[name]=now; return True
     async def housekeeping(self):
         while True:
             try:
@@ -428,11 +447,12 @@ class PolyRunner(Runner):
                     held=self.db.sql('SELECT coalesce(sum(spent+fees),0) FROM fills WHERE epoch NOT IN (SELECT epoch FROM results)')[0][0]
                     self.cash=max(0.,self.a.capital+self.db.metrics()['pnl']-held)
                 self.cash_at=time.monotonic(); self.ui.update_stake()
-                self._wipeout_check()
+                if self._due('wipeout',self.MONITOR_EVERY_S): self._wipeout_check()
                 self._sample_ambient_age(int(time.time()//300)*300)
                 self._flush_wait_census(int(time.time()//300)*300)
-                self.db.sql('DELETE FROM diagnostics WHERE ts<?',(time.time()-7*86400,))
-                self.db.sql('DELETE FROM candles WHERE epoch<?',(time.time()-30*86400,))
+                if self._due('retention',self.RETENTION_EVERY_S):
+                    self.db.sql('DELETE FROM diagnostics WHERE ts<?',(time.time()-7*86400,))
+                    self.db.sql('DELETE FROM candles WHERE epoch<?',(time.time()-30*86400,))
             except Exception as e: self.error='Metadata/balance: '+type(e).__name__
             await asyncio.sleep(5)
     WIPEOUT_CONFIRMATIONS=3
@@ -564,8 +584,9 @@ class PolyRunner(Runner):
     async def reconcile_loop(self):
         while True:
             await self.executor.reconcile()
-            try: self._main_oneshot_check()
-            except Exception as e: self.error='main one-shot: '+type(e).__name__
+            if self._due('main_oneshot',self.MONITOR_EVERY_S):
+                try: self._main_oneshot_check()
+                except Exception as e: self.error='main one-shot: '+type(e).__name__
             await asyncio.sleep(1)
     async def grade_loop(self):
         while True:
@@ -576,7 +597,7 @@ class PolyRunner(Runner):
                 ms=[m for e in data for m in e.get('markets',[]) if m.get('slug')==f'btc-updown-5m-{ep}']
                 result=official_result(ms[0]) if len(ms)==1 else None
                 if result: self.db.grade(ep,result); self.revision+=1
-            self.db.halt_check(); await asyncio.sleep(20)
+            self.db.halt_check(every_s=self.db.HALT_CHECK_EVERY_S); await asyncio.sleep(20)
     async def claim_loop(self):
         while True:
             if self.a.live:
@@ -748,7 +769,10 @@ def args():
     p.add_argument('--live',action='store_true'); p.add_argument('--port',type=int,default=8787); p.add_argument('--host',default='127.0.0.1')
     p.add_argument('--model',default=str(pathlib.Path(__file__).with_name('model_v10.json')))
     p.add_argument('--db',default='polymarket_v12_paper.sqlite3'); p.add_argument('--capital',type=float,default=50)
-    p.add_argument('--mode',choices=['pnl'],default='pnl'); p.add_argument('--ev',type=float,default=None)
+    # --mode is vestigial (audit_deadcode 3c): PolyRunner never reads a.mode; EV
+    # mode is the ev_settings meta control. Still accepted, hidden, so the
+    # existing launch lines (start_paper.sh, DEPLOY_MUMBAI.md) keep working.
+    p.add_argument('--mode',choices=['pnl'],default='pnl',help=argparse.SUPPRESS); p.add_argument('--ev',type=float,default=None)
     p.add_argument('--quote-age-ms',type=float,default=750); p.add_argument('--pad-ticks',type=int,default=1)
     # Execution budget. Raise these for a host far from the venue; the dashboard
     # latency block reports the measured split so the value can be set from data.

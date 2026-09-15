@@ -20,6 +20,19 @@ What it does
 
 Needs: numpy, websockets  (pip install numpy websockets), plus
 btc_model_v10.py and model_v10.json in the same folder.
+
+STANDALONE-ONLY CODE (12.9.0 note, from analysis/v/audit_deadcode_overlap.md §1b).
+The live Polymarket engine (btc_model_v12_polymarket.PolyRunner) subclasses
+Runner WITHOUT calling Runner.__init__ and overrides resolve_market, venue,
+decide_loop, grade_loop and main. From this file it uses only the handlers
+Runner.on_spot / Runner.on_perp / Runner.on_depth, http_json, and the
+constants US / GAMMA / CLOB / POLY_WS. Everything below is reached only when
+this file is run directly as the paper runner and is NOT on the live path:
+  class Store (trade, decision, ungraded, grade, stats), Runner.__init__,
+  Runner.ws, Runner.resolve_market, Runner._publish_venue, Runner._apply_ws,
+  Runner.venue, Runner.decide_loop, Runner.grade_loop, Runner.serve (+ class H),
+  Runner.main, and the module-level FEE / cost.
+Do not read a live-engine behaviour from those; read PolyRunner.
 """
 import argparse, asyncio, json, math, os, pathlib, sqlite3, threading, time, urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer

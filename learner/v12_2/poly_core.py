@@ -113,7 +113,6 @@ class BookCache:
         # 12.8.10: the last refusal per token, with the age quote() judged, so
         # publish() can say WHICH token blocked a decision and HOW old it was.
         self.block_detail={}
-    def clear(self): self.books.clear()
     def prune(self,keep):
         """Drop books for tokens we are no longer subscribed to, keep the rest.
 
@@ -359,6 +358,7 @@ class Journal:
     def __init__(self,path,lane,model_hash):
         self.c=sqlite3.connect(path,check_same_thread=False); self.c.row_factory=sqlite3.Row; self.lock=threading.RLock()
         self._kill_reported=set()   # 12.8.8: KILL_CONDITION rules already written this episode
+        self._halt_checked_at=None  # 12.9.0: monotonic stamp of the last halt_check that ran (see every_s)
         self.c.executescript('''PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;
         CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY,v TEXT);
         CREATE TABLE IF NOT EXISTS signals(epoch INTEGER PRIMARY KEY,ts REAL,side TEXT,token TEXT,condition_id TEXT,decision TEXT,status TEXT,kind TEXT DEFAULT 'EF');
@@ -392,12 +392,16 @@ class Journal:
         CREATE TABLE IF NOT EXISTS venue_state(ts REAL PRIMARY KEY,cash REAL,portfolio_value REAL,
             open_value REAL,realized_pnl REAL,unrealized_pnl REAL,fees_paid REAL,detail TEXT);
         ''')
+        # 12.9.0: housekeeping's retention DELETE and _main_oneshot_check's
+        # control_write scan both walk diagnostics by ts; ~30k rows/day, 7-day
+        # keep, and until now no index - a full scan every 5 s on the loop thread.
+        self.c.executescript('CREATE INDEX IF NOT EXISTS diagnostics_ts ON diagnostics(ts);')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.8.11')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.9.0')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -492,7 +496,9 @@ class Journal:
     # Outcomes where nothing was ever sent to the venue. A candle that ends in
     # one of these has NOT been traded, so holding the reservation until the
     # candle closes throws away every later chance in it.
-    NO_ORDER_SENT={'SKIPPED','DEADLINE','SIGNAL_CHANGED','EV_CHANGED','PREPARE_FAILED'}
+    # BUDGET (12.9.0): the post would have had under Executor.POST_FLOOR_S to
+    # live, so it was not sent. Same shape as DEADLINE.
+    NO_ORDER_SENT={'SKIPPED','DEADLINE','SIGNAL_CHANGED','EV_CHANGED','PREPARE_FAILED','BUDGET'}
     MAX_ATTEMPTS_PER_CANDLE=4
     def release(self,ep,status,kind='EF'):
         """Mark the attempt and free the candle if nothing was sent.
@@ -754,7 +760,14 @@ class Journal:
             JOIN orders o ON o.id=f.order_id
             WHERE r.pnl IS NOT NULL AND r.ts>?
             GROUP BY r.epoch ORDER BY r.epoch DESC""",(since,))]
-    def halt_check(self):
+    # 12.9.0: halt_check is watch-only (12.8.8) yet ran ~4 SELECTs incl. the
+    # 3-table kill_window join once a second from Executor.reconcile. Callers on
+    # a loop pass every_s; a bare call (tests, operator tooling) always runs.
+    HALT_CHECK_EVERY_S=60.0
+    def halt_check(self,every_s=0.0):
+        now=time.monotonic()
+        if every_s and self._halt_checked_at is not None and now-self._halt_checked_at<every_s: return False
+        self._halt_checked_at=now
         # Only what has happened SINCE the operator last cleared a kill.
         #
         # Without this the reset does not reset. The window is the last 20
@@ -821,6 +834,7 @@ class Journal:
                 self._kill_reported.add(rule)
                 self.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),0,json.dumps(dict(
                     kind='KILL_CONDITION',rule=rule,acted=False,**info))))
+        return True
 
 class PaperBroker:
     # Fills whatever the ladder holds, so the pre-send depth check does not apply.
@@ -840,13 +854,19 @@ class PaperBroker:
     async def reconcile(self,r):
         f=self.pending.pop(r['id'],None)
         return dict(terminal=True,fills=[(r['id'],f)] if f else [],live=False,verified_no_fill=not bool(f))
-    async def account_snapshot(self): return dict(cash=None,open_order_ids=set(),positions=[])
 
 
 class Executor:
     # Paper's retry_delay_ms=75: after a retryable reject, wait this long and
     # fire at the current book, rather than waiting for the book to tick.
     RETRY_DELAY_S=0.075
+    # 12.9.0, audit_hotpath defect (i): wait_for(post, max(.001, deadline-start))
+    # could send a real order with a few-ms timeout - the deadline check runs
+    # BEFORE the second reassess (~30 ms) and order_plan - then cancel it in
+    # flight and leave UNKNOWN with the reserve held until reconcile proved
+    # absence. Under this much budget left the attempt is not posted; the
+    # candle is released as BUDGET (re-arms like DEADLINE) and the timing kept.
+    POST_FLOOR_S=0.4
     def __init__(self,db,books,broker,age=.75,pad=1,budget_s=2.0,post_timeout_s=1.2,attempts=4):
         self.db=db; self.books=books; self.broker=broker; self.age=age; self.pad=pad; self.band=False
         # A venue that fills partially does not need the pre-send depth check.
@@ -957,6 +977,11 @@ class Executor:
             try: order_plan(latest,self.books.terms[token],stake,final,self.pad,band=self.band,require_depth=self.require_depth)
             except (KeyError,ValueError): self.db.release(ep,'EV_CHANGED',kind); return
             timing['pre_submit_book_age_ms']=latest['age_ms']; timing['fire_to_submit_ms']=1000*(time.monotonic()-fire_start)
+            left=deadline-time.monotonic(); timing['post_budget_left_ms']=1000*left
+            if left<self.POST_FLOOR_S:
+                timing['total_attempt_ms']=1000*(time.monotonic()-fire_start)
+                self.db.release(ep,'BUDGET',kind); self._sample(timing,'BUDGET')
+                print(f'[order not sent] BUDGET: {1000*left:.0f} ms left of budget, floor {1000*self.POST_FLOOR_S:.0f} ms; attempt={n} kind={kind}',flush=True); return
             self.db.order(oid,ep,n,plan,timing,kind); start=time.monotonic()
             try:
                 r=await asyncio.wait_for(self.broker.post(signed),min(self.post_timeout_s,max(.001,deadline-start)))
@@ -1045,7 +1070,7 @@ class Executor:
                 reason=out.get('reason') or ('venue-confirmed fill' if has_fill else 'venue-confirmed no fill')
                 self.db.order_status(r['id'],state,reason,venue_live=False); self.db.status(r['epoch'],state,r['kind'] if 'kind' in r.keys() and r['kind'] else 'EF')
                 print(f'[reconcile] id={r["id"]} -> {state}: {reason}',flush=True)
-        self.db.halt_check()
+        self.db.halt_check(every_s=self.db.HALT_CHECK_EVERY_S)
     def latency_stats(self):
         def pcts(vals):
             if not vals: return None

@@ -65,11 +65,23 @@ class FeatureState:
 
     KEEP_US = 20 * 60 * US   # prev2 needs open-10min, plus up to 5 min of candle
 
-    def __init__(self):
+    def __init__(self, cache=True):
         self.s_ts, self.s_px, self.s_buy, self.s_sell = deque(), deque(), deque(), deque()
         self.p_ts, self.p_px, self.p_sig, self.p_abs = deque(), deque(), deque(), deque()
         self.depth = None            # (ts, spread_bps, imb5, imb20, micro_bps, crossed)
         self.venue = (np.nan, np.nan, np.nan, np.nan)   # ask_up, bid_up, ask_dn, bid_dn
+        # 12.9.0 array cache. features() converted every deque with np.fromiter
+        # (+ cumsum) on EVERY call: ~15 ms at 120k rows, and the live engine
+        # calls it twice per 250 ms tick and five more times per fire attempt.
+        # The conversions depend only on the deque contents, so they are kept
+        # until a trade mutates a deque (_rev bumps in on_spot_trade, which also
+        # trims both sides, and on_perp_trade). Everything that depends on
+        # now_us, depth or the venue quote is still computed per call. The
+        # arrays are read-only inside features(), so reuse is bit-identical
+        # (FeatureCacheParity pins that on 1,000 ticks). cache=False is the
+        # reference path for that test.
+        self.cache = bool(cache); self.cache_hits = 0
+        self._rev = 0; self._arr_key = None; self._arr = None
 
     def _trim(self, now):
         cut = now - self.KEEP_US
@@ -84,7 +96,7 @@ class FeatureState:
             return
         self.s_ts.append(int(ts_us)); self.s_px.append(float(price))
         self.s_buy.append(0.0 if is_buyer_maker else float(qty)); self.s_sell.append(float(qty) if is_buyer_maker else 0.0)
-        self._trim(int(ts_us))
+        self._trim(int(ts_us)); self._rev += 1
 
     def on_perp_trade(self, ts_us, price, qty, signed_quote_notional, quote_notional):
         # Binance futures @trade emits "X":"NA" prints with p=0,q=0 (about 15/min live);
@@ -93,6 +105,7 @@ class FeatureState:
             return
         self.p_ts.append(int(ts_us)); self.p_px.append(float(price))
         self.p_sig.append(float(signed_quote_notional)); self.p_abs.append(float(quote_notional))
+        self._rev += 1
 
     def on_depth(self, ts_us, b0, bq0, a0, aq0, bq5, aq5, bq20, aq20, is_crossed=0):
         if not (a0 > 0 and b0 > 0):
@@ -114,9 +127,26 @@ class FeatureState:
         i = bisect.bisect_right(self.s_ts, ts) - 1
         return self.s_px[i] if i >= 0 else np.nan
 
-    def features(self, candle_open_us, now_us):
+    def _arrays(self):
+        """The deque -> ndarray conversions features() needs, cached per mutation."""
+        key = (self._rev, len(self.s_ts), len(self.p_ts))
+        if self.cache and self._arr_key == key:
+            self.cache_hits += 1
+            return self._arr
         s_ts = np.fromiter(self.s_ts, dtype=np.int64, count=len(self.s_ts))
         s_px = np.fromiter(self.s_px, dtype=np.float64, count=len(self.s_px))
+        s_buy = np.cumsum(np.fromiter(self.s_buy, dtype=np.float64, count=len(self.s_buy)))
+        s_sell = np.cumsum(np.fromiter(self.s_sell, dtype=np.float64, count=len(self.s_sell)))
+        p_ts = np.fromiter(self.p_ts, dtype=np.int64, count=len(self.p_ts))
+        p_sig = np.cumsum(np.fromiter(self.p_sig, dtype=np.float64, count=len(self.p_sig)))
+        p_abs = np.cumsum(np.fromiter(self.p_abs, dtype=np.float64, count=len(self.p_abs)))
+        arr = (s_ts, s_px, s_buy, s_sell, p_ts, p_sig, p_abs)
+        if self.cache:
+            self._arr_key, self._arr = key, arr
+        return arr
+
+    def features(self, candle_open_us, now_us):
+        s_ts, s_px, s_buy, s_sell, p_ts, p_sig, p_abs = self._arrays()
         i0 = int(np.searchsorted(s_ts, candle_open_us, side="left"))
         i = int(np.searchsorted(s_ts, now_us, side="right")) - 1
         if i0 >= len(s_ts) or i < i0:
@@ -134,9 +164,6 @@ class FeatureState:
         lr = np.diff(np.log(gp)) if len(gp) > 2 else np.array([0.0])
         rv60 = float(np.std(lr) * 1e4) if len(lr) > 1 else 0.0
 
-        s_buy = np.cumsum(np.fromiter(self.s_buy, dtype=np.float64, count=len(self.s_buy)))
-        s_sell = np.cumsum(np.fromiter(self.s_sell, dtype=np.float64, count=len(self.s_sell)))
-
         def spot_imb(sec):
             a = int(np.searchsorted(s_ts, now_us - sec * US, side="left")); b = i
             if b < a:
@@ -145,9 +172,6 @@ class FeatureState:
             tot = buy + sell
             return (buy - sell) / tot if tot > 0 else 0.0
 
-        p_ts = np.fromiter(self.p_ts, dtype=np.int64, count=len(self.p_ts))
-        p_sig = np.cumsum(np.fromiter(self.p_sig, dtype=np.float64, count=len(self.p_sig)))
-        p_abs = np.cumsum(np.fromiter(self.p_abs, dtype=np.float64, count=len(self.p_abs)))
         pi = int(np.searchsorted(p_ts, now_us, side="right")) - 1
 
         def perp_ofi(sec):

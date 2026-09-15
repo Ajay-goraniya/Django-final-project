@@ -128,7 +128,7 @@ function renderHistory(){ loadHistory(); }
 function updateUI(state){
   live=state||{};
   var candle=live.candle||{},feature=live.feature||{},feed=live.feed||{},processing=live.processing||{},metrics=live.metrics||{};
-  text('topStatus',(feed.status||'--')+' · '+(feed.last_event_age_ms==null?'no data':feed.last_event_age_ms+' ms old'));
+  text('topStatus',(feed.status||'--')+' · '+(feed.last_event_age_ms==null?'no data':feed.last_event_age_ms+' ms since last trade'));
   text('price',candle.close?Number(candle.close).toFixed(1):'--');
   cls('price','big '+(candle.close>=candle.open?'up':'down'));
   if(candle.time){
@@ -605,7 +605,7 @@ function renderWeights(){
   text('learnStatus',(learning.status||'idle')+(learning.error==null?'':' · last error '+formatNumber(learning.error,3)));
 }
 function loadWeights(){requestJSON('/api/weights',function(err,data){if(err)return;weightsData=data;renderWeights();});}
-function pollState(){requestJSON('/api/state',function(err,state){if(err){text('topStatus','dashboard API error');text('error',String(err.message||err));}else{try{updateUI(state);}catch(problem){text('topStatus','dashboard render error');text('error',String(problem&&problem.stack||problem));}}window.setTimeout(pollState,250);});}
+function pollState(){requestJSON('/api/state',function(err,state){if(err){text('topStatus','dashboard API error');text('error',String(err.message||err));}else{try{updateUI(state);}catch(problem){text('topStatus','dashboard render error');text('error',String(problem&&problem.stack||problem));}}window.setTimeout(pollState,1000);});}
 var canvas=el('chart');if(canvas){
   canvas.addEventListener('wheel',function(event){event.preventDefault();var rect=canvas.getBoundingClientRect();zoomChart(Math.exp(event.deltaY*0.0018),event.clientX-rect.left);},{passive:false});
   canvas.addEventListener('pointerdown',function(event){event.preventDefault();canvas.setPointerCapture(event.pointerId);var rect=canvas.getBoundingClientRect(),x=event.clientX-rect.left;pointers[event.pointerId]={x:x,y:event.clientY-rect.top};hoverX=x;if(Object.keys(pointers).length===1){dragState={x:x,end:viewEnd};pinchState=null;}else if(Object.keys(pointers).length===2){var ids=Object.keys(pointers),a=pointers[ids[0]],b=pointers[ids[1]];pinchState={distance:Math.max(1,Math.hypot(a.x-b.x,a.y-b.y)),count:viewCount,center:(a.x+b.x)/2};dragState=null;}safeDrawChart();});
