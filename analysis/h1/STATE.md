@@ -877,12 +877,14 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
 - **At exactly 200 fires — twice the pre-set bar — the verdict is unchanged: −0.057/fire against a
   +0.018 baseline, both halves negative (−0.069/−0.045).** That is the useful closing fact: doubling
   the sample past the bar did not rescue it, so the REFUTED call was not a sample-size artifact.
-- **09-15 18:45 check: +4 fires, n=305, −0.052/fire, halves −0.085 / −0.020.** The 16:45 move
-  HELD rather than reverting — the headline is flat at −0.052 over four more fires. Verdict
-  unchanged; both halves still negative so `halves()` still passes. **The thing to watch is the
-  second half: −0.107 → −0.034 → −0.020 over three checks.** If it crosses zero the halves check
-  fails and the REFUTED call needs re-examining on its own terms. Not there yet, and a drifting
-  half is not evidence — recording the trajectory so the crossing is not a surprise.
+- **09-15 20:45 check: +3 fires, n=308, −0.048/fire, halves −0.082 / −0.015.** Verdict unchanged;
+  both halves still negative so `halves()` still passes, and the headline is still **0.066 below
+  the +0.018 baseline** it is tested against.
+- **WATCH ITEM, fourth consecutive check: the second half is −0.107 → −0.034 → −0.020 → −0.015.**
+  It is converging on zero from below rather than crossing. If it does cross, `halves()` fails and
+  the REFUTED call needs re-examining on its own terms. Still not there; a drifting half is not
+  evidence. The trajectory is recorded so the crossing is not a surprise.
+- (18:45: +4, n=305, −0.052 — the 16:45 move held rather than reverting.)
 - (16:45: +13 fires — a new fastest accrual — n=301, −0.053/fire, halves −0.072 / −0.034.) Both halves still negative and the verdict is unchanged, but this is the
   largest single-check move the ledger has made: **−0.086 → −0.053**, and the second half has come
   up from −0.107 to −0.034. Recorded as a move, NOT as a reversal: the number is still 0.071 below
