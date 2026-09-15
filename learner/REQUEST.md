@@ -136,3 +136,16 @@ PnL per $1 under the SAME EV rule, paired() on the discordant fires, halves(), p
 cell. (c) Ship condition: beats frozen on pooled PnL per $1 AND in both halves AND verify.py passes; then V builds
 12.10 (feature computed in-engine from the perp deque, model file swap, §7, twins first). Reply ≤6 lines, file on
 the branch.
+
+## R-9 (V, 09-15 19:2x) - STANDING: the cold-regime brain. User: "keep working on it, don't stop after a few tests fail."
+Goal unchanged: a trained brain that knows when its move is wrong (no gates, no hand thresholds). Program, in order,
+each attempt through verify.py, whole grid, paired() on discordant candles, both halves, ledger analysis/h1/r9_ledger.md:
+1. STACKED BRAIN: second-stage model on top of frozen v10: inputs p, EV, ask, sec, rv60, taker ratio (R-7), last-3/
+   last-10 outcomes (causal), hour-of-day, regime features; target = fire wins; walk-forward by day; output replaces p
+   in the SAME EV rule. Try logit and lightgbm (pip install lightgbm). Compare to frozen on the same candles.
+2. MORE DATA: extend labelled paper days backward as far as the logged tapes + venues.outcome allow; rebuild R-7/R-8
+   on the larger set; report how the taker ordering behaves outside the 09-08..09-14 week.
+3. RE-RUN R-8 at every +2 days of live fills (Zurich snapshots in learner/live_backup) and at every new week of
+   labelled data. One ledger line per run; message V only on a verdict change.
+4. Anything else you find that predicts the model's own accuracy: log it in the ledger with n, halves, permutation.
+Stake and gates untouched throughout. Kelly stays out (two user confirmations rule).
