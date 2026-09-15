@@ -74,8 +74,12 @@ def load_live(oc):
     return out
 
 
+LANES = ['pnl', 'acc', 'v12']
+
+
 def design(rows, feats):
-    X = np.array([[r[f] for f in feats] + [1.0 if r['lane'] == 'v10' else 0.0] for r in rows])
+    X = np.array([[r[f] for f in feats] + [1.0 if r['lane'] == L else 0.0 for L in LANES[:-1]]
+                  for r in rows])
     return X
 
 
@@ -142,7 +146,7 @@ def run(rows, oc, feats, label):
           % (s_dyn['staked'], s_dyn['pnl'], s_dyn['per1'], s_dyn['staked'] / s_flat['staked']))
     print('    per-$1 delta %+.3f   total-pnl delta %+.2f   trades better/worse %d/%d'
           % (s_dyn['per1'] - s_flat['per1'], s_dyn['pnl'] - s_flat['pnl'], pos, neg))
-    coef = dict(zip(feats + ['lane_v10'], np.round(m['w'][:-1], 3)))
+    coef = dict(zip(feats + ['lane_' + L for L in LANES[:-1]], np.round(m['w'][:-1], 3)))
     print('    what it learned (standardised weights): %s' % json.dumps(coef))
     print()
     return dict(te=te, sized=sized, flat=flat, dyn=s_dyn, fl=s_flat, edge=edge, model=m, d=d)
@@ -150,8 +154,14 @@ def run(rows, oc, feats, label):
 
 def main():
     oc = oracle()
-    v10 = load_lane('v10_poly_long4',
-                    ['candle_epoch', 'ts_ms', 'side', 'p', 'ask', 'ev', 'sec', 'rv60'], 'v10')
+    # poly_pnl is a SUPERSET of v10_poly_long4 - all 777 of v10's rows are in it by (epoch, ts),
+    # and it runs 125 trades fresher (to 2026-09-15 00:41). Pass 1 used the stale subset; this
+    # uses the largest available, as the method requires. poly_acc is the accuracy-mode lane and
+    # is carried as its own lane flag, never pooled blind with a different decision rule.
+    v10 = (load_lane('poly_pnl',
+                     ['candle_epoch', 'ts_ms', 'side', 'p', 'ask', 'ev', 'sec', 'rv60'], 'pnl')
+           + load_lane('poly_acc',
+                       ['candle_epoch', 'ts_ms', 'side', 'p', 'ask', 'ev', 'sec', 'rv60'], 'acc'))
     v12 = (load_lane('v12_poly_lane',
                      ['candle_epoch', 'signal_ms', 'side', 'p', 'quote_ask', 'signal_ev', 'sec',
                       'rv60'], 'v12')
@@ -162,8 +172,8 @@ def main():
     pooled = sorted(v10 + v12, key=lambda r: r['ts'])
 
     print('=' * 78)
-    print('R-5  walk-forward trained sizing, %d paper trades (v10 %d + v12 %d), %d live fills'
-          % (len(pooled), len(v10), len(v12), len(live)))
+    print('R-5  walk-forward trained sizing, %d paper trades (poly_pnl+poly_acc %d + v12 %d), '
+          '%d live fills' % (len(pooled), len(v10), len(v12), len(live)))
     print('     fit on the first half by TIME, sized on the second. Fractional Kelly %.2f, cap %.0fx.'
           % (KELLY_FRAC, CAP))
     print('=' * 78)
@@ -172,13 +182,18 @@ def main():
     print()
     full = run(pooled, oc, FEATS, 'pooled paper, all features')
     abl = run(pooled, oc, [f for f in FEATS if f != 'ask'], 'pooled paper, ASK REMOVED (ablation)')
-    v10r = run(v10, oc, FEATS, 'v10 only')
+    v10r = run(v10, oc, FEATS, 'poly_pnl + poly_acc only')
     v12r = run(v12, oc, FEATS, 'v12 only')
 
     print('=' * 78)
-    print('LIVE FILLS: %d graded. The live journal records no p, no EV and no rv60, so this model'
-          % len(live))
-    print('CANNOT be scored on them at all. Not "did badly" - could not be run. Stated, not hidden.')
+    print('LIVE FILLS: %d graded, and this model cannot be scored on ANY of them. The reason is' % len(live))
+    print('NOT that the engine fails to record the features - V is right that the v12 journals carry')
+    print('p / ev / rv60, and this task reads exactly those for the paper set. It is that the only')
+    print('LIVE-FILL rows H1 can reach are analysis/h1/r3_submissions.csv, a 14-column CSV the AWS')
+    print('box sent by chat, which carries no p, no EV and no rv60. The Zurich live journal that')
+    print('would carry them is NOT on the branch: 18 snapshots in learner/live_backup, none named')
+    print('zurich, and no table named `signals` or `diagnostics` in any of them. One pushed snapshot')
+    print('unblocks this; nothing else does.')
     print('=' * 78)
     print()
 
@@ -216,11 +231,11 @@ def main():
           % (full['dyn']['pnl'] - full['fl']['pnl'],
              100 * full['dyn']['staked'] / full['fl']['staked']))
     print()
-    print('  The per-$1 number rises only because Kelly declines most of the book. Per $1 is the')
-    print('  wrong scorecard for this lane: the binding constraint is the number of 5-minute')
-    print('  candles, not capital, and the unused %.0f%% has nowhere else to go inside the same'
+    print('  Whatever Kelly does to the per-$1 number, it does by declining most of the book.')
+    print('  Per $1 is the wrong scorecard for this lane anyway: the binding constraint is the')
+    print('  number of 5-minute candles, not capital, and the unused %.0f%% has nowhere else to go'
           % (100 * (1 - full['dyn']['staked'] / full['fl']['staked'])))
-    print('  candles. On the metric V set - same trades, more money - it loses.')
+    print('  inside the same candles. On the metric V set - same trades, more money - it loses.')
     print()
     print('=' * 78)
     print('THE STEELMAN: give Kelly the SAME TOTAL CAPITAL and let it lever up')
@@ -231,8 +246,8 @@ def main():
     worst = min(s * per1(r['ask'], r['side'] == oc.get(r['ep']))
                 for r, s in zip(te, norm) if oc.get(r['ep']))
     print('  rescale x%.1f so both books stake %.0f in total:' % (sc, b['staked']))
-    print('    normalised Kelly %+.2f  vs  fixed-3 %+.2f   -> Kelly wins by %+.2f ON PAPER'
-          % (a['pnl'], b['pnl'], a['pnl'] - b['pnl']))
+    print('    normalised Kelly %+.2f  vs  fixed-3 %+.2f   -> Kelly %s by %+.2f ON PAPER'
+          % (a['pnl'], b['pnl'], 'WINS' if a['pnl'] > b['pnl'] else 'LOSES', a['pnl'] - b['pnl']))
     print('  and here is what that costs:')
     print('    %d of %d trades get a ZERO stake - that is a GATE on %.0f%% of the book, the exact'
           % (int((norm == 0).sum()), len(norm), 100 * (norm == 0).mean()))
