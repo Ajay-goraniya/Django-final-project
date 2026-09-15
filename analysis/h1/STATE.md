@@ -23,6 +23,26 @@ twice for the same words. From now: verdict, numbers, file path; detail stays in
 **01:20 — V made it STRICT** (everyone, always; sole exception a major matter needed now, numbers first)
 and wrote it into CLAUDE.md. I removed my own near-duplicate block there — V's is authoritative.
 
+## Task R-5 pass 1 DONE 09-15 02:4x — trained Kelly sizing DOES NOT SHIP. `analysis/h1/task_r5_kelly_sizing.md`
+STANDING task (V): re-run at every +100 graded live fires; one line per run in `analysis/h1/r5_ledger.md`;
+report to V only on a change of verdict. **Until it passes, stake stays fixed 3.0.**
+- Walk-forward ridge on per-$1 PnL from fire-time inputs (p, ev, ask, sec, rv60, lane), fit on the
+  first half BY TIME, fractional Kelly 0.25 capped 3x on the second. 1543 paper trades.
+- **V's ship condition (same trades, more money): NO.** fixed-3 **+405.75** vs Kelly **+24.24**.
+  Kelly's higher per-$1 (+0.248 vs +0.175) comes from staking **4% of the capital**. 343 trades
+  better, 429 worse.
+- **Steelman at equal total capital (x23.7): Kelly +573.72 vs +405.75 on paper** — but **339 of 772
+  trades get a ZERO stake**, i.e. a gate on 44% of the book, the banned shape; max stake $31 vs $3;
+  worst single loss −$22 vs −$3.
+- **The ablation decides it: remove `ask` and the per-$1 delta goes +0.073 → −0.146.** Weights:
+  p +0.329, **ask −0.292**, ev −0.086. The model re-learned R-4 — cheap quotes pay more per $1,
+  price not accuracy — and carries R-4's quote-age FAIL unchanged. v10 alone is −0.039.
+- verify.py (second half): sample/halves/null PASS, **quote age FAIL, paired FAIL**. On paired():
+  sizing never changes WHICH trades are right, so there are no discordant pairs and the test has no
+  information here — reported failing for that reason, not because the rules tie.
+- **Live fills cannot be scored at all: the live journal records no `p`, `ev` or `rv60`.** That is
+  the blocking item carried forward, not a result.
+
 ## Task R-4 DONE 09-14 22:1x — dynamic staking: nothing to size on. `analysis/h1/task_r4_stake_calibration.md`
 V's task (learner/REQUEST.md 21:5x). Buckets fixed first, whole grid, halves, <60 marked and not read.
 Polymarket oracle; provenance 0/912 vs the lanes' own `actual`.
