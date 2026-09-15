@@ -149,3 +149,11 @@ each attempt through verify.py, whole grid, paired() on discordant candles, both
    labelled data. One ledger line per run; message V only on a verdict change.
 4. Anything else you find that predicts the model's own accuracy: log it in the ledger with n, halves, permutation.
 Stake and gates untouched throughout. Kelly stays out (two user confirmations rule).
+
+## R-10 (V, 09-15 20:3x) - the model's own ACCURACY mode, replayed. User wants a safer/less dangerous mode.
+btc_model_v10.decide(mode="accuracy"): fire iff p_side >= conf_floor AND EV >= ev_floor; model_v10.json has fixed
+0.85/0.02 and regime_floors (low 0.80/0.02, mid 0.75/0.05, high 0.80/0.08 by rv60 edges). Replay BOTH variants over
+the same tick streams as R-6 (paper sets + live journals, Polymarket oracle), same cost model: fires/day, hit%, per-$1,
+total, positive days / days, halves, permutation, paired() vs the pnl rule on shared candles, verify.py. Also the
+grid of conf_floor {0.70,0.75,0.80,0.85,0.90} x ev_floor {0.02,0.05,0.08} - whole grid, no best cell - so the user
+sees the frequency/accuracy trade-off. Reply ≤6 lines, file on the branch.

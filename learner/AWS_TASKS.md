@@ -3384,3 +3384,12 @@ btc_model_v12_polymarket.py --port 8793 --db twin_1290.sqlite3 --capital 50` (pa
 and its db are untouched. Report ≤6 lines: pid, build, suites, first decision row time. Then every 4 h append one
 line to analysis/aws/twin_1290_ledger.md: results n W pnl, orders by status, any BUDGET release, any Traceback in its
 log. At 24 h: verdict line (clean / not) - that is the go/no-go input for Zurich.
+
+## Task 94 - Mumbai 8787 becomes the 12.9.0 PAPER engine with the dashboard open to the user. No live engine on Mumbai.
+User: "8787 on Mumbai is running live with master off, not paper - run it on paper and make the dashboard available
+on Chrome; security group done." Do: stop the live 12.8.10 (pid 109303, master off, 0 positions - confirm) and the
+8793 twin (pid 116809); start ONE 12.9.0 PAPER engine on port 8787, --host 0.0.0.0, db twin_1290.sqlite3 (keeps the
+twin's history), capital 50, master true, stake fixed 3.0, DASHBOARD_PASSWORD from the environment as before. Verify
+from the box: curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8787/ (401 or 200 = up). The user opens
+http://<mumbai-ip>:8787 in Chrome. Report ≤5 lines: pid, build, argv, http code, ledger line. Twin ledger continues on
+this engine.
