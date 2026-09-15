@@ -22,6 +22,10 @@ twice for the same words. From now: verdict, numbers, file path; detail stays in
 `learner/REQUEST.md` is V's file, so V annotates that one, not me.
 **01:20 — V made it STRICT** (everyone, always; sole exception a major matter needed now, numbers first)
 and wrote it into CLAUDE.md. I removed my own near-duplicate block there — V's is authoritative.
+**09-15 20:5x — TIGHTENED AGAIN (user, via V), and this is the operative version:** verdict messages
+to V are **≤6 lines**, ledger entries **1 line**, **message only on a verdict change**, everything
+else lives in files. Always. **No acknowledgement of the rule itself** — V asked for none, so none
+was sent; this line is the record.
 
 ## Task R-10 DONE 09-15 20:5x — **accuracy mode is genuinely accurate and worth nothing.** `analysis/h1/task_r10_accuracy_mode.md`
 The user asked for a safer mode. Straight answer: it is safer in the sense of being wrong far less
