@@ -256,3 +256,61 @@ Row 4: build 12.8.9, master false, halt null, ef true, main/rev false, stake 3.0
 Row 5: attempt-loop effect NOT observable yet — no submissions since master went off. AMBIENT_AGE flowing (7 rows/2 min), KILL_CONDITION still 0.
 Row 7: 29 results and 67 orders (29F/37R/1U) carried across; decide path alive; one audit row since restart — safe-start master true→false, stacked to btc_model:52 __init__.
 Final 12.8.8 numbers for the comparison baseline: 29 results, 16W/13L, +19.77, unit +6.900; fill rate 29/66 = 43.9% on that build.
+
+## 12.8.10
+
+Deployed 2026-09-14 23:16:04 UTC, `/home/ubuntu/polymarket_v12`, PID 109303 (was 108430), commit `771bc87`.
+Observation only: `WAIT_CENSUS`. Stopped 23:15:34 with 0 open positions and 0 orders in flight.
+
+### Row 6 — read before Row 1, no objection
+`git diff 7457816 771bc87` on the two changed modules is: `BookCache.block_detail[t]=(reason,age)` set on each
+refusal path in `quote()` (no_book/no_asks/no_bids/stale/crossed) and popped on success; `self._wait_census={}`
+and `_wait_flushed` in the runner's `__init__`; `_count_wait(toks,quotes)` called from `publish()` on refusal and
+an `ok` counter on success; `_flush_wait_census(ep)` from housekeeping writing one `WAIT_CENSUS` diagnostics row a
+minute; `WAIT_BUCKETS` (<0.75 / 0.75-1 / 1-2 / 2-5 / 5+); build string 12.8.9 → 12.8.10. Nothing in the decision or
+order path changes and both new methods swallow every exception.
+
+### Row 1 — hashes in the running process's cwd
+All nine files equal `git show 771bc87:learner/v12_2/<f>`: btc_model 177dfdf1ab6ea20f, poly_core d1b2e423776e2a2b,
+poly_dashboard aafe0d8ad9c7ebcd, poly_lanes 89c5f058fa9c4484, poly_live ea47eee28fe5b217, poly_feeds 85128b1cbac0f737,
+controls_html 6bbe96f76dc5b8bc, dashboard_html b62bff16f72450a0, data_html fa485a443d1fbad4.
+`rm -rf __pycache__` ran before the start; every regenerated pyc header matches its source (0 mismatches).
+cmdline: `venv/bin/python btc_model_v12_polymarket.py --live --mode pnl --capital 50 --host 0.0.0.0 --port 8787
+--db polymarket_v12_live_8787.sqlite3 --quote-age-ms 2000`. Backup: /home/ubuntu/polymarket_v12_backup_20260914_231534/.
+
+### Row 2 — three suites, staged 771bc87, box venv, before the restart
+test_polymarket Ran 68 OK; test_lanes Ran 21 OK; test_v122 Ran 163 OK = 252.
+
+### Row 3 — the new class against the running 12.8.9 tree
+`test_v122.WaitCensusSaysWhichBookBlockedAndHowOld`: Ran 6, FAILED (failures=3, errors=2) —
+ERROR test_housekeeping_writes_one_row_a_minute_and_resets, ERROR test_quote_leaves_the_reason_and_age_per_token,
+FAIL test_ok_publishes_are_counted_too, FAIL test_publish_counts_side_reason_bucket,
+FAIL test_stale_is_bucketed_by_the_age_quote_judged.
+
+### Row 4 — state after restart
+build 12.8.10, lane LIVE, master false (safe-start; not armed by the deploy), halt null, ef true, main/rev false,
+stake 3.0, ev_settings {"mode":"regime","pad_ticks":1,"slippage_mode":"band","quote_age_ms":750.0} preserved.
+Journal carried across: 135 orders / 54 fills / 54 results.
+The user armed master at 23:17:13 (audit stack server.py → poly_dashboard do_POST → apply); I set it back to false at
+23:47:5x on V's Zurich-cutover instruction (audit stack `<stdin>:10 <module>`, my write, flagged as such).
+
+### Row 5 — behavioural effect, the census itself
+65 `WAIT_CENSUS` rows covering 4,050 s (67.5 min), one a minute as designed. Summed:
+publish() ok 1,495,108, blocked 324,908, no_market 1 → **17.9% of publishes blocked**.
+By side: UP 162,428 / DOWN 162,480 — symmetric to 0.03%, so it is not one side's book.
+By reason: no_bids 113,092, no_asks 113,092, stale 96,958, crossed 1,762, no_book 4.
+By age bucket: <0.75 s 227,866 (70.1%), 2-5 s 92,532 (28.5%), 5+ s 4,426 (1.4%), 0.75-1 s 60, 1-2 s 20, n/a 4.
+Top cells: UP:no_bids:<0.75 and DOWN:no_asks:<0.75 at 77,896 each (24.0%); UP/DOWN:stale:2-5 at 46,266 each (14.2%);
+UP:no_asks:<0.75 and DOWN:no_bids:<0.75 at 35,168 each (10.8%).
+**The answer to "why 34.7% waiting": 70% of blocked publishes are on a book younger than 0.75 s that has an empty
+side — one-sided books, not staleness.** no_bids and no_asks are exactly equal (113,092 each), which is the signature
+of the two tokens of a pair being complementary: when UP has no bids, DOWN has no asks. Only 28.5% is genuine
+staleness, and it sits in the 2-5 s bucket, i.e. beyond the old 0.75 s bar and beyond the new 2 s one.
+
+### Row 7 — downstream
+Journal writing throughout; 56 results / 135+ orders carried; decide path alive; no KILL_CONDITION; no halt.
+Dashboard not exercised (401 without DASHBOARD_PASSWORD). engine.log clean after the start line.
+
+### Phase split (AWS, 00:2x, appended by V from AWS's follow-up message, not part of the section above)
+Decision window 15-240 s: ok 1,214,100, blocked 152,223 = 11.1%; one-sided 87,590 = 57.5% of those blocks.
+Tail: 33.9% blocked, one-sided 80.2%. The 60-120 s phase is the clean one (3.2% blocked).
