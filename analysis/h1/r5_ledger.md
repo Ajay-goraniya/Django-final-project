@@ -7,6 +7,15 @@ Detail for each run is in `analysis/h1/task_r5_kelly_sizing.md` (rewritten in pl
 |---|---|---|---|---|---|---|---|
 | 1 | 2026-09-15 02:4x | 1543 | 0 | **NO**, −381.51 vs fixed-3 | +0.073 → −0.146 | quote age FAIL, paired FAIL | DOES NOT SHIP |
 | 1b | 2026-09-15 02:5x | **1872** | 0 | **NO**, −480.44 vs fixed-3; steelman also loses (−21.54) | −0.008 → **−0.138** | halves, null, quote age, paired all FAIL | **DOES NOT SHIP — stake stays fixed 3.0** |
+| 2 | 2026-09-15 03:0x | 1872 | 0 (no `p` column live) | **NO** — shrunk Kelly +70.17 vs fixed-3 +505.53 | unchanged | `p` overconfident in **5 of 5** bins; Brier 0.2435 vs venue 0.2463 | **DOES NOT SHIP — stake stays fixed 3.0** |
+
+**Run 2** adds V's amendment: reliability curve + shrunk Kelly from the measured error (Baker &
+McHale 2013 principle; shrinkage = calibration slope fitted on the training half, 0.699, falling to
+0.474 out of sample). It supplies the *reason* runs 1/1b could only infer: sizing on `p` fails not
+because the Kelly fraction was mistuned — retuning it by the measured error leaves per-$1 at +0.177
+— but because **`p` is overconfident in every bin** (gaps −0.051 / −0.039 / −0.102 / −0.119 /
+−0.051, all n ≥ 266) and beats the venue's own price by only **0.0028 of Brier**. There is no
+calibrated edge for a stake curve to amplify.
 
 **Run 1b supersedes run 1** and its row is kept rather than deleted. Run 1 used `v10_poly_long4`
 (777); `poly_pnl` is a superset of it (all 777 rows, 125 fresher, to 2026-09-15 00:41), and adding

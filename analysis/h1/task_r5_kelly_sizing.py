@@ -260,6 +260,132 @@ def main():
     print('  %+.3f -> %+.3f.' % (full['dyn']['per1'] - full['fl']['per1'],
                                  abl['dyn']['per1'] - abl['fl']['per1']))
     print()
+    pass2(pooled, live, oc)
+
+
+
+
+# =============================================================================================
+# PASS 2 AMENDMENT (V, 09-15 02:2x)
+#   (1) reliability curve of p on graded fires, paper and live separately, 5 bins, n per bin,
+#       Brier against the venue's own price;
+#   (2) a SHRUNK Kelly fraction measured from the p error, after Baker & McHale (2013),
+#       "Optimal Betting Under Parameter Uncertainty: Improving the Kelly Criterion",
+#       Decision Analysis 10(3):189-199.
+#
+# On the citation, stated plainly: that paper derives a shrinkage factor on the Kelly stake from
+# the uncertainty in the estimated win probability, because replacing population parameters with
+# sample estimates makes out-of-sample performance worse than in-sample. I implement its
+# PRINCIPLE with a shrinkage MEASURED from this data - the calibration slope of the outcome on
+# (p_hat - 0.5), fitted on the TRAINING half only and applied forward. I do not reproduce their
+# closed form, because I have not read the paper itself and will not transcribe a formula from an
+# abstract. The measured slope is the quantity the shrinkage is supposed to estimate, and unlike a
+# copied constant it is checkable against the data in front of me.
+# =============================================================================================
+
+BINS = [0.5, 0.55, 0.60, 0.65, 0.70, 1.01]
+
+
+def reliability(rows, oc, label, pfield='p', bins=None, show_price=True):
+    bins = bins or BINS
+    dropped = sum(1 for r in rows if not (bins[0] <= r[pfield] < bins[-1]))
+    print('  %s' % label)
+    if dropped:
+        print('    (%d of %d rows fall outside the bin range and are NOT shown - see the note)'
+              % (dropped, len(rows)))
+    print('    %-14s %6s %10s %10s %10s' % ('bin', 'n', 'mean p', 'observed', 'gap'))
+    bs_model = bs_price = n_tot = 0.0
+    for i in range(len(bins) - 1):
+        lo, hi = bins[i], bins[i + 1]
+        sub = [r for r in rows if lo <= r[pfield] < hi and oc.get(r['ep'])]
+        if not sub:
+            print('    %-14s %6d %10s' % ('%.2f-%.2f' % (lo, hi), 0, '-'))
+            continue
+        win = sum(1 for r in sub if r['side'] == oc[r['ep']]) / len(sub)
+        mp = statistics.fmean([r[pfield] for r in sub])
+        mark = '' if len(sub) >= MIN_CELL else '  INSUFFICIENT'
+        print('    %-14s %6d %10.3f %10.3f %+10.3f%s'
+              % ('%.2f-%.2f' % (lo, hi), len(sub), mp, win, win - mp, mark))
+    for r in rows:
+        a = oc.get(r['ep'])
+        if a is None:
+            continue
+        y = 1.0 if r['side'] == a else 0.0
+        bs_model += (r[pfield] - y) ** 2
+        bs_price += (r['ask'] - y) ** 2          # the venue's own gross price as its probability
+        n_tot += 1
+    if show_price:
+        print('    Brier: model %.4f   venue price %.4f   (lower is better, n=%d)'
+              % (bs_model / n_tot, bs_price / n_tot, int(n_tot)))
+    else:
+        print('    Brier of the venue price against outcome: %.4f  (n=%d). There is no model'
+              % (bs_price / n_tot, int(n_tot)))
+        print('    column to compare it with on live rows, so only the one number is meaningful.')
+    print()
+    return bs_model / n_tot, bs_price / n_tot
+
+
+def calib_slope(rows, oc):
+    """Least-squares slope of outcome on (p_hat - 0.5). 1.0 = calibrated, <1 = overconfident."""
+    x = np.array([r['p'] - 0.5 for r in rows if oc.get(r['ep'])])
+    y = np.array([1.0 if r['side'] == oc[r['ep']] else 0.0 for r in rows if oc.get(r['ep'])])
+    y = y - 0.5
+    return float((x @ y) / (x @ x)) if (x @ x) > 0 else 0.0
+
+
+def pass2(pooled, live, oc):
+    print('=' * 78)
+    print('PASS 2 (1)  RELIABILITY OF p - is the number we would size on even calibrated?')
+    print('=' * 78)
+    reliability(pooled, oc, 'PAPER, %d graded fires, model p vs outcome' % len(pooled))
+    print('  LIVE, %d graded fills: the model curve CANNOT be drawn - r3_submissions.csv carries no'
+          % len(live))
+    print('  p. What IS available live is the venue\'s own price, so that half is shown instead.')
+    print('  Its own range is used for the bins: live asks run 0.24-0.58, so the paper bins (which')
+    print('  start at 0.50) would silently drop most of the set.')
+    for r in live:
+        r['p'] = r['ask']                       # market price as the only live "forecast"
+    reliability(live, oc, '  LIVE, venue price as the forecast, price-range bins',
+                bins=[0.20, 0.35, 0.42, 0.47, 0.52, 1.01], show_price=False)
+
+    print('=' * 78)
+    print('PASS 2 (2)  SHRUNK KELLY from the MEASURED p error (Baker & McHale 2013 principle)')
+    print('=' * 78)
+    rows = sorted(pooled, key=lambda r: r['ts'])
+    h = len(rows) // 2
+    tr, te = rows[:h], rows[h:]
+    k = calib_slope(tr, oc)
+    k_te = calib_slope(te, oc)
+    print('  calibration slope on the TRAINING half : %.3f   (1.0 = calibrated, <1 = overconfident)'
+          % k)
+    print('  same slope on the test half (not used to size, shown for honesty): %.3f' % k_te)
+    print('  shrinkage applied forward: %.3f' % max(0.0, min(1.0, k)))
+    print()
+    y = np.array([per1(r['ask'], r['side'] == oc.get(r['ep'])) for r in rows])
+    m = fit_ridge(design(tr, FEATS), y[:h])
+    edge = predict(m, design(te, FEATS))
+    flat = np.full(len(te), FIXED)
+    out = {}
+    for name, frac in (('fixed 0.25 Kelly (run 1b)', KELLY_FRAC),
+                       ('shrunk Kelly, k=%.3f' % max(0.0, min(1.0, k)), max(0.0, min(1.0, k)))):
+        st = []
+        for r, e in zip(te, edge):
+            b = net_odds(r['ask'])
+            f = frac * (e / b) if b > 0 else 0.0
+            st.append(float(np.clip(f, 0.0, 1.0)) * CAP * FIXED)
+        st = np.array(st)
+        s = score(te, oc, st)
+        out[name] = s
+        print('  %-28s staked %8.1f  pnl %+9.2f  per $1 %+.3f'
+              % (name, s['staked'], s['pnl'], s['per1']))
+    sf = score(te, oc, flat)
+    print('  %-28s staked %8.1f  pnl %+9.2f  per $1 %+.3f' % ('fixed-3 flat', sf['staked'], sf['pnl'], sf['per1']))
+    print()
+    print('  SHIP TEST (unchanged): does either sized book beat fixed-3 on the same trades?')
+    for name, s in out.items():
+        print('    %-28s %+9.2f vs %+9.2f  -> %s' % (name, s['pnl'], sf['pnl'],
+                                                     'BEATS' if s['pnl'] > sf['pnl'] else 'LOSES'))
+    print()
 
 
 if __name__ == '__main__':
