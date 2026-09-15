@@ -5345,3 +5345,7 @@ Persistence"): V's hourly now always pokes it. Snapshot backups still intermitte
 **17:1x - V's container is reclaimed on idle (uptime 2 min at 17:12); local twins die every hour when the user is
 away, so the 12.9.0 24 h uptime test moves to Mumbai as a paper twin (AWS Task 93, port 8793). Local twins stay as
 the decision-parity check (56 vs 53 results, identical fires so far).**
+**17:31 UTC 12.9.0 LIVE on Zurich** (user's go 17:2x, §7 by Zurich: diff exact, 30/30, 280 tests, fail-on-old 22/25;
+stop 17:31:17 at a clean moment after the user approved the kill prompt; pid 72358, same argv/db; settings read back
+unchanged, master parked OFF for the user). 12.8.11 final on this journal: 44 res 27W/17L +55.39, 44 fills / 68 rejects.
+Watch: first two live orders (identity check, status, fire_to_submit_ms vs 50 ms median) - Zurich reports rows 5/7.
