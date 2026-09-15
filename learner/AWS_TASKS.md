@@ -3393,3 +3393,11 @@ twin's history), capital 50, master true, stake fixed 3.0, DASHBOARD_PASSWORD fr
 from the box: curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8787/ (401 or 200 = up). The user opens
 http://<mumbai-ip>:8787 in Chrome. Report ≤5 lines: pid, build, argv, http code, ledger line. Twin ledger continues on
 this engine.
+
+## Task 95 - 12.8.11 PAPER control twin on Mumbai 8793 beside the 12.9.0 paper 8787. No live engine on Mumbai.
+V's container dies hourly, so its ctrl/cand twins were dead 16-22 UTC and cannot serve as the drawdown comparator.
+Do: `git pull`; `git show 2026983:learner/v12_2` -> /home/ubuntu/pm_twin_12811 (build 12.8.11, verify
+`grep BUILD poly_core.py`); `rm -rf __pycache__`; start PAPER: `venv/bin/python btc_model_v12_polymarket.py --port
+8793 --db twin_12811.sqlite3 --capital 50`; seed meta master=true, next_stake=3.0, stake_settings fixed 3.0. 8787
+untouched. Report ≤4 lines: pid, build, first decision row. From then the 4-h ledger line in
+analysis/aws/twin_1290_ledger.md carries BOTH: "8787 12.9.0: n W pnl | 8793 12.8.11: n W pnl | same-hour delta".
