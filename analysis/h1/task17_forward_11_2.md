@@ -4,19 +4,19 @@ Cumulative, append-only. Frozen artifact `models/ef11_2_gbm_seed0.joblib`, never
 
 **Quote rule: NEXT — the first collector sample at or AFTER the decision second.** The original ledger used the last sample at or *before* it, i.e. a quote up to 5 s older than the price it decided on. That is the Task 20 artifact; those eight fires were discarded and this ledger rebuilt, because a mixed history would be worse than none.
 
-_Last updated 2026-09-14 22:45 UTC._
+_Last updated 2026-09-15 00:45 UTC._
 
 ## VERDICT: >= 100 forward fires reached — read the halves and run verify.py
 
 | | n | hit | per-fire | total |
 |---|---|---|---|---|
-| **forward, all** | 252 | 45.6% | **-0.082** | -20.73 |
-| first half | 126 | — | -0.062 | -7.79 |
-| second half | 126 | — | -0.103 | -12.94 |
+| **forward, all** | 256 | 45.7% | **-0.081** | -20.81 |
+| first half | 128 | — | -0.076 | -9.79 |
+| second half | 128 | — | -0.086 | -11.02 |
 
 **Baseline: the replay's +0.266 is RETRACTED (Task 20 — stale quote). Under the honest rule the same replay gives +0.018/fire at this margin. That ~0.00 is what this ledger is testing against, not +0.266.**
 
-Forward hit rate is 115 of 252. If the honest-rule 51.5% were the true rate, seeing 115 or fewer hits in 252 fires has probability **0.0359**. That is context, **not a verdict** — n is far below the 60-fire bar, let alone 100, and a run this short can do this by chance. It is recorded so the trend is visible from the start rather than discovered at fire 100.
+Forward hit rate is 117 of 256. If the honest-rule 51.5% were the true rate, seeing 117 or fewer hits in 256 fires has probability **0.0365**. That is context, **not a verdict** — n is far below the 60-fire bar, let alone 100, and a run this short can do this by chance. It is recorded so the trend is visible from the start rather than discovered at fire 100.
 
 ## By UTC day
 
@@ -26,16 +26,16 @@ Forward hit rate is 115 of 252. If the honest-rule 51.5% were the true rate, see
 | 2026-09-11 | 55 | 45% | -0.147 | -8.07 | no |
 | 2026-09-12 | 104 | 48% | -0.001 | -0.11 | yes |
 | 2026-09-13 | 75 | 44% | -0.116 | -8.72 | yes |
-| 2026-09-14 | 16 | 44% | -0.115 | -1.84 | no |
+| 2026-09-14 | 20 | 45% | -0.096 | -1.92 | no |
 
 ## Fire-distance profile (forward)
 
 | bps at fire | n | share | per-fire |
 |---|---|---|---|
-| <1 | 188 | 75% | -0.090 |
-| 1-2.5 | 30 | 12% | -0.248 |
+| <1 | 190 | 74% | -0.088 |
+| 1-2.5 | 32 | 12% | -0.240 |
 | 2.5-5 | 16 | 6% | +0.003 |
-| 5-10 | 14 | 6% | +0.151 |
+| 5-10 | 14 | 5% | +0.151 |
 | 10-25 | 4 | 2% | +0.384 |
 
 **Weekend forward fires: 179.** The replay had none, so these are the first weekend evidence for this fire set.

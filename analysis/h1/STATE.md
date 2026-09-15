@@ -714,10 +714,11 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
 - **At exactly 200 fires — twice the pre-set bar — the verdict is unchanged: −0.057/fire against a
   +0.018 baseline, both halves negative (−0.069/−0.045).** That is the useful closing fact: doubling
   the sample past the bar did not rescue it, so the REFUTED call was not a sample-size artifact.
-- **09-14 22:45 check: +2 fires, n=252, −0.082/fire, halves −0.062 / −0.103.** Both halves
-  negative, verdict unchanged at 2.5x its bar.
-- (20:45: +4, n=250, −0.075, halves −0.054/−0.096.) The number has sat inside −0.079 ± 0.004 across
-  the last five checks (243 → 252), so accrual is no longer moving it at all.
+- **09-15 00:45 check: +4 fires, n=256, −0.081/fire, halves −0.076 / −0.086.** Both halves
+  negative, verdict unchanged at 2.6x its bar. The two halves are now within 0.010 of each other —
+  the most internally consistent the ledger has been.
+- (22:45: +2, n=252, −0.082. 20:45: +4, n=250, −0.075.) The number has sat inside −0.079 ± 0.004
+  across the last six checks (243 → 256), so accrual is no longer moving it at all.
 - (18:45: +2, n=246, −0.077, halves −0.060/−0.094. 16:45: +1, n=244, −0.075, −0.052/−0.099.)
 - (14:45 check: +1 fire, n=243, −0.080, halves −0.044 / −0.115.) Accrual is ~1 fire per check; the
   standing ledger job is done. Task 25 is now DONE too — see its block above. No open task.
