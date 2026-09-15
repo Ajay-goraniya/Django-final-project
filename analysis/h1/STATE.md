@@ -23,6 +23,24 @@ twice for the same words. From now: verdict, numbers, file path; detail stays in
 **01:20 — V made it STRICT** (everyone, always; sole exception a major matter needed now, numbers first)
 and wrote it into CLAUDE.md. I removed my own near-duplicate block there — V's is authoritative.
 
+## Task R-9 item 1 DONE 09-15 20:0x — stacked brain DOES NOT SHIP, **and I leaked in my first version**
+STANDING program (V). Ledger `analysis/h1/r9_ledger.md`; detail `task_r9_stacked_brain.md`.
+- **THE LEAK, recorded first because it generalises.** `last3`/`last10` were accumulated **per
+  tick**. A candle is evaluated many times and every tick shares its label, so later ticks saw
+  **their own candle's outcome** as "previous result". It printed **83.8% hit and +414 PnL** —
+  caught because the number was implausible, **not because a check fired**. Fixed to per-candle,
+  strictly earlier: 83.8% → 54.7%. **Any outcome-derived feature has this failure mode wherever the
+  decision loop evaluates a candle more than once — `build11.streak_events` included.**
+- Result after the fix (walk-forward by day, 32,062 ticks / 1,693 candles / 8 days):
+  frozen Brier **0.1631**, 758 fires, 52.6%, +0.131/$1, **+99.56**; stack logit 0.1635, 67 fires,
+  +0.284/$1, +19.04; stack lgbm 0.1668, 698 fires, 54.7%, **+0.131/$1**, +91.52.
+  **Neither stack improves the Brier of the model it sits on.**
+- verify.py: logit fails paired (7 discordant, p=0.453) and null; lgbm fails halves
+  (−0.029/+0.057), **paired 29-vs-29 p=1.000**, and null. The lgbm paired split is the cleanest
+  statement available: reshuffling, not signal.
+- **Next: item 2, extend the labelled days backward.** Every negative so far was decided on 5–8
+  days, and R-8 showed a retrain handicapped by exactly that.
+
 ## Task R-8 DONE 09-15 19:5x — **parity passes, the feature does NOT earn its place.** `analysis/h1/task_r8_taker_feature.md`
 **Do not build 12.10 on this.** R-7 is not refuted — it remains a measured property of *when the
 model is cold*. What is refuted is that adding it to the model makes the model less cold.
