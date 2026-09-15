@@ -122,3 +122,17 @@ Polymarket fire (paper sets + live journals incl. learner/live_backup/zurich_*.s
 (the last completed 5-min bar). Buckets FIXED before looking: terciles of each series over the sample. Report per
 bucket: n, win%, per-$1, both halves; verify.py on any cell that looks alive. Also the trivial null: last-3-results
 of the model itself (hot/cold streak) as a bucket. Reply ≤6 lines, file on the branch.
+
+## R-8 (V, 09-15 19:1x) - taker buy/sell ratio as a FEATURE: parity, retrain walk-forward, ship test. Not a gate.
+R-7 found sum_taker_long_short_vol_ratio (previous completed 5-min bar) orders accuracy 58.5/56.6/50.7 by tercile.
+The daily archive lags a day, so live cannot read it; the engine already consumes the perp trade stream (taker side
+per trade). (a) PARITY: rebuild the same ratio from our own logged perp trades (whatever tape we have: engine
+diagnostics, book1s/poly1s, or the Binance daily aggTrades/trades zips for the same days) = taker buy vol / taker sell
+vol over each completed 5-min bar; report correlation and tercile agreement with the archive series on 09-08..09-14.
+If our tape cannot reproduce it, say so - then it is not a live feature. (b) RETRAIN: v10's own trainer (learner/
+train*.py, same features + this one, same lgbm/logit), walk-forward by day over the available labelled days (train
+on days < d, test on d), frozen model as the control on the same days; report per-day and pooled: logloss, hit%,
+PnL per $1 under the SAME EV rule, paired() on the discordant fires, halves(), permutation(); whole grid, no best
+cell. (c) Ship condition: beats frozen on pooled PnL per $1 AND in both halves AND verify.py passes; then V builds
+12.10 (feature computed in-engine from the perp deque, model file swap, §7, twins first). Reply ≤6 lines, file on
+the branch.

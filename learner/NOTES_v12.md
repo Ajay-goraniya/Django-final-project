@@ -5349,3 +5349,10 @@ the decision-parity check (56 vs 53 results, identical fires so far).**
 stop 17:31:17 at a clean moment after the user approved the kill prompt; pid 72358, same argv/db; settings read back
 unchanged, master parked OFF for the user). 12.8.11 final on this journal: 44 res 27W/17L +55.39, 44 fills / 68 rejects.
 Watch: first two live orders (identity check, status, fire_to_submit_ms vs 50 ms median) - Zurich reports rows 5/7.
+
+**19:1x R-7 (H1, analysis/h1/task_r7_futures_positioning.md):** taker buy/sell volume ratio (prev completed 5-min bar)
+orders model accuracy 58.5 / 56.6 / 50.7 % by fixed tercile, n≈620 each, halves +7.9/+8.7 pp, survives ask-tercile
+and streak controls; OI change and both L/S ratios: nothing. Caveat: 7 paper days, 2 live fires. Cold-streak null:
+0-of-3 bucket +0.251/$1 (n=155) - stopping on a cold run cuts the best bucket. -> R-8: parity from our own perp tape,
+walk-forward retrain with the feature, ship only if it beats frozen v10 with verify.py. Live source = the perp trade
+stream the engine already has (fapi is geo-blocked; archive lags a day).
