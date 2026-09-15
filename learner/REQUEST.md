@@ -192,3 +192,12 @@ ONLY if Mumbai cannot run it, H1 runs the twin inside its own container and keep
 other issue yourself; do not stop. V's session is near its usage limit - H1 self-drives R-12 end to end (data ->
 train -> walk-forward -> paired test -> twin -> 4-h ledger), commits every stage to analysis/h1/r12_big_brain.md,
 and posts a one-line verdict trigger to V only at: test verdict, twin running, or a blocker V must clear.
+R-12 step 2 (V, 23:5x) - user order stands ("if not achievable then make changes but train on all regimes"). Stage 1
+shows linear-on-18 + venue = frozen v10. Change the model, keep the data and the test: (a) gradient boosting (lightgbm)
+on the 4.75M-row store with explicit regime inputs (rv60, ret60, range_bps, hour, weekend, era) so regimes are learned,
+not gated; walk-forward BY YEAR (train <= Y-1, test Y) reporting OOS logloss/AUC per year vs the stage-1 logistic -
+if GBM does not beat logistic on Binance direction across years, say so: regimes carry no extra 5-min direction
+info and that closes the question honestly. (b) if it does beat: venue stage as before, then the paired test vs
+frozen v10 on the Polymarket rows, verify.py, and only then a twin. (c) Also report the per-regime OOS grid of the
+stage-1 model itself (era x vol x trend, n/hit/logloss) - that is the "all regimes" deliverable the user asked for,
+whatever ships. ≤15 lines in r12_big_brain.md, one verdict poke to V.

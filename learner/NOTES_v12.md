@@ -5394,3 +5394,5 @@ Verdict: market regime + variance (13/36 at p=0.54, z=-2.1), same under 12.8.11 
 ### 09-15 23:1x - user order: retrain on all known BTC regimes -> R-12 to H1 (priority over R-9/R-11). v10 = 8 days 08-29..09-06 frozen.
 
 ### 09-15 22:4x - R-11 verdict (H1, analysis/h1/task_r11_trend_vol_grid.md): selloff cell (ret60 down / rv60>0.75 / DOWN) n=77 hit 44% -0.092/$1, halves -0.272/+0.083 -> sign flips, NOT A FINDING; 2/6 days positive. 09-15 whole day +0.175/$1 (n=77), best day; losing afternoon only. 18 cells, 8 readable, 1942 fires. No switch.
+
+### 09-15 23:5x - R-12 stage 1 verdict (H1, analysis/h1/r12_big_brain.md): 4.75M rows / 950k candles / 109 months, masked-18 logistic + venue stage: +0.241/$1 vs frozen +0.131, Brier 0.1628 vs 0.1622 = dead heat; halves FAIL, paired 201/196 p=0.84. History + venue price forecasts the same as 8 days + venue price. Not a finding, no twin. Two data bugs caught (ms->us timestamp unit, string min()). User order stands -> step 2: nonlinear regime-aware brain on the same store.
