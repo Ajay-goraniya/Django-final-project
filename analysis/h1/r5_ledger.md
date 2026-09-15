@@ -23,7 +23,13 @@ it plus `poly_acc` takes the sample to 1,872. The verdict got **stronger**: the 
 read +0.073 on the stale subset reads −0.008 on the full one, and the equal-capital steelman flips
 from +168 to −21.54. A mildly positive number on the smaller sample was a small-sample artifact.
 
-Blocking item carried forward, stated accurately (run 1's wording was wrong and V corrected it):
+**BLOCKER RESOLVED 09-15 02:3x** — V pushed `zurich_v1` and `zurich_2` at e64b5b7. The schema does
+carry `p`/`ev`/`rv60`/`sec`/`ask` in `signals.decision`, so pass 2 needs no further plumbing. The
+blocker is now **sample size**: **5 graded live fires against the threshold of 100.** Details,
+plus an open question on Zurich's grading oracle and a correction to how R-3 applies to the live
+1-tick pad, in `analysis/h1/task_r5_zurich_readiness.md`.
+
+Historical (superseded by the line above), stated accurately after V corrected run 1's wording:
 the v12 engine journals DO record `p`, `ev` and `rv60`, and this task reads exactly those for the
 paper set. What is missing is a **Zurich live-journal snapshot on the branch** — `learner/live_backup`
 holds 18 snapshots, none named zurich, and no `signals` or `diagnostics` table in any of them. The
