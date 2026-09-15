@@ -165,3 +165,22 @@ Zurich rows: ret60 tercile (down/flat/up) x rv60 (<0.35 / 0.35-0.75 / >0.75) x s
 halves, >=60 or "insufficient". Full grid, never the best cell. Question: is "selling into a selloff at high vol" a
 cell that loses every day (rain or sun) or is today variance. verify.py gates. Report ≤8 lines in analysis/h1/, one
 verdict line to NOTES.
+
+## R-12 (09-15 23:1x, USER ORDER) - retrain the brain on ALL known BTC regimes. Priority over R-9 and R-11.
+User: "train it on a bigger scale... trained in almost all the regimes known... train it and test it, no excuse or no
+cheating." v10 today = 8 days (08-29..09-06), frozen; today's selloff is out of sample.
+Data: data.binance.vision (monthly zips; api.binance.com geo-blocked, data-api.binance.vision works - fetch_rest_klines.py):
+spot BTCUSDT aggTrades (2017-08+), futures BTCUSDT aggTrades + bookTicker (2019-09+ / 2020+), spot 1s klines where
+aggTrades are too big. State the data footprint before pulling (disk is a fixed per-session allowance).
+Regimes - DEFINE FIRST, then grid ALL, never the best cell: era (2020-21 bull, 2022 crash incl. LUNA/FTX, 2023 chop,
+2024 ETF/halving, 2025, 2026), trend (ret60 tercile), vol (rv60 <0.35/0.35-0.75/>0.75), hour-of-day, weekend.
+Model: same feature set + interface as btc_model_v10 (model json drop-in, FeatureState unchanged) so it can run as a
+twin without engine changes; the venue-implied features do not exist historically - train the microstructure part on
+the full history, fit the venue combination + isotonic on the logged Polymarket window only, report both stages.
+Test (this is the deliverable, not the training): strict walk-forward (train <= T, test > T, no overlap); on the
+labelled Polymarket rows graded on venues.outcome, PAIRED vs frozen v10 (discordant only, McNemar), halves, permutation
+of predictions, costs, null; plus today's 13-22 UTC Zurich rows. Every regime cell: n, hit, pnl/$1, >=60 or
+"insufficient". verify.py verdict() must pass. No in-sample numbers in the report. Retrain on the 8 days with the
+new pipeline must reproduce v10 within noise (pipeline check) before the big run.
+Deliver: analysis/h1/r12_big_brain.md (<=15 lines + grid file), model json under analysis/h1/, one verdict line to
+NOTES. Ships as a PAPER twin first (Mumbai, V arranges); nothing live without the user.

@@ -5390,3 +5390,5 @@ max 50** (dashboard, user's own). Dashboard "today" panel read -7.59 on 43 settl
 Regime: BTC 77918 -> 75762 (-2.8%), rv60 med 0.26 -> 0.75, candle range 10 -> 24 bps, fire reversal 37% -> 50%.
 Not a known bad bucket: rv60>0.75 historically +0.151/$1 (poly_pnl n=118) and +0.072 (v10_long4 n=80); every rv60 bucket positive, both halves where n>=60.
 Verdict: market regime + variance (13/36 at p=0.54, z=-2.1), same under 12.8.11 and 12.9.0, execution clean. No gate, no switch (rain-or-sun: no bucket to switch off). R-11 to H1: trend x vol grid.
+
+### 09-15 23:1x - user order: retrain on all known BTC regimes -> R-12 to H1 (priority over R-9/R-11). v10 = 8 days 08-29..09-06 frozen.
