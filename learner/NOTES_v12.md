@@ -5275,3 +5275,10 @@ behind the market and `quote()`'s wall-clock term is doing its job - "stale" is 
 quote-age bar changes it (matches the census). Caveat (AWS): 6 socket closes in 15 min on the probe; catch-up after a
 reconnect could be the burst. Open in Task 92: per-connection (watchdog reconnect worth building) vs path-wide
 (Mumbai's route - moot for Zurich); and the same probe must run on Zurich once its sandbox is unblocked.
+
+**01:4x AWS Task 92 - VENUE/PATH-WIDE, book-feed thread CLOSED.** 60 min, second socket beside the engine: 58 census
+minutes, one above 2% stale (01:07:49, 17.6%); the probe's gap profile is identical inside and outside the engine's
+stale minutes (p50 412-414 ms, max 3.1-3.3 s), 12 probe reconnects produced 1 stale minute. A silence watchdog in
+venue() would not have prevented it; nothing to build. Full thread: one-sided books = un-decidable by the model's own
+feature (closed); stale = delivery delay on Mumbai's path, correct refusals, and Zurich's path is cleaner (Z-1).
+Files: analysis/aws/task92_drip.md (pending paste), log stays on the box.
