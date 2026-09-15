@@ -5264,3 +5264,14 @@ over an hour - retracted as a standing cause. Stale 2-5 s for most of a minute, 
 a reconnect (sets self.error only), so that zero is not evidence. Open (Task 92): is the drip per-connection (a
 watchdog reconnect would fix it) or venue-wide (nothing to do)? Test: a second connection beside the engine, per-second
 timestamped, aligned with the engine's stale minutes.
+
+**00:5x AWS Task 91(b) - the stamp-lag mechanism IS real on Mumbai's path.** 15 min, active tokens, own socket:
+price_change n=361,850 lag p50 71 ms, p90 309 ms, p99 5,216 ms, max 5,715 ms; 5.18% >0.75 s, 3.57% >2 s. book/last_trade
+p99 ~5.5 s, 8% >2 s. Gaps per token: max 0.6-1.4 s, 0% >2 s. So the feed never goes quiet; a burst of events arrives
+carrying stamps 2-5 s old, with a hard ceiling ~5.7 s. My run (THIS container, not Zurich - AWS mis-attributed it):
+max 336 ms, nothing >0.75 s. Same script, same hour, different path.
+Reading: a lagged stamp on a just-arrived event means DELIVERY is 2-5 s behind the venue, so the book really is 2-5 s
+behind the market and `quote()`'s wall-clock term is doing its job - "stale" is a correct verdict, not a bug, and no
+quote-age bar changes it (matches the census). Caveat (AWS): 6 socket closes in 15 min on the probe; catch-up after a
+reconnect could be the burst. Open in Task 92: per-connection (watchdog reconnect worth building) vs path-wide
+(Mumbai's route - moot for Zurich); and the same probe must run on Zurich once its sandbox is unblocked.
