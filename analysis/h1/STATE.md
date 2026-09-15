@@ -797,7 +797,7 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
 - **At exactly 200 fires — twice the pre-set bar — the verdict is unchanged: −0.057/fire against a
   +0.018 baseline, both halves negative (−0.069/−0.045).** That is the useful closing fact: doubling
   the sample past the bar did not rescue it, so the REFUTED call was not a sample-size artifact.
-- **09-15 08:45 check: +6 fires, n=272, −0.098/fire, halves −0.072 / −0.124.** Both halves
+- **09-15 10:45 check: +1 fire, n=273, −0.101/fire, halves −0.072 / −0.130.** Both halves
   negative, verdict unchanged at 2.7x the bar.
 - (06:45: +3, n=266, −0.107 — the first crossing of −0.10. The run of four checks moving
   monotonically away from zero ended here: −0.107 → −0.098 as the sample grew.)
