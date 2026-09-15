@@ -23,6 +23,23 @@ twice for the same words. From now: verdict, numbers, file path; detail stays in
 **01:20 — V made it STRICT** (everyone, always; sole exception a major matter needed now, numbers first)
 and wrote it into CLAUDE.md. I removed my own near-duplicate block there — V's is authoritative.
 
+## Task R-5 run 2 DONE 09-15 03:0x — calibration curve + shrunk Kelly. Still DOES NOT SHIP.
+V's pass-2 amendment. **It supplies the REASON runs 1/1b could only infer.**
+- **`p` is overconfident in 5 of 5 bins**, all n ≥ 266, no sign change: gaps −0.051 / −0.039 /
+  −0.102 / −0.119 / −0.051. The 0.65–0.70 bin promises 67.9% and delivers **56.0%**; the 0.60–0.65
+  bin promises 62.4% and delivers 52.2%.
+- **Brier: model 0.2435 vs the venue's own price 0.2463.** The forecast we would size on beats the
+  price already on the screen by **0.0028** (1.1% relative). That is the whole edge, before costs.
+- Live: the model curve **cannot be drawn** (no `p` column). Venue price shown instead over its own
+  0.24–0.58 range — the paper bins start at 0.50 and would have dropped most of the set. Every live
+  cell n=2–22, **INSUFFICIENT, unread**.
+- **Shrunk Kelly** after Baker & McHale 2013 — their *principle* with a shrinkage measured here:
+  calibration slope **0.699 on train, 0.474 on test** (falling out of sample, which is the effect
+  that paper is about). I did NOT transcribe their closed form and the file says why.
+  **+70.17 vs fixed-3 +505.53 → LOSES.** Retuning the fraction leaves per-$1 at +0.177 either way.
+- So sizing fails not because the Kelly fraction was mistuned but because **there is no calibrated
+  edge for a stake curve to amplify.** Ledger row 2 appended. Stake stays fixed 3.0.
+
 ## Task R-5 run 1b DONE 09-15 02:5x — DOES NOT SHIP, and the bigger sample made it worse
 **`poly_pnl` is a SUPERSET of `v10_poly_long4`** — all 777 of v10's rows by (epoch, ts), 125 fresher
 (to 09-15 00:41). Run 1 used the stale subset. With `poly_acc` too the sample goes 1543 → **1872**,
