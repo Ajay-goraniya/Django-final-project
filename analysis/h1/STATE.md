@@ -27,6 +27,23 @@ to V are **≤6 lines**, ledger entries **1 line**, **message only on a verdict 
 else lives in files. Always. **No acknowledgement of the rule itself** — V asked for none, so none
 was sent; this line is the record.
 
+## Task R-11 DONE 09-15 22:4x — the selloff cell is **NOT** a rain-or-sun loser. `analysis/h1/task_r11_trend_vol_grid.md`
+`ret60 down / rv>0.75 / DOWN`: n=77, hit 44.2%, **−0.092/$1, halves −0.272 / +0.083 → sign flips,
+NOT A FINDING.** 2 of 6 days positive and **every day thin** (n=3–28). Negative pooled, not
+reproducible daily.
+- **V's premise reconciles exactly** on the live lane: 09-15 from 13:00 UTC = **36 results, 13 wins
+  (36.1%), −0.165/$1**, rv60 median 0.712; before 13:00, 34 results **+0.499/$1**. But the whole day
+  pooled is **+0.175/$1 (n=77) — better than all other days (+0.122)**. The day is not a losing day;
+  an afternoon inside it is.
+- 18-cell grid, **8 readable**, buckets fixed first (ret60 terciles −0.481/+0.949 bps, rv60 0.35/0.75
+  per the brief). 1,942 fires = 1,872 paper + **70 live Zurich**.
+- **Oracle note worth keeping:** live rows are graded on the Zurich journal's own `actual`, not
+  `venues.outcome` — my venues snapshot ends 09-15 01:10 and requiring it **silently dropped 68 of
+  the 70 live rows**, including every row that prompted the task. That field IS the venue's
+  resolution (verified from `grade_loop`; CLOSED 09-15 02:37), so it is the right oracle, not a
+  convenient one.
+- Live sample is now **70 graded fires** (was 5) — R-5 pass 2 needs 100, so it is close.
+
 ## Task R-10 DONE 09-15 20:5x — **accuracy mode is genuinely accurate and worth nothing.** `analysis/h1/task_r10_accuracy_mode.md`
 The user asked for a safer mode. Straight answer: it is safer in the sense of being wrong far less
 often — **and that claim in the model file is honest** — but it converts a **+$123 book into +$0.31**.
