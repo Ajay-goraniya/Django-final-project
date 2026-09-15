@@ -63,9 +63,19 @@ def fetch(mon):
     return None
 
 
+def to_sec(t):
+    """Binance CHANGED THE TIMESTAMP UNIT partway through this archive: older monthly files stamp
+    open_time in MILLISECONDS, newer ones in MICROSECONDS. Assuming one silently turns the other
+    into garbage - a microsecond stamp read as ms puts `start` a thousand-fold too high, so the
+    candle loop runs ~288k times per day over a ~700 MB index array and emits nonsense instead of
+    failing. Caught on 2026-09-12 while building the parity check, before any of it was trained on.
+    Unit is detected per file from the magnitude rather than assumed."""
+    return (t // 1_000_000).astype(np.int64) if t[0] > 1e14 else (t // 1000).astype(np.int64)
+
+
 def build(a):
-    """a: (ts_ms, close, volume, taker_buy_base) at 1 s. Returns rows, one per (candle, S)."""
-    sec = (a[:, 0] // 1000).astype(np.int64)
+    """a: (open_time, close, volume, taker_buy_base) at 1 s. Returns rows, one per (candle, S)."""
+    sec = to_sec(a[:, 0])
     close, vol, tbb = a[:, 1], a[:, 2], a[:, 3]
     lo_s, hi_s = sec[0], sec[-1]
     n = hi_s - lo_s + 1
