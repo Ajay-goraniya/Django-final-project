@@ -69,3 +69,19 @@ or tells V. Expected effect within ~3 reconcile ticks: order ...64f7d150 -> NO_F
 (UnexpectedResponseError); absent from account open orders Nx over Ns and no account trade"; reserve drops by 2.88;
 epoch 1789432500 then grades on the next grade_loop pass (DOWN, unfilled winner, n stays). DEPLOYED.md `## 12.8.11`
 section: commit it yourself (you can push now) - 7 rows, verbatim numbers, <=25 lines. Reply <=8 lines.
+
+## Z-6 - deploy 12.9.0 under §7, user's go 17:2x. Same journal (polymarket_v12_live_zurich_2.sqlite3), same argv.
+Commit 76d9eb6 (or later HEAD; build '12.9.0'). Row 6 first: `git diff 2cf8b6d HEAD -- learner/v12_2/` must be the 7
+items of analysis/v/plan_12_9.md, nothing in decide/EV/pad/threshold: POST_FLOOR_S=0.4 BUDGET release; FeatureState
+array cache (_rev); sign_off_loop in poly_live; diagnostics_ts index + 60 s/hourly housekeeping cadence; publish()
+on quote_age_s() and gate require_depth=executor's; dashboard exchange_latency_ms + 1 s poll; PaperBroker.
+account_snapshot/BookCache.clear removed, --mode hidden. Suites 71+21+188=280. Fail-on-old: 22 of the 25 new tests
+must FAIL on the running 12.8.11 tree (3 pass by design: test_above_the_floor_still_posts,
+test_sdk_sign_order_awaits_nothing, test_main_oneshot_returns_at_once_when_main_is_off). SHA256SUMS 30/30.
+`rm -rf __pycache__`. Clean moment: no open position, no order SUBMITTING/PENDING. Restart; safe-start parks master
+OFF - do not arm, the user does. ev_settings (quote_age 750, regime, pad 1, band) and stake_settings fixed 5.0 carry
+over in the journal - verify they read back unchanged after start.
+Then WATCH the first two live orders: order-identity check passed (no halt), status FILLED/REJECTED not UNKNOWN,
+timing fire_to_submit_ms vs the 12.8.11 median 50 ms, and one RECONCILE_STUCK count. If halt='Order hash mismatch'
+appears: stop, do not clear it, write hourly.md with the halt text; V decides. DEPLOYED.md `## 12.9.0` ≤25 lines,
+7 rows, commit + push with plain git -C. Report via analysis/zurich/hourly.md (overwrite) - 4 lines.
