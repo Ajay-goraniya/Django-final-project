@@ -5330,3 +5330,9 @@ question for the decide cadence (hot-path audit, analysis/v/audit_hotpath.md, pe
 the top bin, adds 206 expensive favourites at +0.124/$1; total below raw. Rolling refit every 200: both below raw.
 Overconfident p (R-5 run 2) is real but correcting it inside EV loses money; the raw p + EV rule stays. Only thread:
 Platt's kept 42 at +0.466/$1 - under the bar, re-read at 60+.
+
+**10:15 Zurich live since 02:06 (12.8.11, fresh journal):** 19 results 13W/6L +31.60; 20 FILLED / 23 REJECTED / 0 UNKNOWN
+(46.5% fill); cash 95.87 (61.62 at start). RECONCILE_STUCK 16 rows, 0 orders left UNKNOWN -> the 12.8.11 absence rule
+resolved every one. Note for later: 16 unreadable get_order lookups in 43 orders - the SDK parse fails on most
+non-open orders, not just the POST-timeout case; harmless now, worth one line in the next hourly (which statuses).
+Snapshots 93e7045. Twins since 03:50: ctrl 12.8.11 22 res +33.3 vs cand 12.9.0 21 res +37.5, same decisions.
