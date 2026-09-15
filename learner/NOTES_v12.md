@@ -5342,3 +5342,6 @@ refused as full Kelly on an uncalibrated p. Watch fill rate over the next 50 ord
 (dashboard typo) -> 5.0 at 11:21:08; no order fired in those 7 s. Correction to my 11:2x claim: DEPLOYED.md `## 12.8.11`
 HAS been on origin since 02:1x (2026983). Zurich cannot self-schedule (create_trigger denied "Unauthorized
 Persistence"): V's hourly now always pokes it. Snapshot backups still intermittently denied on the box.
+**17:1x - V's container is reclaimed on idle (uptime 2 min at 17:12); local twins die every hour when the user is
+away, so the 12.9.0 24 h uptime test moves to Mumbai as a paper twin (AWS Task 93, port 8793). Local twins stay as
+the decision-parity check (56 vs 53 results, identical fires so far).**

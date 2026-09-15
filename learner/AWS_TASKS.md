@@ -3374,3 +3374,13 @@ Then list the engine's WAIT_CENSUS minutes with stale share >2% in that hour, an
 maxgap_ms and events for those same seconds. Same gap on the probe's connection = venue-wide (nothing to build);
 probe clean while the engine is stale = per-connection (a silence watchdog in venue() is worth building).
 Commit probe output + the alignment table to analysis/aws/task92_drip.md. <=10 lines back with the hash.
+
+## Task 93 - run the 12.9.0 PAPER twin on Mumbai (persistent box) beside the observation engine. No live change.
+V's container is reclaimed on idle, so the local twins die every hour; the 24 h uptime test for 12.9.0 needs a box
+that stays up. Do: `git pull`; copy learner/v12_2 at HEAD (76d9eb6 or later, build 12.9.0) to /home/ubuntu/pm_twin_1290;
+`rm -rf __pycache__`; run the three suites there (280 expected); start PAPER: `venv/bin/python
+btc_model_v12_polymarket.py --port 8793 --db twin_1290.sqlite3 --capital 50` (paper execution is the default without
+--live); seed meta master=true, next_stake=3.0, stake_settings fixed 3.0 (same as V's twins). The live 12.8.10 engine
+and its db are untouched. Report ≤6 lines: pid, build, suites, first decision row time. Then every 4 h append one
+line to analysis/aws/twin_1290_ledger.md: results n W pnl, orders by status, any BUDGET release, any Traceback in its
+log. At 24 h: verdict line (clean / not) - that is the go/no-go input for Zurich.
