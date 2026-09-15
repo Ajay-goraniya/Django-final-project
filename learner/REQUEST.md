@@ -184,3 +184,6 @@ of predictions, costs, null; plus today's 13-22 UTC Zurich rows. Every regime ce
 new pipeline must reproduce v10 within noise (pipeline check) before the big run.
 Deliver: analysis/h1/r12_big_brain.md (<=15 lines + grid file), model json under analysis/h1/, one verdict line to
 NOTES. Ships as a PAPER twin first (Mumbai, V arranges); nothing live without the user.
+R-12 addendum (V, 22:5x): plan approved. On the 9 unbuildable features: serve them zeroed too (a feature mask in the
+json, applied in FeatureState output) so train == serve and there is no skew to measure; the venue stage on the logged
+window may use all 30. Report both (masked vs unmasked serve) if cheap, masked is the default.
