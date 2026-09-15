@@ -23,6 +23,26 @@ twice for the same words. From now: verdict, numbers, file path; detail stays in
 **01:20 — V made it STRICT** (everyone, always; sole exception a major matter needed now, numbers first)
 and wrote it into CLAUDE.md. I removed my own near-duplicate block there — V's is authoritative.
 
+## Task R-10 DONE 09-15 20:5x — **accuracy mode is genuinely accurate and worth nothing.** `analysis/h1/task_r10_accuracy_mode.md`
+The user asked for a safer mode. Straight answer: it is safer in the sense of being wrong far less
+often — **and that claim in the model file is honest** — but it converts a **+$123 book into +$0.31**.
+| rule | fires/day | hit% | per $1 | total | pos days |
+|---|---|---|---|---|---|
+| pnl rule (today) | 134.3 | 52.9% | **+0.131** | **+123.13** | **6/7** |
+| accuracy 0.85/0.02 | 50.6 | **86.4%** | +0.001 | +0.31 | 4/7 |
+| accuracy `regime_floors` | 49.1 | 74.1% | −0.040 | **−13.74** | **2/7** |
+- The model file's `oos_8day` claim of **87.6% accuracy REPRODUCES (86.4%)**. Only the money half
+  fails to carry over to Polymarket pricing.
+- **WARNING: `regime_floors` is the CONFIGURED DEFAULT** for accuracy mode and is the worst of the
+  three here. If accuracy mode is ever switched on, avoid the shipped defaults.
+- Whole 15-cell conf×ev grid: hit% climbs monotonically **71.3 → 89.2%** while per-$1 never leaves
+  **−0.087 … +0.063**. The confidence is bought at an ask that already prices it.
+- verify.py vs the pnl rule: halves PASS (consistently *worse*), **paired FAIL** (46 discordant,
+  26-20, p=0.461), **permutation FAIL — a PERMUTED confidence does BETTER** (+0.034 vs +0.001,
+  p=0.970), null FAIL. **NOT A FINDING.**
+- If "less dangerous" means smaller swings, the honest route is a smaller stake on the current rule,
+  not a mode that trades away the entire edge. Stake/gates untouched; Kelly out (two-confirm rule).
+
 ## Task R-9 item 1 DONE 09-15 20:0x — stacked brain DOES NOT SHIP, **and I leaked in my first version**
 STANDING program (V). Ledger `analysis/h1/r9_ledger.md`; detail `task_r9_stacked_brain.md`.
 - **THE LEAK, recorded first because it generalises.** `last3`/`last10` were accumulated **per
