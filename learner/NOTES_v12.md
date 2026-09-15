@@ -5361,3 +5361,8 @@ from the perp deque the engine already has). Walk-forward retrain with the featu
 +0.131 per $1, but halves +0.063 / -0.033 (sign flips) and paired 156 vs 158 on 314 discordant candles (p=0.955).
 R-7's accuracy ordering stands; turning it into a better model does not. CLOSED unless the sample grows past one
 regime week. Note: lightgbm not installed in H1's container; shipped v10 artifact is the logit.
+**19:29 R-9 item 1 (H1, analysis/h1/task_r9_stacked_brain.md): stacked second-stage brain DOES NOT SHIP** - lgbm
+54.7% hit, 58 discordant split 29/29; logit 67 fires only. H1's first version leaked (per-tick streak feature saw its
+own candle's label: 83.8% hit, caught by implausibility). Checked ours: v10's live feature set has no outcome-derived
+feature (grep streak/outcome in btc_model_v10.py = 0), so the leak pattern cannot occur in the live engine.
+Next in the program: item 2, extend labelled days backward; everything negative so far was decided on 5-8 days.
