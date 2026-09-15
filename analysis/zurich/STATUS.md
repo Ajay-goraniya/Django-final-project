@@ -1,5 +1,10 @@
 # Zurich status (newest first). Routines from this session are intermittently denied; this file is the durable channel.
 
+## Hourly 12:14 UTC 09-15 (since 02:06)
+results n=27 W21/L6 pnl +64.67
+fills 27 / rejects 35 / unknown 0 | cash 123.16 open 0.00 | master true, stake 5.0 | pid 15581 alive
+snapshot: DENIED by sandbox this hour; last pushed 4422da3. Routine to V also denied this hour.
+
 ## Hourly 11:28 UTC 09-15 (since 02:06)
 results n=25 W19/L6 pnl +54.41
 fills 25 / rejects 34 / unknown 0 | cash 113.24 open 0.00 | master true, stake 5.0 | pid 15581 alive
