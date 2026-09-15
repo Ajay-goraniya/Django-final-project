@@ -23,6 +23,27 @@ twice for the same words. From now: verdict, numbers, file path; detail stays in
 **01:20 — V made it STRICT** (everyone, always; sole exception a major matter needed now, numbers first)
 and wrote it into CLAUDE.md. I removed my own near-duplicate block there — V's is authoritative.
 
+## Task R-7 DONE 09-15 19:3x — **the taker buy/sell ratio orders the model's ACCURACY.** `analysis/h1/task_r7_futures_positioning.md`
+First thing in R-4 → R-7 that is **not** the price artifact. A candidate FEATURE, not a gate.
+- **Data:** `fapi.binance.com` is geo-blocked (451) and `data-api.binance.vision` has no
+  `/futures/data` (404). **`data.binance.vision` daily futures METRICS archive works** — all four
+  series, 5-min spacing verified, 09-08…09-14 published (09-15 lags). 1,874 graded fires, **1,874
+  joined causally** (bar fully past, T+300 ≤ ts), 0 unjoinable. 1,872 paper, **2 live**.
+- **Three of four series die.** OI change looks monotone pooled but **breaks on the side split**
+  (UP +0.033/−0.054/+0.310) — the pooled ordering was a side-mix artifact. Top-trader position peaks
+  in the middle. `null()` passes on 7 of 12 cells and that is **worth nothing**: with terciles some
+  cell always beats the pooled mean. Monotonicity + replication decided it.
+- **Taker survives everything:** monotone in win% and per-$1; monotone on **both sides separately**
+  (58.0/56.6/50.7 UP, 58.9/56.4/50.7 DOWN); **median ask IDENTICAL 0.470 across all three terciles**
+  and taker-low wins more inside all three ask buckets, so it is accuracy not price; permutation of
+  the series (never labels) **+7.77pp, p=0.0065**; halves **+7.9 / +8.7 pp**; **rain or sun 7 of 7
+  days positive** (two thin days shown, not dropped); survives the hot/cold-streak null in all three
+  readable streak buckets.
+- **NOT a trade.** Accuracy is not PnL — the per-$1 column is paper at the quoted ask and R-3 priced
+  the live book at **+0.004 vs +0.038 quoted**. Live n=2. Seven consecutive days is one regime.
+  A rule would need a gate or a size change — banned, and exactly where R-4/R-5/R-6 died.
+  **Proposed as `sum_taker_long_short_vol_ratio` as a FEATURE in the next retrain, never a gate.**
+
 ## CLOSED 09-15 02:37 — "does Zurich grade Polymarket fills on the wrong oracle?" NO. Do not re-derive.
 I raised it as an open question at n=2 (never as a claim). V answered from the running code and
 **I verified it against the module on the branch rather than accepting it**:
