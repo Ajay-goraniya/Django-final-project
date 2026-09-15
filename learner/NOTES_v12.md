@@ -5356,3 +5356,8 @@ and streak controls; OI change and both L/S ratios: nothing. Caveat: 7 paper day
 0-of-3 bucket +0.251/$1 (n=155) - stopping on a cold run cuts the best bucket. -> R-8: parity from our own perp tape,
 walk-forward retrain with the feature, ship only if it beats frozen v10 with verify.py. Live source = the perp trade
 stream the engine already has (fapi is geo-blocked; archive lags a day).
+**19:16 R-8 (H1, analysis/h1/task_r8_taker_feature.md): DOES NOT SHIP.** Parity passes (the ratio is computable live
+from the perp deque the engine already has). Walk-forward retrain with the feature vs frozen v10: pooled +0.160 vs
++0.131 per $1, but halves +0.063 / -0.033 (sign flips) and paired 156 vs 158 on 314 discordant candles (p=0.955).
+R-7's accuracy ordering stands; turning it into a better model does not. CLOSED unless the sample grows past one
+regime week. Note: lightgbm not installed in H1's container; shipped v10 artifact is the logit.
