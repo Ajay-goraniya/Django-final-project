@@ -797,8 +797,11 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
 - **At exactly 200 fires — twice the pre-set bar — the verdict is unchanged: −0.057/fire against a
   +0.018 baseline, both halves negative (−0.069/−0.045).** That is the useful closing fact: doubling
   the sample past the bar did not rescue it, so the REFUTED call was not a sample-size artifact.
-- **09-15 10:45 check: +1 fire, n=273, −0.101/fire, halves −0.072 / −0.130.** Both halves
-  negative, verdict unchanged at 2.7x the bar.
+- **09-15 12:45 check: +11 fires — the fastest accrual the ledger has seen — n=284, −0.092/fire,
+  halves −0.069 / −0.116.** Both halves negative, verdict unchanged at 2.8x the bar. Eleven fires
+  moved the headline by 0.009; the number is now stable to that scale against a whole check's worth
+  of new evidence.
+- (10:45: +1, n=273, −0.101, halves −0.072/−0.130.)
 - (06:45: +3, n=266, −0.107 — the first crossing of −0.10. The run of four checks moving
   monotonically away from zero ended here: −0.107 → −0.098 as the sample grew.)
 - (04:45: +6, n=263, −0.097, halves −0.098/−0.096 — the halves' tightest agreement so far.)
