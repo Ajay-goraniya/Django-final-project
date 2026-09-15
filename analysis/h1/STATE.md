@@ -797,8 +797,10 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
 - **At exactly 200 fires — twice the pre-set bar — the verdict is unchanged: −0.057/fire against a
   +0.018 baseline, both halves negative (−0.069/−0.045).** That is the useful closing fact: doubling
   the sample past the bar did not rescue it, so the REFUTED call was not a sample-size artifact.
-- **09-15 02:45 check: +1 fire, n=257, −0.085/fire, halves −0.076 / −0.093.** Both halves
-  negative, verdict unchanged at 2.6x its bar.
+- **09-15 04:45 check: +6 fires, n=263, −0.097/fire, halves −0.098 / −0.096.** Both halves
+  negative and now within **0.002** of each other — the tightest the two halves have ever been, at
+  2.6x the bar. Six fires in one check is the fastest accrual since 09-14, and it moved the number
+  further from zero, not toward it.
 - (00:45: +4, n=256, −0.081, halves −0.076/−0.086 — the halves' closest agreement so far.)
 - (22:45: +2, n=252, −0.082. 20:45: +4, n=250, −0.075.) The number has sat inside −0.079 ± 0.004
   across the last six checks (243 → 256), so accrual is no longer moving it at all.
