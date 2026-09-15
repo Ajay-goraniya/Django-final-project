@@ -797,8 +797,13 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
 - **At exactly 200 fires — twice the pre-set bar — the verdict is unchanged: −0.057/fire against a
   +0.018 baseline, both halves negative (−0.069/−0.045).** That is the useful closing fact: doubling
   the sample past the bar did not rescue it, so the REFUTED call was not a sample-size artifact.
-- **09-15 14:45 check: +4 fires, n=288, −0.086/fire, halves −0.065 / −0.107.** Both halves
-  negative, verdict unchanged at 2.9x the bar.
+- **09-15 16:45 check: +13 fires — a new fastest accrual — n=301, −0.053/fire, halves
+  −0.072 / −0.034.** Both halves still negative and the verdict is unchanged, but this is the
+  largest single-check move the ledger has made: **−0.086 → −0.053**, and the second half has come
+  up from −0.107 to −0.034. Recorded as a move, NOT as a reversal: the number is still 0.071 below
+  the +0.018 baseline it is being tested against, and 13 fires is exactly the sample size that has
+  twice produced a swing here that the next hundred undid. Watch it; do not read it.
+- (14:45: +4, n=288, −0.086, halves −0.065/−0.107.)
 - (12:45: +11 — the fastest accrual the ledger has seen — n=284, −0.092, halves −0.069/−0.116.
   Eleven fires moved the headline by 0.009, so the number is stable to that scale against a whole
   check's worth of new evidence.)
