@@ -431,6 +431,28 @@ class Tests(unittest.TestCase):
         self.assertEqual(self.db.sql('SELECT status FROM orders')[0][0],'NO_FILL')
         self.assertEqual(self.db.live_reserve(),0)
         self.db.grade(ep,'DOWN'); self.assertEqual(self.db.metrics()['n'],0)
+    def test_stuck_reconcile_is_recorded_once_not_every_second(self):
+        """12.8.11. The 4,292-attempt loop left NO diagnostics row, because
+        broker.reconcile returned instead of raising. One RECONCILE_STUCK row per
+        order per distinct reason, so the next stuck order is visible in an hour,
+        not found by a human counting reconcile_count."""
+        class AmbiguousBroker(PaperBroker):
+            async def post(self,signed): raise TimeoutError('socket closed after send')
+        async def first():
+            ep=epoch(); ex=Executor(self.db,self.books,AmbiguousBroker(self.books))
+            await ex.fire(ep,decision(),'up','c',10,decision)
+        asyncio.run(first())
+        self.db.c.close(); self.db=Journal(self.path,'PAPER','abc')
+        class Stuck(PaperBroker):
+            async def reconcile(self,r): return dict(terminal=False,fills=[],live=False,reason=json.dumps({'class':'UnexpectedResponseError','message':'OpenOrder response did not match expected shape','phase':'reconcile_get_order'}))
+        async def loop():
+            ex=Executor(self.db,self.books,Stuck(self.books))
+            for _ in range(5): await ex.reconcile()
+        asyncio.run(loop())
+        rows=[json.loads(r['detail']) for r in self.db.sql('SELECT detail FROM diagnostics')]
+        stuck=[d for d in rows if d.get('kind')=='RECONCILE_STUCK']
+        self.assertEqual(len(stuck),1); self.assertEqual(stuck[0]['class'],'UnexpectedResponseError'); self.assertIn('order',stuck[0])
+        self.assertEqual(self.db.sql('SELECT status FROM orders')[0][0],'UNKNOWN')
     def test_latency_stages_are_persisted(self):
         async def run():
             ex=Executor(self.db,self.books,PaperBroker(self.books)); ep=epoch()
@@ -445,7 +467,7 @@ class Tests(unittest.TestCase):
     def test_v120_database_migrates_additively(self):
         self.db.reserve(123,decision(),'up','condition')
         self.db.set('build','12.0'); self.db.c.close(); self.db=Journal(self.path,'PAPER','abc')
-        self.assertEqual(self.db.get('build'),'12.8.10')
+        self.assertEqual(self.db.get('build'),'12.8.11')
         self.assertEqual(self.db.sql('SELECT count(*) FROM signals WHERE epoch=123')[0][0],1)
         cols={r[1] for r in self.db.c.execute('PRAGMA table_info(orders)')}
         self.assertTrue({'error_json','timing_json','request_reached','reconcile_count','venue_live'}<=cols)
@@ -502,6 +524,39 @@ class LiveBrokerSimulationTests(unittest.TestCase):
         row=dict(id='oid',token='up',plan=json.dumps(dict(rate=.07,exponent=1)),ts=time.time()-3,reconcile_count=0)
         out=asyncio.run(self.b.reconcile(row)); self.assertTrue(out['terminal']); self.assertEqual(len(out['fills']),1)
         tid,f=out['fills'][0]; self.assertEqual(tid,'trade1'); self.assertAlmostEqual(f['shares'],5.4717); self.assertAlmostEqual(f['price'],.53)
+    def test_unreadable_get_order_resolves_on_repeated_venue_absence(self):
+        """12.8.11. Zurich Z-4: get_order raised UnexpectedResponseError ("OpenOrder
+        response did not match expected shape") in 0.04 s for an order the venue
+        never received; the non-404 branch returned terminal=False 4,292 times over
+        80 minutes, the candle never graded and 2.88 stayed reserved. The account's
+        own open-orders listing had shown the id absent 232 times and the trade tape
+        had nothing. That is venue truth; use it."""
+        class UnexpectedResponseError(Exception): pass
+        class Client:
+            def list_account_trades(self,**kwargs):
+                async def gen():
+                    if False: yield None
+                return gen()
+            async def get_order(self,**kwargs): raise UnexpectedResponseError('OpenOrder response did not match expected shape')
+        self.b.client=Client()
+        row=dict(id='oid',token='up',plan=json.dumps(dict(rate=.07,exponent=1)),ts=time.time()-70,reconcile_count=5,venue_absent=0)
+        out=asyncio.run(self.b.reconcile(row)); self.assertFalse(out['terminal']); self.assertIn('UnexpectedResponseError',out['reason'])
+        row['venue_absent']=3; row['ts']=time.time()-10
+        out=asyncio.run(self.b.reconcile(row)); self.assertFalse(out['terminal'])
+        row['ts']=time.time()-70
+        out=asyncio.run(self.b.reconcile(row)); self.assertTrue(out['terminal']); self.assertTrue(out['verified_no_fill']); self.assertEqual(out['fills'],[])
+        self.assertIn('UnexpectedResponseError',out['reason']); self.assertIn('3x',out['reason'])
+    def test_unreadable_get_order_still_takes_a_confirmed_trade(self):
+        class UnexpectedResponseError(Exception): pass
+        trade=SimpleNamespace(taker_order_id='oid',trader_side='TAKER',size='5.4717',price='0.53',status='CONFIRMED',id='trade1')
+        class Client:
+            def list_account_trades(self,**kwargs):
+                async def gen(): yield SimpleNamespace(items=[trade])
+                return gen()
+            async def get_order(self,**kwargs): raise UnexpectedResponseError('OpenOrder response did not match expected shape')
+        self.b.client=Client()
+        row=dict(id='oid',token='up',plan=json.dumps(dict(rate=.07,exponent=1)),ts=time.time()-70,reconcile_count=5,venue_absent=9)
+        out=asyncio.run(self.b.reconcile(row)); self.assertTrue(out['terminal']); self.assertEqual(len(out['fills']),1); self.assertNotIn('verified_no_fill',out)
 
 class DashboardTests(unittest.TestCase):
     def setUp(self):

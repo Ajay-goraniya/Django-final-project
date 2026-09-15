@@ -5282,3 +5282,15 @@ stale minutes (p50 412-414 ms, max 3.1-3.3 s), 12 probe reconnects produced 1 st
 venue() would not have prevented it; nothing to build. Full thread: one-sided books = un-decidable by the model's own
 feature (closed); stale = delivery delay on Mumbai's path, correct refusals, and Zurich's path is cleaner (Z-1).
 Files: analysis/aws/task92_drip.md (pending paste), log stays on the box.
+
+## 09-15 02:0x - 12.8.11: the stuck UNKNOWN order (Zurich Z-4, 6dc0f89)
+Live fact: order ...64f7d150 (00:36:19, POST TimeoutError -> UNKNOWN, never reached the venue). get_order raised
+UnexpectedResponseError "OpenOrder response did not match expected shape" in 0.04 s; poly_live.reconcile's non-404
+branch returned terminal=False once a second for 80 min (reconcile_count 4,292), wrote no diagnostics (it returns, it
+does not raise), the candle never graded and 2.88 stayed reserved. The account's own open-orders listing had shown the
+id absent 232 times (venue_absent, maintained by mark_venue_open and consumed by nothing) and the trade tape had 0.
+Fix: trade tape first (a confirmed trade is a fill whatever get_order says); then an unreadable get_order resolves to
+verified no-fill once venue_absent>=3 and age>=60 s with no trade; one RECONCILE_STUCK diagnostics row per order per
+reason. Fail-on-old confirmed here (3 new tests fail on 12.8.10 modules, pass after). 255 tests. Z-5 = §7 on Zurich.
+Cross-session: triggers to Zurich must set environment_id=env_01Q4MxpRM42a9vjPSbtMj4av; with V's own env they mint
+orphan sessions since Zurich's remote-control restart (3 minted and archived 01:41-01:50).

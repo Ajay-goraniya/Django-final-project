@@ -50,3 +50,22 @@ stays reserved (your "open 2.82"). So the loop is a real 12.8.x defect. Before I
 (d) Did that epoch grade (results row present?) and what is candles/venue outcome for it.
 Commit as analysis/zurich/z4_unknown_order.md, push, reply ≤8 lines with the hash. The fix (12.8.11) follows §7
 only after these facts; nothing ships on a reconstruction.
+
+## Z-5 - deploy 12.8.11 under §7 at the next clean moment. The stuck-UNKNOWN fix. Master stays OFF after restart.
+Commit: the one this task lands in (git log -1 on learner/v12_2). Row 6 first: `git diff <running 12.8.9 commit> HEAD -- learner/v12_2/poly_live.py learner/v12_2/poly_core.py`
+must be exactly: (1) poly_live.LiveBroker: ABSENT_PROOF=3, ABSENT_PROOF_AGE_S=60; in reconcile() the `if fills:` check
+moves above the get_order-error branch, and that branch resolves verified_no_fill when venue_absent>=3, age>=60 s,
+no trade and nothing unsettled - otherwise unchanged; (2) poly_core.Executor: `_stuck_reported=set()` in __init__,
+and reconcile() writes ONE `RECONCILE_STUCK` diagnostics row per (order, class, message) when the broker returns a
+non-terminal JSON reason; build 12.8.10 -> 12.8.11 (12.8.9 -> 12.8.11 on your box, nothing from 12.8.10's census
+changes the order path; that build was Mumbai's). Nothing in decide, fire or pricing changes.
+Fail-on-old (must FAIL on the running tree, PASS on staged): test_polymarket.LiveBrokerSimulationTests.
+test_unreadable_get_order_resolves_on_repeated_venue_absence, .test_unreadable_get_order_still_takes_a_confirmed_trade,
+test_polymarket.Tests.test_stuck_reconcile_is_recorded_once_not_every_second. Suites: 71 + 21 + 163 = 255.
+SHA256SUMS 30/30. `rm -rf __pycache__`. Same argv as now (--quote-age-ms 2000); ev_settings preserved.
+Clean moment = no open position and no order in flight (orders status not in SUBMITTING/PENDING; the UNKNOWN one is
+the patient, it may stay). After restart: safe-start leaves master OFF - do NOT arm; the user arms on the dashboard
+or tells V. Expected effect within ~3 reconcile ticks: order ...64f7d150 -> NO_FILL, reason "get_order unreadable
+(UnexpectedResponseError); absent from account open orders Nx over Ns and no account trade"; reserve drops by 2.88;
+epoch 1789432500 then grades on the next grade_loop pass (DOWN, unfilled winner, n stays). DEPLOYED.md `## 12.8.11`
+section: commit it yourself (you can push now) - 7 rows, verbatim numbers, <=25 lines. Reply <=8 lines.

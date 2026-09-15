@@ -4,6 +4,10 @@ from types import SimpleNamespace
 from poly_core import fee, error_info
 
 class LiveBroker:
+    # 12.8.11: how many account open-orders listings must have shown an order
+    # absent (Journal.mark_venue_open, ~20 s apart on the live box), and how old
+    # it must be, before an unreadable get_order stops blocking resolution.
+    ABSENT_PROOF=3; ABSENT_PROOF_AGE_S=60.0
     # FAK is NOT all-or-nothing. Polymarket's own error table:
     #   "no orders found to match with FAK order. FAK orders are partially
     #    filled or killed if no match is found."  -- at least ONE match is
@@ -109,15 +113,29 @@ class LiveBroker:
             live=st not in ('MATCHED','CANCELED','CANCELLED','EXPIRED','REJECTED')
             terminal=(not live) and not trade_unsettled and abs(trade_qty-matched)<1e-5
             return dict(terminal=terminal,fills=fills,live=live,reason=f'order status {st}')
-        if order_error is not None:
-            return dict(terminal=False,fills=fills,live=False,reason=json.dumps(order_error,ensure_ascii=False))
-        # FAK cannot remain resting. If it is absent from open-order state, has no trade,
-        # and this absence has been observed twice after a grace period, it is proven no-fill.
         age=max(0,time.time()-float(r['ts']))
         misses=int(r.get('reconcile_count') or 0)+1
         if fills:
             # Confirmed trade itself proves fill even if open-order endpoint no longer retains the FAK.
             return dict(terminal=not trade_unsettled,fills=fills,live=False,reason='confirmed account trade; order no longer open')
+        if order_error is not None:
+            # 12.8.11. Zurich Z-4, 09-15: get_order raised UnexpectedResponseError
+            # ("OpenOrder response did not match expected shape") in 0.04 s for an
+            # order whose POST had timed out and which the venue never received.
+            # This branch answered terminal=False once a second for 80 minutes
+            # (reconcile_count 4,292): the candle never graded and 2.88 stayed
+            # reserved. Meanwhile the account's OWN open-orders listing had shown
+            # the id absent 232 times (Journal.mark_venue_open -> venue_absent)
+            # and the trade tape had nothing. A FAK cannot rest; absent from the
+            # account's open orders repeatedly, with no trade, is venue truth
+            # whatever get_order's parser thinks of the body.
+            absent=int(r.get('venue_absent') or 0)
+            if not trade_unsettled and absent>=self.ABSENT_PROOF and age>=self.ABSENT_PROOF_AGE_S:
+                return dict(terminal=True,fills=[],live=False,verified_no_fill=True,
+                            reason=f"get_order unreadable ({order_error.get('class')}); absent from account open orders {absent}x over {age:.0f}s and no account trade")
+            return dict(terminal=False,fills=fills,live=False,reason=json.dumps(order_error,ensure_ascii=False))
+        # FAK cannot remain resting. If it is absent from open-order state, has no trade,
+        # and this absence has been observed twice after a grace period, it is proven no-fill.
         if order_missing and not trade_unsettled and age>=2.0 and misses>=2:
             return dict(terminal=True,fills=[],live=False,verified_no_fill=True,reason='not present in open orders and no matching account trade after repeated venue checks')
         return dict(terminal=False,fills=[],live=False,reason='venue reconciliation in progress')

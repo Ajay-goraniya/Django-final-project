@@ -394,10 +394,10 @@ class Journal:
         ''')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.8.10')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.8.11')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -851,6 +851,7 @@ class Executor:
         self.db=db; self.books=books; self.broker=broker; self.age=age; self.pad=pad; self.band=False
         # A venue that fills partially does not need the pre-send depth check.
         self.require_depth=getattr(broker,'all_or_nothing',True)
+        self._stuck_reported=set()   # 12.8.11: (order id, reason head) already written as RECONCILE_STUCK
         # v12.1 hardcoded a 2.0s total budget and a 1.2s post timeout. Both are
         # fine beside the venue and too tight from a distant region: three
         # attempts of sign + round trip do not fit in 2s when one round trip is
@@ -1027,6 +1028,16 @@ class Executor:
                 continue
             if out is None: continue
             self.db.reconcile_touch(r['id'],venue_live=bool(out.get('live')))
+            if not out.get('terminal') and str(out.get('reason','')).startswith('{'):
+                # 12.8.11: a reconcile that RETURNS an error (rather than raising)
+                # left no trace for 4,292 attempts. One row per order per reason.
+                try:
+                    err=json.loads(out['reason']); key=(r['id'],err.get('class'),str(err.get('message'))[:40])
+                    if key not in self._stuck_reported:
+                        self._stuck_reported.add(key)
+                        self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),r['epoch'],json.dumps(dict(kind='RECONCILE_STUCK',order=str(r['id'])[-8:],
+                            **{k:err.get(k) for k in ('class','message','phase','status')},reconcile_count=r.get('reconcile_count'),venue_absent=r.get('venue_absent')))))
+                except Exception: pass
             for tid,f in out.get('fills',[]): self.db.fill(r['id'],r['epoch'],tid,f,self.broker.basis)
             if out.get('terminal'):
                 has_fill=bool(self.db.sql('SELECT 1 FROM fills WHERE order_id=?',(r['id'],)))
