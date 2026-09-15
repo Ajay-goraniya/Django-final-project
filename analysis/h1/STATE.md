@@ -27,6 +27,31 @@ to V are **≤6 lines**, ledger entries **1 line**, **message only on a verdict 
 else lives in files. Always. **No acknowledgement of the rule itself** — V asked for none, so none
 was sent; this line is the record.
 
+## Task R-12 DONE 09-16 00:0x — **the big-regime retrain DOES NOT SHIP.** `analysis/h1/r12_big_brain.md`
+User order: "train it on almost all the regimes known... no excuse, no cheating." Done end to end.
+Trained on **4,753,000 rows / 950,600 candles / 109 months (2017-08..2026-08)**. Out of sample **by
+construction** — the store ends 08-31, the first Polymarket candle is 09-08.
+- **Two bugs caught before they could poison it, both by an implausible number rather than a check:**
+  (1) **Binance changed the archive timestamp unit mid-history (ms → µs)** — reading µs as ms does
+  not raise, it emits nonsense; one day built **863,982 rows where 864 were expected**. (2) the
+  5-pass fit was thrown away by `grp.min()` on a string array; the fit is now cached.
+- **Stage A parity PASSES:** my extractor reproduces the engine's own logged features — returns to
+  **~5e-07 bps**, the rest to ~0.001 bps. (`sec_left` reads 0.458 and is *not* an error: mine is an
+  integer second, the engine's is sub-second, so the median difference must be ~0.5.)
+- **Stage B (history alone, 18 features):** Brier **0.1952 vs 0.1654**, per-$1 +0.070 vs +0.131.
+  NOT A FINDING — and expected, since it masks `p_venue` and v10's feature set is `BASE + p_venue`.
+- **Stage B2 (the brief's real two-stage design):** frozen **+0.131/$1, Brier 0.1622**;
+  R-12+venue **+0.241/$1, Brier 0.1628**. **The venue stage recovers ALL the forecast quality the
+  masked model lost — a dead heat.**
+- **THE ANSWER: nine years of history plus the venue price forecasts exactly as well as eight days
+  plus the venue price. The history adds nothing measurable.**
+- verify.py NOT A FINDING: **halves FAIL** (+0.226/−0.060), **paired FAIL — 397 discordant candles
+  split 201/196, p=0.841.** The two PASSes mislead: the +0.241/$1 is bought by firing **419 times
+  instead of 751**, and the total edge is **+2.93 on ~100**. The paired test has real power and
+  says no effect.
+- **No paper twin proposed; nothing written to `AWS_TASKS.md`.** Artifact kept at
+  `analysis/h1/model_r12_big.json` (a v10 drop-in, 12 features masked so train == serve).
+
 ## Task R-11 DONE 09-15 22:4x — the selloff cell is **NOT** a rain-or-sun loser. `analysis/h1/task_r11_trend_vol_grid.md`
 `ret60 down / rv>0.75 / DOWN`: n=77, hit 44.2%, **−0.092/$1, halves −0.272 / +0.083 → sign flips,
 NOT A FINDING.** 2 of 6 days positive and **every day thin** (n=3–28). Negative pooled, not
