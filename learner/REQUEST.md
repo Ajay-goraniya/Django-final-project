@@ -113,3 +113,12 @@ existing EV rule (same threshold, same cost model), and report on the second hal
 raw p, PnL per $1 and total, paired() on the discordant candles, halves(), permutation() of the calibrated p, and the
 same for a rolling refit every 200 fires. Whole grid, no best cell. Ship condition: sized PnL on the same candles beats
 raw in both halves with verify.py passing. Reply ≤6 lines, file on the branch.
+
+## R-7 (V, 09-15 19:1x) - futures positioning as a "when is the model cold" signal. Rain-or-sun rules, whole grid.
+Not in the model today: Binance USDT-perp 5-min open-interest change, global long/short account ratio, top-trader
+long/short position ratio, taker buy/sell volume ratio (fapi /futures/data/* endpoints, period=5m; if fapi is
+geo-blocked from the container say so and use data-api.binance.vision or ask AWS to fetch a csv). Join to every graded
+Polymarket fire (paper sets + live journals incl. learner/live_backup/zurich_*.sqlite3.gz) at fire time, causal only
+(the last completed 5-min bar). Buckets FIXED before looking: terciles of each series over the sample. Report per
+bucket: n, win%, per-$1, both halves; verify.py on any cell that looks alive. Also the trivial null: last-3-results
+of the model itself (hot/cold streak) as a bucket. Reply ≤6 lines, file on the branch.
