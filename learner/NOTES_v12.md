@@ -5255,3 +5255,12 @@ book with a 2 s-old stamp reads 2.00x = "stale". Probe `analysis/v/ws_lag_probe.
 on a drop (nothing persisted), one ConnectionClosedError seen in 4 min. Open: is stale bursty (minutes at 100% =
 reconnects/outages) or diffuse (every minute ~5% = systematic)? -> AWS Task 91 on the Mumbai census rows.
 Ambient arrival age here (ctrl twin, 25 h, in-window): >2 s 4.7%, of which 2-5 s 1.5%, >5 s 3.2%.
+
+**00:4x AWS Task 91 (a),(c) - stale is BURSTY, not standing.** 80 census minutes: 57 have zero stale events; 99.0% of
+the 99,122 stale events fall in four minutes (23:22:50 79.8%, 23:29:02 45.0%, 00:16:52 28.4%, 00:32:27 6.1%),
+spread across candle phases. My "28.5% stale, ~42% of in-window blocks" above pooled four outage-shaped episodes
+over an hour - retracted as a standing cause. Stale 2-5 s for most of a minute, never 5+, means the feed DRIPPED
+(events every 2-5 s) for ~a minute, ~4x/hour. engine.log: 11 Binance reconnects, 0 venue - but venue() never logs
+a reconnect (sets self.error only), so that zero is not evidence. Open (Task 92): is the drip per-connection (a
+watchdog reconnect would fix it) or venue-wide (nothing to do)? Test: a second connection beside the engine, per-second
+timestamped, aligned with the engine's stale minutes.

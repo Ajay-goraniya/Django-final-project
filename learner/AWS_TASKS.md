@@ -3367,3 +3367,10 @@ now-minus-venue-stamp p50/p99/max and per-token gaps on the ACTIVE tokens. My 4-
 max gap 891 ms, nothing >0.75 s. Commit the output to analysis/aws/task91_lag_probe.txt.
 (c) engine.log lines containing "reconnect" or "Venue" in the census window, count and times, if any exist.
 <=10 lines back, commit hash. Mumbai stays master off.
+
+## Task 92 - is the drip per-connection or venue-wide? Observation only, no code change, no restart.
+Run `analysis/aws/ws_gap_probe.py 3600` (per-second lines with wall-clock seconds) beside the engine for 60 min.
+Then list the engine's WAIT_CENSUS minutes with stale share >2% in that hour, and for each print the probe's
+maxgap_ms and events for those same seconds. Same gap on the probe's connection = venue-wide (nothing to build);
+probe clean while the engine is stale = per-connection (a silence watchdog in venue() is worth building).
+Commit probe output + the alignment table to analysis/aws/task92_drip.md. <=10 lines back with the hash.
