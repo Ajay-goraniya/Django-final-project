@@ -23,6 +23,27 @@ twice for the same words. From now: verdict, numbers, file path; detail stays in
 **01:20 — V made it STRICT** (everyone, always; sole exception a major matter needed now, numbers first)
 and wrote it into CLAUDE.md. I removed my own near-duplicate block there — V's is authoritative.
 
+## Task R-8 DONE 09-15 19:5x — **parity passes, the feature does NOT earn its place.** `analysis/h1/task_r8_taker_feature.md`
+**Do not build 12.10 on this.** R-7 is not refuted — it remains a measured property of *when the
+model is cold*. What is refuted is that adding it to the model makes the model less cold.
+- **(a) PARITY PASSES:** rebuilt the ratio from the raw futures aggTrades tape — the stream the
+  engine already consumes, and its perp deque keeps 20 min so a 5-min window fits. 2016/2016 bars,
+  **Pearson 0.9999, Spearman 0.9998, median |diff| 0.0002, tercile agreement 99.4%.** It IS
+  live-computable; parity was never the blocker.
+- **(b) RETRAIN** (walk-forward by day, `learner/train.py`'s own logit recipe = what the shipped
+  artifact is; lightgbm absent, stated not skipped). 32,062 ticks / 8 days / 1,693 candles:
+  frozen **0.4911 logloss, 758 fires, +0.131/$1, +99.56**; retrain **0.5078, 452, +0.167, +75.37**;
+  retrain+taker **0.5075, 443, +0.160, +70.98**.
+- **The MATCHED pair decides** (with vs without the feature, everything else identical) and the
+  feature **LOSES** it: logloss −0.0003 (noise), per-$1 **+0.167 → +0.160**, total worse.
+- **(c) SHIP FAILS.** Pooled per-$1 beats frozen (+0.029) but **h2 loses (−0.033)**; verify.py fails
+  halves, paired and null. **Paired is the cleanest: 314 discordant candles split 156/158,
+  McNemar p=0.955** — a well-powered null, not an underpowered one.
+- **Not redundancy:** corr(taker, ofi5/15/60, perp_n15, spot_imb60) all **under 0.15**. The feature
+  carries information the model lacks and the model still cannot use it.
+- Caveat stated in the doc: frozen-vs-retrain is unfair to the retrains (frozen saw far more
+  training data). That is exactly why the matched pair is the test that counts.
+
 ## Task R-7 DONE 09-15 19:3x — **the taker buy/sell ratio orders the model's ACCURACY.** `analysis/h1/task_r7_futures_positioning.md`
 First thing in R-4 → R-7 that is **not** the price artifact. A candidate FEATURE, not a gate.
 - **Data:** `fapi.binance.com` is geo-blocked (451) and `data-api.binance.vision` has no
