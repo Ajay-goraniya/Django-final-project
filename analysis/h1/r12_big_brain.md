@@ -75,3 +75,76 @@ the median; the p90/max columns are the same 1s-grid-vs-tick-tape residual R-8 a
 measured.
 
 Stage 1 extraction: 71 of 110 months done, ~10 s/month.
+
+## Stages B, C, B2 — the test. **R-12 DOES NOT SHIP, in either form.**
+
+Trained on **4,753,000 rows / 950,600 candles / 109 months** (2017-08..2026-08). Every number below
+is out of sample **by construction**: the store ends 2026-08-31 and the first Polymarket candle is
+2026-09-08, so no test row can be in training — not a filter that could be got wrong.
+
+### Stage B — history alone (18 features, 12 masked)
+
+| | frozen v10 | R-12 big |
+|---|---|---|
+| Brier, all 31,596 test rows | **0.1654** | 0.1952 |
+| logloss | **0.4962** | 0.5715 |
+| fires / hit% | 928 / 52.8% | 1036 / 51.4% |
+| per $1 | **+0.131** | +0.070 |
+| total | **+121.43** | +72.72 |
+
+verify.py: **NOT A FINDING** — paired FAIL (200 discordant, 93 vs 107, p=0.358), costs FAIL (dies at
++5c), null FAIL. Both halves worse. No regime cell convincingly wins.
+
+**This half of the result was expected and is not the interesting one.** Stage B masks
+`p_venue`/`lv`/`lv_x_sec` — the market's own implied probability — and v10's shipped feature set is
+literally `BASE + p_venue`. A model blind to the market price losing to one that sees it says
+nothing about whether history helps.
+
+### Stage B2 — the two-stage design the brief actually specified
+
+History model's output as **one input** alongside the venue features, recalibrated on the logged
+window, walk-forward by day. This is the fair test.
+
+| arm | fires | hit% | per $1 | total | Brier |
+|---|---|---|---|---|---|
+| frozen v10 | 751 | 52.6% | +0.131 | +98.02 | **0.1622** |
+| R-12 big alone | 839 | 51.5% | +0.067 | +56.52 | 0.1931 |
+| **R-12 + venue** | 419 | 51.1% | **+0.241** | **+100.96** | 0.1628 |
+
+The venue stage **recovers all the forecast quality the masked model lost** — Brier 0.1628 against
+frozen's 0.1622, a dead heat.
+
+**And that is the answer to the question.** Nine years of history plus the venue price forecasts
+*exactly as well as* eight days plus the venue price. **The history adds nothing measurable.**
+
+verify.py: **NOT A FINDING.**
+
+| check | result |
+|---|---|
+| sample size | PASS — n=419 |
+| **both halves** | **FAIL** — +0.226 / −0.060, sign flips |
+| **paired test** | **FAIL** — **397 discordant candles, 201 vs 196, p=0.841** |
+| cost sensitivity | PASS — survives to +5c (+0.104) |
+| beats the null | PASS — +100.96 vs +98.02 |
+
+Do not be misled by the two PASSes. The +0.241 per $1 is bought by firing **419 times instead of
+751** — the same concentrate-the-book shape as R-5, R-6 and R-10 — and the total edge is **+2.93 on
+~100, under 3%**. The paired test is the one with power here: **397 discordant candles split
+201/196.** That is not a small effect, it is no effect, measured well.
+
+### Honest limits
+
+- 2026-09-15's daily kline file is not published yet, so **today's live Zurich rows could not be
+  joined** to my features. The test window is 09-08..09-14.
+- All paper at the quoted ask; R-3 priced the live book at +0.004/$1 against +0.038 quoted.
+- Model artifact kept at `analysis/h1/model_r12_big.json` (a `model_v10.json` drop-in: all 30
+  feature names in v10's order, the 12 masked ones carrying mean 0, scale 1, coef 0 — train == serve).
+
+### Verdict
+
+**No paper twin is proposed.** V's condition for shipping to Mumbai was a model that passes; this
+one fails two gates including the well-powered one. Nothing goes to `AWS_TASKS.md`.
+
+The user's question — *"train it on almost all the regimes known"* — now has a measured answer:
+**it was worth doing and the answer is no.** Nine years of BTC history does not improve a 5-minute
+direction forecast that already has the market's own price as an input.
