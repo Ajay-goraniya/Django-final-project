@@ -5315,3 +5315,12 @@ of v10_poly_long4 (777 rows + 125 fresher to 09-15 00:41) - use poly_pnl for any
 fixed-3 +506: no calibrated edge for a stake curve to amplify. Sizing CLOSED until p calibrates. The finding that
 matters is upstream of sizing: the EV gate multiplies an overconfident p, so it passes fires whose true EV is lower
 than computed. -> R-6.
+
+## 09-15 02:4x - feed geography, measured on both boxes the same minute
+Zurich (/api/state, 20 samples): event_lag spot 111 ms med / 133 max, perp 112, depth 111, venue 12. arrival_age spot
+245 med / 1,679 max = silence between Binance trades, NOT latency - this is the "300+ ms" the user sees on the
+dashboard. TCP RTT: Binance 220 ms, Polymarket edge 2 ms. Mumbai: TCP RTT Binance 128 ms, Polymarket edge 2 ms (edge =
+Cloudflare; the order round trip there was 348 ms vs Zurich 236). So: Binance one-way ~111 ms Zurich vs ~64 Mumbai vs
+~10 Tokyo (build 36); order leg 236 Zurich vs 348 Mumbai. Sum of the two legs ~347 vs ~412 ms. Neither box is near
+both engines; that is the architecture fact behind the user's gut. Whether 50-100 ms of input age matters is a
+question for the decide cadence (hot-path audit, analysis/v/audit_hotpath.md, pending).
