@@ -194,11 +194,21 @@ def main():
 
     print('  fitting (StandardScaler -> LogisticRegression(C=0.3) -> isotonic on inner GroupKFold '
           'OOF)...', flush=True)
-    m, iso = fit(Xh.astype(np.float64), yh, grp)
+    # Cache the fit: it is 5 logistic passes over 4.75M rows, and a trivial bug downstream should
+    # never cost it twice. (It did once - grp.min() on a string array - hence this.)
+    import joblib
+    cache = os.path.join(SP, 'r12_fit.joblib')
+    if os.path.exists(cache):
+        m, iso = joblib.load(cache)
+        print('  loaded cached fit', flush=True)
+    else:
+        m, iso = fit(Xh.astype(np.float64), yh, grp)
+        joblib.dump((m, iso), cache)
     path = to_json(m, iso, os.path.join(H1, 'model_r12_big.json'),
                    'R-12: trained on %d rows of BTC 1s history, %s..%s, %d of 30 features built, '
                    'the rest masked to zero so train == serve.'
-                   % (len(Xh), grp.min(), grp.max(), len(BUILT)))
+                   % (len(Xh), sorted(set(grp.tolist()))[0], sorted(set(grp.tolist()))[-1],
+                      len(BUILT)))
     print('  model written: %s' % os.path.basename(path))
     print()
 
