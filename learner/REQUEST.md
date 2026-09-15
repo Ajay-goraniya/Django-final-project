@@ -187,3 +187,8 @@ NOTES. Ships as a PAPER twin first (Mumbai, V arranges); nothing live without th
 R-12 addendum (V, 22:5x): plan approved. On the 9 unbuildable features: serve them zeroed too (a feature mask in the
 json, applied in FeatureState output) so train == serve and there is no skew to measure; the venue stage on the logged
 window may use all 30. Report both (masked vs unmasked serve) if cheap, masked is the default.
+R-12 addendum 2 (user, 09-15 23:2x): "hoping to run it live sooner." Paper twin: Mumbai first (Task via AWS_TASKS);
+ONLY if Mumbai cannot run it, H1 runs the twin inside its own container and keeps checking it. Walk through any
+other issue yourself; do not stop. V's session is near its usage limit - H1 self-drives R-12 end to end (data ->
+train -> walk-forward -> paired test -> twin -> 4-h ledger), commits every stage to analysis/h1/r12_big_brain.md,
+and posts a one-line verdict trigger to V only at: test verdict, twin running, or a blocker V must clear.
