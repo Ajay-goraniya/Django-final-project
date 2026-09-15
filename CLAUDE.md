@@ -39,6 +39,8 @@ The two channels that work:
 - **No gates.** No on/off gates, stake modifiers, or threshold sweeps on a score already known to be
   weak. *"EF should know when to fire and it cannot be decided by a gate... give it a trained brain
   that knows that move is wrong and it will reverse."* Four such attempts failed on 09-10.
+- **Kelly / dynamic staking never goes live without TWO separate confirmations from the user** (user, 09-15 12:2x:
+  "don't push it in live runs without confirmation from me twice"). Back-tests continue (R-5); stake stays fixed.
 - **"Don't do unnecessary or unuseful work, go in a right direction not wrong."**
 - **"Rain or sun"**: a finding must work every day, or you identify *when* it works and switch only
   then. A regime switch is itself a threshold — define buckets FIRST, test them all, report the full
