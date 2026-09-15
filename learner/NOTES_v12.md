@@ -5324,3 +5324,9 @@ Cloudflare; the order round trip there was 348 ms vs Zurich 236). So: Binance on
 ~10 Tokyo (build 36); order leg 236 Zurich vs 348 Mumbai. Sum of the two legs ~347 vs ~412 ms. Neither box is near
 both engines; that is the architecture fact behind the user's gut. Whether 50-100 ms of input age matters is a
 question for the decide cadence (hot-path audit, analysis/v/audit_hotpath.md, pending).
+
+**03:20 R-6 (H1, analysis/h1/task_r6_calibrated_p.md): calibrated p inside EV does NOT ship. CLOSED.** Platt: 370 fires
+-> 42; the 327 it drops made +0.154/$1 (+50.38) - it refuses average trades, not losers. Isotonic: saturates at 1.0 in
+the top bin, adds 206 expensive favourites at +0.124/$1; total below raw. Rolling refit every 200: both below raw.
+Overconfident p (R-5 run 2) is real but correcting it inside EV loses money; the raw p + EV rule stays. Only thread:
+Platt's kept 42 at +0.466/$1 - under the bar, re-read at 60+.
