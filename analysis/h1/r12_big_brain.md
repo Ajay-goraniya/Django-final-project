@@ -148,3 +148,52 @@ one fails two gates including the well-powered one. Nothing goes to `AWS_TASKS.m
 The user's question — *"train it on almost all the regimes known"* — now has a measured answer:
 **it was worth doing and the answer is no.** Nine years of BTC history does not improve a 5-minute
 direction forecast that already has the market's own price as an input.
+
+## R-12c — the FAIR comparison. **My stage B headline was wrong and is corrected here.**
+
+The user: *"it should be a fair comparison so do it."* Correct, and it is my error. Stage B compared
+frozen v10 with **all 30 features** against R-12 big with **18**. I named the direction of that
+unfairness and reported the result anyway. That is not good enough — the only honest test of
+"8 days vs 109 months" is both models on the **same inputs**.
+
+**What those 12 features are worth, measured (R-12b):** masking them costs frozen v10
+**0.7516 → 0.5969 of direction accuracy** and **0.1654 → 0.2308 of Brier**. Stage B's comparison was
+rigged by ~15 points of accuracy the historical model could never have had.
+
+### Same rows, same 18 inputs, same EV rule
+
+| arm | accuracy | Brier | logloss |
+|---|---|---|---|
+| frozen v10, all 30 *(the unfair comparison)* | 0.7516 | 0.1654 | 0.4962 |
+| frozen v10, **masked to 18** | 0.5969 | 0.2308 | 0.6513 |
+| **R-12 big, 109 months (18)** | **0.6982** | **0.1952** | **0.5715** |
+
+**On equal inputs the nine-year model beats the eight-day model by +10.1 points of accuracy and
++0.036 of Brier.** More data does produce a better forecast. Stage B said the opposite and stage B
+was wrong.
+
+### And then the money goes the other way
+
+| through the same EV rule | fires | hit% | per $1 | total |
+|---|---|---|---|---|
+| frozen v10, masked to 18 | 1089 | 52.1% | **+0.099** | **+107.74** |
+| R-12 big, 109 months | 1036 | 51.4% | +0.070 | +72.72 |
+
+verify.py: **NOT A FINDING** — halves FAIL (−0.081/+0.050), paired FAIL (362 discordant, 171 vs 191,
+p=0.318), costs FAIL, null FAIL.
+
+**The better forecaster makes less money.** That is this project's own "accuracy is not PnL" rule in
+its sharpest form so far: +10 points of direction accuracy converts into −0.029 per $1, because the
+EV rule fires where the ask is, and a better-calibrated model does not automatically pick
+better-priced trades.
+
+### What the corrected answer is
+
+1. **More data helps the forecast.** Nine years beats eight days on equal inputs, clearly.
+2. **It does not help the money**, and fails every gate when run through the trading rule.
+3. **It changes nothing about what should run live.** The live model keeps its 12 extra features —
+   dominated by the venue price — and stage B2 already showed that once the venue price is added
+   back to the history model the two finish in a dead heat (Brier 0.1628 vs 0.1622).
+
+The ship decision is unchanged. The *reasoning* behind it was wrong in stage B, and this is the
+correction.
