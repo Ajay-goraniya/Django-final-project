@@ -23,6 +23,26 @@ twice for the same words. From now: verdict, numbers, file path; detail stays in
 **01:20 — V made it STRICT** (everyone, always; sole exception a major matter needed now, numbers first)
 and wrote it into CLAUDE.md. I removed my own near-duplicate block there — V's is authoritative.
 
+## Task R-6 DONE 09-15 03:1x — calibrated p inside the EV rule. NEITHER CALIBRATOR SHIPS. `analysis/h1/task_r6_calibrated_p.md`
+Rebuilt the full candidate stream: `trades` = fired ticks, `decisions` = NOT-fired (its `fire` col
+is 0 on every row of all three lanes), so only their union (29,779 ticks / 1,709 candles) can answer
+"fires added". Rule read from the engine's own `model_v10.json`. **Sanity first: the replay
+reproduces 946 of the engine's 948 fires and proposes 0 spurious ones** — it IS the rule.
+- **Platt: 370 fires → 42** (declines 89%). Kept read **+0.466/$1** but total **+19.57 vs raw
+  +64.90** — and **the DROPPED book was PROFITABLE: 327 fires, +0.154/$1, +50.38.** It refuses
+  near-average trades; it does not find losers.
+- **Isotonic: 345 fires, +0.067/$1 (below raw +0.176), total +23.24.** ADDS 206 fires at 85.4% win
+  but only +0.124/$1 — expensive favourites — because **isotonic saturates at 1.000 for p=0.80**
+  (top training bin all wins), which makes EV explode. An overfit step, not a calibration.
+- Rolling refit every 200: Platt +56.57, isotonic +60.86 — both below raw on the same window.
+- verify.py: **both FAIL the ship metric** (total PnL, same candles) **and paired** (no discordant
+  pairs — calibration can only change WHETHER it fires, never the side). Platt also fails sample
+  at n=42.
+- **The one live thread:** Platt's +0.466/$1, halves +0.119/+0.388, permutation p=0.000 — but
+  **n=42, under the bar, marked insufficient and NOT read**, and the dropped book contradicts it.
+  Re-run at 60+ fires. Nothing else in R-6 is worth revisiting.
+- Live not run: 5 graded fires, a calibration fit needs a training half.
+
 ## Task R-5 run 2 DONE 09-15 03:0x — calibration curve + shrunk Kelly. Still DOES NOT SHIP.
 V's pass-2 amendment. **It supplies the REASON runs 1/1b could only infer.**
 - **`p` is overconfident in 5 of 5 bins**, all n ≥ 266, no sign change: gaps −0.051 / −0.039 /
