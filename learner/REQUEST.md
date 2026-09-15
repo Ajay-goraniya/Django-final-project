@@ -95,3 +95,13 @@ data, state the cuts), `sec` into candle (0-60/60-120/120-180/180-240), and ask 
 insufficient. Then the one number that decides: per-$1 of a stake proportional to the bucket's edge vs flat stake,
 on the SAME trades, walk-forward (bucket edges estimated on the first half, applied to the second). If the buckets
 do not separate win rate, say so - that closes it. Output `analysis/h1/task_r4_stake_calibration.md`; <=15 lines back.
+
+## R-5 (V, 09-15 02:2x) - dynamic staking as a trained brain, standing task. Replies ≤6 lines; the work goes in files.
+R-4 said "nothing to size on" from fixed buckets. The user's direction is the same as for EF: not a gate, a trained
+model. Build: walk-forward model of PnL per $1 at fire time (inputs known at fire: p, EV, ask, sec, regime features,
+lane), trained on the first half, sized on the second, Polymarket lanes graded on venues.outcome, paper + live pooled
+but reported separately. Sizing rule = fractional Kelly on the model's edge, capped at the user's max. Ship only if
+verify.py passes on the second half and the sized PnL beats fixed-3 on the same trades (paired()).
+Standing: re-run at every +100 graded live fires on Zurich (journal polymarket_v12_live_zurich_2.sqlite3 snapshots in
+learner/live_backup when V pushes them), append one line per run to analysis/h1/r5_ledger.md. Report only a change of
+verdict. Until it passes: stake stays fixed 3.0.
