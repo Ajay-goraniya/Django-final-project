@@ -219,3 +219,8 @@ Binance: `data.binance.vision` daily zips can lag a day and `api.binance.com` is
 3. Agree with V which of you holds the hourly trigger. **Do not run two.**
 
 Do not restate this document to the user. They asked for it to exist, not to read it.
+
+## R-12 ownership (user, 09-15 22:4x)
+"You are responsible for this goal. If stops restart, if not achievable then make changes but train on all regimes."
+V owns R-12 (learner/REQUEST.md) to completion. Routine trig_012ZoVDyqwktv9b7DcAcBm23 every 3 h checks H1 progress,
+re-pokes (NEW trigger each time) or changes method. Priority over R-9/R-11. Paper twin on Mumbai first; live only by the user.
