@@ -5305,3 +5305,7 @@ testable on the next such order - RECONCILE_STUCK row + NO_FILL within ~1 min).
 quote_age FAIL. Equal-capital steelman zero-stakes 339/772 = a gate. Stake stays fixed 3.0. H1's "live journal has no
 p/ev/rv60" blocker is wrong: signals.decision JSON has p, ev, rv60, sec, ask, threshold, features; diagnostics has p per
 tick (verified on a v12 twin journal). Pass 2 on real Zurich fills at +100.
+**02:27 R-5 run 1b (H1, full 1,872 pooled):** worse with more data - per-$1 delta -0.008, ship condition -480, steelman
+-21.5, verify.py fails 4. H1 correction accepted: no Zurich journal was on the branch; Zurich now pushes
+learner/live_backup/zurich_v1 / zurich_2 .sqlite3.gz with each hourly. H1 note for V: poly_pnl.sqlite3.gz is a superset
+of v10_poly_long4 (777 rows + 125 fresher to 09-15 00:41) - use poly_pnl for anything keyed to "776/777".
