@@ -87,3 +87,139 @@ def to_json(m, iso, path, note):
                r12_masked_features=[f for f in FEATURES if f not in BUILT])
     json.dump(out, open(path, 'w'), indent=1)
     return path
+
+
+# ---------------------------------------------------------------- test-window features
+def test_store(days):
+    """My 18 features at EVERY second 15..240 over the Polymarket window, cached."""
+    import r12_parity as P
+    f = os.path.join(SP, 'r12_test.npz')
+    if os.path.exists(f):
+        d = np.load(f)
+        return {(int(k[0]), int(k[1])): x for x, k in zip(d['X'], d['K'])}
+    import r12_extract as E
+    E.SECS = list(range(15, 241))
+    Xs, Ks = [], []
+    for day in days:
+        try:
+            a = P.daily(day)
+        except Exception:
+            print('  test store: no daily file for %s' % day, flush=True)
+            continue
+        r = E.build(a)
+        if r:
+            Xs.append(r[0])
+            Ks.append(r[1])
+    X, K = np.vstack(Xs), np.vstack(Ks)
+    np.savez_compressed(f, X=X, K=K)
+    return {(int(k[0]), int(k[1])): x for x, k in zip(X, K)}
+
+
+def lane_ticks(oc):
+    """Every evaluated tick in the Polymarket lanes, with the engine's own feat and ask."""
+    out = []
+    lanes = [('poly_pnl', 'ts_ms', 'ask'), ('poly_acc', 'ts_ms', 'ask'),
+             ('v12_poly_lane', 'signal_ms', 'quote_ask'),
+             ('v12_poly_weekend', 'signal_ms', 'quote_ask')]
+    import sqlite3
+    for name, tcol, acol in lanes:
+        c = sqlite3.connect(os.path.join('/tmp/claude-0/db', name + '.sqlite3'))
+        rows = list(c.execute('select candle_epoch,%s,%s,feat from trades where feat is not null'
+                              % (tcol, acol)))
+        rows += list(c.execute('select candle_epoch,ts_ms,ask,feat from decisions '
+                               'where feat is not null'))
+        for ep, ts, ask, feat in rows:
+            if ask is None or int(ep) not in oc:
+                continue
+            s = int(ts) // 1000 - int(ep)
+            if not (15 <= s <= 240):
+                continue
+            out.append(dict(ep=int(ep), sec=s, ts=int(ts) // 1000, ask=float(ask),
+                            feat=json.loads(feat), lane=name,
+                            day=datetime.utcfromtimestamp(int(ep)).strftime('%Y-%m-%d'),
+                            actual=oc[int(ep)]))
+    seen, uniq = set(), []
+    for r in sorted(out, key=lambda r: r['ts']):
+        k = (r['lane'], r['ep'], r['sec'])
+        if k in seen:
+            continue
+        seen.add(k)
+        uniq.append(r)
+    return uniq
+
+
+def fire_set(rows, pup):
+    by = {}
+    for r, p in sorted(zip(rows, pup), key=lambda z: z[0]['ts']):
+        if r['ep'] in by:
+            continue
+        side = 'UP' if p >= 0.5 else 'DOWN'
+        ps = p if side == 'UP' else 1 - p
+        if R8.ev_of(ps, r['ask']) >= R8.threshold(r['feat']['rv60']):
+            by[r['ep']] = dict(r, side=side, ps=ps)
+    return by
+
+
+def book(fires, haircut=0.0):
+    if not fires:
+        return None
+    pnl, wins = [], 0
+    for t in fires.values():
+        won = (t['side'] == t['actual'])
+        wins += won
+        pnl.append(R8.per1(min(0.98, t['ask'] + haircut), won))
+    return dict(n=len(pnl), win=wins / len(pnl), per1=statistics.fmean(pnl), total=sum(pnl))
+
+
+def main():
+    oc = R8.oracle()
+    L = lane_ticks(oc)
+    cutoff = min(r['ep'] for r in L)
+    days = sorted({r['day'] for r in L})
+    print('=' * 78)
+    print('R-12 stage B/C  big-history train, strict walk-forward, then the test')
+    print('=' * 78)
+    print('  test window: %s .. %s, %d evaluated ticks, %d candles'
+          % (days[0], days[-1], len(L), len({r['ep'] for r in L})))
+    print('  TRAIN CUTOFF: every training row has candle_epoch < %d (%s), which is the FIRST'
+          % (cutoff, datetime.utcfromtimestamp(cutoff).isoformat()))
+    print('  Polymarket candle. The store ends 2026-08-31, so no test row can be in training -')
+    print('  the separation is by construction, not by a filter I could have got wrong.')
+    Xh, Kh = load_hist(upto_epoch=cutoff)
+    yh = Kh[:, 2].astype(float)
+    grp = np.array([datetime.utcfromtimestamp(int(e)).strftime('%Y-%m') for e in Kh[:, 0]])
+    print('  history: %d rows, %d candles, %d months, label balance %.4f'
+          % (len(Xh), len(np.unique(Kh[:, 0])), len(np.unique(grp)), yh.mean()))
+    print()
+
+    print('  fitting (StandardScaler -> LogisticRegression(C=0.3) -> isotonic on inner GroupKFold '
+          'OOF)...', flush=True)
+    m, iso = fit(Xh.astype(np.float64), yh, grp)
+    path = to_json(m, iso, os.path.join(H1, 'model_r12_big.json'),
+                   'R-12: trained on %d rows of BTC 1s history, %s..%s, %d of 30 features built, '
+                   'the rest masked to zero so train == serve.'
+                   % (len(Xh), grp.min(), grp.max(), len(BUILT)))
+    print('  model written: %s' % os.path.basename(path))
+    print()
+
+    TS = test_store(days)
+    ok = [r for r in L if (r['ep'], r['sec']) in TS]
+    print('  test rows with my features rebuilt: %d of %d' % (len(ok), len(L)))
+    Z = np.array([TS[(r['ep'], r['sec'])] for r in ok], np.float64)
+    p_new = predict(m, iso, Z)
+    frozen = Model(MODEL_JSON)
+    p_old = np.array([frozen.p_up(r['feat']) for r in ok])
+
+    f_new, f_old = fire_set(ok, p_new), fire_set(ok, p_old)
+    b_new, b_old = book(f_new), book(f_old)
+    print()
+    print('  %-14s %8s %9s %10s %10s' % ('arm', 'fires', 'hit%', 'per $1', 'total'))
+    for nm, b in (('frozen v10', b_old), ('R-12 big', b_new)):
+        print('  %-14s %8d %8.1f%% %+10.3f %+10.2f'
+              % (nm, b['n'], 100 * b['win'], b['per1'], b['total']))
+    print()
+    return ok, p_new, p_old, f_new, f_old, b_new, b_old, oc, days
+
+
+if __name__ == '__main__':
+    main()
