@@ -44,3 +44,34 @@ buy, the same quantity the engine accumulates from the trade stream.
   actually be wrong: recompute my kline-derived features **at the engine's own decision seconds**
   over the logged window and compare value-by-value against the `feat` it recorded at that instant.
   Verify against the running artifact, not a re-derivation. Script `analysis/h1/r12_parity.py`.
+
+## Stage A — extractor parity: **PASSES**, after a silent corruption caught first
+
+**A bug had to be fixed before this could be run, and it would have poisoned everything downstream.**
+Binance **changed the timestamp unit partway through the archive** — older monthly 1s-kline files
+stamp `open_time` in milliseconds, newer ones in microseconds. Reading a microsecond stamp as ms
+does not raise: it puts the candle loop's start a thousand-fold too high, so it runs ~288k times per
+day over a ~700 MB index array and **emits nonsense**. One day of 2026-09-12 built **863,982 rows
+where 864 were expected**. Caught because the row count was implausible, not because a check fired.
+The unit is now detected per file from magnitude. None of the 67 months already extracted were
+affected — the format change falls later in the range — so no completed work was lost.
+
+Parity, 24,805 of 25,317 logged ticks joined across 2026-09-08..09-14
+(09-15's daily file is not published yet — the documented one-day lag):
+
+| feature | median \|diff\| | feature | median \|diff\| |
+|---|---|---|---|
+| ret5 / ret15 / ret30 / ret60 | **~5e-07 bps** | move_bps | 0.0013 bps |
+| range_bps, pos_in_range, dist_hi, dist_lo | **~1e-06** | rv60 | 0.0014 |
+| hod_sin / hod_cos | 2.4e-07 | prev1_bps / prev2_bps | 0.0013 |
+| **spot_imb15 / spot_imb60** | **0.0025 / 0.00057** | mv_x_sec | 0.0049 |
+| `sec_left` | 0.458 — see below | | |
+
+**The extractor reproduces the engine's own logged numbers.** `sec_left` is the one large value and
+it is **not an error**: mine is an integer second by construction, the engine computes
+`(now_us − candle_open_us)/1e6` with sub-second precision, so the difference is uniform in [0,1)
+and its median *must* be ~0.5. Observed 0.458. Every other feature agrees to 1e-3 bps or better at
+the median; the p90/max columns are the same 1s-grid-vs-tick-tape residual R-8 and Task 25 already
+measured.
+
+Stage 1 extraction: 71 of 110 months done, ~10 s/month.
