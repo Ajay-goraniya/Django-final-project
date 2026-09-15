@@ -34,3 +34,19 @@ paper twin of Mumbai's live build on the Zurich path - it measures decisions/fil
 LIVE on Zurich: only after (a) the user's key transfer (never through chat) and (b) V's written go, because live on
 two boxes with one wallet double-trades. `--live` runs the geoblock pre-check first; that result is the answer the
 user wants.
+
+## Z-4 - the stuck UNKNOWN order: facts before any fix. Read-only, no engine change, no restart.
+Code read (V, poly_live.py reconcile + poly_core.py Executor.reconcile): a non-404 error from get_order returns
+terminal=False every second forever; the venue_absent counter (mark_venue_open, from account open_order_ids) is
+maintained but never used to resolve; and grade() skips the whole candle while an UNKNOWN row exists, and its budget
+stays reserved (your "open 2.82"). So the loop is a real 12.8.x defect. Before I write the fix, the running facts:
+(a) ONE reconcile diagnostics row for that order, compact: phase, class, message (first 200 chars), status code.
+    Say which call fails: list_account_trades (phase 'reconcile') or get_order (phase 'reconcile_get_order').
+(b) The orders row: id last 8 chars, epoch, ts, status, error (compact), reconcile_count, venue_absent, venue_live,
+    venue_checked, plan.budget, plan.cap, plan.amount.
+(c) Venue truth, plain reads with the deployed client (no writes): is the id in the account's open orders now; does
+    list_account_trades(token, after=ts-120) show any taker trade with that taker_order_id; venue cash now vs engine
+    cash.
+(d) Did that epoch grade (results row present?) and what is candles/venue outcome for it.
+Commit as analysis/zurich/z4_unknown_order.md, push, reply ≤8 lines with the hash. The fix (12.8.11) follows §7
+only after these facts; nothing ships on a reconstruction.
