@@ -1,4 +1,4 @@
-17:32 UTC 09-15 | Z-6 12.9.0 @ 76d9eb6 LIVE: stopped 15581 at 17:31:17 (clean 17:31:12), started pid 72358 at 17:31:16, same argv, same db. 30/30 == git, build 12.9.0, 280 tests, fail-on-old 22/25.
-Read-back unchanged: stake fixed 5.0 / next_stake 5.0, ev_settings quote_age_ms 750, ef on, main/rev off, halt null. diagnostics_ts index present. MASTER OFF (safe-start audit 17:31:26 True->False) - user arms.
-Watch pending: first two live orders (identity/halt, status, fire_to_submit_ms vs 50) once armed. Cash 99.50 pre-restart.
-DEPLOYED.md ## 12.9.0 rows 1-4,6 committed; rows 5/7 follow after the first two orders.
+18:02 UTC 09-15 | 12.9.0 LIVE pid 72358 since 17:31:16; user armed master 17:34:11 (apply). results n=48 W28/L20 pnl +45.07 | cash 99.50 open 0 | stake 5.0, ev 750 unchanged.
+Watch: 1 of 2 orders so far - ...d4e1b885 17:51:37 REJECTED (venue: no orders to match), identity check passed, halt null, fire_to_submit 41 ms (12.8.11 median 50), rtt 359, budget_left 1958 (floor 400 not hit). 0 BUDGET releases. 122 decide rows, 1 fire in 28 min.
+RECONCILE_STUCK: 1 row, for that reject on its first reconcile pass - get_order UnexpectedResponseError ("OpenOrder response did not match expected shape"), same SDK error as Z-4, now logged once as designed; order still terminal. KILL_CONDITION x2 at 17:31:27 = watch-only monitor re-reporting the pre-restart 20-result window (unit -5.23 vs -3.0, acted=false).
+DEPLOYED.md ## 12.9.0 rows 5/7 updated; second order added when it comes. Snapshot: not this hour.
