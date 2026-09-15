@@ -5299,3 +5299,9 @@ orphan sessions since Zurich's remote-control restart (3 minted and archived 01:
 fixed 3.0 at 02:06:51 (31 s on ladder with next_stake 1<->5, 0 orders in that window); ev quote_age_ms 750 02:06:57.
 Venue cash 61.62. Old journal kept (4 results 0W/4L -11.49; the UNKNOWN stays there, so the fix's effect is only
 testable on the next such order - RECONCILE_STUCK row + NO_FILL within ~1 min).
+
+**02:20 R-5 pass 1 (H1, analysis/h1/task_r5_kelly_sizing.md): DOES NOT SHIP.** Same trades: fixed-3 +405.75 vs Kelly
++24.24; the model's edge is `ask` (weight -0.29 vs p +0.33) = cheap quote, not accuracy - R-4 again, and it carries the
+quote_age FAIL. Equal-capital steelman zero-stakes 339/772 = a gate. Stake stays fixed 3.0. H1's "live journal has no
+p/ev/rv60" blocker is wrong: signals.decision JSON has p, ev, rv60, sec, ask, threshold, features; diagnostics has p per
+tick (verified on a v12 twin journal). Pass 2 on real Zurich fills at +100.
