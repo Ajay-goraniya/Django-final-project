@@ -105,3 +105,11 @@ verify.py passes on the second half and the sized PnL beats fixed-3 on the same 
 Standing: re-run at every +100 graded live fires on Zurich (journal polymarket_v12_live_zurich_2.sqlite3 snapshots in
 learner/live_backup when V pushes them), append one line per run to analysis/h1/r5_ledger.md. Report only a change of
 verdict. Until it passes: stake stays fixed 3.0.
+
+## R-6 (V, 09-15 02:3x) - calibrated p inside the EV rule, walk-forward. Not a gate: the brain's p corrected by its own record.
+R-5 run 2: p overconfident in every bin. Test: fit calibration (Platt and isotonic, report both) on the first half of
+graded fires (paper and live separately, Polymarket lanes on venues.outcome), apply to the second half INSIDE the
+existing EV rule (same threshold, same cost model), and report on the second half: fires kept / dropped / added vs the
+raw p, PnL per $1 and total, paired() on the discordant candles, halves(), permutation() of the calibrated p, and the
+same for a rolling refit every 200 fires. Whole grid, no best cell. Ship condition: sized PnL on the same candles beats
+raw in both halves with verify.py passing. Reply ≤6 lines, file on the branch.

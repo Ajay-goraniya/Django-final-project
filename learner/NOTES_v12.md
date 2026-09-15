@@ -5309,3 +5309,9 @@ tick (verified on a v12 twin journal). Pass 2 on real Zurich fills at +100.
 -21.5, verify.py fails 4. H1 correction accepted: no Zurich journal was on the branch; Zurich now pushes
 learner/live_backup/zurich_v1 / zurich_2 .sqlite3.gz with each hourly. H1 note for V: poly_pnl.sqlite3.gz is a superset
 of v10_poly_long4 (777 rows + 125 fresher to 09-15 00:41) - use poly_pnl for anything keyed to "776/777".
+
+**02:30 R-5 run 2 (H1): p is OVERCONFIDENT in 5/5 bins** (gaps -0.04 to -0.12, all n>=266; 0.65-0.70 bin delivers
+56.0%). Brier model 0.2435 vs venue price 0.2463. Calibration slope 0.70 train -> 0.47 test. Shrunk Kelly +70 vs
+fixed-3 +506: no calibrated edge for a stake curve to amplify. Sizing CLOSED until p calibrates. The finding that
+matters is upstream of sizing: the EV gate multiplies an overconfident p, so it passes fires whose true EV is lower
+than computed. -> R-6.
