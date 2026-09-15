@@ -5378,3 +5378,5 @@ accuracy 0.85/0.02: 51/day, 86.4% hit, +0.001/$1, +0.31, 4/7 days; the shipped r
 lose the full stake when wrong. Permutation: a random confidence through the same floors does as well (+0.034) -
 the floors select a price band, not skill. Whole grid in the file (p 0.70-0.90 x ev 0.02-0.08): no cell beats the
 pnl rule per $1. CLOSED as a safer mode; the model file's 87.6% accuracy claim reproduces, its $263 does not.
+**21:2x user: switching Zurich to HYBRID staking and will change stake settings by hand from now.** Any unusual
+stake_settings / next_stake audit rows on Zurich after 21:2x are the user's, not a fault. Report them, never revert.
