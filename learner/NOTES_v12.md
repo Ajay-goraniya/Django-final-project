@@ -5366,3 +5366,8 @@ regime week. Note: lightgbm not installed in H1's container; shipped v10 artifac
 own candle's label: 83.8% hit, caught by implausibility). Checked ours: v10's live feature set has no outcome-derived
 feature (grep streak/outcome in btc_model_v10.py = 0), so the leak pattern cannot occur in the live engine.
 Next in the program: item 2, extend labelled days backward; everything negative so far was decided on 5-8 days.
+**19:4x SDK/execution check (user asked "fastest, used correctly?").** polymarket-client 0.10.0 is the latest on PyPI;
+HTTP/2, pooled, keepalive 30 s; the 5 s balance poll runs on the same CLOB pool so it stays warm. Zurich data, n=160
+orders: attempt-1 RTT 264/323 ms (med/p90) vs attempt-2+ 247/298; idle >120 s 267 vs <30 s 262 -> NO idle-connection
+penalty. The order RTT floor is ~245-265 ms from Zurich = Polymarket's processing + path to its origin; no client
+change removes it. CLOSED: SDK execution path is not leaving latency on the table.
