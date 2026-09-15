@@ -31,9 +31,29 @@ These are Polymarket fills, so they settle on `venues.outcome`, not on Binance c
 - Over the 285 candles both oracles cover, they **disagree on 25 (8.8%)**.
 
 So: two agreeing rows at an 8.8% base disagreement rate is roughly a 0.83 chance under the null
-that Zurich is Binance-graded. **That is no evidence either way.** I am not claiming Zurich grades
-on the wrong oracle — I am saying n=2 cannot tell, and this is live money, so it is cheap for V to
-settle from the code rather than from data. **Open question, not a finding.**
+that Zurich is Binance-graded. That was no evidence either way — n=2 cannot tell — so it was raised
+as an open question for V to settle from the code, not as a claim.
+
+### CLOSED 09-15 02:37 — the grader reads the VENUE's resolution. Verified, not just accepted.
+
+V answered from the running code, and I checked it against the module on the branch rather than
+taking the answer on trust. `learner/v12_polymarket/btc_model_v12_polymarket.py`, `grade_loop`
+(line ~556): it fetches the Gamma market for the epoch and takes
+
+```python
+names=json.loads(mk.get("outcomes")); prices=json.loads(mk.get("outcomePrices"))
+w=[n for n,p in zip(names,prices) if str(p)=="1"]
+...
+actual=w[0].strip().upper(); win=(actual==side)
+```
+
+`actual` comes from the venue's own resolved outcome prices. **It never reads `candles`.** That is
+`venues.outcome`'s source, so the lane grades on the oracle it settles on and the symmetric rule in
+CLAUDE.md is satisfied. (V cited a separate `official_result(m)` at lines 11–20; on the branch copy
+the logic is inline in `grade_loop` instead. The substance is identical — different packaging of
+the same read, most likely a later revision on the box.)
+
+**Question closed in V's favour. Nothing to fix.** Recorded here so it is not re-derived.
 
 ## 4. The live 1-tick pad — this CORRECTS a plausible misreading of R-3
 

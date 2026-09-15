@@ -23,6 +23,15 @@ twice for the same words. From now: verdict, numbers, file path; detail stays in
 **01:20 — V made it STRICT** (everyone, always; sole exception a major matter needed now, numbers first)
 and wrote it into CLAUDE.md. I removed my own near-duplicate block there — V's is authoritative.
 
+## CLOSED 09-15 02:37 — "does Zurich grade Polymarket fills on the wrong oracle?" NO. Do not re-derive.
+I raised it as an open question at n=2 (never as a claim). V answered from the running code and
+**I verified it against the module on the branch rather than accepting it**:
+`learner/v12_polymarket/btc_model_v12_polymarket.py`, `grade_loop` (~line 556) pulls the Gamma
+market and sets `actual` from `outcomePrices` where the price is "1" — the **venue's own resolved
+outcome**. It never reads `candles`. That is `venues.outcome`'s source, so the lane grades on the
+oracle it settles on. (V cited `official_result(m)` at lines 11–20; on the branch copy the same
+logic is inline in `grade_loop` — different packaging, identical substance.) **Nothing to fix.**
+
 ## Task R-6 DONE 09-15 03:1x — calibrated p inside the EV rule. NEITHER CALIBRATOR SHIPS. `analysis/h1/task_r6_calibrated_p.md`
 Rebuilt the full candidate stream: `trades` = fired ticks, `decisions` = NOT-fired (its `fire` col
 is 0 on every row of all three lanes), so only their union (29,779 ticks / 1,709 candles) can answer
