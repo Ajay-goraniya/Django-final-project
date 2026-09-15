@@ -3358,3 +3358,12 @@ test_polymarket be05d2fdd6e7b27f. Suites 68 + 21 + 163 = 252. Fail-on-old: `test
 (6) -> 3F/2E on 12.8.9. Keep argv incl. `--quote-age-ms 2000`; ev_settings.quote_age_ms 750 stays. `rm -rf __pycache__`.
 Master off at safe-start - do not arm; tell me. After 30 min: the WAIT_CENSUS rows summed - which side, which
 reason, which bucket. That is the answer to "why 34.7% waiting". <=10 lines; DEPLOYED.md section to a file path.
+
+## Task 91 - stale 2-5 s: bursty or diffuse? Observation only, no code change, no restart.
+(a) WAIT_CENSUS rows since 23:16: per minute, stale share = (UP:stale:* + DOWN:stale:*) / (ok+blocked). Report the
+distribution: how many minutes at 0-2%, 2-10%, 10-50%, 50-100%. Bursty = reconnect/outage; diffuse = systematic.
+(b) Run `analysis/v/ws_lag_probe.py 900` (git pull first) from the engine's cwd with the venv, 15 min. It prints
+now-minus-venue-stamp p50/p99/max and per-token gaps on the ACTIVE tokens. My 4-min run here: max lag 336 ms,
+max gap 891 ms, nothing >0.75 s. Commit the output to analysis/aws/task91_lag_probe.txt.
+(c) engine.log lines containing "reconnect" or "Venue" in the census window, count and times, if any exist.
+<=10 lines back, commit hash. Mumbai stays master off.

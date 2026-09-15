@@ -5232,3 +5232,26 @@ message other sessions`), so a Routine is my only channel and it cannot carry li
 it will not act on one for this, and I am not going to keep pushing.** The route is the user's own
 controls page - the `control_write` audit row will carry the `poly_dashboard.py do_POST / apply` stack
 the way their 14:24:11 MAIN arming did.
+
+## 09-15 00:4x — one-sided books: the quote() relaxation is dead; stale 2-5 s is the open question
+
+**12.8.11 "return a quote with bid=None on no_bids" is NOT worth building.** Read against the running modules:
+- Census: `no_bids` == `no_asks` exactly (113,092 each), same publish. Polymarket mirrors the pair, so "UP has no
+  bids" is the same fact as "DOWN has no asks": nobody on that side at any price.
+- `btc_model_v10.features()` (lines 171-177) needs `ask_up` and (`bid_up` or `ask_dn`) for `p_venue`. In the
+  complementary state both fallbacks are gone -> `p_venue` NaN -> `_venue_ok` False -> `decide()` line 258 refuses
+  ("venue quote incomplete"). That guard is the 09-08 bogus-fire fix (0.01 dust asks, p collapsing to 0.51).
+- So relaxing `quote()` moves the refusal from "Waiting for fresh books" to "venue quote incomplete". Fires gained: 0.
+  Removing the decide guard reopens 09-08. Training zero-filled these rows (`train.py` fillna(0.0)) - the guard is
+  deliberately non-parity and stays. CLOSED: one-sided-book relaxation, any form.
+- Scale check (ctrl twin, 24.9 h, 4,106 in-window decision rows): 19.3% "Waiting for fresh UP and DOWN books",
+  fire rate among decided rows 1.05% -> even if every waiting second were decidable, ~8 fires/day at stake.
+
+**The stale 2-5 s cells (28.5% of blocks, ~42% of in-window blocks) are the only recoverable part, cause unknown.**
+Hypothesis tested: `quote()` clamps age to `mono+max_age` when the venue `timestamp` lags our clock, so a 1 ms-old
+book with a 2 s-old stamp reads 2.00x = "stale". Probe `analysis/v/ws_lag_probe.py` (this container, 00:33-00:37,
+2 candles, 57,481 events on the ACTIVE tokens): now-minus-stamp p50 25 ms, p99 236 ms, max 336 ms, zero events
+>0.75 s; per-token gap max 891 ms. Not supported in this window. `venue()` sets only `self.error='Venue reconnect'`
+on a drop (nothing persisted), one ConnectionClosedError seen in 4 min. Open: is stale bursty (minutes at 100% =
+reconnects/outages) or diffuse (every minute ~5% = systematic)? -> AWS Task 91 on the Mumbai census rows.
+Ambient arrival age here (ctrl twin, 25 h, in-window): >2 s 4.7%, of which 2-5 s 1.5%, >5 s 3.2%.
