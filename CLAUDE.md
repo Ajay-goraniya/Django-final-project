@@ -41,6 +41,10 @@ The two channels that work:
   that knows that move is wrong and it will reverse."* Four such attempts failed on 09-10.
 - **Kelly / dynamic staking never goes live without TWO separate confirmations from the user** (user, 09-15 12:2x:
   "don't push it in live runs without confirmation from me twice"). Back-tests continue (R-5); stake stays fixed.
+- **One automatic stop exists, and only because the user ordered it (09-16 03:2x): "ef off if bankroll goes
+  below 30$ in central 2".** Built as `ef_cash_floor` + `_floor_check` in 12.12.0: EQUITY (cash + open_value), six
+  reads and 360 s of persistence, turns off EF only, never master or a halt, never re-enables itself. Everything
+  else stays hand-stopped: no coded PnL kill, no gates.
 - **"Don't do unnecessary or unuseful work, go in a right direction not wrong."**
 - **"Rain or sun"**: a finding must work every day, or you identify *when* it works and switch only
   then. A regime switch is itself a threshold — define buckets FIRST, test them all, report the full
