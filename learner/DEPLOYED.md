@@ -445,3 +445,23 @@ Tests 215+71+23 = 309 OK (direct invocation, see the test-runner fix below); SHA
 mid-file, runs the 106 tests defined so far and exits **printing OK** — silently skipping 109 tests, all of them
 the recent 12.10–12.13 work. `python3 -m unittest test_v122` was unaffected, which is why two sessions counted
 307 and 189 and both were right. Blocks moved to end of file; either invocation now runs the whole suite.
+
+## 12.14.1 — seed the lane's closed-candle history at startup (every restart was blind for 2 h)
+`LaneEngine.closed` is a deque fed only by `on_closed_candle`, which the engine calls only on a live `k['x']`
+frame (`btc_model_v12_polymarket.py:177`). The very next line writes that candle to the `candles` table — so the
+table keeps the history and the deque starts EMPTY on every restart. `volume_ratio()` (poly_lanes.py:316) and the
+move median (306) both read `list(self.closed)[-24:]`, so for the first 24 closed candles — two hours — the median
+is over whatever handful has arrived.
+Measured by Mumbai on two running engines reading the byte-identical candle at 11:57:27: volume_ratio 1.4975 warm
+vs 0.4672 cold, implied vol median 27.51 vs 88.19, the cold lane's figure being simply the largest of the four
+candles it had seen. Under `GATED_VOL_MIN` 0.70 that makes `_aligned_direction` return None on every read — 0 MAIN
+calls in 6 candles where warm siblings called 10 and 11 of 17 (p=0.003 at their rate). It inflates the other way
+too: the 113 lane's "23 MAIN in 28 min" against a steady 7–9/hr was the same artifact with a small median.
+**Not a Task 114 problem — every restart pays it, live deploys included**, and it is invisible because the lane
+reports a volume_ratio throughout; it just does not mean anything.
+Fix: `_seed_lane_history()` replays the last 64 journal candles oldest-first into the lane before the feeds start,
+prints warm/COLD, and files a `LANE_SEED_COLD` diagnostics row when under 24 so a genuinely cold start is on the
+record rather than inferred. Unreadable candles table degrades to the old behaviour instead of failing the engine.
+Tests: `LaneSeed12141`, 6 cases, including one that fails if seeding changes no median. 215+71+23+6 -> 316 OK;
+SHA256SUMS 31/31.
+Credit: Mumbai found and measured it, and retracted its own "market state" reading to do so.

@@ -46,6 +46,7 @@ class PolyRunner(Runner):
         # MAIN/REVERSAL run on the Binance pressure engine, independent of the
         # v10 model that drives EF. See poly_lanes for the port and its caveats.
         self.lanes=poly_lanes.LaneEngine()
+        self._seed_lane_history()
         self.lane_decision={}
         self.market={}; self.info={}; self.terms_age={}; self.last_decision={}; self.started=time.time()
         self._wait_census={}; self._wait_flushed=time.monotonic()
@@ -53,6 +54,51 @@ class PolyRunner(Runner):
         self.db.set('master',False) if a.live else None # explicit arming through old controls
         from poly_dashboard import Dashboard
         self.ui=Dashboard(self)
+    def _seed_lane_history(self):
+        """12.14.1: a restarted lane is BLIND for two hours unless we do this.
+
+        LaneEngine.closed is a deque fed only by on_closed_candle, which the
+        engine calls only on a live k['x'] frame (btc_model_v12_polymarket.py:177).
+        The very next line writes that candle to the `candles` table - so the
+        table keeps the history and the deque starts empty on every restart.
+        volume_ratio() and the move median both read list(self.closed)[-24:],
+        so for the first 24 closed candles - TWO HOURS - the median is taken
+        over whatever handful has arrived.
+
+        Measured on the running lanes at 11:57:27 on 09-16, two engines reading
+        the byte-identical candle: volume_ratio 1.4975 on the warm lane against
+        0.4672 on the cold one, implied vol median 27.51 against 88.19. The cold
+        lane's 88.19 is just the largest of the four candles it had seen. Under
+        GATED_VOL_MIN 0.70 that means _aligned_direction returns None on every
+        read: 0 MAIN calls in 6 candles where the warm siblings called 10 and 11
+        of 17, p = 0.003 under their own rate. It also inflated the other way -
+        the 113 lane's "23 MAIN in 28 min" against a steady 7-9/hr was the same
+        artifact with a small median instead of a large one.
+
+        This is not a Task 114 problem. Every restart pays it, live deploys
+        included, and it is invisible because the lane looks healthy throughout:
+        it reports a volume_ratio, just not one that means anything.
+        """
+        try:
+            rows=self.db.sql('SELECT epoch,open,high,low,close,volume FROM candles '
+                             'ORDER BY epoch DESC LIMIT 64')
+        except Exception as e:
+            print(f'[LANE SEED] candles unreadable ({type(e).__name__}); lane starts cold',flush=True)
+            return
+        n=0
+        for ep,o,h,l,c,v in reversed(list(rows)):
+            try:
+                self.lanes.on_closed_candle(dict(time=int(ep)*1000,open=float(o),high=float(h),
+                                                 low=float(l),close=float(c),volume=float(v)))
+                n+=1
+            except Exception: continue
+        warm=n>=24
+        print(f'[LANE SEED] {n} closed candles from the journal; '
+              f'{"warm" if warm else "COLD - volume_ratio is noise until %d more"%(24-n)}',flush=True)
+        if not warm:
+            self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',
+                        (time.time(),0,json.dumps(dict(event='LANE_SEED_COLD',seeded=n,need=24-n))))
+
     async def resolve_market(self,ep):
         if self.market.get(ep): return self.market[ep]
         data=await asyncio.to_thread(http_json,GAMMA.format(ep))

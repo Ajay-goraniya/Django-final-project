@@ -2153,7 +2153,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.14.0'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.14.1'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0
@@ -2466,6 +2466,74 @@ class MainOneShot12131(unittest.TestCase):
         r, db, path = self._runner(False)
         r._main_oneshot_check(); self.assertIs(db.get('main_enabled'), True)
         db.c.close(); os.unlink(path)
+
+
+class LaneSeed12141(unittest.TestCase):
+    """A restarted lane must not spend two hours with a meaningless volume_ratio.
+
+    Pinned because the failure is silent: the cold lane reports a volume_ratio
+    like any other, it is just computed over 4 candles instead of 24, and the
+    only visible symptom is MAIN never calling (or calling far too often).
+    """
+    def _runner(self, n_candles):
+        import btc_model_v12_polymarket as E, poly_lanes
+        temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
+        db = C.Journal(str(pathlib.Path(temp.name) / 'seed.db'), 'PAPER', 'h')
+        self.addCleanup(db.c.close)
+        for i in range(n_candles):
+            ep = 1789500000 + i * 300
+            db.sql('INSERT OR REPLACE INTO candles VALUES(?,?,?,?,?,?)',
+                   (ep, 100000.0, 100050.0, 99950.0, 100010.0, 25.0 + i))
+        r = E.PolyRunner.__new__(E.PolyRunner)
+        r.db = db; r.lanes = poly_lanes.LaneEngine()
+        return r, db
+
+    def test_seeds_the_lane_from_the_journal(self):
+        r, _ = self._runner(30)
+        r._seed_lane_history()
+        self.assertEqual(len(r.lanes.closed), 30)
+
+    def test_keeps_journal_order_oldest_first(self):
+        r, _ = self._runner(30)
+        r._seed_lane_history()
+        eps = [c['time'] for c in r.lanes.closed]
+        self.assertEqual(eps, sorted(eps), 'the deque must run oldest -> newest')
+
+    def test_a_cold_lane_is_recorded_not_hidden(self):
+        r, db = self._runner(4)
+        r._seed_lane_history()
+        rows = [json.loads(x[0]) for x in
+                db.sql("SELECT detail FROM diagnostics WHERE detail LIKE '%LANE_SEED_COLD%'")]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['seeded'], 4); self.assertEqual(rows[0]['need'], 20)
+
+    def test_a_warm_lane_files_no_cold_row(self):
+        r, db = self._runner(24)
+        r._seed_lane_history()
+        self.assertEqual(db.sql("SELECT detail FROM diagnostics WHERE detail LIKE '%LANE_SEED_COLD%'"), [])
+
+    def test_seeding_changes_the_volume_median_the_gate_reads(self):
+        """The defect itself: 4 candles give a median off the true one."""
+        cold, _ = self._runner(30)                      # not seeded
+        warm, _ = self._runner(30); warm._seed_lane_history()
+        for i in (26, 27, 28, 29):                      # the handful a cold lane sees live
+            cold.lanes.on_closed_candle(dict(time=(1789500000 + i * 300) * 1000, open=100000.0,
+                                             high=100050.0, low=99950.0, close=100010.0,
+                                             volume=25.0 + i))
+        live = dict(time=1789509000000, open=100000.0, high=100050.0, low=99950.0,
+                    close=100010.0, volume=30.0)
+        cold.lanes.on_candle(dict(live)); warm.lanes.on_candle(dict(live))
+        self.assertNotEqual(round(cold.lanes.volume_ratio(150.0), 4),
+                            round(warm.lanes.volume_ratio(150.0), 4),
+                            'if these matched, the seed would be doing nothing')
+
+    def test_missing_candles_table_does_not_stop_the_engine(self):
+        import btc_model_v12_polymarket as E, poly_lanes
+        r = E.PolyRunner.__new__(E.PolyRunner)
+        r.lanes = poly_lanes.LaneEngine()
+        r.db = types.SimpleNamespace(sql=lambda *a: (_ for _ in ()).throw(RuntimeError('no such table')))
+        r._seed_lane_history()                           # must not raise
+        self.assertEqual(len(r.lanes.closed), 0)
 
 
 if __name__ == '__main__':
