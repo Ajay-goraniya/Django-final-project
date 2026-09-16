@@ -5543,3 +5543,28 @@ Arm B (8794) is not broken: 250 decide rows vs C 241, p on 142 vs 121, p median 
 both arms is EV under the 0.25 floor (B -0.0065..-0.0156, C -0.0007..-0.0224). C cleared it 4x, B 0x — 4-to-0 is
 noise, not a p_source verdict. Lane pnl, all under the 60-fire bar: A 10 EF +6.05; 8793 68 EF -1.91; C 4 EF -0.33;
 D113 1 EF -2.99. D114 0 fires at 7 min. Read none of these.
+
+## 09-16 12:xx — Task 97 revised verdict (Mumbai, b5c535b): NOT SHIPPING IT, and why
+Mumbai's work is good and the diagnosis is the useful part: across 2541 graded fires the 19 loss runs collapse to
+10 distinct (epoch,side) starts, 8 of them shared across lanes on the same candles - so the "drawdown" is one
+market event hitting every lane, not a per-lane defect. Start hours spread over 9 UTC hours, rv60 0.14-1.27,
+p inside 0.594 vs outside 0.591. Calendar, vol and confidence mark nothing. The book does: signed imb5
+-0.630 vs -0.136 (0.65 SD), imb20 0.63 SD, pos_in_range 0.326 vs 0.524, ofi15 -0.242 vs -0.070.
+
+**What Mumbai proposes is a gate, and gates are banned by the owner (09-10, four failures).** Walk-forward and
+held-out is better method than any of those four - thresholds fixed on half A, +0.1616 -> +0.2154 per $1 on 781
+held-out fires in half B - and it still does not get shipped. Two independent reasons:
+1. The owner's rule is not a preference: *"EF should know when to fire and it cannot be decided by a gate... give
+   it a trained brain that knows that move is wrong and it will reverse."*
+2. **Rain or sun: it fails on 09-16** (-0.273 -> -0.348, n=99) - the very day whose drawdown started this. A rule
+   that breaks on the newest day is a rule fitted to the older ones. The 8->0 run-count line is also 8 events,
+   under the 60 bar, off a 6-value grid on 2 features; only the per-$1 line has real n behind it.
+
+**Where it does belong - and this is the part worth having.** All four separators are ALREADY model features
+(`model_v10.json`: imb5, imb20, pos_in_range, ofi15 are 4 of the 30). So this is not information the model lacks.
+But the model is an L2 logistic - linear in those 30, then isotonic, which is monotone in p. **It cannot represent
+"ofi15 signed by the side we are about to take"**, because that is an interaction between a feature and the sign of
+the model's own output. Linear-in-ofi15 pushes p_up the same way regardless of which side the fire ends up on.
+That is a representability gap in the architecture, not a missing input, and it is exactly what a retrain can close.
+Routed to H1 as R-25 (candidate interaction terms for the R-12 training run), NOT as a gate on the live score.
+No engine touched. Task 97 file: analysis/aws/task97_drawdowns.md.
