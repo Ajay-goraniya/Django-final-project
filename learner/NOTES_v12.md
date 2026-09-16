@@ -5512,3 +5512,19 @@ the block is skipped and all 215 collect. Mumbai used the import form, I used th
 Fixed: both blocks moved to end of file. Direct invocation now runs 215 + 71 + 21 = 307, OK.
 Lesson, and it is mine: Mumbai gave a number that contradicted mine and I assumed it had copied me. It had not.
 A disagreement between two counts is a defect to find, not a peer to correct.
+
+## 09-16 11:4x — Task 114 replaces 113: lane D is EF + REVERSAL, MAIN orders OFF
+Mumbai pid 128432, port 8796, build 12.14.0 (25405a4), fresh db paper_ef_rev_114.sqlite3, model_v10.json,
+capital 50, PAPER. Read-back from meta: master true, ef_enabled true, reversal_enabled true, **main_enabled FALSE**,
+next_stake 3.0, fixed. Checksums 31/31, tests 215+71+23 = 309. The 113 db and directory left untouched.
+This is the owner's Tokyo configuration (MAIN BLOCKED / EF BLOCKED / REVERSAL TRADING) now expressible here,
+minus the EF block: EF and REVERSAL together, which is what he asked for. Ledger analysis/aws/task114_ef_rev.md,
+4-hourly, graded on venues.outcome. Decider: EF+REV combined per-$1 vs EF alone ON THE SAME CANDLES.
+
+**Task 111 closed (Mumbai, 1130 rows / 565 s, run died at 9.4 min on a slow-consumer disconnect — n smaller than asked).**
+quote() blocked 408/1130 = 36.1%. Raw top-of-book had both sides on 987 rows (87.3%). Of the refusals with a raw
+both-sided book, 264/264 were reason `stale` — zero no_asks/no_bids/crossed, so delta handling is not dropping a side.
+By last-delta age on both-sided rows: <750 ms 4/617 blocked (0.6%); 0.75-2 s 8/99; 2-5 s 8/26; **5 s+ 244/244 (100%)**.
+The 144 genuinely one-sided raw rows are the venue's: 12.7% of seconds. So of the ~18% live block, the venue is the
+smaller half and our own 0.75 s bar on a 5 s-stale book is the larger. **Nothing changed.** A freshness threshold
+moves only after a grid against real outcomes, both arms; and execution work is parked by the owner's instruction.
