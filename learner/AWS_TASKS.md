@@ -3548,3 +3548,17 @@ If you still cannot push, say so and paste nothing - instead tell V the exact si
 Context for you: R-22 confirmed the settlement line on 2,132 venue-graded candles (7.7 days, all we have): TWAP-vs-TWAP
 agrees with the venue 96.67%, close>=open 87.05%, discordant 249 split 91.2/8.8 in the TWAP rule's favour, positive on
 9 of 9 days. The missing piece is exactly your file.
+
+## Task 108 - you cannot push the file, so do the measurement THERE and push the numbers as text (which you can,
+because V commits your messages). The file never has to move. You hold both series at 1 Hz - chainlink btc/usd and
+btcusdt spot - plus the per-epoch market rows; `git pull` gives you venues.sqlite3.gz for the venue outcomes.
+Report <=8 lines in a message to V (V commits it to analysis/aws/task108_proxy_error.md):
+(1) PER SECOND, over the whole 7.77 h: |chainlink - binance spot| and |chainlink - TWAP60(binance spot)| in bps -
+median, p90, max, and the sign (is chainlink systematically below spot, as your -60 USD sample suggests?). The second
+number is the one that matters: it is the error in the proxy we actually use.
+(2) PER CANDLE, on every epoch fully covered by your stream AND present in venues.outcome: three directions - venue
+outcome, chainlink TWAP60(end) vs TWAP60(open), and Binance-proxy TWAP60(end) vs TWAP60(open). Give the 2x2 of proxy
+vs chainlink and the agreement of each with the venue. n per cell; say "insufficient" under 60 rather than reading it.
+(3) Exclude epochs touching your 30 gaps (747 s) and say how many that removes - a gap at the open or close second
+breaks the TWAP and must not be silently averaged over.
+(4) One line: is the Binance proxy safe to use where the live feed does not reach, and with what error budget in bps.
