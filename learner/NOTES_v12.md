@@ -5886,3 +5886,25 @@ V tells the owner when ALL of these are true; none is optional and the owner arm
    -$8.51 after fees on n=83. The purpose of re-arming is to prove the fixed engine on real fills - the fee row,
    whole-account open_value, the floor - at small fixed stake. It is not a bet that the edge improved today.
 Earliest plausible time if Zurich answers in the next hour: ~19:30-20:00 UTC tonight. V will say so explicitly.
+
+## 09-16 17:3x — Zurich answered. CORRECTION to my 17:2x fault warning, and the fee fix is PROVEN.
+**Correction, mine:** I told the owner the engine was "most likely armed and trading for ~2.5 h after you said
+no live." Wrong. The engine's audit row: **15:34:04 master True -> False, do_POST <- apply** - the OWNER disarmed it
+from the dashboard himself, 30 s before my order reached Zurich. Live orders since then: 0. What I reported as
+likely was not so; the state was unconfirmed, and I should have said only that.
+12.15.4 shipped 15:25:03 via cycle.py (31/31 == 0cae0bd, suites 365), pid 100134, armed 15:25:09, disarmed by the
+owner 15:34:04. Master false, halt null, ef_enabled true, stake untouched (streak 5%, next 3.0), floor 30. Banner
+prints "Polymarket v12.15.4 LIVE". Seed 64 warm. Since disarm: 523 decide rows, 4 fire=true, all gated, 0 orders.
+4 MASTER_OFF rows are _master_watch doing its job in a deliberately disarmed engine - expected, not a fault.
+
+**FEE FIX PROVEN on real fills, the row I owed:** three fills between 14:30 and the disarm carry a fee for the first
+time - 15:03:24 shares 10.9615 px 0.26 **fees=0.147630 fee_basis=LOCAL_FEE_ESTIMATE fee_rate_bps=0.0**; 15:07:54
+shares 6.5909 px 0.44 fees=0.113680; 15:12:08 fees=0.147630. The venue tape reported 0 bps, the new guard rejected
+it as not-a-rate, fell back to the local estimate and said so in the basis - the designed behaviour. Reproduces
+0.07*shares*p*(1-p) to 1e-6 (0.07*10.9615*0.26*0.74 = 0.147630). Before this build: 100/100 fills fees=0.0.
+Bases now: n=103 W46/L57, LOCAL -3.1990 vs VENUE -18.0944, venue_fees 15.3239. Historical rows are not rewritten
+and the divergence stays visible for them, by design. Cash 43.52, equity 43.52 vs floor 30, whole-account read.
+
+**Go-live criteria status:** (1) Zurich responsive on 12.15.4 master off - MET. (2) paper lanes >= 4 h clean on
+12.15.4 - ~19:30 UTC. (3) stake mode FIXED before arming - owner's write, NOT DONE. (4) equity vs floor from the
+whole account - MET (43.52 vs 30). (5) stated purpose - recorded. Earliest: ~19:30 UTC, after the owner sets fixed.
