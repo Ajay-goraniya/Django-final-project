@@ -389,3 +389,14 @@ class AdaptRatio12160(unittest.TestCase):
         eng.adapt.cache = 1.0
         same, _ = eng.fair_odds(30 * 300000 + 60000, 100030.0, 100000.0)
         self.assertEqual(base, same)
+
+
+class AdaptRatioJournaled12161(unittest.TestCase):
+    """12.16.0 set adapt_ratio only in the feature dict; the journal and /api/state never saw it."""
+    def test_monitor_carries_adapt_ratio(self):
+        eng = L.LaneEngine(); eng.adapt.cache = 1.7
+        self.assertEqual(eng.monitor()["adapt_ratio"], 1.7)
+    def test_decision_dicts_carry_adapt_ratio(self):
+        import inspect
+        src = inspect.getsource(L.LaneEngine)
+        self.assertGreaterEqual(src.count("adapt_ratio=self.adapt.value()"), 3)

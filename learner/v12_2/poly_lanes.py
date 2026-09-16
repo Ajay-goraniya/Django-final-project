@@ -689,7 +689,7 @@ class LaneEngine:
         self.pending['MAIN'] = True
         p_side = p_up if direction == "UP" else 1.0 - p_up
         return dict(kind="MAIN", side=direction, p=p_side, probability_up=p_up,
-                    confidence=conf, sec=int(phase), rv60=None, threshold=LANE_EV_FLOOR,
+                    confidence=conf, sec=int(phase), rv60=None, adapt_ratio=self.adapt.value(), threshold=LANE_EV_FLOOR,
                     reason=f"MAIN: {f.get('pressure_text')} with fair {f.get('fair_p_up'):.2f} held {held/1000:.0f}s")
 
     # ---- REVERSAL (build11:17169 gate, 17232 emit) ----------------------
@@ -762,7 +762,7 @@ class LaneEngine:
         self.reversal_signal = dict(direction=live, ts_ms=ts_ms)
         self.pending['REVERSAL'] = True
         return dict(kind="REVERSAL", side=live, p=p_side, probability_up=fair,
-                    sec=int(phase), rv60=None, threshold=LANE_EV_FLOOR,
+                    sec=int(phase), rv60=None, adapt_ratio=self.adapt.value(), threshold=LANE_EV_FLOOR,
                     reason=f"reversal at {phase:.0f}s: {detail}")
 
     # ---- public ---------------------------------------------------------
@@ -804,7 +804,7 @@ class LaneEngine:
         f = self.feature or {}
         return dict(
             pressure_text=f.get("pressure_text"), pressure_score=f.get("pressure_score"),
-            fair_p_up=f.get("fair_p_up"), volume_ratio=f.get("volume_ratio"),
+            fair_p_up=f.get("fair_p_up"), volume_ratio=f.get("volume_ratio"), adapt_ratio=self.adapt.value(),
             probability_up=f.get("probability_up"), phase_second=f.get("phase_second"),
             main=(dict(self.current_main) if self.current_main else None),
             main_signal=(dict(self.main_signal) if self.main_signal else None),

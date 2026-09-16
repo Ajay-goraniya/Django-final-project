@@ -659,3 +659,8 @@ decided the candle is, so MAIN waits and REVERSAL sees the swing earlier; in ord
 12.15.5's. Feature `adapt_ratio` is logged on every lane decision so its engagement rate is auditable. **EF is
 untouched** — a vol-scaled EF is R-28 for H1 to grid first (rule: threshold gridded before shipping). Tests +6 =
 375; SHA256SUMS 31/31. Paper lanes first (8794 MAIN, 8796 EF+REV); Zurich stays 12.15.4, master off.
+
+## 12.16.1 — adapt_ratio reaches the journal and /api/state
+Mumbai, 8 post-restart lane rows: the field never left `poly_lanes` — set in the feature dict, absent from the
+MAIN/REVERSAL decision dicts the engine journals and from `monitor()`. Now on both and on `lanes.adapt_ratio`.
+Tests +2 = 377; SHA256SUMS 31/31.
