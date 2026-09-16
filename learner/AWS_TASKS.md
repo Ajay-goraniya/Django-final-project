@@ -3617,3 +3617,15 @@ Every 4 h, one line in analysis/aws/task113_ef_rev.md: per KIND (EF / MAIN / REV
 results n/W/pnl, pnl per $1; plus how many REVERSALs fired on candles where MAIN was already filled, and the combined
 per-$1 of the three together vs EF alone on the same candles (that comparison is the point of the test).
 Do not touch 8787, 8793, 8794, 8795, the loggers or Zurich. Nothing live.
+
+## Task 117 — clean EF+REV vs EF-only test on 12.15.5 (owner: "test that rev again", 09-16 18:2x)
+Supersedes Task 114's comparison: every REVERSAL figure before this point is either DOWN-censored (pre-12.15.0
+probability flip) or refused by EF's EV dial (pre-12.15.5), so no earlier db can answer the question.
+Two lanes, FRESH dbs, restarted at the same candle boundary on 12.15.5 (4340859):
+- 8796 EF + REVERSAL (main_enabled false), fixed 3.0, paper_ef_rev_117.sqlite3
+- 8795 EF only, fixed 3.0, paper_ef_117.sqlite3
+Ledger analysis/aws/task117_rev_clean.md, 4-hourly, venues.outcome, <60 = insufficient:
+(1) REVERSAL alone: signals / orders by status / refused-by-breakeven vs placed / n W pnl per $1.
+(2) EF alone on 8795, same. (3) paired 8796-vs-8795 per $1 on the SAME candles, discordant only, exact McNemar.
+(4) stacking count: candles where EF and REV both fired - same side N / opposite M, combined per $1 each subset.
+(5) halves() everywhere; a flip is "not readable". Confirm the first DOWN and first UP REVERSAL fills with p/ask.
