@@ -417,3 +417,15 @@ Three arms on one held-out slice, and the middle one is not optional:
 constant. (a) vs (c) decides whether it ships. A win in (c) without (b) is unattributable and V will not relay it.
 Same table as the R-12 verdict, halves() and paired() against frozen, walk-forward only, and state whether (c) is
 data-starved against (a). Assigned to H1.
+
+## R-27 (owner, 09-16 20:1x) - EF parameters PER VOLATILITY REGIME, not a gate
+Owner: "in high volatility EF for sure needs different parameters, in different markets it needs different
+parameters." Not "don't fire in high vol" - FIRE AND WIN in that bucket with its own parameters.
+Buckets FIRST, fixed before any number is read: realised vol of the prior 6 candles (30 min), thresholds at the
+33rd/67th percentile of the full sample, three buckets LOW/MID/HIGH. Same buckets for every test.
+Per bucket, walk-forward, sweep the full EF parameter grid on all graded fills (live Zurich + Mumbai paper,
+each on its own oracle): EV floor {0,0.05,...,0.30}, max entry price {0.40..0.80}, fire-second window
+{0-30,30-45,45-60,60+}, min |p-0.5| {0,0.05,0.10,0.15}. Report the WHOLE grid per bucket, n per cell,
+halves(), permutation(), paired() vs current parameters, cells <60 marked insufficient. Also the plain
+per-bucket record of the current parameters (n, W, per $1) - that alone answers "is it high vol".
+Tokens critically low: the result is one file analysis/h1/r27_vol_regime.md and a 3-line poke to V.
