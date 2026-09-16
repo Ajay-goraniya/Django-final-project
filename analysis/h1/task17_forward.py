@@ -125,11 +125,18 @@ def main():
     lines.append('\n**Baseline: the replay\'s +0.266 is RETRACTED (Task 20 — stale quote). Under the '
                  'honest rule the same replay gives +0.018/fire at this margin. That ~0.00 is what '
                  'this ledger is testing against, not +0.266.**\n')
+    # The caveat has to track n. It used to be hardcoded as "far below the 60-fire bar", which
+    # silently became false once the ledger passed 100 and then 347 fires, and a stale caveat that
+    # under-reads real evidence is as wrong as one that over-reads it.
+    caveat = ('That is context, **not a verdict** — n is below the 60-fire bar and a run this short '
+              'can do this by chance. It is recorded so the trend is visible from the start.'
+              if n < 60 else
+              'n is past the 60-fire bar%s, and both halves are reported above; read the verdict '
+              'block from task17_verdict.py, not this probability alone.'
+              % (' and past 100' if n >= 100 else ''))
     lines.append('Forward hit rate is %d of %d. If the honest-rule 51.5%% were the true rate, seeing '
-                 '%d or fewer hits in %d fires has probability **%.4f**. That is context, **not a '
-                 'verdict** — n is far below the 60-fire bar, let alone 100, and a run this short '
-                 'can do this by chance. It is recorded so the trend is visible from the start '
-                 'rather than discovered at fire 100.\n' % (k, n, k, n, tail))
+                 '%d or fewer hits in %d fires has probability **%.4f**. %s\n'
+                 % (k, n, k, n, tail, caveat))
     lines.append('## By UTC day\n')
     lines.append('| day | n | hit | per-fire | total | weekend |')
     lines.append('|---|---|---|---|---|---|')
