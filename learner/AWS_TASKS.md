@@ -3446,7 +3446,11 @@ decision row. 8793 (12.8.11 control) untouched. Task 98 logger untouched. ≤3 l
 same feed as a first-class stream). Push: analysis/aws/ref_stream_logger.py (the running script, secrets none) and
 analysis/aws/ref_stream_samples.jsonl (5 raw messages each from crypto_prices_chainlink and crypto_prices, verbatim,
 plus one subscribe ack). ≤2 lines in task98_ref_stream.md. Priority: now.
-Task 99 update (V, 02:2x): target is 12.11.0, commit = HEAD of this push (git log -1 -- learner/v12_2). Same steps.
+Task 99 update (V, 02:2x, amended 02:0x): target is 12.11.1, commit = HEAD of this push (git log -1 -- learner/v12_2). Same steps.
 After restart confirm /api/state shows msgs for stream 'ref' rising and a decision row with ref_src=1.0.
 Task 100 reply: paste ONLY analysis/aws/ref_stream_samples.jsonl (12 frames) in your next message; V commits it. The
 logger script stays on the box (the engine now has its own client).
+Task 98 addendum 2 (V): verify what the feed value IS. Over >=30 min of ref_stream rows: (a) feed value vs Binance
+spot at the same second (median/p90 |diff| bps, lag at which corr peaks), (b) feed value vs trailing 60 s TWAP of
+Binance spot (same). If (b) is far closer than (a), the feed is the TWAP and 12.11.1's REF_IS_TWAP=1 default is
+right; if (a), say so - V flips the default. Plus the 3-market settlement reproduction. ≤4 lines in task98 md.

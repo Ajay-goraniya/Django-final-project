@@ -48,7 +48,7 @@ USAGE
 
   python3 btc_model_v10.py --selftest   # parity vs the training features + in-sample check
 """
-import bisect, json, math, pathlib, sys
+import bisect, json, math, os, pathlib, sys
 from collections import deque
 import numpy as np
 
@@ -57,6 +57,8 @@ FEATURES = ["move_bps", "ret5", "ret15", "ret30", "ret60", "rv60", "range_bps", 
             "dist_hi_bps", "dist_lo_bps", "spot_imb15", "spot_imb60", "ofi5", "ofi15", "ofi60",
             "perp_n15", "basis_bps", "spread_bps", "imb5", "imb20", "micro_bps", "prev1_bps",
             "prev2_bps", "sec_left", "hod_sin", "hod_cos", "p_venue", "lv", "mv_x_sec", "lv_x_sec"]
+# 12.11.x settlement-line features, always computed and logged; a model json may list them.
+EXTRA_FEATURES = ["ref_open_bps", "ref_move_bps", "ref_gap_bps", "ref_src"]
 
 
 class FeatureState:
@@ -143,13 +145,33 @@ class FeatureState:
         while self.r_ts and self.r_ts[0] < cut:
             self.r_ts.popleft(); self.r_px.popleft()
 
+    # The venue's feed already publishes the settlement quantity (Chainlink's 60 s TWAP,
+    # resolutionSource btc-usd-twap-60s; the market's price-to-beat is that value at
+    # eventStartTime). So the line at the open is the feed's value AT the open and the
+    # line now is its latest value - never a TWAP of a TWAP. REF_IS_TWAP=0 (env) switches
+    # to averaging the feed, for the case where a raw-price topic is configured instead.
+    REF_IS_TWAP = os.environ.get("REF_IS_TWAP", "1") != "0"
+    REF_STALE_US = 5 * US
+
+    def _ref_at(self, t):
+        """Reference value in force at t (latest sample <= t), nan if none or stale."""
+        i = bisect.bisect_right(self.r_ts, int(t)) - 1
+        if i < 0 or t - self.r_ts[i] > self.REF_STALE_US:
+            return np.nan
+        return self.r_px[i]
+
     def _ref_twap(self, t0, t1):
         """TWAP of the reference stream over [t0, t1) if the buffer covers it, else nan."""
-        if len(self.r_ts) < 2 or self.r_ts[0] > t0 or self.r_ts[-1] < t1 - 5 * US:
+        if len(self.r_ts) < 2 or self.r_ts[0] > t0 or self.r_ts[-1] < t1 - self.REF_STALE_US:
             return np.nan                # no sample in force at t0, or feed stale near t1
         ts = np.fromiter(self.r_ts, dtype=np.int64, count=len(self.r_ts))
         px = np.fromiter(self.r_px, dtype=np.float64, count=len(self.r_px))
         return self._twap(ts, px, t0, t1)
+
+    def _ref_line(self, t0, t1):
+        """Settlement line over the window ending at t1: the feed's value at t1 when the feed
+        is the TWAP itself, else the TWAP of the feed over [t0, t1)."""
+        return self._ref_at(t1) if self.REF_IS_TWAP else self._ref_twap(t0, t1)
 
     # ---- feature computation (must match learner/build_features.py exactly)
     @staticmethod
@@ -200,8 +222,8 @@ class FeatureState:
         # Settlement-reference line (R-16). ref_open = 60 s TWAP ending at the candle open,
         # ref_now = 60 s TWAP ending now; from the venue's Chainlink feed when the buffer
         # covers the window (ref_src=1), else the Binance spot TWAP proxy (ref_src=0).
-        ref_open = self._ref_twap(candle_open_us - 60 * US, candle_open_us)
-        ref_now = self._ref_twap(now_us - 60 * US, now_us)
+        ref_open = self._ref_line(candle_open_us - 60 * US, candle_open_us)
+        ref_now = self._ref_line(now_us - 60 * US, now_us)
         ref_src = 1.0 if (np.isfinite(ref_open) and np.isfinite(ref_now)) else 0.0
         if not (np.isfinite(ref_open) and ref_open > 0):
             ref_open = self._twap(s_ts, s_px, candle_open_us - 60 * US, candle_open_us)
@@ -283,7 +305,13 @@ class FeatureState:
 class Model:
     def __init__(self, path="model_v10.json"):
         j = json.loads(pathlib.Path(path).read_text())
-        assert j["features"] == FEATURES, "feature order mismatch"
+        # 12.11.1: the json owns its feature list. v10's json equals FEATURES; a model retrained
+        # on the settlement line may add ref_move_bps / ref_gap_bps / ref_src (every name must be
+        # a key FeatureState.features() computes - checked at load, not at fire time).
+        self.features = list(j["features"])
+        assert all(isinstance(k, str) and k for k in self.features), "bad feature list"
+        unknown = [k for k in self.features if k not in FEATURES and k not in EXTRA_FEATURES]
+        assert not unknown, f"features not computed by FeatureState: {unknown}"
         self.mean = np.array(j["scaler_mean"]); self.scale = np.array(j["scaler_scale"])
         self.coef = np.array(j["coef"]); self.b = j["intercept"]
         self.iso_x = np.array(j["iso_x"]); self.iso_y = np.array(j["iso_y"])
@@ -298,7 +326,7 @@ class Model:
         self.acc_rv_edges = acc.get("rv60_edges") or self.regime.get("rv60_edges") or [0.17, 0.37]
 
     def p_up(self, f):
-        x = np.array([f[k] for k in FEATURES], dtype=np.float64)
+        x = np.array([f[k] for k in self.features], dtype=np.float64)
         x = np.nan_to_num(x, nan=0.0)
         z = float(((x - self.mean) / self.scale) @ self.coef + self.b)
         z = max(-60.0, min(60.0, z))            # numerically safe sigmoid

@@ -2151,7 +2151,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.11.0'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.11.1'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0
@@ -2196,8 +2196,8 @@ class RefFeed12110(unittest.TestCase):
         for k in range(-70, 31): st.on_ref_price(op + k * US, 101.0 if k < 0 else 103.0)   # 1/s, covers both windows
         f = st.features(op, op + 30 * US)
         self.assertEqual(f['ref_src'], 1.0)
-        self.assertAlmostEqual(f['ref_open_bps'], (102 / 101 - 1) * 1e4, places=6)        # first trade vs chainlink TWAP 101
-        self.assertAlmostEqual(f['ref_move_bps'], (102 / 101 - 1) * 1e4, places=6)        # last-60s TWAP (30x101+30x103)/60=102
+        self.assertAlmostEqual(f['ref_open_bps'], (102 / 103 - 1) * 1e4, places=6)        # first trade vs the feed's value AT open (103)
+        self.assertAlmostEqual(f['ref_move_bps'], 0.0, places=6)                          # feed value now 103 vs at open 103: the feed IS the TWAP
         self.assertAlmostEqual(f['move_bps'], (104 / 102 - 1) * 1e4, places=6)            # v10 as trained: untouched
     def test_stale_reference_falls_back(self):
         M, US, st, op = self._state()
@@ -2207,8 +2207,25 @@ class RefFeed12110(unittest.TestCase):
         M, US, st, op = self._state()
         for k in range(-70, 31): st.on_ref_price(op + k * US, 101.0 if k < 0 else 103.0)
         st.open_ref = 'twap60'; f = st.features(op, op + 30 * US)
-        self.assertAlmostEqual(f['move_bps'], (104 / 101 - 1) * 1e4, places=6)            # measured from the settlement line
-        self.assertAlmostEqual(f['ref_open_bps'], (102 / 101 - 1) * 1e4, places=6)        # still reports first trade vs line
+        self.assertAlmostEqual(f['move_bps'], (104 / 103 - 1) * 1e4, places=6)            # measured from the settlement line (feed at open)
+        self.assertAlmostEqual(f['ref_open_bps'], (102 / 103 - 1) * 1e4, places=6)        # still reports first trade vs line
+    def test_feed_value_at_open_not_averaged(self):
+        M, US, st, op = self._state()
+        for k in range(-70, 31): st.on_ref_price(op + k * US, 100.0 + k)                   # ramp: a TWAP-of-feed would differ from the value at open
+        f = st.features(op, op + 30 * US)
+        self.assertAlmostEqual(f['ref_gap_bps'], (104 / 100.0 - 1) * 1e4, places=6)       # line at open = feed value at t=op = 100
+        self.assertAlmostEqual(f['ref_move_bps'], (130 / 100.0 - 1) * 1e4, places=6)      # line now = latest feed value 130
+    def test_model_json_may_list_extra_features(self):
+        import btc_model_v10 as M, json, pathlib, tempfile
+        j = json.loads((pathlib.Path(__file__).resolve().parent / 'model_v10.json').read_text())
+        j['features'] = j['features'] + ['ref_gap_bps']; j['coef'] = list(j['coef']) + [0.0]
+        j['scaler_mean'] = list(j['scaler_mean']) + [0.0]; j['scaler_scale'] = list(j['scaler_scale']) + [1.0]
+        path = tempfile.mktemp(suffix='.json'); pathlib.Path(path).write_text(json.dumps(j))
+        m = M.Model(path); self.assertEqual(m.features[-1], 'ref_gap_bps')
+        M2, US, st, op = self._state(); d = m.decide(st, op, op + 30 * US); self.assertIn('p', d)
+        j['features'] = j['features'] + ['not_a_feature']; j['coef'].append(0.0); j['scaler_mean'].append(0.0); j['scaler_scale'].append(1.0)
+        pathlib.Path(path).write_text(json.dumps(j))
+        with self.assertRaises(AssertionError): M.Model(path)
     def test_model_flag_default_and_copy(self):
         import btc_model_v10 as M, pathlib
         m = M.Model(pathlib.Path(__file__).resolve().parent / 'model_v10.json')

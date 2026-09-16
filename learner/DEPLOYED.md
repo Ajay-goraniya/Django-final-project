@@ -350,3 +350,10 @@ NEW model flag `open_reference` ("first_trade" default = v10 as trained; "twap60
 measured from the settlement line); Model.decide copies it into the state so train == serve. With model_v10.json the
 model vector is unchanged from 12.9.0 (parity smoke-tested). Tests 71+21+197 = 289 green; SHA256SUMS 30/30.
 Deploy: paper first (Mumbai Task 99 -> 12.11.0); Zurich after Z-8 settles, master state untouched.
+
+## 12.11.1 (09-16 02:0x UTC) - the feed IS the settlement quantity; json-owned feature list
+Correction to 12.11.0: the venue feed publishes Chainlink's 60 s TWAP itself, so the line at the open is the feed's
+value AT the open (`_ref_at`) and the line now is its latest value - not a TWAP of the feed (REF_IS_TWAP=0 env
+restores averaging for a raw-price topic). Model json now owns its `features` list (FEATURES + EXTRA_FEATURES =
+ref_open_bps/ref_move_bps/ref_gap_bps/ref_src allowed; every name checked at load). model_v10.json unchanged ->
+decisions identical to 12.9.0. Tests 71+21+199 = 291; SHA256SUMS 30/30. Supersedes 12.11.0 for Task 99 / Z-8b.
