@@ -371,3 +371,10 @@ value AT the open (`_ref_at`) and the line now is its latest value - not a TWAP 
 restores averaging for a raw-price topic). Model json now owns its `features` list (FEATURES + EXTRA_FEATURES =
 ref_open_bps/ref_move_bps/ref_gap_bps/ref_src allowed; every name checked at load). model_v10.json unchanged ->
 decisions identical to 12.9.0. Tests 71+21+199 = 291; SHA256SUMS 30/30. Supersedes 12.11.0 for Task 99 / Z-8b.
+
+## 12.11.2 (09-16 02:4x UTC) - fix: a blank frame is not a dead socket
+Zurich found the ref stream dead at 591 reconnects (~35/min, zero data): the venue's RTDS sends an EMPTY frame as its
+subscribe ack and run_stream's json.loads raised, which the reconnect handler treated as a broken connection. Now a
+blank frame is skipped and a non-JSON frame is counted in health.skipped_frames instead of reconnecting; the stall
+timer still force-reconnects a genuinely silent stream. No other behaviour changes; decisions unchanged
+(model_v10.json, 30 features). Tests 71+21+200 = 292; SHA256SUMS 30/30.

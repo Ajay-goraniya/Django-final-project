@@ -2151,7 +2151,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.11.1'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.11.2'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0
@@ -2246,3 +2246,41 @@ class RefFeed12110(unittest.TestCase):
         cls = next(c for c in vars(E).values() if isinstance(c, type) and hasattr(c, 'ref_samples'))
         j = {'topic': 'crypto_prices_chainlink', 'type': 'update', 'payload': {'symbol': 'btc/usd', 'full_accuracy_value': '75409056369963195000000', 'timestamp': 1789516920000}}
         (t, v), = cls.ref_samples(j); self.assertEqual(t, 1789516920000000); self.assertAlmostEqual(v, 75409.056369963195, places=6)
+
+
+class BlankFrame12112(unittest.TestCase):
+    """12.11.2: a blank or non-JSON frame is skipped, not treated as a dead socket.
+
+    The venue's RTDS sends an empty frame as its subscribe ack; json.loads('') raised and
+    run_stream reconnected on every one of them (591 reconnects live, zero data delivered)."""
+    def _run(self, frames):
+        import asyncio, poly_feeds as F
+        got = []; sent = []
+        class W:
+            async def __aenter__(s): return s
+            async def __aexit__(s, *a): return False
+            async def send(s, m): sent.append(m)
+            async def recv(s):
+                if frames: return frames.pop(0)
+                raise asyncio.CancelledError
+        class WS:
+            def connect(s, *a, **k): return W()
+        real = F.websockets if hasattr(F, 'websockets') else None
+        import sys, types
+        mod = types.ModuleType('websockets'); mod.connect = lambda *a, **k: W()
+        old = sys.modules.get('websockets'); sys.modules['websockets'] = mod
+        h = F.FeedHealth(['ref'])
+        try:
+            asyncio.run(F.run_stream('ref', got.append, h, event_key=(), urls=['wss://x/'], subscribe={'a': 1}))
+        except asyncio.CancelledError:
+            pass
+        finally:
+            if old is not None: sys.modules['websockets'] = old
+            else: sys.modules.pop('websockets', None)
+        return got, h, sent
+    def test_blank_and_garbage_frames_do_not_reconnect(self):
+        got, h, sent = self._run(['', '   ', 'not json', b'', '{"payload":{"symbol":"btc/usd","value":1,"timestamp":1}}'])
+        self.assertEqual(len(got), 1)                      # only the real frame reached the handler
+        self.assertEqual(h.reconnects.get('ref', 0), 0)    # and no reconnect was counted
+        self.assertEqual(h.skipped.get('ref', 0), 1)       # 'not json' counted as skipped
+        self.assertEqual(json.loads(sent[0]), {'a': 1})    # subscribe frame was sent

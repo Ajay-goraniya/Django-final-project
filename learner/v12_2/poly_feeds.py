@@ -118,6 +118,7 @@ class FeedHealth:
         self.msgs = {n: 0 for n in names}
         self.host = {n: None for n in names}
         self.reconnects = {n: 0 for n in names}
+        self.skipped = {n: 0 for n in names}     # 12.11.2: non-JSON frames dropped, not reconnects
         self.clock_skew_s = 0.0                  # local minus venue, see note()
 
     def note(self, name, event_ms=None, now=None):
@@ -174,6 +175,7 @@ class FeedHealth:
             "messages": {n: self.msgs.get(n, 0) for n in names},
             "host": {n: self.host.get(n) for n in names},
             "reconnects": {n: self.reconnects.get(n, 0) for n in names},
+            "skipped_frames": {n: self.skipped.get(n, 0) for n in names},
             "clock_skew_s": round(self.clock_skew_s, 3),
             "limits": {"max_arrival_age_s": {n: self.limit_for(n) for n in names}, "max_event_lag_s": MAX_EVENT_LAG_S},
         }
@@ -204,7 +206,21 @@ async def run_stream(name, handler, health, event_key=("E", "T"), urls=None, sub
                         msg = await asyncio.wait_for(w.recv(), STALL_RECONNECT_S)
                     except asyncio.TimeoutError:
                         raise ConnectionError(f"no message for {STALL_RECONNECT_S:.0f}s")
-                    j = json.loads(msg)
+                    # 12.11.2: the venue's RTDS sends an EMPTY frame as its subscribe ack, and
+                    # json.loads("") raises - which the handler below treated as a dead socket
+                    # and reconnected, at ~35 reconnects/min with no data ever delivered
+                    # (measured live on Zurich, 591 reconnects). A frame that is blank or not
+                    # JSON is a protocol nicety, not a broken connection: skip it and keep the
+                    # socket. The stall timer still force-reconnects a truly silent stream.
+                    if isinstance(msg, (bytes, bytearray)):
+                        msg = msg.decode("utf-8", "replace")
+                    if not str(msg).strip():
+                        continue
+                    try:
+                        j = json.loads(msg)
+                    except ValueError:
+                        health.skipped[name] = health.skipped.get(name, 0) + 1
+                        continue
                     if isinstance(j, dict) and "data" in j and "stream" in j:
                         j = j["data"]           # combined-stream envelope
                     stamp = None
