@@ -2152,7 +2152,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.12.0'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.12.1'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0
@@ -2348,3 +2348,24 @@ class EFFloor12120(unittest.TestCase):
         r2, db2, p2 = self._runner(cash=1.0, open_value=1.0, live=False)
         self._hammer(r2, 10, 900); self.assertIs(db2.get('ef_enabled'), True)
         db2.c.close(); os.unlink(p2)
+
+
+class SubmitBook12121(unittest.TestCase):
+    """12.12.1: the order row carries an independent book read stamped at submit."""
+    def test_submit_book_recorded_with_size(self):
+        import poly_core as C, tempfile, asyncio
+        path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
+        books = C.BookCache()
+        snap = dict(event_type='book', asset_id='up', timestamp=str(int(time.time() * 1000)),
+                    asks=[dict(price='0.40', size='120')], bids=[dict(price='0.39', size='80')])
+        books.apply(snap); books.terms['up'] = (.01, 1, .07, 1)
+        d = dict(fire=True, side='UP', p=.8, threshold=.2, ask=.4, sec=30, ev=.9)
+        ex = C.Executor(db, books, C.PaperBroker(books, db)); ep = int(time.time()) - 30
+        asyncio.run(ex.fire(ep, d, 'up', 'c', 10, lambda: d))
+        t = json.loads(db.sql('SELECT timing_json FROM orders')[0][0])
+        self.assertIn('submit_book', t)
+        sb = t['submit_book']
+        self.assertAlmostEqual(sb['ask'], 0.40); self.assertAlmostEqual(sb['bid'], 0.39)
+        self.assertAlmostEqual(float(sb['size']), 120.0)     # displayed size, the thing a fill needs
+        self.assertIsNotNone(sb['ts_ms']); self.assertIsNotNone(sb['age_ms'])
+        db.c.close(); os.unlink(path)

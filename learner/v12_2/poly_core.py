@@ -398,10 +398,10 @@ class Journal:
         self.c.executescript('CREATE INDEX IF NOT EXISTS diagnostics_ts ON diagnostics(ts);')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.12.0')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.12.1')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -982,6 +982,17 @@ class Executor:
                 timing['total_attempt_ms']=1000*(time.monotonic()-fire_start)
                 self.db.release(ep,'BUDGET',kind); self._sample(timing,'BUDGET')
                 print(f'[order not sent] BUDGET: {1000*left:.0f} ms left of budget, floor {1000*self.POST_FLOOR_S:.0f} ms; attempt={n} kind={kind}',flush=True); return
+            # 12.12.1 (H1's R-18a blocker): one INDEPENDENT book read stamped at submit, so a
+            # counterfactual "would price X have filled" is an observation instead of an
+            # inference. `quote` and `pre_submit_quote` are set from reads taken milliseconds
+            # apart and are identical on 182 of 191 live orders - the same-read trap CLAUDE.md
+            # warns about - and neither carries the displayed size, which is what a fill needs.
+            # This is a local cache read: no network, no added latency before the post.
+            sb=self.books.quote(token,self.age)
+            if sb:
+                timing['submit_book']=dict(ask=sb.get('ask'),bid=sb.get('bid'),
+                    size=(sb['asks'][0][1] if sb.get('asks') else None),
+                    age_ms=sb.get('age_ms'),seq=sb.get('seq'),ts_ms=int(time.time()*1000))
             self.db.order(oid,ep,n,plan,timing,kind); start=time.monotonic()
             try:
                 r=await asyncio.wait_for(self.broker.post(signed),min(self.post_timeout_s,max(.001,deadline-start)))
