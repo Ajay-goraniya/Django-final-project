@@ -84,7 +84,13 @@ ARRIVAL_LIMITS = {
     "perp":  float(os.environ.get("FEED_MAX_ARRIVAL_PERP_S", "6.0")),
     "depth": float(os.environ.get("FEED_MAX_ARRIVAL_DEPTH_S", "2.0")),
     "venue": float(os.environ.get("FEED_MAX_ARRIVAL_VENUE_S", "5.0")),
+    "ref":   float(os.environ.get("FEED_MAX_ARRIVAL_REF_S", "5.0")),     # ~1 value/s
 }
+# 12.11.0: the venue's own settlement reference (Chainlink BTC/USD, public, no credentials).
+# Polymarket's btc-5m-twap-60 markets resolve on this feed's 60 s TWAP; see AWS Task 98.
+REF_WS = _env_list("POLY_REF_WS", ["wss://ws-live-data.polymarket.com/"])
+REF_SUBSCRIBE = {"action": "subscribe",
+                 "subscriptions": [{"topic": "crypto_prices_chainlink", "type": "update"}]}
 MAX_EVENT_LAG_S   = float(os.environ.get("FEED_MAX_EVENT_LAG_S", "2.5"))
 # Force a reconnect rather than waiting out the websocket ping timeout.
 STALL_RECONNECT_S = float(os.environ.get("FEED_STALL_RECONNECT_S", "8.0"))
@@ -173,7 +179,7 @@ class FeedHealth:
         }
 
 
-async def run_stream(name, handler, health, event_key=("E", "T"), urls=None):
+async def run_stream(name, handler, health, event_key=("E", "T"), urls=None, subscribe=None):
     """Keep one logical stream connected, failing over between candidate hosts.
 
     A stream that stops delivering is force-reconnected after STALL_RECONNECT_S
@@ -191,6 +197,8 @@ async def run_stream(name, handler, health, event_key=("E", "T"), urls=None):
             async with websockets.connect(url, ping_interval=15, ping_timeout=10,
                                           open_timeout=15, max_size=2 ** 22) as w:
                 health.host[name] = url.split("/")[2]
+                if subscribe is not None:       # topic feeds (the venue's RTDS) need a subscribe frame
+                    await w.send(json.dumps(subscribe))
                 while True:
                     try:
                         msg = await asyncio.wait_for(w.recv(), STALL_RECONNECT_S)

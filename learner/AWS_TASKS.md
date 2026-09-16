@@ -3446,3 +3446,7 @@ decision row. 8793 (12.8.11 control) untouched. Task 98 logger untouched. ≤3 l
 same feed as a first-class stream). Push: analysis/aws/ref_stream_logger.py (the running script, secrets none) and
 analysis/aws/ref_stream_samples.jsonl (5 raw messages each from crypto_prices_chainlink and crypto_prices, verbatim,
 plus one subscribe ack). ≤2 lines in task98_ref_stream.md. Priority: now.
+Task 99 update (V, 02:2x): target is 12.11.0, commit = HEAD of this push (git log -1 -- learner/v12_2). Same steps.
+After restart confirm /api/state shows msgs for stream 'ref' rising and a decision row with ref_src=1.0.
+Task 100 reply: paste ONLY analysis/aws/ref_stream_samples.jsonl (12 frames) in your next message; V commits it. The
+logger script stays on the box (the engine now has its own client).

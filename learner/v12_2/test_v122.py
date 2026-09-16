@@ -2151,7 +2151,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.10.0'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.11.0'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0
@@ -2176,3 +2176,56 @@ class RefProxy12100(unittest.TestCase):
         f = st.features(op, op + 5 * US)
         self.assertAlmostEqual(f['ref_open_bps'], 0.0, places=9)
         self.assertTrue(math.isfinite(f['ref_move_bps']) and math.isfinite(f['ref_gap_bps']))
+
+
+# ---------------------------------------------------------------- 12.11.0
+class RefFeed12110(unittest.TestCase):
+    """The venue's settlement-reference stream: used when it covers the window, proxy otherwise,
+    and the model json's open_reference flag decides whether the candle 'open' is the settlement line."""
+    def _state(self):
+        import btc_model_v10 as M
+        US = M.US; st = M.FeatureState(); op = 1_000_000 * US
+        st.on_spot_trade(op - 90 * US, 100.0, 1.0, False); st.on_spot_trade(op, 102.0, 1.0, False)
+        st.on_spot_trade(op + 30 * US, 104.0, 1.0, True)
+        return M, US, st, op
+    def test_proxy_when_no_reference_samples(self):
+        M, US, st, op = self._state(); f = st.features(op, op + 30 * US)
+        self.assertEqual(f['ref_src'], 0.0); self.assertAlmostEqual(f['ref_open_bps'], 200.0, places=6)
+    def test_reference_stream_used_when_it_covers_the_window(self):
+        M, US, st, op = self._state()
+        for k in range(-70, 31): st.on_ref_price(op + k * US, 101.0 if k < 0 else 103.0)   # 1/s, covers both windows
+        f = st.features(op, op + 30 * US)
+        self.assertEqual(f['ref_src'], 1.0)
+        self.assertAlmostEqual(f['ref_open_bps'], (102 / 101 - 1) * 1e4, places=6)        # first trade vs chainlink TWAP 101
+        self.assertAlmostEqual(f['ref_move_bps'], (102 / 101 - 1) * 1e4, places=6)        # last-60s TWAP (30x101+30x103)/60=102
+        self.assertAlmostEqual(f['move_bps'], (104 / 102 - 1) * 1e4, places=6)            # v10 as trained: untouched
+    def test_stale_reference_falls_back(self):
+        M, US, st, op = self._state()
+        for k in range(-70, 10): st.on_ref_price(op + k * US, 101.0)                        # stops 20 s before now
+        f = st.features(op, op + 30 * US); self.assertEqual(f['ref_src'], 0.0)
+    def test_open_reference_twap60_moves_the_open(self):
+        M, US, st, op = self._state()
+        for k in range(-70, 31): st.on_ref_price(op + k * US, 101.0 if k < 0 else 103.0)
+        st.open_ref = 'twap60'; f = st.features(op, op + 30 * US)
+        self.assertAlmostEqual(f['move_bps'], (104 / 101 - 1) * 1e4, places=6)            # measured from the settlement line
+        self.assertAlmostEqual(f['ref_open_bps'], (102 / 101 - 1) * 1e4, places=6)        # still reports first trade vs line
+    def test_model_flag_default_and_copy(self):
+        import btc_model_v10 as M, pathlib
+        m = M.Model(pathlib.Path(__file__).resolve().parent / 'model_v10.json')
+        self.assertEqual(m.open_ref, 'first_trade')
+        M2, US, st, op = self._state(); st.open_ref = 'twap60'; st.set_venue(0.5, 0.49, 0.51, 0.5) if hasattr(st, 'set_venue') else None
+        m.decide(st, op, op + 30 * US); self.assertEqual(st.open_ref, 'first_trade')          # decide() enforces train == serve
+    def test_ref_samples_parser(self):
+        import btc_model_v12_polymarket as E
+        f = E.PolyRunner.ref_samples if hasattr(E, 'PolyRunner') else None
+        cls = next(c for c in vars(E).values() if isinstance(c, type) and hasattr(c, 'ref_samples'))
+        j = {'topic': 'crypto_prices_chainlink', 'type': 'update', 'payload': {'symbol': 'btc/usd', 'value': 75581.97, 'timestamp': 1789516920123}}
+        self.assertEqual(cls.ref_samples(j), [(1789516920123000, 75581.97)])
+        self.assertEqual(cls.ref_samples({'payload': [{'symbol': 'eth/usd', 'value': 1, 'timestamp': 1}]}), [])
+        self.assertEqual(cls.ref_samples({'payload': {'symbol': 'BTC-USD', 'value': '7', 'timestamp': 1789516920}}), [(1789516920000000, 7.0)])
+        self.assertEqual(cls.ref_samples('garbage'), [])
+    def test_ref_samples_fixed_point(self):
+        import btc_model_v12_polymarket as E
+        cls = next(c for c in vars(E).values() if isinstance(c, type) and hasattr(c, 'ref_samples'))
+        j = {'topic': 'crypto_prices_chainlink', 'type': 'update', 'payload': {'symbol': 'btc/usd', 'full_accuracy_value': '75409056369963195000000', 'timestamp': 1789516920000}}
+        (t, v), = cls.ref_samples(j); self.assertEqual(t, 1789516920000000); self.assertAlmostEqual(v, 75409.056369963195, places=6)

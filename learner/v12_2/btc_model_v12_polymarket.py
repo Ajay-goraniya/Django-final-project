@@ -131,6 +131,36 @@ class PolyRunner(Runner):
         super().on_spot(j)
         try: self.lanes.on_spot_trade(int(j['T']),float(j['p']),float(j['q']),bool(j['m']))
         except Exception: pass
+    @staticmethod
+    def ref_samples(j):
+        """(ts_us, price) pairs for BTC/USD out of one RTDS frame, whatever its envelope.
+
+        The public feed wraps each update as {topic, type, payload:{symbol,value,timestamp}}
+        (single dict or a list of them); field names are matched loosely and anything that
+        is not a positive BTC/USD price is skipped, so a format change degrades to "no
+        reference samples" (ref_src=0 in the features) instead of an exception."""
+        out=[]; stack=[j]
+        while stack:
+            x=stack.pop()
+            if isinstance(x,list): stack.extend(x); continue
+            if not isinstance(x,dict): continue
+            sym=str(x.get('symbol') or x.get('asset') or x.get('pair') or '').lower().replace('-','/').replace('_','/')
+            val=x.get('value',x.get('price',x.get('full_accuracy_value')))
+            ts=x.get('timestamp',x.get('ts',x.get('time')))
+            if sym in ('btc/usd','btcusd','btc') and isinstance(val,(int,float,str)) and ts is not None:
+                try:
+                    v=float(val); t=float(ts)
+                    if v>1e9: v=v/1e18          # chainlink full_accuracy_value: integer string, 1e18 fixed point (Task 100)
+                    t_us=int(t*1e6) if t<1e11 else (int(t*1e3) if t<1e14 else int(t))   # s / ms / us
+                    if v>0: out.append((t_us,v))
+                except (TypeError,ValueError): pass
+            for k in ('payload','data','message','updates'):
+                if k in x: stack.append(x[k])
+        return out
+    def on_ref(self,j):
+        try:
+            for t_us,v in self.ref_samples(j): self.st.on_ref_price(t_us,v)
+        except Exception: pass
     def on_depth(self,j):
         super().on_depth(j)
         try:
@@ -730,6 +760,14 @@ class PolyRunner(Runner):
             if key: self.age[key]=time.time()
             self.msgs[name]=self.msgs.get(name,0)+1
         await poly_feeds.run_stream(name,wrapped,self.health)
+    async def _ref_stream(self):
+        # 12.11.0: the settlement reference as a first-class stream. Its own url list and a
+        # subscribe frame; health/arrival accounting exactly like the Binance streams. If the
+        # endpoint is down the features fall back to the Binance proxy (ref_src=0) - decisions
+        # never depend on this stream unless the model json says open_reference="twap60".
+        def wrapped(j):
+            self.on_ref(j); self.msgs['ref']=self.msgs.get('ref',0)+1
+        await poly_feeds.run_stream('ref',wrapped,self.health,event_key=(),urls=poly_feeds.REF_WS,subscribe=poly_feeds.REF_SUBSCRIBE)
     async def chart_seed(self):
         # api.binance.com answers HTTP 451 from several hosting regions, which left
         # the chart empty with no error. poly_feeds tries each REST mirror in turn.
@@ -758,7 +796,7 @@ class PolyRunner(Runner):
         server=self.ui.make_server(); threading.Thread(target=server.serve_forever,daemon=True).start()
         print('Polymarket v12.1', 'LIVE (master OFF)' if self.a.live else 'PAPER',f'http://{self.a.host}:{self.a.port}',flush=True)
         try:
-            await asyncio.gather(self.chart_seed(),self._stream('spot',self.on_spot),self._stream('perp',self.on_perp),self._stream('depth',self.on_depth),self._stream('chart',self.on_kline),self.venue(),self.decide_loop(),self.housekeeping(),self.reconcile_loop(),self.grade_loop(),self.claim_loop(),self.venue_truth_loop())
+            await asyncio.gather(self.chart_seed(),self._stream('spot',self.on_spot),self._stream('perp',self.on_perp),self._stream('depth',self.on_depth),self._stream('chart',self.on_kline),self._ref_stream(),self.venue(),self.decide_loop(),self.housekeeping(),self.reconcile_loop(),self.grade_loop(),self.claim_loop(),self.venue_truth_loop())
         finally:
             server.shutdown(); server.server_close()
             if self.a.live: await self.broker.close()

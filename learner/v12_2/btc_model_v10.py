@@ -70,6 +70,15 @@ class FeatureState:
         self.p_ts, self.p_px, self.p_sig, self.p_abs = deque(), deque(), deque(), deque()
         self.depth = None            # (ts, spread_bps, imb5, imb20, micro_bps, crossed)
         self.venue = (np.nan, np.nan, np.nan, np.nan)   # ask_up, bid_up, ask_dn, bid_dn
+        # 12.11.0 settlement-reference stream (Polymarket's public Chainlink BTC/USD feed,
+        # ~1 value/s). The venue settles btc-5m-twap-60 markets on this feed's 60 s TWAP
+        # at close vs the same TWAP at the candle start. When the buffer covers a window
+        # its TWAP is used; otherwise the Binance spot TWAP stands in (ref_src=0).
+        self.r_ts, self.r_px = deque(), deque()
+        # Which price the candle "open" means for every open-relative feature:
+        # "first_trade" (v10 as trained) or "twap60" (a model retrained on the settlement
+        # line sets open_reference="twap60" in its json; Model.decide copies it here).
+        self.open_ref = "first_trade"
         # 12.9.0 array cache. features() converted every deque with np.fromiter
         # (+ cumsum) on EVERY call: ~15 ms at 120k rows, and the live engine
         # calls it twice per 250 ms tick and five more times per fire attempt.
@@ -122,6 +131,26 @@ class FeatureState:
         f = lambda x: float(x) if x is not None and math.isfinite(float(x)) else np.nan
         self.venue = (f(ask_up), f(bid_up), f(ask_dn), f(bid_dn))
 
+    def on_ref_price(self, ts_us, price):
+        """One settlement-reference sample (Chainlink BTC/USD via the venue's feed)."""
+        if not (price > 0):
+            return
+        ts_us = int(ts_us)
+        if self.r_ts and ts_us < self.r_ts[-1]:
+            return                       # out of order: keep the step function monotone
+        self.r_ts.append(ts_us); self.r_px.append(float(price))
+        cut = ts_us - self.KEEP_US
+        while self.r_ts and self.r_ts[0] < cut:
+            self.r_ts.popleft(); self.r_px.popleft()
+
+    def _ref_twap(self, t0, t1):
+        """TWAP of the reference stream over [t0, t1) if the buffer covers it, else nan."""
+        if len(self.r_ts) < 2 or self.r_ts[0] > t0 or self.r_ts[-1] < t1 - 5 * US:
+            return np.nan                # no sample in force at t0, or feed stale near t1
+        ts = np.fromiter(self.r_ts, dtype=np.int64, count=len(self.r_ts))
+        px = np.fromiter(self.r_px, dtype=np.float64, count=len(self.r_px))
+        return self._twap(ts, px, t0, t1)
+
     # ---- feature computation (must match learner/build_features.py exactly)
     @staticmethod
     def _twap(ts, px, t0, t1):
@@ -168,6 +197,23 @@ class FeatureState:
         if i0 >= len(s_ts) or i < i0:
             return None
         open_px, p = s_px[i0], s_px[i]
+        # Settlement-reference line (R-16). ref_open = 60 s TWAP ending at the candle open,
+        # ref_now = 60 s TWAP ending now; from the venue's Chainlink feed when the buffer
+        # covers the window (ref_src=1), else the Binance spot TWAP proxy (ref_src=0).
+        ref_open = self._ref_twap(candle_open_us - 60 * US, candle_open_us)
+        ref_now = self._ref_twap(now_us - 60 * US, now_us)
+        ref_src = 1.0 if (np.isfinite(ref_open) and np.isfinite(ref_now)) else 0.0
+        if not (np.isfinite(ref_open) and ref_open > 0):
+            ref_open = self._twap(s_ts, s_px, candle_open_us - 60 * US, candle_open_us)
+        if not (np.isfinite(ref_now) and ref_now > 0):
+            ref_now = self._twap(s_ts, s_px, now_us - 60 * US, now_us)
+        if not (np.isfinite(ref_open) and ref_open > 0):
+            ref_open = open_px
+        if not (np.isfinite(ref_now) and ref_now > 0):
+            ref_now = p
+        first_trade_px = open_px
+        if self.open_ref == "twap60":
+            open_px = ref_open           # every open-relative feature below now measures from the settlement line
         seg = s_px[i0:i + 1]; hi, lo = seg.max(), seg.min(); rng = hi - lo
 
         def ret(sec):
@@ -219,17 +265,6 @@ class FeatureState:
         lv = math.log(pvc / (1 - pvc)) if np.isfinite(pvc) else 0.0
         sec_left = 300 - off
         move = (p / open_px - 1) * 1e4
-        # 12.10.0 settlement-reference proxy (R-16). Polymarket's btc-5m-twap-60 markets settle on
-        # the Chainlink 60 s TWAP at close vs the same TWAP at the candle start - not on the Binance
-        # first trade `move_bps` is measured from. Until the venue feed is wired in, log the Binance
-        # proxy: time-weighted spot over the 60 s before open (ref_open) and the last 60 s (ref_now).
-        # Logged only - not in FEATURES, so the trained weights are untouched.
-        ref_open = self._twap(s_ts, s_px, candle_open_us - 60 * US, candle_open_us)
-        ref_now = self._twap(s_ts, s_px, now_us - 60 * US, now_us)
-        if not (np.isfinite(ref_open) and ref_open > 0):
-            ref_open = open_px
-        if not (np.isfinite(ref_now) and ref_now > 0):
-            ref_now = p
         f = dict(move_bps=move, ret5=ret(5), ret15=ret(15), ret30=ret(30), ret60=ret(60), rv60=rv60,
                  range_bps=rng / open_px * 1e4, pos_in_range=((p - lo) / rng) if rng > 0 else 0.5,
                  dist_hi_bps=(hi - p) / open_px * 1e4, dist_lo_bps=(p - lo) / open_px * 1e4,
@@ -238,8 +273,8 @@ class FeatureState:
                  prev1_bps=prev1, prev2_bps=prev2, sec_left=sec_left, hod_sin=math.sin(hod), hod_cos=math.cos(hod),
                  p_venue=(p_venue if np.isfinite(p_venue) else 0.0), lv=lv,
                  mv_x_sec=move * sec_left / 300.0, lv_x_sec=lv * sec_left / 300.0,
-                 ref_open_bps=(open_px / ref_open - 1) * 1e4, ref_move_bps=(ref_now / ref_open - 1) * 1e4,
-                 ref_gap_bps=(p / ref_open - 1) * 1e4)
+                 ref_open_bps=(first_trade_px / ref_open - 1) * 1e4, ref_move_bps=(ref_now / ref_open - 1) * 1e4,
+                 ref_gap_bps=(p / ref_open - 1) * 1e4, ref_src=ref_src)
         f["_ask_up"], f["_ask_dn"], f["_price"] = ask_up, ask_dn, p
         f["_venue_ok"] = bool(np.isfinite(p_venue))   # both sides quoted -> venue features are real, not zero-filled
         return f
@@ -253,6 +288,8 @@ class Model:
         self.coef = np.array(j["coef"]); self.b = j["intercept"]
         self.iso_x = np.array(j["iso_x"]); self.iso_y = np.array(j["iso_y"])
         self.fee = j["fee_rate"]; self.thr = j["ev_threshold_default"]
+        self.open_ref = j.get("open_reference", "first_trade")
+        assert self.open_ref in ("first_trade", "twap60"), "unknown open_reference"
         self.regime = j.get("regime") or {}
         acc = j.get("accuracy_mode") or {}
         self.mode = j.get("mode_default", "pnl")
@@ -294,6 +331,7 @@ class Model:
                         (out-of-sample). Fixed 0.85/0.02: ~82/day, 87.6%, 8/8 days.
         Frequency is adjusted by moving these floors; nothing else changes.
         """
+        state.open_ref = self.open_ref   # train == serve: the json says which "open" its weights were fitted on
         f = state.features(candle_open_us, now_us)
         if f is None:
             return dict(fire=False, reason="no spot history in candle")

@@ -339,3 +339,14 @@ Row 3: the 25 new 12.9.0 tests against the RUNNING 12.8.11 modules: 22 failed, 3
 Row 4 (state after restart, `meta`, 17:31:48): build 12.9.0, **master False** (safe-start audit 17:31:26 True -> False, `__init__`), halt null, stake_settings fixed 5.0 / next_stake 5.0, ev_settings {quote_age_ms: 750.0}, ef true, main/rev false - all carried over unchanged. `diagnostics_ts` index created. 0 orders since restart. Master stays OFF for the user to arm.
 Row 5 (behavioural effect, user armed 17:34:11 via dashboard `apply`): first live order ...d4e1b885 at 17:51:37, REJECTED (venue "no orders found to match"), order-identity check passed, halt null, fire_to_submit_ms **41** (12.8.11 median 50), network_roundtrip 359, total 408, post_budget_left 1958 ms (floor 400 not reached, 0 BUDGET releases). One RECONCILE_STUCK row for it on its first reconcile pass: `get_order` UnexpectedResponseError "OpenOrder response did not match expected shape" (the Z-4 SDK error, now recorded once as designed); the order still went terminal. KILL_CONDITION x2 at 17:31:27 = the watch-only monitor re-reporting the pre-restart 20-result window (unit_sum -5.23 vs limit -3.0, acted=false). Second order ...f268d9f5 at 18:08:52, **FILLED** (venue MATCHED), identity check passed, halt null, fire_to_submit_ms **23**, network_roundtrip 247, total 276, post_budget_left 1977. No second RECONCILE_STUCK row. Watch complete: 2/2 terminal, 0 UNKNOWN, 0 halts, fire_to_submit 41 / 23 ms vs the 12.8.11 median 50.
 Row 7 (downstream, 17:42-18:02): AMBIENT_AGE flowing (124 rows/10 min, p50 24.5 ms); feed_counters applied 362,945, dropped_stale 0; decide path alive (122 rows); venue_truth updating (cash 99.50, open 0); results grading (46 -> 48 across the restart). Dashboard 0.0.0.0:8787 Basic auth.
+
+## 12.11.0 (staged 09-16 02:2x UTC) - the settlement reference as a first-class feed
+poly_feeds: `ref` stream = wss://ws-live-data.polymarket.com (public, no credentials), subscribe frame
+topic crypto_prices_chainlink; run_stream gained `subscribe=`; ARRIVAL_LIMITS ref 5 s. Engine: `_ref_stream()` +
+`ref_samples()` (loose parser; chainlink full_accuracy_value 1e18 fixed point per Task 100; any format change
+degrades to ref_src=0, never an exception) -> FeatureState.on_ref_price. FeatureState: r_ts/r_px buffer, `_ref_twap`;
+ref_open/ref_now come from the venue feed when it covers the window (ref_src=1) else the Binance proxy (ref_src=0).
+NEW model flag `open_reference` ("first_trade" default = v10 as trained; "twap60" = every open-relative feature
+measured from the settlement line); Model.decide copies it into the state so train == serve. With model_v10.json the
+model vector is unchanged from 12.9.0 (parity smoke-tested). Tests 71+21+197 = 289 green; SHA256SUMS 30/30.
+Deploy: paper first (Mumbai Task 99 -> 12.11.0); Zurich after Z-8 settles, master state untouched.
