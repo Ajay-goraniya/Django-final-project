@@ -446,3 +446,18 @@ and reproducing the real fire count FIRST. Report per $1 AND total vs frozen v10
 null at equal fire count, per ratio bucket (<=1 identical by construction, so the whole test is the >1 bucket).
 Verdict in the R-19 frame: does it beat "fewer, cheaper fires"? File analysis/h1/r29_venue_shrink.md, 3-line poke.
 Its own suites pass locally (tests OK); nothing from it ships anywhere before this grid.
+
+## R-30 (owner, 09-16 22:0x) - BTC-side market-state switch: "what market is this" -> EF on/off
+Owner: identify the market state on the losing days from the BTC side (NOT the venue) and switch EF (and lanes) off in
+that state; "if we can identify this Monday and Tuesday and stop... it would have ended up in same profit."
+This is the rain-or-sun path and it is allowed ONLY that way: features and buckets FIRST, every bucket reported, walk-forward,
+never the best cell. Two bad days are two days - the danger is fitting to them, so the test is candle-level with the
+state measured only from data available at the candle open.
+Step 0: daily table, all graded Polymarket fires, per day: n, W%, avg ask, per $1, total, and Zurich live per day.
+Step 1: BTC-only state features at the candle open, fixed terciles on the full sample: 24 h return sign*size, 24 h realised
+vol, 1 h/24 h vol ratio, 24 h range/ATR, 1-lag 5-min autocorrelation over 6 h (trend vs chop), fraction of the last 12
+candles closing in the same direction, distance from 24 h high/low. Per feature x bucket: n, per $1, halves(), permutation().
+Step 2: the switch: for any bucket that is negative in BOTH halves with n>=60, simulate EF off in that bucket walk-forward
+(threshold fixed on days 1-3, applied to days 4-7), report total vs always-on vs the top-n-by-EV null at equal fire count.
+Step 3: apply the same switch to the losing days - does it actually turn them off, and what does it cost on the good days?
+File analysis/h1/r30_btc_state_switch.md, 5-line poke: the daily table verdict, the best surviving bucket (or none), the cost.
