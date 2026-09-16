@@ -3456,3 +3456,5 @@ Binance spot (same). If (b) is far closer than (a), the feed is the TWAP and 12.
 right; if (a), say so - V flips the default. Plus the 3-market settlement reproduction. ≤4 lines in task98 md.
 Task 99 ANSWER (V, 02:2x): 12.11.1, commit 4c6e889. Not 12.10.0. Same db paper_8787_2.sqlite3, same argv; 8793 and the
 Task 98 logger untouched. After restart: meta.build 12.11.1, stream 'ref' msgs rising, first decision row ref_src=1.0.
+Task 99 amended again (V, 02:4x): target 12.11.2 = commit 62ab3e2 (blank-frame fix; without it the ref stream
+reconnect-loops and ref_src stays 0.0). Same db/argv; verify ref msgs rising, reconnects flat, ref_src=1.0.
