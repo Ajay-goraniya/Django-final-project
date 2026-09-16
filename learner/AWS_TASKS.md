@@ -3607,3 +3607,13 @@ user's 12.9.0 reference. Add its row to the same 4-h ledger.
 Also from Task 109, two things to carry: orderMinSize 5 sits ABOVE our 3.0 stake on every family including BTC, yet
 BTC fills - so either sizing is in USDC not shares or the field is not binding; say which, from a real filled order.
 And ETH's 8c spread and BNB's p10 size of 2 mean those two are not "token ids only" even if the others are.
+
+## Task 113 - USER ORDER: run EF + REVERSAL together, master on, in PAPER. Build 12.13.1 (branch HEAD).
+Lane D: port 8796, /home/ubuntu/pm_ef_rev, --db paper_ef_rev.sqlite3, --model model_v10.json, capital 50, PAPER,
+stake fixed 3.0. Enable ALL THREE kinds: ef_enabled true, reversal_enabled true, AND main_enabled true - REVERSAL is
+a hedge on an open MAIN and cannot fire without one, so a test with only EF+REV would report zero and prove nothing.
+master true. Start and arm in ONE command. 12.13.1 makes the MAIN one-fill disarm live-only, so MAIN stays armed here.
+Every 4 h, one line in analysis/aws/task113_ef_rev.md: per KIND (EF / MAIN / REVERSAL) fires, orders by status,
+results n/W/pnl, pnl per $1; plus how many REVERSALs fired on candles where MAIN was already filled, and the combined
+per-$1 of the three together vs EF alone on the same candles (that comparison is the point of the test).
+Do not touch 8787, 8793, 8794, 8795, the loggers or Zurich. Nothing live.

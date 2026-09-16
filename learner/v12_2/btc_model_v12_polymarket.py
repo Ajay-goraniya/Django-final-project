@@ -679,6 +679,12 @@ class PolyRunner(Runner):
         window and let a second order through, and the instruction is
         unconditional.
         """
+        # 12.13.1: LIVE ONLY. The instruction it implements was about live money
+        # ("main off after 1 filled order, whatever happens"), and on a paper
+        # engine it ends the experiment at the first fill - which also kills
+        # REVERSAL, since REVERSAL is a hedge on an open MAIN and cannot fire
+        # without one. Paper lanes therefore keep MAIN armed; live is unchanged.
+        if not self.a.live: return
         if not self.db.get('main_enabled'): return
         armed=None
         for r in self.db.sql("SELECT ts,detail FROM diagnostics WHERE detail LIKE "

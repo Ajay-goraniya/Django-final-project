@@ -2067,7 +2067,10 @@ class HousekeepingCadence(unittest.TestCase):
     def test_main_oneshot_returns_at_once_when_main_is_off(self):
         """Already true on 12.8.11 (kept as a pin): one meta read, no diagnostics scan."""
         import btc_model_v12_polymarket as E
-        r = E.PolyRunner.__new__(E.PolyRunner); r.db = self.db; self.db.set('main_enabled', False)
+        import types as _t
+        r = E.PolyRunner.__new__(E.PolyRunner); r.db = self.db
+        r.a = _t.SimpleNamespace(live=True)      # 12.13.1: the rule is live-only, so the pin runs a live stub
+        self.db.set('main_enabled', False)
         calls = []; real = self.db.sql; self.db.sql = lambda *a, **k: (calls.append(a[0]), real(*a, **k))[1]
         r._main_oneshot_check(); self.assertEqual(len(calls), 1); self.assertIn('meta', calls[0])
     def test_housekeeping_deletes_hourly_and_wipeout_checks_once_a_minute(self):
@@ -2152,7 +2155,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.13.0'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.13.1'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0
@@ -2444,3 +2447,24 @@ class VenueP12130(unittest.TestCase):
         j = json.loads((pathlib.Path(__file__).resolve().parent / 'model_v10.json').read_text())
         j['p_source'] = 'oracle'; p = tempfile.mktemp(suffix='.json'); pathlib.Path(p).write_text(json.dumps(j))
         with self.assertRaises(AssertionError): M.Model(p)
+
+
+class MainOneShot12131(unittest.TestCase):
+    """12.13.1: the one-fill disarm is a LIVE rule; paper keeps MAIN armed so REVERSAL can be tested."""
+    def _runner(self, live):
+        import btc_model_v12_polymarket as E, poly_core as C, tempfile, types, json as _json
+        path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'LIVE' if live else 'PAPER', 'abc')
+        db.set('main_enabled', True)          # this write is itself the arming audit row
+        db.sql("INSERT INTO orders(id,epoch,attempt,status,plan,ts,kind) VALUES('o',1,1,'FILLED','{}',?,'MAIN')",
+               (time.time() + 1,))            # a fill AFTER arming, which is what the rule counts
+        r = types.SimpleNamespace(db=db, a=types.SimpleNamespace(live=live))
+        r._main_oneshot_check = types.MethodType(E.PolyRunner._main_oneshot_check, r)
+        return r, db, path
+    def test_live_still_disarms_after_one_fill(self):
+        r, db, path = self._runner(True)
+        r._main_oneshot_check(); self.assertIs(db.get('main_enabled'), False)
+        db.c.close(); os.unlink(path)
+    def test_paper_keeps_main_armed(self):
+        r, db, path = self._runner(False)
+        r._main_oneshot_check(); self.assertIs(db.get('main_enabled'), True)
+        db.c.close(); os.unlink(path)

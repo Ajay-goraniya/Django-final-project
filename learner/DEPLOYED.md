@@ -415,3 +415,12 @@ byte-identical otherwise - so the two arms differ in exactly one thing. PAPER ON
 model_v10.json is untouched. Tests 71+21+213 = 305; SHA256SUMS 31/31 (the new json is in the manifest).
 CAVEAT that ships with it: R-23's halves are +0.493/+0.100 and the per-day edge decays +0.573 -> +0.077 across
 09-09..09-15. That decay must be explained before this goes anywhere near live money.
+
+## 12.13.1 (09-16 12:5x UTC) - the MAIN one-fill disarm becomes LIVE-ONLY, so REVERSAL can be tested on paper
+USER: run the Predict/build11 REV signal on Polymarket with EF, master on, in paper. The port already exists -
+`poly_lanes.py` is build11's MAIN + REVERSAL ported into v12 (pressure gauge, fair odds, volume ratio, 13-feature
+model, constants copied with line provenance; 21 tests in test_lanes.py). The blocker was elsewhere: REVERSAL is a
+HEDGE on an open MAIN by design (build11 `_watch_reversal`: no MAIN, nothing to hedge), and `_main_oneshot_check`
+disarms MAIN after ONE filled order - a live instruction from 09-13 that, on a paper engine, ends the experiment at
+the first fill and takes REVERSAL with it. It now returns immediately unless `a.live`. Live behaviour is unchanged
+and pinned by a test; paper keeps MAIN armed. Tests 71+21+215 = 307; SHA256SUMS 31/31.
