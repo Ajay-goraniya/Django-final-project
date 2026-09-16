@@ -279,3 +279,23 @@ adapts by itself: quiet thin candles price themselves out, and no threshold is h
 Mumbai that posts resting orders beside the live FAK engine so the two are comparable on the same candles.
 Constraints unchanged: real data only, >=60 graded per cell or "insufficient", halves, paired, permutation, costs,
 null. Nothing live without the user. This is not a gate on the score - it is how the order is placed.
+
+## R-18a (09-16 03:1x, USER'S IDEA, run it FIRST - it is cheaper than the resting grid and uses data we already have)
+User: "maybe adjusting one tick, two ticks may help? or maybe EV mode?" They are right that the tick is the live knob.
+FACT from the running journal (V, 400 live orders): the cap is ask_at_decide + pad, pad=1 tick today. Outcomes by
+cap-minus-ask: +1 -> 46 FILLED / 32 REJECTED, +2 -> 4 FILLED / 2 REJECTED, and 21 rejects sit at cap <= ask (the ask
+moved up between decide and submit, so our cap was already stale). So both directions are live: pay one more tick and
+more of those 53 rejects become fills, at a worse price.
+Do, on real rows (Zurich journals + every paper lane + the book logs), full grid, never the best cell:
+(1) For pad in {-2,-1,0,+1,+2,+3,+4}: counterfactual fill (would the ask at submit have been <= cap, and was there
+size), realized price, pnl/$1 graded on venues.outcome, n per cell, halves, per day. Paired against the actual +1 arm
+on the same candles (McNemar on discordant).
+(2) Split by what moved: rejects where the ask ROSE after decide vs rejects where size vanished at our price. A pad
+only helps the first kind; report the split so the ceiling of this lever is known.
+(3) Interaction with fire-second and rv60 (the pad that pays may differ at 30 s vs 240 s, in fast vs quiet markets) -
+report the grid, and if a single pad is not best everywhere, that is the adaptive-frequency answer the user wants:
+pad chosen by a fitted rule on (sec, rv60, spread, displayed size), not a hand-set number.
+(4) EV MODE: do not re-run R-10 (accuracy mode 86.4% hit but +0.001/$1, regime floors -0.040/$1 worst, pnl rule
++0.131 best). Instead answer the one open question: with the best pad from (1), does the EV threshold sweep move at
+all? Full sweep, both arms, PnL not accuracy.
+Deliverable analysis/h1/task_r18a_pad_grid.md <=12 lines + grid file. verify.py. Then the resting simulator (R-18).
