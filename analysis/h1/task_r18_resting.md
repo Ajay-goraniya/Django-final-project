@@ -54,6 +54,31 @@ Rain or sun — resting loses to the taker on every readable day:
 verify.py on k=1/TTL=299 vs the taker: **NOT A FINDING** — halves −0.325 / −0.244 (consistently bad,
 not noisy), and it loses the null by $125 (−44.45 vs +80.47).
 
+## The split Mumbai asked for, run on the real book tape
+
+Mumbai's Task 101 (n=64, every cell insufficient, ~19 price rows per candle) offered a prior: 47 of
+64 fires were fillable a tick under, and only 19 of those 47 (**40.4%**) went the fire's way. They
+asked for that number first, on the real tape, before the grid. Here it is — same candles, split by
+whether the resting order *would* have filled:
+
+| k | TTL | n filled | win% filled | n NOT filled | win% NOT filled | gap | Fisher p |
+|---|---|---|---|---|---|---|---|
+| 1 | 60 | 320 | 39.7% | 172 | **81.4%** | −0.417 | 1.1e-19 |
+| 1 | 299 | 378 | 40.7% | 114 | **99.1%** | **−0.584** | 7.7e-35 |
+| 2 | 299 | 368 | 39.1% | 124 | 99.2% | −0.601 | 6.7e-39 |
+| 3 | 299 | 361 | 38.0% | 131 | 99.2% | −0.613 | 1.1e-41 |
+
+Unconditional rate on all 492 fires: **54.3%**.
+
+**The orders that fill win 40.7%. The orders that do not fill win 99.1%.** The second number is not a
+typo and it is not surprising once stated: if the ask never drops even one tick below your entry for
+the rest of the candle, the market was never in doubt about your side. **A resting order is a machine
+for sorting the winners out of your own portfolio** — it hands back the 99% bucket and keeps the 40%
+bucket.
+
+Mumbai's prior reproduces almost exactly: **40.4% on n=64 with ~19 rows per candle, 40.7% on n=492
+with the real 1 s book.** Two independent measurements, 7.7× apart in sample, same answer.
+
 ## A fake pass I built and caught
 
 My first adverse-selection table compared the filled orders' win rate against **those same orders**
