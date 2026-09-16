@@ -1017,6 +1017,10 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
 - **09-16 10:4x: n=325, −0.069/fire, halves −0.069 / −0.069 — the two halves now agree to
   three decimals.** That is as clean as this verdict can get: the forward set is uniformly
   −0.069 against a +0.018 baseline, with no remaining reading under which it drifts to zero.
+- **09-16 12:4x: +29 candles, +9 fires, n=334, −0.082/fire, halves −0.073 / −0.090.** The
+  per-fire number has moved monotonically AWAY from zero across the last six checks:
+  −0.051 → −0.057 → −0.061 → −0.066 → −0.069 → −0.082. Whatever the second half was doing
+  earlier, the direction of travel is now unambiguous and it is downward.
 - (18:45: +4, n=305, −0.052 — the 16:45 move held rather than reverting.)
 - (16:45: +13 fires — a new fastest accrual — n=301, −0.053/fire, halves −0.072 / −0.034.) Both halves still negative and the verdict is unchanged, but this is the
   largest single-check move the ledger has made: **−0.086 → −0.053**, and the second half has come
