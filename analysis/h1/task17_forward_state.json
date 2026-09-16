@@ -1,5 +1,5 @@
 {
- "last_epoch": 1789563300,
+ "last_epoch": 1789579200,
  "fires": [
   {
    "epoch": 1789079400,
@@ -4044,6 +4044,126 @@
    "bi": 0,
    "hit": true,
    "pnl": 1.177777777777778
+  },
+  {
+   "epoch": 1789564500,
+   "day": "2026-09-16",
+   "hour": 13,
+   "wknd": false,
+   "S": 15,
+   "side": "DOWN",
+   "ask": 0.56,
+   "bi": 2,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789566900,
+   "day": "2026-09-16",
+   "hour": 13,
+   "wknd": false,
+   "S": 90,
+   "side": "DOWN",
+   "ask": 0.62,
+   "bi": 3,
+   "hit": true,
+   "pnl": 0.5806451612903227
+  },
+  {
+   "epoch": 1789567500,
+   "day": "2026-09-16",
+   "hour": 14,
+   "wknd": false,
+   "S": 30,
+   "side": "UP",
+   "ask": 0.7,
+   "bi": 4,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789569300,
+   "day": "2026-09-16",
+   "hour": 14,
+   "wknd": false,
+   "S": 45,
+   "side": "UP",
+   "ask": 0.47,
+   "bi": 2,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789569600,
+   "day": "2026-09-16",
+   "hour": 14,
+   "wknd": false,
+   "S": 15,
+   "side": "UP",
+   "ask": 0.45,
+   "bi": 1,
+   "hit": true,
+   "pnl": 1.177777777777778
+  },
+  {
+   "epoch": 1789570200,
+   "day": "2026-09-16",
+   "hour": 14,
+   "wknd": false,
+   "S": 15,
+   "side": "DOWN",
+   "ask": 0.4,
+   "bi": 0,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789570500,
+   "day": "2026-09-16",
+   "hour": 14,
+   "wknd": false,
+   "S": 15,
+   "side": "UP",
+   "ask": 0.43,
+   "bi": 0,
+   "hit": true,
+   "pnl": 1.2790697674418605
+  },
+  {
+   "epoch": 1789571400,
+   "day": "2026-09-16",
+   "hour": 15,
+   "wknd": false,
+   "S": 45,
+   "side": "DOWN",
+   "ask": 0.47,
+   "bi": 1,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789573200,
+   "day": "2026-09-16",
+   "hour": 15,
+   "wknd": false,
+   "S": 20,
+   "side": "DOWN",
+   "ask": 0.44,
+   "bi": 0,
+   "hit": true,
+   "pnl": 1.2272727272727275
+  },
+  {
+   "epoch": 1789576800,
+   "day": "2026-09-16",
+   "hour": 16,
+   "wknd": false,
+   "S": 120,
+   "side": "DOWN",
+   "ask": 0.53,
+   "bi": 1,
+   "hit": true,
+   "pnl": 0.8490566037735847
   }
  ]
 }
