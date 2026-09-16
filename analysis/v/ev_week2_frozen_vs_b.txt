@@ -1,0 +1,49 @@
+week 2: 34121 rows, 1906 candles, 2026-09-08..2026-09-16
+
+no slippage. rows = EV threshold
+   thr | frozen n    total   per$1 |    b n    total   per$1 | b-frozen
+  0.05 |     1551  +109.85 +0.0708 |   1531  +106.51 +0.0696 |    -3.34
+  0.10 |     1291  +104.56 +0.0810 |   1242  +111.76 +0.0900 |    +7.20
+  0.15 |     1109  +134.45 +0.1212 |    931  +160.65 +0.1726 |   +26.20
+  0.20 |      721  +146.27 +0.2029 |    675  +131.48 +0.1948 |   -14.78
+  0.25 |      636  +140.30 +0.2206 |    493  +120.24 +0.2439 |   -20.06
+  0.30 |      338  +107.56 +0.3182 |    282   +86.22 +0.3057 |   -21.34
+  0.40 |      124   +49.80 +0.4016 |    115   +52.07 +0.4528 |    +2.28
+  0.50 |       64   +29.55 +0.4618 |     64   +36.58 +0.5716 |    +7.03
+
+flatness across 0.10-0.30 (the question that matters):
+  frozen  total +104.56..+146.27 (spread 41.71), fires 338..1291 (3.8x)
+  arm b   total +86.22..+160.65 (spread 74.43), fires 282..1242 (4.4x)
+
+slippage, total PnL at the shipped regime rule (no override):
+ slip | frozen n    total  pos/d |    b n    total  pos/d
+   0c |     1033  +145.81   7/9 |    733  +145.45   8/9
+   1c |     1033  +120.15   7/9 |    733  +125.91   8/9
+   2c |     1033   +95.65   7/9 |    733  +107.28   8/9
+   3c |     1033   +72.24   7/9 |    733   +89.50   8/9
+   5c |     1033   +28.40   6/9 |    733   +56.24   8/9
+
+CROSS-CHECK AND ONE UNRESOLVED DISAGREEMENT.
+Frozen reproduces H1 EXACTLY: +145.81 on 1033 fires at the shipped regime rule, same to the cent, so the two
+harnesses agree and the week-2 table loads correctly. The calibrator difference also reproduces: median |dp|
+0.0087 (H1 0.0077), p90 0.0223 (0.022), direction differs on 0.759% of rows (0.511%) - small gaps consistent with
+a different row subset, not a different model.
+**Arm (b) does NOT reproduce.** H1 reports (b) +182.17 on 778 fires; on the pushed `model_b_week1.json` through
+the same harness that reproduces frozen to the cent, I get **+145.45 on 733 fires** - a gap of $36.72 against
+frozen of essentially zero, not +$36. Since frozen agrees bit-for-bit, the difference is in the EVALUATION of (b),
+not in the artifact. Raised with H1. **Until it is reconciled, "an arbitrary calibrator detail is worth $36" is
+NOT an established finding and must not be relayed as one.**
+
+WHAT DOES HOLD, on my run, and it is the more useful half.
+1. (b) is materially more ROBUST TO COST than frozen, monotonically: totals at 0/1/2/3/5 cents are
+   frozen +145.81 / +120.15 / +95.65 / +72.24 / +28.40 against (b) +145.45 / +125.91 / +107.28 / +89.50 / +56.24,
+   and positive days 7/9 (6/9 at 5c) against 8/9 at EVERY level. Same coefficients, same direction call: the
+   152-knot calibrator is simply firing 733 times where frozen fires 1033, and the 300 it declines are the ones
+   that stop paying once you cross the spread.
+2. **The best threshold is NOT stable between the two weeks.** Week 1 peaked at 0.10 (+153.42); week 2 peaks at
+   0.20 (+146.27) and 0.10 is the WORST cell in the 0.10-0.30 band (+104.56). H1's (c) also peaks at 0.20 on
+   week 2. A dial whose optimum moves 0.10 -> 0.20 between adjacent weeks is not a parameter to tune, and the
+   rain-or-sun rule says so directly: fitting it to either week is fitting.
+3. The curve is not flat - frozen spans +104.56..+146.27 across 0.10-0.30 while fires swing 3.8x (338..1291),
+   and H1 measures the same shape on (c): ~35% PnL spread against a 71% fire swing. So the threshold moves a lot
+   of VOLUME for a modest and unstable change in money.
