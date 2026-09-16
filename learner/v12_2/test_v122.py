@@ -2153,7 +2153,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.15.4'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.15.5'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0
@@ -2960,6 +2960,52 @@ class AuditFixes12154(unittest.TestCase):
         for i in range(210): h.note('spot', (now - 3.0 + i * 0.01) * 1000, now=now + i * 0.01)
         for i in range(80): h.note('spot', (now + 5 - 3.0 + i * 0.01) * 1000, now=now + 5 + i * 0.01)
         self.assertLess(h.event_lag('spot'), 0.5, 'a persistent 3 s floor is skew and is removed')
+
+
+class LaneParameters12155(unittest.TestCase):
+    """The lanes are build11's strategy, with build11's parameters - not EF's EV dial.
+
+    build11 applies no EV gate to MAIN or REVERSAL; its only price control is the
+    REVERSAL max-entry cap. This port was handing every lane decision EF's v10
+    regime threshold (0.15/0.25) and refusing on it - a rule the lane was never
+    designed to face. Owner: "reversal is different thing and it has different
+    parameters."
+    """
+    def test_lane_decisions_carry_their_own_threshold(self):
+        import test_lanes as T, poly_lanes as L
+        e = T.engine_with()
+        fired = T.drive(e, 0, 100060.0, seconds=20, step_ms=100)
+        main = [d for _, d in fired if d['kind'] == 'MAIN'][0]
+        self.assertEqual(main['threshold'], L.LANE_EV_FLOOR)
+        e.confirm('MAIN', placed=False)
+        flipped = T.drive(e, 40000, 99930.0, seconds=30, step_ms=100, imbalance=-0.9, buy=False, candle_id=0)
+        rev = [d for _, d in flipped if d['kind'] == 'REVERSAL'][0]
+        self.assertEqual(rev['threshold'], L.LANE_EV_FLOOR)
+
+    def test_the_engine_no_longer_overrides_it_with_efs_dial(self):
+        import inspect, btc_model_v12_polymarket as E
+        body = inspect.getsource(E.PolyRunner.lane_loop)
+        self.assertNotIn("self.m.threshold(", body, "EF's regime table must not reach a lane order")
+        self.assertIn("poly_lanes.LANE_EV_FLOOR", body)
+
+    def test_breakeven_floor_still_refuses_a_losing_price(self):
+        """The one thing kept: a lane may not buy a price it cannot beat even when right."""
+        import poly_core as PC, poly_lanes as L
+        q = dict(ask=0.70, bid=0.68, asks=[(0.70, 500.0)], seq=1, age_ms=10)
+        d = dict(fire=True, side='DOWN', p=0.65, threshold=L.LANE_EV_FLOOR, ask=0.70, sec=60, ev=0.0)
+        # stake 10, not 3: at $3 an ask of 0.70 buys 4.2 shares, under the venue's
+        # 5-share minimum, and order_plan refuses on THAT before it reaches EV.
+        with self.assertRaisesRegex(ValueError, 'EV'):
+            PC.order_plan(q, (0.01, 5.0, 0.07, 1.0), 10.0, d, 1, False, False)
+        d2 = dict(d, p=0.80)                                   # beats cost at 0.71 -> allowed
+        PC.order_plan(q, (0.01, 5.0, 0.07, 1.0), 10.0, d2, 1, False, False)
+
+    def test_rev_entry_cap_is_build11s_and_off_by_default(self):
+        import poly_lanes as L
+        self.assertEqual(L.REV_MAX_ENTRY_DEFAULT, 0.0)
+        src = pathlib.Path(__file__).with_name('btc_model_v12_polymarket.py').read_text()
+        self.assertIn("self.db.get('rev_max_entry')", src)
+        self.assertIn("REVERSAL entry cap: quote", src)
 
 
 if __name__ == '__main__':

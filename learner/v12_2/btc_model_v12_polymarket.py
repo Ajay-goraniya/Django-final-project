@@ -541,11 +541,22 @@ class PolyRunner(Runner):
         if stake>max(0,(self.cash or 0)-reserved):
             return self._lane_drop(ep,kind,'stake exceeds free cash')
         d=dict(decision); d['fire']=True
-        # The lane supplies the side and its probability; the EV bar the order
-        # must clear is the same regime threshold the venue book is priced
-        # against, so a lane signal cannot buy at a price EF would refuse.
-        d.setdefault('threshold',(self.m.threshold(self.st.features(ep*US,int(now*US)) or {})
-                                  if hasattr(self.m,'threshold') else 0.25))
+        # 12.15.5: the lane supplies its OWN threshold (poly_lanes.LANE_EV_FLOOR,
+        # breakeven only). Until now this line replaced it with EF's v10 regime
+        # threshold, which build11 never applies to a lane - see the note at
+        # poly_lanes.LANE_EV_FLOOR. EF's dial stays EF's.
+        d.setdefault('threshold',poly_lanes.LANE_EV_FLOOR)
+        # build11's one REVERSAL price control, v11_rev_max_entry: a maximum entry
+        # price, off at 0. Read from meta (`rev_max_entry`) so the owner can match
+        # the Tokyo value without a build.
+        if kind=='REVERSAL':
+            try: cap=float(self.db.get('rev_max_entry') or poly_lanes.REV_MAX_ENTRY_DEFAULT)
+            except (TypeError,ValueError): cap=0.0
+            if cap>0:
+                _t=self.market.get(ep); _q=self.books.quote(_t[0 if d['side']=='UP' else 1],self.quote_age_s()) if _t else None
+                _ask=(_q or {}).get('ask')
+                if _ask is None or float(_ask)>cap:
+                    return self._lane_drop(ep,kind,f"REVERSAL entry cap: quote {'none' if _ask is None else f'{float(_ask):.2f}'} above {cap:.2f}")
         d['features']={'ts_ms':int(now*1000)}
         d['signal_price']=float(self.st.s_px[-1]) if self.st.s_px else None
         # 12.15.4: reassess for a lane is no longer the frozen original dict. It

@@ -69,6 +69,20 @@ MEDIAN_WINDOW = 23
 
 REVERSAL_MIN_SECOND = 30.0
 REVERSAL_LAST_SECOND = 285.0
+# 12.15.5, port fidelity - THE LANES DO NOT USE EF'S EV THRESHOLD. build11's
+# _record_trade (btc_model_build11.py:16804-16820) consults may_execute (the
+# switches and halts) and, for REVERSAL only, an optional maximum entry PRICE cap
+# `v11_rev_max_entry` (default 0.0 = off). There is no EV gate, no model-p-versus-
+# price test, for either lane. This port handed every lane decision EF's v10
+# regime threshold (0.15/0.25) and order_plan refused on it - so REVERSAL on
+# Polymarket faced a rule it was never designed to clear, and two of its first
+# four post-fix signals died to it. The owner: "reversal is different thing and it
+# has different parameters." These are them. The one thing kept is the
+# fee-inclusive breakeven (threshold 0.0 = p must beat cost), because build11's
+# venue has no fee model and this one does; a lane buying a price it cannot beat
+# even when right is not a strategy difference, it is a loss.
+LANE_EV_FLOOR = 0.0          # breakeven only; EF's regime table does not apply
+REV_MAX_ENTRY_DEFAULT = 0.0  # build11 v11_rev_max_entry default: no cap
 
 VOL_REFERENCE = 1.00
 VOL_FLOOR_FACTOR = 0.55
@@ -578,7 +592,7 @@ class LaneEngine:
         self.pending['MAIN'] = True
         p_side = p_up if direction == "UP" else 1.0 - p_up
         return dict(kind="MAIN", side=direction, p=p_side, probability_up=p_up,
-                    confidence=conf, sec=int(phase), rv60=None,
+                    confidence=conf, sec=int(phase), rv60=None, threshold=LANE_EV_FLOOR,
                     reason=f"MAIN: {f.get('pressure_text')} with fair {f.get('fair_p_up'):.2f} held {held/1000:.0f}s")
 
     # ---- REVERSAL (build11:17169 gate, 17232 emit) ----------------------
@@ -651,7 +665,7 @@ class LaneEngine:
         self.reversal_signal = dict(direction=live, ts_ms=ts_ms)
         self.pending['REVERSAL'] = True
         return dict(kind="REVERSAL", side=live, p=p_side, probability_up=fair,
-                    sec=int(phase), rv60=None,
+                    sec=int(phase), rv60=None, threshold=LANE_EV_FLOOR,
                     reason=f"reversal at {phase:.0f}s: {detail}")
 
     # ---- public ---------------------------------------------------------

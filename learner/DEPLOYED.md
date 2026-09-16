@@ -631,3 +631,20 @@ ignoring min/max stake (12.15.2). The other eleven were real and open on the cur
 11. **Persisted `model_weights` were never loaded** despite the docstring; `PolyRunner` always built `LaneEngine()`
     bare. Read once at construction.
 Tests 365 OK; SHA256SUMS 31/31.
+
+## 12.15.5 — the lanes get build 11's parameters, not EF's EV threshold
+Owner: *"are you using same ev for reversal as well? because reversal is different thing and it has different
+parameters."* Yes, we were. `lane_loop` handed every MAIN/REVERSAL decision `self.m.threshold(...)` — the v10 model's
+0.15/0.25 regime EV table — and `order_plan` refused on it. **build11 applies no EV gate to either lane**
+(`btc_model_build11.py:16804-16820`: `may_execute` is switches and halts; the only price control is REVERSAL's
+optional max-entry cap `v11_rev_max_entry`, default 0 = off). So REVERSAL on Polymarket faced a rule it was never
+designed to clear — two of its first four post-fix signals died to it. The order_plan auditor named this
+separately this afternoon ("a lane trade's EV bar is EF's regime dial, not anything the lane chose") and I did
+not act on it then. Acting now.
+Change: lane decisions carry their own `threshold = LANE_EV_FLOOR = 0.0` — the fee-inclusive breakeven and nothing
+more — and the engine no longer overrides it. The breakeven is the one thing kept, deliberately: build11's venue has
+no fee model and this one does, and a lane buying a price it cannot beat even when right is a loss, not a strategy
+difference. build11's REVERSAL entry cap is ported as meta `rev_max_entry` (default 0 = off) so the owner can match
+Tokyo's value without a build. EF's dial is untouched. Tests +4 = 369; SHA256SUMS 31/31.
+Expect REVERSAL (and MAIN, where armed) to place materially more orders on the paper lanes. That is the port
+running its own rules for the first time, not a regression — and it is exactly the sample the EF+REV question needs.
