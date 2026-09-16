@@ -3406,3 +3406,11 @@ analysis/aws/twin_1290_ledger.md carries BOTH: "8787 12.9.0: n W pnl | 8793 12.8
 `curl -s -o /dev/null -w '%{time_connect} %{time_starttransfer}\n' https://clob.polymarket.com/time` and the same for
 `https://clob.polymarket.com/book?token_id=<any current BTC 5m token>`; report median/p90 connect and TTFB in ms, plus
 `traceroute -n -m 12 clob.polymarket.com` first 3 and last 3 hops. Append to analysis/aws/task96_clob_rtt.md (≤6 lines).
+
+## Task 97 - STANDING (user order 09-16): "keep working on finding how the drawdowns can be stopped." Signal side only,
+no gates/kills. Your data: paper 8787 (12.9.0) and 8793 (12.8.11) journals + polybook logs on the box. Every 4 h with
+the ledger: (1) loss runs >=4 same-side: when they start (hour, rv60, ret over prior 15m/1h, candle streak), how long;
+(2) what the book/Binance state looked like at the fires inside a run vs fires outside runs - full grid, n per cell,
+>=60 or "insufficient"; (3) any candidate feature that separates them, tested walk-forward on your own journals with
+halves. Report ≤8 lines in analysis/aws/task97_drawdowns.md, verdict line only when it changes. Nothing changes on any
+engine without V.
