@@ -5871,3 +5871,18 @@ SIGNAL_CHANGED releases from still_valid: 0 on all three so far. Lane totals, al
 (zero orders ever), 8795 33 graded W16 +9.92, 8796 31 graded W15 +18.94.
 Goal check: H1's only commit in 3 h is the R-26 correction (2f99ab2); queue not empty (standing (a)); nothing new
 assigned; no new direction-model idea. Twins ctrl n=212 +220.83 | cand n=231 +149.78, both looping, clean.
+
+## 09-16 17:3x — GO-LIVE CRITERIA (owner asked: "let me know when it's a good time for master on and live")
+V tells the owner when ALL of these are true; none is optional and the owner arms it himself.
+1. **Zurich responsive and confirmed on 12.15.4 with master OFF** — build/pid/master from the engine, audit row in
+   hand. Currently UNCONFIRMED (rate-limited since ~15:00, reset ~17:20; last known 12.15.3 master TRUE).
+2. **Paper lanes clean on 12.15.4 for >= 4 h** — no TASK_CRASH, no lane_dropped storm, no SIGNAL_CHANGED storm from
+   still_valid, seeds warm on every restart, MAIN calling at its normal 8-15/hr. Currently 133 min clean.
+3. **Stake mode set to FIXED before arming** — the owner's own standing rule; live is on `streak` (equity-scaled)
+   today. His write, from the panel, not ours. Recommend fixed 3.0, the current pinned value.
+4. **Equity vs floor read** from the whole-account venue_state on 12.15.4 (the filtered-set bug is gone), and
+   `ef_cash_floor` still 30.
+5. What going live is FOR, stated so nobody mistakes it: the signal is unchanged and the honest live record is
+   -$8.51 after fees on n=83. The purpose of re-arming is to prove the fixed engine on real fills - the fee row,
+   whole-account open_value, the floor - at small fixed stake. It is not a bet that the edge improved today.
+Earliest plausible time if Zurich answers in the next hour: ~19:30-20:00 UTC tonight. V will say so explicitly.
