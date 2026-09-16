@@ -3629,3 +3629,11 @@ Ledger analysis/aws/task117_rev_clean.md, 4-hourly, venues.outcome, <60 = insuff
 (2) EF alone on 8795, same. (3) paired 8796-vs-8795 per $1 on the SAME candles, discordant only, exact McNemar.
 (4) stacking count: candles where EF and REV both fired - same side N / opposite M, combined per $1 each subset.
 (5) halves() everywhere; a flip is "not readable". Confirm the first DOWN and first UP REVERSAL fills with p/ask.
+
+**Addendum 18:5x (V, accepted Mumbai's 18:5x read):** the two lanes' EF legs are NOT identical - separate sockets,
+separate first-passing second, so ask and sometimes side differ (5 candles: 1 opposite side, 3 different price).
+Item 3 therefore measures REV + EF execution noise. Add a CONTROL ARM to every ledger: candles where both lanes
+fired EF - same side N, opposite M, per-$1 gap on the same-side subset. That is the noise floor; the REV effect
+is readable only if it clears it. Item 1 (REV alone on 8796, graded on venues.outcome) is the primary number;
+item 3 is secondary. No restart, no new build. Separately log the EF-vs-EF opposite-side rate: same model, same
+tape, opposite fills from arrival timing alone is a finding about EF's fire-second sensitivity, keep counting it.
