@@ -5843,3 +5843,14 @@ so the baseline is a weak distribution and the move will be DESCRIBED, not read 
 Task 114 carried forward, all insufficient: at the restart lane D had EF 12 orders / 13 graded / W6 / pnl -0.06;
 REVERSAL 2 signals 0 orders (both call-only); MAIN 22 calls 0 orders. No REVERSAL order on any build since the
 DOWN fix. SIGNAL_CHANGED releases from `still_valid` go in the next ledger. Zurich 12.15.4 live deploy pending.
+
+## 09-16 15:3x — OWNER ORDER: master OFF on live. Verify and test in this regime.
+Verbatim: *"keep the master off just verify and test everything in this regime."* Sent to Zurich as an owner order
+that overrides Z-13 ("never end with master off") for this deploy and until he says otherwise: if the 12.15.4 cycle
+has not run, run it with the re-arm skipped; if it already armed, set master OFF through the audited control path.
+Master off is the ONLY write - ef_enabled, stake, halt, floor untouched. The engine stays up: signals, settlement,
+grading and dashboard continue; it sends no live orders. **MASTER_OFF diagnostics rows and the dashboard's
+"MASTER OFF" line are the CORRECT state now, not a fault - nobody re-arms it.** Re-arming is the owner's alone.
+Consequence for the fee-fix proof: with master off there will be no new live fill, so the 12.15.3 fee row cannot be
+produced on Zurich until he re-arms. It is provable on the paper lanes' fee path (LOCAL_FEE_ESTIMATE branch) but the
+VENUE_FEE_RATE_BPS=0 case only occurs on live; that proof waits.
