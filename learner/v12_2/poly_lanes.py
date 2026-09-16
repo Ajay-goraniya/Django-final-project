@@ -185,6 +185,61 @@ class RollingDelta:
         return (self.buy - self.sell) / total if total > 0 else 0.0
 
 
+class RollingSignedMean:
+    """Rolling mean of already-normalised signed values, used for OFI (build11:4393)."""
+    def __init__(self, window_ms):
+        self.window_ms = int(window_ms); self.items = deque(); self.total = 0.0
+    def add(self, ts_ms, value):
+        self.items.append((ts_ms, value)); self.total += value; self.prune(ts_ms)
+    def prune(self, ts_ms):
+        cutoff = ts_ms - self.window_ms
+        while self.items and self.items[0][0] < cutoff:
+            _, v = self.items.popleft(); self.total -= v
+    def value(self, ts_ms):
+        self.prune(ts_ms)
+        return self.total / len(self.items) if self.items else 0.0
+
+
+# 12.15.4, port fidelity (build11:555-561). Four of the thirteen weighted MAIN
+# features - ofi_1s (0.85), ofi_5s (0.60), aggressive_cluster_bias (0.25) and
+# volume_profile_delta (0.35) - were hardcoded to 0.0 in this port, so the score
+# the lane actually ran was not the declared 13-feature score: 2.05 of 8.75
+# total anchor weight was permanently silent. All four are now computed exactly
+# as build11 computes them, from the same inputs the port already receives.
+OFI_QUOTE_SCALE = 1_000.0     # OFI is reported in thousands of USD
+CLUSTER_WINDOW = 300          # depth samples kept for the mean/sigma estimate
+CLUSTER_MIN_SAMPLES = 30      # below this the z-score is reported as zero
+CLUSTER_SIGMA = 2.0           # a spike must exceed mean + 2 sigma
+CLUSTER_SIGMA_FLOOR = 0.01
+
+
+def quote_ofi(previous, current):
+    """build11:15730. Signed change of top-of-book quote value, in $thousands.
+    Classic OFI accounting on price and size, valued in quote currency and
+    deliberately NOT divided by resting depth."""
+    pbp, pbq, pap, paq = previous
+    cbp, cbq, cap, caq = current
+    if cbp > pbp: bid_term = cbq * cbp
+    elif cbp == pbp: bid_term = (cbq - pbq) * cbp
+    else: bid_term = -pbq * pbp
+    if cap < pap: ask_term = caq * cap
+    elif cap == pap: ask_term = (caq - paq) * cap
+    else: ask_term = -paq * pap
+    return (bid_term - ask_term) / OFI_QUOTE_SCALE
+
+
+def cluster_z(history, value):
+    """build11:15767. Excess z-score of `value`; zero unless it clears CLUSTER_SIGMA."""
+    count = len(history)
+    if count < CLUSTER_MIN_SAMPLES: return 0.0
+    mean = sum(history) / count
+    variance = sum((item - mean) ** 2 for item in history) / count
+    sigma = max(math.sqrt(variance), abs(mean) * CLUSTER_SIGMA_FLOOR)
+    if sigma <= 1e-9: return 0.0
+    z = (value - mean) / sigma
+    return clamp(z, 0.0, 8.0) if z >= CLUSTER_SIGMA else 0.0
+
+
 class Model:
     """score = sum(w_i*tanh(x_i/thr_i)); p_up = sigmoid(score/T)  (build11:4606).
 
@@ -227,6 +282,14 @@ class LaneEngine:
         self.delta_1s = RollingDelta(1_000)
         self.delta_5s = RollingDelta(5_000)
         self.delta_30s = RollingDelta(30_000)
+        # 12.15.4: the four previously-zeroed inputs (build11:14527, :14610-14616)
+        self.ofi_1s = RollingSignedMean(1_000)
+        self.ofi_5s = RollingSignedMean(5_000)
+        self.previous_top = None
+        self.bid_volume_history = deque(maxlen=CLUSTER_WINDOW)
+        self.ask_volume_history = deque(maxlen=CLUSTER_WINDOW)
+        self.aggressive_bid_cluster = 0.0; self.aggressive_ask_cluster = 0.0
+        self.candle_buy_quote = 0.0; self.candle_sell_quote = 0.0
         self.pressure_history = deque(maxlen=PRESSURE_HISTORY)
         self.price_history = deque(maxlen=4000)      # (ts_s, price) for returns
         self.depth = {"bids": [], "asks": []}
@@ -260,10 +323,24 @@ class LaneEngine:
         signed = price * qty * (-1.0 if is_buyer_maker else 1.0)
         for d in (self.delta_1s, self.delta_5s, self.delta_30s):
             d.add(int(ts_ms), signed)
+        if signed >= 0.0: self.candle_buy_quote += price * qty
+        else: self.candle_sell_quote += price * qty
         self.price_history.append((ts_ms / 1000.0, price))
 
-    def on_depth(self, bids, asks):
+    def on_depth(self, bids, asks, ts_ms=None):
         self.depth = {"bids": bids, "asks": asks}
+        if not bids or not asks: return
+        ts = int(ts_ms if ts_ms is not None else time.time() * 1000)
+        current_top = (float(bids[0][0]), float(bids[0][1]), float(asks[0][0]), float(asks[0][1]))
+        if self.previous_top is not None:
+            v = quote_ofi(self.previous_top, current_top)
+            self.ofi_1s.add(ts, v); self.ofi_5s.add(ts, v)
+        self.previous_top = current_top
+        bid_quote = sum(float(p) * float(q) for p, q in bids[:5])
+        ask_quote = sum(float(p) * float(q) for p, q in asks[:5])
+        self.aggressive_bid_cluster = cluster_z(self.bid_volume_history, bid_quote)
+        self.aggressive_ask_cluster = cluster_z(self.ask_volume_history, ask_quote)
+        self.bid_volume_history.append(bid_quote); self.ask_volume_history.append(ask_quote)
 
     def on_candle(self, candle):
         cid = int(candle["time"])
@@ -277,6 +354,7 @@ class LaneEngine:
             self.main_streak_dir = ""; self.main_streak_start_ms = 0; self.main_streak_reads = 0
             self.reject_up = self.reject_down = 0.0
             self.candle_high_seen = self.candle_low_seen = 0.0
+            self.candle_buy_quote = 0.0; self.candle_sell_quote = 0.0
             self.reversal_state = {"status": "idle", "detail": ""}
         self._candle_id = cid
         self.candle = candle
@@ -345,7 +423,7 @@ class LaneEngine:
         f["delta_5s"] = self.delta_5s.value(int(ts_ms))
         f["delta_30s"] = self.delta_30s.value(int(ts_ms))
         f["spot_imbalance5"] = self.spot_imbalance5()
-        f["ofi_1s"] = 0.0; f["ofi_5s"] = 0.0
+        f["ofi_1s"] = self.ofi_1s.value(int(ts_ms)); f["ofi_5s"] = self.ofi_5s.value(int(ts_ms))
         f["return_250ms_bps"] = self._return_bps(now_s, price, 0.25)
         f["return_1s_bps"] = self._return_bps(now_s, price, 1.0)
         f["return_5s_bps"] = self._return_bps(now_s, price, 5.0)
@@ -353,8 +431,10 @@ class LaneEngine:
         rng = max(hi - lo, 1e-9)
         f["body_range_ratio"] = (price - open_price) / rng
         f["close_location_centred"] = ((price - lo) / rng) * 2.0 - 1.0
-        f["aggressive_cluster_bias"] = 0.0
-        f["volume_profile_delta"] = 0.0
+        f["aggressive_cluster_bias"] = self.aggressive_bid_cluster - self.aggressive_ask_cluster
+        aggressive_volume = self.candle_buy_quote + self.candle_sell_quote
+        f["volume_profile_delta"] = ((self.candle_buy_quote - self.candle_sell_quote) / aggressive_volume
+                                     if aggressive_volume > 0.0 else 0.0)
 
         fair, seconds_left = self.fair_odds(ts_ms, price, open_price)
         f["fair_p_up"] = fair; f["seconds_left"] = seconds_left
@@ -575,6 +655,28 @@ class LaneEngine:
                     reason=f"reversal at {phase:.0f}s: {detail}")
 
     # ---- public ---------------------------------------------------------
+    def still_valid(self, kind, side, ts_ms):
+        """12.15.4: is a decision the lane returned earlier STILL the call, now?
+
+        EF re-runs decide_now() inside the executor's retry loop, so a signal that
+        has gone stale between decide and submit is caught. MAIN and REVERSAL
+        handed the executor a lambda returning the ORIGINAL frozen dict, so a
+        lane's p was held constant against a moving book across up to four
+        attempts and two seconds, and a signal the market had already reversed
+        could still be submitted. This recomputes the features and re-applies the
+        same alignment test the lane fired on, without touching pending or any
+        per-candle state - it is a read, not a second call.
+        """
+        f = self.compute(int(ts_ms))
+        if f is None: return False
+        live = self._aligned_direction(f)
+        if kind == 'MAIN':
+            return live == side
+        if kind == 'REVERSAL':
+            main = self.current_main or self.main_signal
+            return bool(main) and live == side and live != main.get('direction')
+        return True
+
     def evaluate(self, ts_ms):
         """Rebuild features and return at most one lane decision.
 

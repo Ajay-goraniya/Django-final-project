@@ -327,6 +327,10 @@ class LiveBroker:
         return dict(cash=cash,open_order_ids=open_ids,positions=positions,listed=listed,ts=time.time())
     async def redeem(self,condition): return await self.client.redeem_positions(condition_id=condition)
     async def claim_state(self,claim_id):
+        # 12.15.4: 'tx:<hash>' is a direct redeem; the relayer poller cannot see it.
+        # Return a distinct state so the monitor resolves it from venue valuation
+        # instead of leaving the row in REVIEW forever.
+        if claim_id.startswith('tx:'): return 'TX_DIRECT'
         if not claim_id.startswith('relayer:'): return None
         from polymarket._internal.actions.relayer.poll import fetch_gasless_transaction
         tx=await fetch_gasless_transaction(self.client._ctx.relayer,transaction_id=claim_id.split(':',1)[1])

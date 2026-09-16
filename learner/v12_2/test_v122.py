@@ -2153,7 +2153,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.15.3'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.15.4'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0
@@ -2844,6 +2844,122 @@ class AuditFixes12153(unittest.TestCase):
         src = (pathlib.Path(__file__).parent / 'poly_dashboard.py').read_text()
         head, _, tail = src.partition('def make_server')
         self.assertIn('status=500', tail, 'a failed control write must not return an HTML traceback')
+
+
+class AuditFixes12154(unittest.TestCase):
+    """Regressions for the 12.15.4 batch: the owner's second audit, run against
+    12.9.0. Four of its fifteen were already closed in 12.15.x; these pin the
+    eleven that were real and open on the current tree."""
+
+    def test_the_four_main_features_are_computed_not_zeroed(self):
+        """2.05 of 8.75 anchor weight was permanently silent."""
+        import test_lanes as T, poly_lanes as L
+        e = T.engine_with()
+        for i in range(40):                                   # let the cluster window fill
+            e.on_depth([(100000 - 1, 100.0 + i)] * 5, [(100001, 2.0)] * 5, ts_ms=i * 100)
+        e.on_depth([(100000 - 1, 900.0)] * 5, [(100001, 2.0)] * 5, ts_ms=4100)   # a bid spike
+        e.on_spot_trade(4100, 100000.0, 1.0, False)            # aggressive buy
+        e.on_candle(dict(time=0, open=100000.0, high=100001.0, low=99999.0, close=100000.0, volume=1.0))
+        f = e.compute(4150)
+        self.assertNotEqual(f['ofi_1s'], 0.0)
+        self.assertGreater(f['aggressive_cluster_bias'], 0.0, 'a bid-side spike must read as bid cluster')
+        self.assertAlmostEqual(f['volume_profile_delta'], 1.0, 'one aggressive buy, no sells')
+        self.assertEqual(L.MODEL_FEATURE_NAMES.index('ofi_1s'), 3)
+
+    def test_ofi_matches_build11_accounting(self):
+        import poly_lanes as L
+        prev = (100.0, 10.0, 101.0, 10.0)
+        self.assertAlmostEqual(L.quote_ofi(prev, (100.0, 12.0, 101.0, 10.0)), 2 * 100.0 / 1000.0)  # bid size up
+        self.assertAlmostEqual(L.quote_ofi(prev, (100.0, 10.0, 101.0, 12.0)), -2 * 101.0 / 1000.0) # ask size up
+        self.assertAlmostEqual(L.quote_ofi(prev, (100.5, 5.0, 101.0, 10.0)), 5.0 * 100.5 / 1000.0)  # bid price up
+
+    def test_lane_reassess_is_no_longer_frozen(self):
+        import inspect, btc_model_v12_polymarket as E
+        body = inspect.getsource(E.PolyRunner.lane_loop)
+        self.assertIn('still_valid', body)
+        self.assertNotIn("lambda k=kind,dd=d: dd if self.ui.allowed(k)", body)
+
+    def test_still_valid_reads_the_tape_without_touching_pending(self):
+        import test_lanes as T
+        e = T.engine_with()
+        fired = T.drive(e, 0, 100060.0, seconds=20, step_ms=100)
+        self.assertTrue(fired and fired[0][1]['kind'] == 'MAIN')
+        before = dict(e.pending)
+        self.assertTrue(e.still_valid('MAIN', 'UP', 20500))
+        self.assertFalse(e.still_valid('MAIN', 'DOWN', 20500))
+        self.assertEqual(e.pending, before)
+
+    def test_venue_state_is_the_whole_account(self):
+        import inspect, btc_model_v12_polymarket as E
+        body = inspect.getsource(E.PolyRunner.venue_truth_loop)
+        self.assertIn('venue_truth(condition_ids=None)', body)
+        self.assertIn('self.venue_state=truth', body)
+
+    def test_a_positions_failure_is_not_an_empty_account(self):
+        src = pathlib.Path(__file__).with_name('btc_model_v12_polymarket.py').read_text()
+        self.assertNotIn("list(snap.get('positions') or [])", src)
+        self.assertIn("if snap.get('positions') is not None else None", src)
+
+    def test_dashboard_positions_group_by_lane(self):
+        import inspect, poly_dashboard as D
+        self.assertIn("GROUP BY s.epoch,coalesce(s.kind,'EF')", inspect.getsource(D.Dashboard.positions))
+
+    def test_dashboard_ef_signal_is_ef(self):
+        src = pathlib.Path(__file__).with_name('poly_dashboard.py').read_text()
+        self.assertIn("WHERE epoch=? AND coalesce(kind,'EF')='EF'", src)
+
+    def test_csv_export_does_not_cross_lanes(self):
+        src = pathlib.Path(__file__).with_name('poly_dashboard.py').read_text()
+        i = src.index('/export.csv')
+        self.assertIn("coalesce(o.kind,'EF')=coalesce(s.kind,'EF')", src[i:i + 1500])
+        self.assertIn("JOIN orders o2 ON o2.id=f.order_id", src[i:i + 1500])
+
+    def test_direct_tx_claims_can_leave_review(self):
+        import inspect
+        from poly_live import LiveBroker
+        import btc_model_v12_polymarket as E
+        self.assertIn("startswith('tx:'): return 'TX_DIRECT'", inspect.getsource(LiveBroker.claim_state))
+        self.assertIn("state=='TX_DIRECT'", inspect.getsource(E.PolyRunner.claim_loop))
+
+    def test_banner_prints_the_real_build(self):
+        src = pathlib.Path(__file__).with_name('btc_model_v12_polymarket.py').read_text()
+        self.assertNotIn("print('Polymarket v12.1'", src)
+        self.assertIn("self.db.get('build')", src)
+
+    def test_persisted_lane_weights_are_loaded(self):
+        src = pathlib.Path(__file__).with_name('btc_model_v12_polymarket.py').read_text()
+        self.assertIn("self.db.get('model_weights')", src)
+        self.assertIn("poly_lanes.LaneEngine(_mw", src)
+
+    def test_book_clock_ahead_is_corrected_from_a_window(self):
+        """A clock 3 s AHEAD used to fail the freshness bar on fresh data forever."""
+        b = C.BookCache()
+        now = time.time()
+        def ev(t): return dict(event_type='book', asset_id='tok', timestamp=str(int(t * 1000)),
+                               asks=[dict(price='0.4', size='100')], bids=[dict(price='0.39', size='100')])
+        b.apply(ev(now - 3.0))                       # venue stamp reads 3 s "old": local clock is ahead
+        self.assertIsNone(b.quote('tok', max_age=0.75), 'one packet must not be trusted as skew')
+        for i in range(200):                         # a full window of the same 3 s floor
+            b.apply(ev(time.time() - 3.0 + 0.001 * (i % 5)))
+        for _ in range(60): b.apply(ev(time.time() - 3.0))   # let the offset converge on the floor
+        self.assertGreater(b.clock_offset, 2.5)
+        self.assertIsNotNone(b.quote('tok', max_age=0.75), 'after a window of evidence the skew is removed')
+
+    def test_book_first_old_event_is_still_dropped(self):
+        b = C.BookCache()
+        b.apply(dict(event_type='book', asset_id='tok', timestamp=str(int((time.time() - 600) * 1000)),
+                     asks=[dict(price='0.4', size='1')], bids=[dict(price='0.39', size='1')]))
+        self.assertEqual(b.dropped_stale, 1)
+
+    def test_feed_clock_ahead_is_corrected_from_a_window(self):
+        import poly_feeds as F
+        h = F.FeedHealth(('spot',))
+        now = time.time()
+        h.note('spot', (now - 3.0) * 1000, now=now)
+        self.assertGreater(h.event_lag('spot'), 2.5, 'one lagging packet is lag, not skew')
+        for i in range(210): h.note('spot', (now - 3.0 + i * 0.01) * 1000, now=now + i * 0.01)
+        for i in range(80): h.note('spot', (now + 5 - 3.0 + i * 0.01) * 1000, now=now + 5 + i * 0.01)
+        self.assertLess(h.event_lag('spot'), 0.5, 'a persistent 3 s floor is skew and is removed')
 
 
 if __name__ == '__main__':

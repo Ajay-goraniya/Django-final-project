@@ -591,3 +591,43 @@ genuinely missing from the port (`btc_model_build11.py:15976`, plus `_AdaptWindo
 supporting code). It changes what fires, its magnitude here is unmeasured, and the lanes that use it are paper-only
 today. Porting it belongs in its own build with its own before/after, not bundled into a same-day live deploy.
 Tests 350 OK; SHA256SUMS 31/31.
+
+## 12.15.4 — the owner's second audit (15 items, run against 12.9.0), verified against 12.15.3 first
+Four of the fifteen were already closed by 12.15.x and are recorded as such, not re-fixed: #2 REVERSAL double
+flip (12.15.0), #5 lane `pending` latch (12.15.3 `_lane_drop`), #7 attempt caps 6 vs 4 (12.15.3), #8 ladder
+ignoring min/max stake (12.15.2). The other eleven were real and open on the current tree. All fixed:
+
+1. **Clock skew in BOTH directions** (`poly_core.BookCache`, `poly_feeds.FeedHealth`). Both only corrected a
+   clock BEHIND the venue; a clock AHEAD added its skew to every age — >8 s ahead dropped every valid book event,
+   ~3 s ahead failed the 0.75 s bar on data received milliseconds earlier. First attempt at this (running minimum
+   seeded from the first packet) was WRONG and four existing tests caught it: a single genuinely-old first event
+   would have read as skew. Final form is asymmetric on purpose: a negative delta is impossible without skew, so
+   that side follows immediately as before; a positive floor is indistinguishable from transport lag on one
+   packet, so it is adopted only from the minimum of a full 200-sample window. One packet, or the first packet,
+   can never move it. Tests pin both properties.
+2. **Four of the thirteen weighted MAIN features were hardcoded to 0.0** — `ofi_1s` (0.85), `ofi_5s` (0.60),
+   `aggressive_cluster_bias` (0.25), `volume_profile_delta` (0.35): 2.05 of 8.75 anchor weight permanently silent,
+   so the lane never ran the declared score. Ported from build11 exactly (`quote_ofi` :15730, `cluster_z` :15767,
+   `RollingSignedMean` :4393, per-candle aggressive quote :15226/15624), fed from the depth and trade inputs the
+   port already receives. **This changes MAIN's score on the paper lanes; expect its call pattern to move.**
+3. **MAIN/REVERSAL could submit a signal the market had already reversed.** EF's `reassess` re-runs `decide_now`;
+   the lanes handed the executor a lambda returning the ORIGINAL frozen dict, so a lane's p was held constant
+   against a moving book across up to four attempts. `LaneEngine.still_valid()` recomputes and re-applies the same
+   alignment test without touching `pending`; the lane reassess now releases `SIGNAL_CHANGED` like EF does.
+4. **Filtered positions were stored as whole-account truth.** `venue_truth_loop` passed the settled-candle filter
+   to its one call and stored the result as `venue_state`, so the live position vanished from `open_value` on any
+   pass with candles awaiting PnL (measured: 49 of 5,417 reads, one run 272 s) — biasing the floor toward firing
+   and sizing toward under-staking. Whole account first; the awaited conditions as a second, narrower read.
+5. **A positions-API failure was converted to "zero positions"** (`or []` on a value that is `None` by design).
+   `None` now survives to `account_positions`.
+6. **Dashboard `positions()` grouped by epoch alone**, summing an EF-UP and a REVERSAL-DOWN on one candle into a
+   single position with an arbitrary side. Grouped by (epoch, kind).
+7. **The dashboard's "EF" signal could be MAIN or REVERSAL** — selected `WHERE epoch=?` without kind. Fixed.
+8. **CSV export cross-contaminated lanes** — order/fill subqueries filtered on epoch only. Kind-matched, fills
+   joined through their order.
+9. **Direct on-chain claims (`tx:<hash>`) had no path out of REVIEW/SUBMITTING** — `claim_state` returned None for
+   them. Now `TX_DIRECT`, resolved from the venue's own valuation (settled + valued at zero = collected).
+10. **The banner printed "Polymarket v12.1"** on every build. Prints the journal's build.
+11. **Persisted `model_weights` were never loaded** despite the docstring; `PolyRunner` always built `LaneEngine()`
+    bare. Read once at construction.
+Tests 365 OK; SHA256SUMS 31/31.

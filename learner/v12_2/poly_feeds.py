@@ -25,6 +25,7 @@ stream.binance.com resets and fstream-mm.binance.com refuses.  A deployment in
 another region will draw a different line, so each stream tries its candidates
 in order and remembers which one worked.
 """
+from collections import deque
 import asyncio, json, os, time, urllib.request
 
 UA = {"User-Agent": "learner-v10/1.0"}
@@ -115,6 +116,7 @@ class FeedHealth:
     def __init__(self, names=("spot", "perp", "depth", "venue")):
         self.arrival = {n: 0.0 for n in names}   # wall clock of last message
         self.mono = {}                           # monotonic clock of last message
+        self._lag_hist = deque(maxlen=200)      # 12.15.4: window for positive-skew evidence
         self.lag = {n: None for n in names}      # seconds behind the event time
         self.msgs = {n: 0 for n in names}
         self.host = {n: None for n in names}
@@ -144,8 +146,18 @@ class FeedHealth:
             # a LIVE dashboard while EF decided on two-second-old microstructure.
             # clock_skew_s is the most negative lag seen, i.e. our best estimate of
             # the offset; removing it leaves the real transport lag.
+            # 12.15.4: both directions, asymmetric evidence (see BookCache.apply).
+            # Negative lag is impossible without skew, so it is adopted at once.
+            # Positive skew (clock ahead) is indistinguishable from transport lag
+            # on one packet, so it is taken only from the floor of a full window -
+            # a single lagging message, or the first message, cannot become "skew".
+            self._lag_hist.append(lag)
             if lag < self.clock_skew_s:
                 self.clock_skew_s = lag
+            elif len(self._lag_hist) == self._lag_hist.maxlen:
+                floor = min(self._lag_hist)
+                if floor > self.clock_skew_s:
+                    self.clock_skew_s += 0.05 * (floor - self.clock_skew_s)
             self.lag[name] = max(0.0, lag - self.clock_skew_s)
 
     def arrival_age(self, name, now=None):

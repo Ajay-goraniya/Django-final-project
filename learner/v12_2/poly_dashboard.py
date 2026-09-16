@@ -404,7 +404,10 @@ class Dashboard:
         return self.db.sql('''SELECT s.*,sum(f.shares) shares,sum(f.spent) spent,sum(f.fees) fees,
         r.actual,r.pnl,r.payout,r.claim_status FROM signals s LEFT JOIN orders o ON o.epoch=s.epoch AND o.kind=s.kind
         LEFT JOIN fills f ON f.order_id=o.id LEFT JOIN results r ON r.epoch=s.epoch
-        GROUP BY s.epoch ORDER BY s.epoch DESC''')
+        GROUP BY s.epoch,coalesce(s.kind,'EF') ORDER BY s.epoch DESC''')
+        # 12.15.4: grouped by (epoch, kind). Grouping by epoch alone summed an
+        # EF-UP and a REVERSAL-DOWN on the same candle into one position with
+        # whichever side/kind SQLite happened to pick.
     KINDS=('EF','MAIN','REVERSAL')
     def orders(self,kind='EF',offset=0,limit=10):
         """Recent orders for ONE lane.
@@ -508,7 +511,7 @@ class Dashboard:
             for key,x in zip(('up','down'),q): book[key]=dict(price=x['ask'],size=x['asks'][0][1],spread=x['ask']-x['bid'],break_even=r.m.cost(x['ask']))
         else: book=dict(status='waiting for fresh UP/DOWN books',environment='live' if r.a.live else 'paper')
         ef=None
-        s=self.db.sql('SELECT * FROM signals WHERE epoch=?',(ep,))
+        s=self.db.sql("SELECT * FROM signals WHERE epoch=? AND coalesce(kind,'EF')='EF'",(ep,))  # 12.15.4: this row is labelled EF, so it must BE EF
         if s: ef=dict(direction=s[0]['side'],ts_ms=int(s[0]['ts']*1000),reason='v10 pnl · '+s[0]['status'])
         vt=getattr(r,'venue_state',None) or {}
         vmetrics=self.db.venue_metrics(); divergence=self.db.pnl_divergence()
@@ -585,7 +588,7 @@ class Dashboard:
                     elif p.path=='/api/weights': self.send(dict(model_hash=ui.r.hash,weights=[dict(name=n,weight=float(v),anchor=float(v),drift=0,max_drift=0) for n,v in zip(FEATURES,ui.r.m.coef)],version=10,status='Original v10 weights; no online retraining',learning=dict(status='Fixed weights; offline calibration')))
                     elif p.path=='/events': self.send({'error':'polling endpoint used'},status=404)
                     elif p.path=='/export.csv':
-                        rows=[dict(r) for r in ui.db.sql('''SELECT s.*,r.actual,r.pnl,r.payout,r.claim_status,(SELECT json_group_array(json_object('id',o.id,'attempt',o.attempt,'status',o.status,'plan',json(o.plan),'latency_ms',o.latency,'reason',o.reason)) FROM orders o WHERE o.epoch=s.epoch) order_attempts,(SELECT json_group_array(json_object('id',f.id,'order_id',f.order_id,'shares',f.shares,'spent',f.spent,'fees',f.fees,'price',f.price,'basis',f.basis)) FROM fills f WHERE f.epoch=s.epoch) fills FROM signals s LEFT JOIN results r USING(epoch) ORDER BY epoch''')]
+                        rows=[dict(r) for r in ui.db.sql('''SELECT s.*,r.actual,r.pnl,r.payout,r.claim_status,(SELECT json_group_array(json_object('id',o.id,'attempt',o.attempt,'status',o.status,'plan',json(o.plan),'latency_ms',o.latency,'reason',o.reason)) FROM orders o WHERE o.epoch=s.epoch AND coalesce(o.kind,'EF')=coalesce(s.kind,'EF')) order_attempts,(SELECT json_group_array(json_object('id',f.id,'order_id',f.order_id,'shares',f.shares,'spent',f.spent,'fees',f.fees,'price',f.price,'basis',f.basis)) FROM fills f JOIN orders o2 ON o2.id=f.order_id WHERE f.epoch=s.epoch AND coalesce(o2.kind,'EF')=coalesce(s.kind,'EF')) fills FROM signals s LEFT JOIN results r USING(epoch) ORDER BY epoch''')]
                         b=io.StringIO(); fields=['model','lane']+list(rows[0]) if rows else ['model','lane','epoch','pnl']
                         w=csv.DictWriter(b,fieldnames=fields); w.writeheader()
                         for row in rows: w.writerow(dict(model='v12_polymarket_v10',lane='LIVE' if ui.r.a.live else 'PAPER',**row))

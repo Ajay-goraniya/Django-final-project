@@ -1,5 +1,6 @@
 """Polymarket order policy, book cache, durable trade journal and reconciliation."""
 import asyncio, json, math, os, sqlite3, threading, time, uuid
+from collections import deque
 from decimal import Decimal, ROUND_CEILING, ROUND_DOWN, ROUND_FLOOR
 
 D=lambda x:Decimal(str(x))
@@ -103,6 +104,7 @@ class BookCache:
         # reported an empty book rather than a clock problem.  We now measure the
         # offset, correct for it, and surface it instead of dropping data.
         self.clock_offset=0.0; self._offset_seeded=False
+        self._delta_hist=deque(maxlen=200)   # 12.15.4: window for positive-skew evidence
         self.dropped_future=0; self.dropped_stale=0; self.applied=0
         # Last tick_size_change per token, and the running count.
         self.tick_changes={}; self.tick_change_count=0
@@ -137,13 +139,25 @@ class BookCache:
         # An EMA starting at zero would reject several hundred events before it
         # caught up with a badly set clock, which is the same outage this change
         # exists to prevent - just slower.
+        # 12.15.4: correct the clock in BOTH directions, with asymmetric evidence.
+        # A NEGATIVE delta is impossible without skew (transit >= 0), so the
+        # negative side follows a new minimum at once, as it always did. A POSITIVE
+        # skew (local clock ahead) looks exactly like transport lag on any single
+        # packet, so it is adopted only from the floor of a full window of samples
+        # - one packet, or the first packet, can never move it. Before this the
+        # offset was seeded min(delta,0) and could only become more negative: a
+        # clock >8 s ahead dropped every valid book event as stale, and ~3 s ahead
+        # failed the freshness bar on data received milliseconds earlier.
+        self._delta_hist.append(delta)
         if not self._offset_seeded:
             self.clock_offset=min(delta,0.0); self._offset_seeded=True
         elif delta<self.clock_offset:
-            # Our clock is further behind than we thought: follow immediately.
             self.clock_offset=delta
-        else:
-            # Drift back toward zero slowly, so one late packet cannot move it.
+        elif len(self._delta_hist)==self._delta_hist.maxlen:
+            floor=min(self._delta_hist)
+            if floor>self.clock_offset: self.clock_offset+=.05*(floor-self.clock_offset)
+            elif self.clock_offset<0: self.clock_offset=.999*self.clock_offset
+        elif self.clock_offset<0:
             self.clock_offset=.999*self.clock_offset
         corrected=delta-self.clock_offset
         if corrected>8: self.dropped_stale+=1; return
@@ -398,10 +412,10 @@ class Journal:
         self.c.executescript('CREATE INDEX IF NOT EXISTS diagnostics_ts ON diagnostics(ts);')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.15.3')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.15.4')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1','12.12.2','12.13.0','12.13.1','12.14.0','12.14.1','12.15.0','12.15.1','12.15.2','12.15.3'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1','12.12.2','12.13.0','12.13.1','12.14.0','12.14.1','12.15.0','12.15.1','12.15.2','12.15.3','12.15.4'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):

@@ -45,7 +45,12 @@ class PolyRunner(Runner):
         self.venue_state={}
         # MAIN/REVERSAL run on the Binance pressure engine, independent of the
         # v10 model that drives EF. See poly_lanes for the port and its caveats.
-        self.lanes=poly_lanes.LaneEngine()
+        # 12.15.4: the module docstring promised persisted `model_weights` would be
+        # loaded when present; nothing ever read the row, so drifted weights could
+        # never reach the live lane model. Read it here, once, at construction.
+        _mw=self.db.get('model_weights')
+        self.lanes=poly_lanes.LaneEngine(_mw.get('weights') if isinstance(_mw,dict) else _mw)
+        if _mw: print(f'[LANE WEIGHTS] loaded persisted model_weights ({len(self.lanes.model.weights)} names)',flush=True)
         self._seed_lane_history()
         self.lane_decision={}
         self.market={}; self.info={}; self.terms_age={}; self.last_decision={}; self.started=time.time()
@@ -223,7 +228,7 @@ class PolyRunner(Runner):
         try:
             b=[(float(x[0]),float(x[1])) for x in j.get('b',[])][:20]
             a=[(float(x[0]),float(x[1])) for x in j.get('a',[])][:20]
-            if b and a: self.lanes.on_depth(b,a)
+            if b and a: self.lanes.on_depth(b,a,int(j.get('E') or time.time()*1000))
         except Exception: pass
     def on_kline(self,j):
         k=j.get('k',{}); ep=int(k['t'])//1000
@@ -543,8 +548,14 @@ class PolyRunner(Runner):
                                   if hasattr(self.m,'threshold') else 0.25))
         d['features']={'ts_ms':int(now*1000)}
         d['signal_price']=float(self.st.s_px[-1]) if self.st.s_px else None
-        await self.executor.fire(ep,d,token,self.info[ep]['conditionId'],stake,
-                                 (lambda k=kind,dd=d: dd if self.ui.allowed(k) else {'fire':False}),kind=kind)
+        # 12.15.4: reassess for a lane is no longer the frozen original dict. It
+        # re-checks permission AND asks the lane whether the same call still holds
+        # on the current tape (still_valid), so a signal the market has reversed
+        # during quote-wait/sign/retry is released as SIGNAL_CHANGED, as EF's is.
+        def _lane_reassess(k=kind,dd=d):
+            ok=self.ui.allowed(k) and self.lanes.still_valid(k,dd['side'],int(time.time()*1000))
+            return dd if ok else {'fire':False}
+        await self.executor.fire(ep,d,token,self.info[ep]['conditionId'],stake,_lane_reassess,kind=kind)
         # Read back what the venue leg actually did. A signal that never reached
         # the book must not be reported, or treated, as a position.
         row=self.db.sql('SELECT status FROM signals WHERE epoch=? AND kind=?',(ep,kind))
@@ -627,7 +638,7 @@ class PolyRunner(Runner):
                         self.books.terms[token]=terms; self.terms_age[token]=time.monotonic()
                 if self.a.live:
                     snap=await asyncio.wait_for(self.broker.account_snapshot(),8)
-                    self.account_snapshot=snap; self.account_positions=list(snap.get('positions') or [])
+                    self.account_snapshot=snap; self.account_positions=(list(snap['positions']) if snap.get('positions') is not None else None)
                     self.cash=float(snap['cash'])
                 else:
                     held=self.db.sql('SELECT coalesce(sum(spent+fees),0) FROM fills WHERE epoch NOT IN (SELECT epoch FROM results)')[0][0]
@@ -927,6 +938,16 @@ class PolyRunner(Runner):
                 for old in self.db.sql("SELECT epoch,claim_id FROM results WHERE claim_status IN ('REVIEW','SUBMITTING') AND claim_id IS NOT NULL"):
                     try:
                         state=await asyncio.wait_for(self.broker.claim_state(old['claim_id']),8)
+                        if state=='TX_DIRECT':
+                            # 12.15.4: a direct on-chain redeem stores 'tx:<hash>' and the relayer
+                            # poller cannot see it, so these rows had NO transition out of
+                            # REVIEW/SUBMITTING - ever. The venue's own valuation is the
+                            # truth here: a position it prices at zero after settlement has
+                            # been collected, whichever path collected it.
+                            vr=self.db.sql('SELECT venue_ts,venue_value FROM results WHERE epoch=?',(old['epoch'],))
+                            if vr and vr[0]['venue_ts'] is not None and (vr[0]['venue_value'] or 0)<=1e-9:
+                                self.db.sql("UPDATE results SET claim_status='CONFIRMED' WHERE epoch=?",(old['epoch'],))
+                            continue
                         if state=='STATE_CONFIRMED': self.db.sql("UPDATE results SET claim_status='CONFIRMED' WHERE epoch=?",(old['epoch'],))
                         elif state in ('STATE_FAILED','STATE_INVALID'): self.db.sql("UPDATE results SET claim_status='PENDING',claim_id=NULL WHERE epoch=?",(old['epoch'],))
                     except Exception: pass
@@ -1033,11 +1054,22 @@ class PolyRunner(Runner):
                 try:
                     # Ask for the markets that still need pricing as well as the
                     # open ones, so a settled candle is not left on the local figure.
-                    need=self.db.conditions_awaiting_venue()
-                    truth=await asyncio.wait_for(self.broker.venue_truth(condition_ids=need or None),25)
+                    # 12.15.4: the WHOLE account is venue_state; the awaited conditions
+                    # are a second, narrower read used only to price settled candles.
+                    # This used to pass the filter to the one call and store the
+                    # filtered result as account truth, so on any pass with settled
+                    # candles awaiting PnL the live position vanished from open_value -
+                    # measured 49 of 5,417 venue_state reads at open_value=0 with a
+                    # confirmed unredeemed fill open, one run lasting 272 s. That fed
+                    # both the bankroll floor (biased toward firing early) and sizing.
+                    truth=await asyncio.wait_for(self.broker.venue_truth(condition_ids=None),25)
                     self.venue_state=truth
                     self.cash=truth.get('cash'); self.cash_at=time.monotonic()
                     self.db.venue_snapshot(truth)
+                    need=self.db.conditions_awaiting_venue()
+                    if need:
+                        settled=await asyncio.wait_for(self.broker.venue_truth(condition_ids=need),25)
+                        self.db.apply_venue_pnl(settled.get('positions'))
                     self.db.apply_venue_pnl(truth.get('positions'))
                     # Cross-check the local reserve against the venue's open
                     # orders so a dead local row cannot keep holding funds back.
@@ -1106,12 +1138,12 @@ class PolyRunner(Runner):
                 await asyncio.sleep(.35)
             try:
                 snap=await asyncio.wait_for(self.broker.account_snapshot(),8)
-                self.account_snapshot=snap; self.account_positions=list(snap.get('positions') or [])
+                self.account_snapshot=snap; self.account_positions=(list(snap['positions']) if snap.get('positions') is not None else None)
                 self.cash=float(snap['cash']); self.cash_at=time.monotonic()
             except Exception as e:
                 self.error='Startup account verification: '+type(e).__name__+': '+str(e)
         server=self.ui.make_server(); threading.Thread(target=server.serve_forever,daemon=True).start()
-        print('Polymarket v12.1', 'LIVE (master OFF)' if self.a.live else 'PAPER',f'http://{self.a.host}:{self.a.port}',flush=True)
+        print(f"Polymarket v{self.db.get('build') or '?'}", 'LIVE (master OFF)' if self.a.live else 'PAPER',f'http://{self.a.host}:{self.a.port}',flush=True)
         try:
             # 12.15.2: one raise in any of these used to unwind main(). asyncio.run
             # then cancelled the rest, systemd restarted, and safe-start parked
