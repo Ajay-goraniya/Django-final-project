@@ -436,3 +436,13 @@ graded fires as R-27, compute the ratio at fire time from the collector tape and
 >1.15. Report EF per $1, n, halves(), permutation() per bucket, plus the grid of p scaled through the ratio
 (p' = 0.5 + (p-0.5)/ratio^k, k in {0, 0.5, 1, 2}) walk-forward. Whole grid, never the best cell. One file
 analysis/h1/r28_adapt_ef.md, 3-line poke to V. Lower priority than nothing else you have.
+
+## R-29 (owner upload, 09-16 21:0x) - external "v12.16.1 adaptive EF" candidate: grid its exact transform
+Owner supplied analysis/v/candidates/btc_model_v12_16_1_adaptive/ (ADAPTIVE_MODEL.md, adaptive_state.py,
+btc_model_v10.py:385-425). It shrinks v10's log-odds TOWARD THE VENUE, not toward 0.5 (R-28 tested 0.5):
+  trust = min(1, 1/max(ratio,1));  z = logit(p_venue) + trust*(logit(p_v10) - logit(p_venue));  ratio = build11 fast/slow engaged.
+Only engages when ratio > 1 (never amplifies). Same R-28 fires (2,080), same ratio at fire time, identity cell printed
+and reproducing the real fire count FIRST. Report per $1 AND total vs frozen v10, walk-forward, halves, the top-n-by-EV
+null at equal fire count, per ratio bucket (<=1 identical by construction, so the whole test is the >1 bucket).
+Verdict in the R-19 frame: does it beat "fewer, cheaper fires"? File analysis/h1/r29_venue_shrink.md, 3-line poke.
+Its own suites pass locally (tests OK); nothing from it ships anywhere before this grid.
