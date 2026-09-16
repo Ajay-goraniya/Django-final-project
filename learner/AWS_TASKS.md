@@ -3414,3 +3414,9 @@ the ledger: (1) loss runs >=4 same-side: when they start (hour, rv60, ret over p
 >=60 or "insufficient"; (3) any candidate feature that separates them, tested walk-forward on your own journals with
 halves. Report ≤8 lines in analysis/aws/task97_drawdowns.md, verdict line only when it changes. Nothing changes on any
 engine without V.
+Task 97 addendum (V, 01:0x): your local journals are too thin (152). Use the branch's dense labelled lanes instead:
+learner/live_backup/poly_pnl.sqlite3.gz (trades 1005, cols p/ask/ev/sec/rv60/feat/win/pnl, Polymarket oracle),
+v10_poly_long4.sqlite3.gz (777), v12_poly_lane.sqlite3.gz (568), zurich_2 + zurich_v1 (live), venues.sqlite3.gz
+(oracle). Same three questions on the pooled ~2,400 graded fires; feat JSON carries the engine features at the fire.
+Coordinate with H1's R-15 (analysis/h1/task_r15_signal.md) - do not duplicate its GBM; your lane is the loss-run
+anatomy and per-cell grid. Keep the 4-h cadence.
