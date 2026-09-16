@@ -71,3 +71,30 @@ That closes the third and last of the routes this session opened: the direction 
 (R-13), paying under the touch costs more than it saves (R-18), and choosing among the fires carries
 no information (here). The remaining honest statement is that on this data the engine's edge is the
 half-spread it captures at the touch, it is small, and nothing tested in R-3 … R-20 enlarges it.
+
+## Addendum — the paired discordant test V asked for, and the sharpest "accuracy is not PnL" yet
+
+The brief also asked for the paired comparison on discordant selections only. Taking the candles the
+model keeps and EV drops, against the candles EV keeps and the model drops, at the same count:
+
+| inputs | keep | model-only picks | EV-only picks | swap worth |
+|---|---|---|---|---|
+| base | top 50% | 144 fires, **win 54.2%**, +0.024/$1 | 144 fires, win 52.1%, **+0.278/$1** | **−36.64** |
+| base | top 30% | 128 fires, **win 58.6%**, +0.161/$1 | 128 fires, win 55.5%, **+0.411/$1** | **−31.94** |
+| + displayed size + book age | top 50% | 81 fires, **win 54.3%**, +0.078/$1 | 81 fires, win 51.9%, +0.215/$1 | −11.11 |
+| + displayed size + book age | top 30% | 53 fires, **win 62.3%**, +0.256/$1 | 53 fires, win 50.9%, +0.281/$1 | −1.35 (n=53, **insufficient**) |
+
+(The size/book-age arm needs `polybook`, which covers 501 of 1033 fires over 5 days; it scores 361
+fires on 3 held-out days. Its top-30% discordant set is 53 — under MIN_CELL, marked and not read.)
+
+**On every readable row the model's picks are MORE ACCURATE and WORSE PAID.** At top 30% on the base
+inputs it wins 58.6% against EV's 55.5% and still gives up $31.94. With size and book age it wins
+62.3% against 50.9% — an eleven-point accuracy advantage — and still does not make money on the swap.
+
+**That is the cleanest demonstration of "accuracy is not PnL" this whole sequence has produced.** The
+selector really does learn which candles we are more likely to be right about. It is just that being
+right more often, on candles that cost more, loses to being right less often on candles that cost
+less. At the selection margin the two halves of the user's goal — accuracy and PnL — point in
+opposite directions, and on this market PnL is bought with price, not with correctness.
+
+This does not rescue R-20: the swap is negative everywhere readable, so the verdict above stands.
