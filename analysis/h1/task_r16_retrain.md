@@ -14,7 +14,31 @@ difference 0.0000 bps, p90 |diff| 0.81 bps, corr 0.9893.
 
 **Recentring flips the sign of `move_bps` on 14.18% of ticks.** It is not a cosmetic change.
 
-## The result
+## Label provenance per arm (V's second ask, and it found a real handicap)
+
+| arm | features | trained on |
+|---|---|---|
+| frozen v10 (live) | first-trade | venue settlement (as shipped) |
+| recipe, old centring | first-trade | `venues.outcome` |
+| recipe, twap60 line | **recentred** | **TWAP60 proxy** ← the handicap |
+
+The first run labelled the twap60 arm on the Binance TWAP proxy, which matches `venues.outcome` only
+**95.54%** of the time, while both competitors used the venue label directly. V caught it. Re-run
+with the *same recentred features* and `venues.outcome` labels:
+
+| arm | fires | hit% | per $1 | total | Brier |
+|---|---|---|---|---|---|
+| frozen v10 (live) | 758 | 52.6% | +0.131 | **+99.56** | **0.1631** |
+| old centring, venue labels | 448 | 50.4% | +0.170 | +75.96 | 0.1705 |
+| **twap60, VENUE labels** | 440 | 50.9% | **+0.183** | +80.71 | 0.1711 |
+
+Removing the handicap helps the arm (+0.145 → +0.183/fire, +70.67 → +80.71) and **changes nothing
+about the verdict**: verify.py still fails it — halves **+0.112 / −0.046**, paired 316 discordant
+**159 vs 157, McNemar p = 0.955**, and it still loses $19 to frozen v10. And on identical labels the
+twap60 arm is indistinguishable from the old-centring arm (+0.183 vs +0.170, Brier 0.1711 vs 0.1705),
+so the conclusion below — that recentring does nothing *through the model* — survives the fair test.
+
+## The result (first run, twap60 arm on proxy labels)
 
 | arm | fires | hit% | per $1 | total | maxDD |
 |---|---|---|---|---|---|
@@ -68,10 +92,14 @@ closes a gap the model had already routed around.**
 3. **The mechanism is R-13, for the fifth independent time.** R-3, R-4, R-5, R-6, R-8/R-9, R-10,
    R-12 B2, R-15, and now R-16 all die the same way: anything that improves the *direction forecast*
    cannot help, because the output is pinned to a price that is already at least as good.
-4. **What should still change**, independent of any model: the engine's own `candles.actual` /
-   training label is `close ≥ open`, which is **13.2% wrong** about how the market settles. That is a
-   correctness fix for grading and for every future retrain, worth making whether or not a model
-   ships on it. It is not a signal edge.
+4. **What should still change — narrowed after V's correction, which was right.** I wrote that
+   "the engine's training label is `close ≥ open`, 13.2% wrong". **That is false for v10.**
+   `learner/build_features.py:244` sets `y=S[ep]`, and `load_settlement()` (line 31) reads the
+   venue's own resolved market file, taking the outcome whose `outcomePrice == 1` — so **v10 was
+   trained on Polymarket's settlement, the same oracle `venues.outcome` carries.** The 13.2% figure
+   applies to the engine's **`candles.actual`** column (Binance `close ≥ open`), which grades the
+   Predict.fun lane and the dashboard. Fixing *that* is still a real correctness item; v10's fit was
+   never affected.
 5. **Where an edge could still be:** the residual between 0.7321 (best naive line) and 0.7498 (book)
    is small, but the gap between the book and *perfect* is 25 points. Nothing in the feature set has
    ever closed any of it. On this evidence the direction forecast is finished as a line of attack.

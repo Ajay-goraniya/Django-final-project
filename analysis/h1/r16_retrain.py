@@ -35,9 +35,15 @@ TWO OF THE FOUR EXTRA FEATURES ARE DELIBERATELY EXCLUDED, and both exclusions ma
 
 So: 30 recentred features + ref_open_bps + ref_move_bps = 32.
 
-LABELS. Training label is the settlement rule, TWAP60(end) >= TWAP60(open), on the Binance proxy.
-PnL is graded on `venues.outcome` -- the oracle Polymarket actually settles on. The two are kept
-separate on purpose: the model learns the rule, the money is counted by the venue.
+LABELS. CORRECTED after V caught a handicap here. This script's twap60 arm trains on the settlement
+rule computed from the Binance TWAP proxy, which matches `venues.outcome` only 95.54% of the time,
+while the other two arms train on the venue label directly -- so the candidate carried ~4.5% of label
+noise its competitors did not. The fair re-run (same features, `venues.outcome` labels) is recorded
+in `task_r16_retrain.md`: it lifts the arm to +0.183/fire and leaves the verdict unchanged.
+
+Also corrected: v10 is NOT trained on `close >= open`. `learner/build_features.py:244` sets `y=S[ep]`
+from `load_settlement()`, the venue's own resolved market file. The `close >= open` label belongs to
+the engine's `candles.actual` column, not to v10's fit.
 
 ARMS (walk-forward BY DAY, train days < d, test d):
   1 frozen v10 (live)        - as deployed, first-trade features, its own json
