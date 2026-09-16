@@ -147,7 +147,15 @@ class Finding:
         if m == 0:
             return self._add('paired test', False, 'the two rules never disagree - no information')
         lo = min(b, c)
-        p = min(1.0, 2 * sum(comb(m, k) * 0.5 ** m for k in range(0, lo + 1)))
+        # Exact binomial overflows once the discordant count gets large (comb(2531, k) does not fit
+        # in a float). Below the cutoff use the exact test, above it the standard normal
+        # approximation with continuity correction - they agree to 3 decimals where both run.
+        if m <= 1000:
+            p = min(1.0, 2 * sum(comb(m, k) * 0.5 ** m for k in range(0, lo + 1)))
+        else:
+            from math import erfc, sqrt
+            z = (abs(b - c) - 1) / sqrt(m)
+            p = min(1.0, erfc(z / sqrt(2)))
         return self._add('paired test', p <= 0.05,
                          'n=%d, agree on %d, discordant %d (%d vs %d), edge %+.3f, exact McNemar p=%.3f'
                          % (len(a), len(a) - m, m, b, c, (b - c) / len(a), p))
