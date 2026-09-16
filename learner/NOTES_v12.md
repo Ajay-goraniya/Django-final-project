@@ -5568,3 +5568,20 @@ the model's own output. Linear-in-ofi15 pushes p_up the same way regardless of w
 That is a representability gap in the architecture, not a missing input, and it is exactly what a retrain can close.
 Routed to H1 as R-25 (candidate interaction terms for the R-12 training run), NOT as a gate on the live score.
 No engine touched. Task 97 file: analysis/aws/task97_drawdowns.md.
+
+## 09-16 12:0x — ref_stream tick counts were 2x (Mumbai correction), and one item needs the owner
+Two `ref_logger.py` processes (121526, 121543) have both been writing since ~01:44 UTC into a `ticks` table with no
+unique constraint and a plain INSERT. 142,940 stored -> 72,212 unique on (topic,symbol,src_ts_ms,value); 70,728
+duplicates, 49.5%. Every ref tick count relayed since 01:44 is doubled: "110k" and "141,780" should read ~55k and
+72,212. Span 10.10 h (01:44:17 -> 11:50:34), markets 123, gaps 41 — unchanged. Rows are byte-identical copies, so
+the dedupe is exact and **no conclusion moves; only the counts do**. `learner/live_backup/ref_stream.sqlite3.gz`
+now holds the deduped snapshot (earlier uploads of that artifact were doubled). `ref_logger.py` gained
+UNIQUE INDEX ticks_u + INSERT OR IGNORE.
+**No live impact:** this is the standalone logger. The engines read the venue websocket in-process
+(`_ref_stream`/`ref_samples`), not this database, so no decision on any lane used a doubled count.
+**Open, and not ours to close:** the patch is on disk but both loggers still run the old code, so the live db keeps
+doubling. Mumbai's `kill 121526` was refused by its own permission layer. I am not reaching into Mumbai's container
+to do what its own layer declined — that boundary exists in CLAUDE.md and laundering it through another session is
+exactly the thing it forbids. Raised to the owner: one process to stop by hand, then restart the survivor so it
+picks up the index. Until then every snapshot needs the dedupe pass.
+D114: first fire at 20 min, EF 1 signal / 1 order (b62bacc).
