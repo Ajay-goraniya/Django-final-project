@@ -245,3 +245,14 @@ labels verified against venue outcomes; (3) chronological evaluation on real exe
 frequency. Also flagged from r12 reports: 17,449 synthetic-book vs 4,117 real-book training rows, real-book coverage
 concentrated on two days - confirm and state what that does to the venue-stage evidence. Mumbai Task 98 starts
 recording the reference stream now (Chainlink BTC/USD + price-to-beat, source and arrival timestamps).
+
+## R-17 (09-16 02:3x) - retrain on EXECUTABLE QUOTES only. From your own addendum: v10 was fitted with p_venue 81%
+trade prints and 5/8 days with no book at all, yet p_venue carries its largest coefficient. We now have many days of
+logged REAL book (v12 lanes, poly_pnl/book_age_ms, the Zurich journals, polybook 1 s snapshots). Do: (1) count the
+usable executable-quote rows per day across every logged source - state n before anything else; if under ~60 graded
+fires per day-bucket say "insufficient" and stop there. (2) Rebuild the training table from book rows only (p_venue
+from the actual UP/DOWN touch at the fire second, quote age recorded), same 30 features, labels on venues.outcome
+(and the TWAP rule where the venue is Predict.fun). (3) Retrain the same recipe chronologically, walk-forward by day;
+paired vs frozen v10 on held-out days (discordant, McNemar), halves, permutation, costs, null; PnL/drawdown/frequency
+on executable quotes only. (4) Report the p_venue coefficient and calibration of the retrained arm vs v10. Ship = paper
+twin on Mumbai with the json (engine 12.11.1 loads any feature list). <=15 lines analysis/h1/task_r17_book_only.md.
