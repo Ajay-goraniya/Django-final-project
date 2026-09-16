@@ -5493,3 +5493,11 @@ SIZING ANSWERED from a real fill: the engine sends a USDC amount, not shares (pl
 Open: Task 111 (is our 18% one-sided block the venue, our 0.75 s bar, or our delta handling) reports ~12:5x.
 
 ### 09-16 10:4x - R-24 (H1, analysis/h1/task_r24_venue_arm.md, 780858d): THE VENUE ARM DOES NOT SURVIVE. The decay is in the WIN RATE, not in the price: ask flat 0.385-0.413, spread flat 1-3c, p_venue-ask gap flat ~+0.22, while win% runs 62.3 / 56.2 / 61.4 then breaks on 09-12 to 47.5 / 46.7 / 43.7 / 43.1. Split at the break: 09-08..09-11 n=266 win 59.4% +0.483/$1 +128.35 (v10 +0.086, +43.67); 09-12..09-16 n=281 win 45.9% +0.119/$1 +33.58 vs v10 +0.194/$1 +102.15. IN THE RECENT WINDOW v10 BEATS IT OUTRIGHT, and the arm's direction call is indistinguishable from a coin (binomial p=0.19). Verdict: run the paper twin, do not touch live money. The session's one apparent positive is four good days followed by three that v10 wins.
+
+## 09-16 11:1x — Task 113 lane D live (EF + MAIN + REVERSAL, paper)
+Mumbai pid 127827, port 8796, build 12.13.1 (c2010cf), db paper_ef_rev.sqlite3, model_v10.json, capital 50, PAPER.
+Armed: master, ef_enabled, main_enabled, reversal_enabled all true; fixed stake 3.0. Checksums 31/31, suites 307 OK.
+Snag recorded by Mumbai: arm took two invocations (venv symlink replaced mid-command), engine sat unarmed ~40 s. No trades lost.
+Ledger analysis/aws/task113_ef_rev.md, 4-hourly. Acceptance: per-KIND fires/orders/results/pnl-per-$1, REVERSALs on
+candles with a filled MAIN, and EF+MAIN+REV combined per-$1 vs EF alone **on the same candles** — that comparison is the test.
+Other lanes untouched: 8787 (12.9.0 pin), 8793, 8794, 8795. Task 111 (18% one-sided block: ours or venue's) reports ~12:55 UTC.
