@@ -5955,3 +5955,5 @@ change has no live effect (MAIN/REV off there) and the gate should have as few m
 rolls to live only if/when the owner wants REV live.
 Expect REVERSAL to place materially more paper orders from here; that is the first honest REV sample, and the EF+REV
 stacking count (same side / opposite) is the number the owner's pending decision needs.
+
+- 09-16 18:5x goal check (V): H1 Tokyo forward n=347 -0.081/fire, snapshot lag not stall; master off by owner since 15:34 (regime, not fault); Task 117 EF+REV vs EF-only running on Mumbai 12.15.5 fresh dbs from 18:28, first ledger 22:30; go-live gate 19:30 UTC.
