@@ -201,3 +201,15 @@ info and that closes the question honestly. (b) if it does beat: venue stage as 
 frozen v10 on the Polymarket rows, verify.py, and only then a twin. (c) Also report the per-regime OOS grid of the
 stage-1 model itself (era x vol x trend, n/hit/logloss) - that is the "all regimes" deliverable the user asked for,
 whatever ships. ≤15 lines in r12_big_brain.md, one verdict poke to V.
+
+## R-14 (09-16 00:1x) - the edge is execution. R-13 accepted (V confirmed on the 70 live fills: 63 disagree with the venue
+side, 48% right, still +12.9 at median ask 0.43). R-12 step 2: deliver only the per-regime OOS grid (cheap), skip the
+GBM unless already running. Then R-14, on the Zurich live journals + polybook/book1s logs, real data only:
+(1) For every fill and every FAK reject since 09-15 02:06: ask paid vs venue mid at signal, vs mid 1 s / 5 s / 60 s
+later, vs outcome. Where does the cheap ask come from (book lag vs Binance move, one-sided book, size pulled)?
+(2) Reject anatomy: 105/108 FAK killed for size - grid order size vs displayed size at signal, fill probability and
+pnl/$1 per bucket; what size would have filled and at what pnl.
+(3) Fire-second grid (15-240 s) x ask bucket: fill rate, pnl/$1, halves. Full grid, never the best cell.
+(4) From (1)-(3) propose at most two concrete execution changes (e.g. size <= displayed, limit-with-TTL vs FAK, a
+different fire window) with their gridded pnl/$1 vs current, verify.py, paired where same candles. No gates on the
+score; these are execution rules. <=15 lines in analysis/h1/task_r14_execution_edge.md, one verdict poke to V.
