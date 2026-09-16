@@ -3401,3 +3401,8 @@ Do: `git pull`; `git show 2026983:learner/v12_2` -> /home/ubuntu/pm_twin_12811 (
 8793 --db twin_12811.sqlite3 --capital 50`; seed meta master=true, next_stake=3.0, stake_settings fixed 3.0. 8787
 untouched. Report ≤4 lines: pid, build, first decision row. From then the 4-h ledger line in
 analysis/aws/twin_1290_ledger.md carries BOTH: "8787 12.9.0: n W pnl | 8793 12.8.11: n W pnl | same-hour delta".
+
+## Task 96 - CLOB round-trip geography (read-only, 2 minutes). From Mumbai: 20 samples each of
+`curl -s -o /dev/null -w '%{time_connect} %{time_starttransfer}\n' https://clob.polymarket.com/time` and the same for
+`https://clob.polymarket.com/book?token_id=<any current BTC 5m token>`; report median/p90 connect and TTFB in ms, plus
+`traceroute -n -m 12 clob.polymarket.com` first 3 and last 3 hops. Append to analysis/aws/task96_clob_rtt.md (≤6 lines).

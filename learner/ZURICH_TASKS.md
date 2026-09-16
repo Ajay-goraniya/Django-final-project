@@ -85,3 +85,7 @@ Then WATCH the first two live orders: order-identity check passed (no halt), sta
 timing fire_to_submit_ms vs the 12.8.11 median 50 ms, and one RECONCILE_STUCK count. If halt='Order hash mismatch'
 appears: stop, do not clear it, write hourly.md with the halt text; V decides. DEPLOYED.md `## 12.9.0` ≤25 lines,
 7 rows, commit + push with plain git -C. Report via analysis/zurich/hourly.md (overwrite) - 4 lines.
+
+## Z-7 - CLOB round-trip geography (read-only). Same as AWS Task 96 from Zurich: 20 curl timings each of
+https://clob.polymarket.com/time and /book?token_id=<current token>; median/p90 connect + TTFB ms; traceroute -n -m 12
+first/last 3 hops. Write analysis/zurich/z7_clob_rtt.md (≤6 lines), git -C add/commit/push. Live engine untouched.
