@@ -423,4 +423,4 @@ model, constants copied with line provenance; 21 tests in test_lanes.py). The bl
 HEDGE on an open MAIN by design (build11 `_watch_reversal`: no MAIN, nothing to hedge), and `_main_oneshot_check`
 disarms MAIN after ONE filled order - a live instruction from 09-13 that, on a paper engine, ends the experiment at
 the first fill and takes REVERSAL with it. It now returns immediately unless `a.live`. Live behaviour is unchanged
-and pinned by a test; paper keeps MAIN armed. Tests 71+21+215 = 307; SHA256SUMS 31/31.
+and pinned by a test; paper keeps MAIN armed. Tests 106+62+21 = 189 (counted, not carried over: the earlier "307" was my arithmetic, wrong); SHA256SUMS 31/31.
