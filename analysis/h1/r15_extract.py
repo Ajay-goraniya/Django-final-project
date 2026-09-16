@@ -65,11 +65,32 @@ def prev_day(mon):
     return d.isoformat()
 
 
+def norm(a):
+    """Column 0 to SECONDS, per file, BEFORE anything is concatenated.
+
+    This is the ms/us trap from r12_extract.to_sec, and I walked into it: the first version stacked
+    the priming day onto the month and called to_sec on the RESULT. to_sec picks the divisor from
+    t[0], so at the boundary where Binance switched units (it bit on 2025-01, whose priming day
+    2024-12-31 is stamped in the other unit) half the array was scaled by 1000x. n came out as
+    1,736,632,395,801 and numpy asked for 12.6 TiB. Converting per file removes the failure mode
+    rather than detecting it later.
+    """
+    a = a.copy()
+    a[:, 0] = to_sec(a[:, 0])
+    return a
+
+
 def grid(a):
-    """1 s close/volume on a dense second grid, forward-filled across gaps."""
-    sec = to_sec(a[:, 0])
+    """1 s close/volume on a dense second grid, forward-filled across gaps.
+
+    Takes column 0 ALREADY IN SECONDS (see norm). Never call to_sec on concatenated input.
+    """
+    sec = a[:, 0].astype(np.int64)
     lo, hi = sec[0], sec[-1]
     n = hi - lo + 1
+    if not (0 < n < 40 * 86400):
+        raise ValueError('implausible second span %d (lo=%d hi=%d) - mixed timestamp units?'
+                         % (n, lo, hi))
     px = np.full(n, np.nan)
     vol = np.zeros(n)
     i = sec - lo
@@ -196,9 +217,10 @@ def main():
             print('%s  no data' % mon, flush=True)
             continue
         prime = get(DAY % prev_day(mon))
-        first_candle = int(to_sec(a[:, 0])[0])
+        a = norm(a)
+        first_candle = int(a[0, 0])
         if prime is not None and len(prime) > 1000:
-            a = np.vstack([prime, a])
+            a = np.vstack([norm(prime), a])
         g = grid(a)
         del a, prime
         if g is None:

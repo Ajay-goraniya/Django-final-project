@@ -33,9 +33,10 @@ def build_days(days, secs=None):
         except Exception as e:
             print('  no daily file for %s (%s)' % (day, e), flush=True)
             continue
-        first = int(to_sec(a[:, 0])[0])
+        a = E.norm(a)
+        first = int(a[0, 0])
         try:
-            pr = P.daily(prev)
+            pr = E.norm(P.daily(prev))
             a = np.vstack([pr, a])
         except Exception:
             print('  no prime for %s - its first 4h will be dropped' % day, flush=True)
