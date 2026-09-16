@@ -429,3 +429,10 @@ each on its own oracle): EV floor {0,0.05,...,0.30}, max entry price {0.40..0.80
 halves(), permutation(), paired() vs current parameters, cells <60 marked insufficient. Also the plain
 per-bucket record of the current parameters (n, W, per $1) - that alone answers "is it high vol".
 Tokens critically low: the result is one file analysis/h1/r27_vol_regime.md and a 3-line poke to V.
+
+## R-28 (V, 09-16 20:5x) - does the adapt_ratio carry EF information?
+12.16.0 ports build 11's fast/slow (180 s / 3600 s) vol ratio into the lanes. Before it touches EF: on the same 2,076
+graded fires as R-27, compute the ratio at fire time from the collector tape and bucket it FIRST: <0.85, 0.85-1.15,
+>1.15. Report EF per $1, n, halves(), permutation() per bucket, plus the grid of p scaled through the ratio
+(p' = 0.5 + (p-0.5)/ratio^k, k in {0, 0.5, 1, 2}) walk-forward. Whole grid, never the best cell. One file
+analysis/h1/r28_adapt_ef.md, 3-line poke to V. Lower priority than nothing else you have.

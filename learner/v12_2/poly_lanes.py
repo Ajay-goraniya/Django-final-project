@@ -278,6 +278,101 @@ class Model:
         return s, logistic(s / self.temperature), comps
 
 
+
+# ---- 12.16.0: build 11's adapt_ratio (btc_model_build11.py:863-877, :15805-15958) ----
+# Fast (3 min) over slow (1 h) robust RMS of one-second log returns, winsorised,
+# with an identity band so ordinary variation leaves fair odds exactly as before.
+# It scales `typical` in fair_odds (build11:15976, :16062): when the last minutes
+# are moving faster than the last hour the 23-candle median lags the onset and
+# fair_p_up over-states how decided the candle is; the ratio bridges that.
+ADAPT_ENABLED = True
+ADAPT_BUCKET_MS = 1_000
+ADAPT_FAST_SEC = 180
+ADAPT_SLOW_SEC = 3_600
+ADAPT_MIN_FAST = 60
+ADAPT_MIN_SLOW = 600
+ADAPT_RATIO_LO = 0.30
+ADAPT_RATIO_HI = 6.00
+ADAPT_IDENTITY_LO = 0.85
+ADAPT_IDENTITY_HI = 1.15
+ADAPT_FULL_LO = 0.67
+ADAPT_FULL_HI = 1.50
+ADAPT_WINSOR_SIGMAS = 5.0
+ADAPT_MIN_ACTIVE_SHARE = 0.10
+ADAPT_STALE_BUCKETS = 5
+
+
+def _robust_rms(values, minimum):
+    """build11:4485-4519. Winsorised RMS; 0.0 until `minimum` returns exist."""
+    n = len(values)
+    if n < minimum: return 0.0
+    mags = sorted(abs(v) for v in values)
+    median_abs = mags[n // 2]
+    if median_abs <= 0.0:
+        pos = [m for m in mags if m > 0.0]
+        if len(pos) < max(8, int(math.ceil(n * ADAPT_MIN_ACTIVE_SHARE))): return 0.0
+        median_abs = pos[len(pos) // 2]
+    cap = ADAPT_WINSOR_SIGMAS * 1.4826 * median_abs
+    return math.sqrt(sum(min(m, cap) ** 2 for m in mags) / n)
+
+
+def engaged_adapt_ratio(raw):
+    """build11:15919. Identity inside the band, log-linear ramp to full outside it."""
+    raw = clamp(raw, ADAPT_RATIO_LO, ADAPT_RATIO_HI)
+    if ADAPT_IDENTITY_LO <= raw <= ADAPT_IDENTITY_HI: return 1.0
+    if raw > ADAPT_IDENTITY_HI:
+        width = math.log(ADAPT_FULL_HI) - math.log(ADAPT_IDENTITY_HI)
+        eng = clamp((math.log(raw) - math.log(ADAPT_IDENTITY_HI)) / width, 0.0, 1.0)
+    else:
+        width = math.log(ADAPT_IDENTITY_LO) - math.log(ADAPT_FULL_LO)
+        eng = clamp((math.log(ADAPT_IDENTITY_LO) - math.log(raw)) / width, 0.0, 1.0)
+    return math.exp(math.log(raw) * eng)
+
+
+class AdaptRatio:
+    """build11:15805-15958 on one deque. Causal: a second's close is only known
+    once a later second arrives. A gap over ADAPT_STALE_BUCKETS breaks the return
+    chain and drops the factor to 1.0 rather than turning the gap into a move."""
+    def __init__(self):
+        self.returns = deque(maxlen=ADAPT_SLOW_SEC + 600)   # (bucket, r)
+        self.bucket = None; self.bucket_close = 0.0
+        self.done_bucket = None; self.done_close = 0.0
+        self.raw = 1.0; self.cache = 1.0
+
+    def add(self, ts_ms, price):
+        if price <= 0.0 or not math.isfinite(price): return
+        b = int(ts_ms) // ADAPT_BUCKET_MS
+        if self.bucket is not None and b < self.bucket: return
+        if self.bucket is None: self.bucket = b; self.bucket_close = price; return
+        if b == self.bucket: self.bucket_close = price; return
+        if b - self.bucket > ADAPT_STALE_BUCKETS: self.raw = self.cache = 1.0
+        cb, cc = self.bucket, self.bucket_close
+        appended = False
+        if self.done_bucket is not None and self.done_close > 0.0:
+            gap = cb - self.done_bucket
+            if 0 < gap <= ADAPT_STALE_BUCKETS:
+                r = math.log(cc / self.done_close) / math.sqrt(float(gap))
+                if math.isfinite(r): self.returns.append((cb, r)); appended = True
+            elif gap > ADAPT_STALE_BUCKETS: self.raw = self.cache = 1.0
+        self.done_bucket, self.done_close = cb, cc
+        self.bucket, self.bucket_close = b, price
+        if appended: self.refresh()
+
+    def _window(self, seconds):
+        if not self.returns: return []
+        cut = self.returns[-1][0] - seconds
+        return [r for b, r in self.returns if b >= cut]
+
+    def refresh(self):
+        fast = _robust_rms(self._window(ADAPT_FAST_SEC), ADAPT_MIN_FAST)
+        slow = _robust_rms(self._window(ADAPT_SLOW_SEC), ADAPT_MIN_SLOW)
+        if fast <= 0.0 or slow <= 0.0: self.raw = self.cache = 1.0; return
+        self.raw = clamp(fast / slow, ADAPT_RATIO_LO, ADAPT_RATIO_HI)
+        self.cache = engaged_adapt_ratio(self.raw)
+
+    def value(self):
+        return self.cache if ADAPT_ENABLED else 1.0
+
 class LaneEngine:
     """Feature state plus the MAIN and REVERSAL gates.
 
@@ -306,6 +401,7 @@ class LaneEngine:
         self.candle_buy_quote = 0.0; self.candle_sell_quote = 0.0
         self.pressure_history = deque(maxlen=PRESSURE_HISTORY)
         self.price_history = deque(maxlen=4000)      # (ts_s, price) for returns
+        self.adapt = AdaptRatio()                     # 12.16.0
         self.depth = {"bids": [], "asks": []}
         self.candle = None
         self.closed = deque(maxlen=64)
@@ -340,6 +436,7 @@ class LaneEngine:
         if signed >= 0.0: self.candle_buy_quote += price * qty
         else: self.candle_sell_quote += price * qty
         self.price_history.append((ts_ms / 1000.0, price))
+        self.adapt.add(ts_ms, price)
 
     def on_depth(self, bids, asks, ts_ms=None):
         self.depth = {"bids": bids, "asks": asks}
@@ -407,7 +504,7 @@ class LaneEngine:
         if not self.candle: return 0.5, 300.0
         seconds_left = max((int(self.candle["time"]) + CANDLE_MS - ts_ms) / 1000.0, 1.0)
         moves = sorted(abs(float(c["close"]) - float(c["open"])) for c in list(self.closed)[-MEDIAN_WINDOW:])
-        typical = moves[len(moves) // 2] if moves else max(price * 4e-4, 1.0)
+        typical = (moves[len(moves) // 2] * self.adapt.value()) if moves else max(price * 4e-4, 1.0)
         per_second = max(typical / math.sqrt(CANDLE_MS / 1000.0), price * 1e-6)
         sigma = per_second * math.sqrt(seconds_left)
         p = 0.5 * (1.0 + math.erf((price - open_price) / (sigma * math.sqrt(2.0))))
@@ -451,7 +548,7 @@ class LaneEngine:
                                      if aggressive_volume > 0.0 else 0.0)
 
         fair, seconds_left = self.fair_odds(ts_ms, price, open_price)
-        f["fair_p_up"] = fair; f["seconds_left"] = seconds_left
+        f["fair_p_up"] = fair; f["seconds_left"] = seconds_left; f["adapt_ratio"] = self.adapt.value()
         f["volume_ratio"] = self.volume_ratio(phase)
 
         # --- rejection: aggressive volume that failed to move price (16170) ---

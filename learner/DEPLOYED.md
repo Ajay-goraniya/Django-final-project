@@ -648,3 +648,14 @@ difference. build11's REVERSAL entry cap is ported as meta `rev_max_entry` (defa
 Tokyo's value without a build. EF's dial is untouched. Tests +4 = 369; SHA256SUMS 31/31.
 Expect REVERSAL (and MAIN, where armed) to place materially more orders on the paper lanes. That is the port
 running its own rules for the first time, not a regression — and it is exactly the sample the EF+REV question needs.
+
+## 12.16.0 — build 11's adapt_ratio ported to the lanes (owner: "i need my model to be adaptive")
+The one adaptive piece Tokyo runs that the port never had (deferred since 12.14.0). `AdaptRatio` in `poly_lanes.py`
+is build11:863-877 + :15805-15958 on one deque: one-second causal log returns from spot trades, winsorised robust
+RMS over 180 s (fast) and 3600 s (slow), ratio clamped 0.30–6.0, identity inside 0.85–1.15, log-linear ramp to
+full by 0.67/1.50, chain broken by any >5 s feed gap. `fair_odds` multiplies the 23-candle median move by it
+(build11:15976, :16062): when the last minutes move faster than the last hour, fair_p_up stops over-stating how
+decided the candle is, so MAIN waits and REVERSAL sees the swing earlier; in ordinary tape the number is exactly
+12.15.5's. Feature `adapt_ratio` is logged on every lane decision so its engagement rate is auditable. **EF is
+untouched** — a vol-scaled EF is R-28 for H1 to grid first (rule: threshold gridded before shipping). Tests +6 =
+375; SHA256SUMS 31/31. Paper lanes first (8794 MAIN, 8796 EF+REV); Zurich stays 12.15.4, master off.

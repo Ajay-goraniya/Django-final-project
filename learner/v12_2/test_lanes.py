@@ -333,3 +333,59 @@ class ReversalProbability12150(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=1)
+
+
+class AdaptRatio12160(unittest.TestCase):
+    """build 11's adapt_ratio port: identity in calm tape, engages on a fast/slow
+    vol break, resets on a stale feed, and scales fair_odds' typical move."""
+    def _feed(self, ar, secs, step, start=0, price=100000.0):
+        import random
+        rnd = random.Random(7); p = price
+        for i in range(secs):
+            p *= 1.0 + rnd.gauss(0.0, step)
+            ar.add((start + i) * 1000, p)
+        return p
+    def test_cold_is_identity(self):
+        ar = L.AdaptRatio()
+        self._feed(ar, 30, 1e-5)
+        self.assertEqual(ar.value(), 1.0)
+    def test_calm_tape_stays_identity(self):
+        ar = L.AdaptRatio()
+        self._feed(ar, 1200, 1e-5)
+        self.assertEqual(ar.value(), 1.0)
+        self.assertTrue(L.ADAPT_IDENTITY_LO <= ar.raw <= L.ADAPT_IDENTITY_HI)
+    def test_vol_break_engages_and_is_bounded(self):
+        ar = L.AdaptRatio()
+        p = self._feed(ar, 1200, 1e-5)
+        self._feed(ar, 180, 5e-5, start=1200, price=p)
+        self.assertGreater(ar.value(), 1.15)
+        self.assertLessEqual(ar.value(), L.ADAPT_RATIO_HI)
+    def test_stale_feed_resets(self):
+        ar = L.AdaptRatio()
+        p = self._feed(ar, 1200, 1e-5)
+        self._feed(ar, 180, 5e-5, start=1200, price=p)
+        self.assertGreater(ar.value(), 1.0)
+        # gap > ADAPT_STALE_BUCKETS: build11:15830-15855 breaks the chain, and
+        # the first post-gap return leaves the fast window under ADAPT_MIN_FAST.
+        g = 1200 + 180 + 200   # gap longer than the fast window: only fresh returns can rebuild it
+        ar.add(g * 1000, p); ar.add((g + 1) * 1000, p); ar.add((g + 2) * 1000, p)
+        self.assertEqual(ar.value(), 1.0)
+    def test_engaged_ramp(self):
+        e = L.engaged_adapt_ratio
+        self.assertEqual(e(1.0), 1.0); self.assertEqual(e(1.15), 1.0); self.assertEqual(e(0.85), 1.0)
+        self.assertAlmostEqual(e(1.5), 1.5, places=9); self.assertAlmostEqual(e(0.67), 0.67, places=9)
+        self.assertAlmostEqual(e(3.0), 3.0, places=9); self.assertEqual(e(10.0), L.ADAPT_RATIO_HI)
+        self.assertTrue(1.0 < e(1.3) < 1.3)
+    def test_fair_odds_uses_ratio(self):
+        eng = L.LaneEngine()
+        for i in range(30):
+            eng.on_closed_candle(dict(time=i * 300000, open=100000.0, high=100050.0, low=99950.0,
+                                      close=100000.0 + (20.0 if i % 2 else -20.0), volume=10.0))
+        eng.candle = dict(time=30 * 300000, open=100000.0)
+        base, _ = eng.fair_odds(30 * 300000 + 60000, 100030.0, 100000.0)
+        eng.adapt.cache = 2.0
+        wide, _ = eng.fair_odds(30 * 300000 + 60000, 100030.0, 100000.0)
+        self.assertGreater(base, wide); self.assertGreater(wide, 0.5)
+        eng.adapt.cache = 1.0
+        same, _ = eng.fair_odds(30 * 300000 + 60000, 100030.0, 100000.0)
+        self.assertEqual(base, same)
