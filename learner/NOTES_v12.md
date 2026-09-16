@@ -5804,3 +5804,29 @@ Lane D at 2.9 h, all insufficient: EF 11 fires / 11 FILLED / 11 graded / W5 / st
 **+0.0140 per $1** (against live Zurich's +0.0138 on the same signal - a coincidence at these n, not a finding).
 MAIN 12 calls 0 orders, correct with main_enabled false. REVERSAL 12 decisions, 2 signals, 0 orders, call-only 2/2.
 Mumbai is watching the MAIN/REVERSAL call rate against the MEDIAN_WINDOW 23 change.
+
+## 09-16 15:0x — 12.15.3 LIVE on Zurich. Both deploys complete.
+Zurich (c78e9b2, 695bb0c): pid 99527 replaced 89791, deployed 14:30:05, armed 14:30:11 — **7 s stop-to-armed in one
+cycle.py run**, nothing failed, no rollback. Engine reports build 12.15.3, master true, halt null, ef_enabled true,
+lane LIVE; 31/31 files match 1d13305; suites 71+28+251 = 350 OK; loop current. Two orders since 14:30, both
+REJECTED, so the fee-fix proof row (the first fill's fees/fee_basis/fee_rate_bps) is still owed. Zurich will push
+the actual row and will not call the fix proven before it exists — correct.
+Mumbai (083c178): 8794/8795/8796 on 12.15.3, 8787/8793 untouched. Everything the owner ordered fixed is on both boxes.
+
+**H1's formal correction (analysis/h1/task_r26_CORRECTION.md), posted as its own doc, not edited into the originals.**
+Corrected R-26 table, fixed harness, 39,237 ticks / 2,038 candles: (a) frozen 1101 f +144.81 | (b) week 1 only
+802 f +146.66 | (c) two weeks 325 f **+65.63**. (b) vs (a) is +$1.85 on H1's rows and −$0.36 on mine — a tie, which
+is what identical coefficients should give. **The second week costs $81 against week 1 alone**, not $6.70.
+**The threshold instability is confirmed and is worse than I put it.** Frozen on week 2, corrected pricing:
+0.10 +107.22 | 0.15 +134.81 | 0.20 **+148.86** | 0.25 +145.58 | 0.30 +112.24. Week 1 peaks at 0.10; on week 2,
+0.10 is the WORST cell of the band. The optimum does not drift — it relocates to where the other week was weakest,
+on adjacent weeks of the same market with the same model. H1's line: this is worse than the non-monotone-sweep
+failure the rules warn about; there a peak is noise, here the peak moves to the opposite end. **The EV threshold is
+not a parameter to tune. Closed.**
+H1's lesson, recorded against itself: an arm that AGREES with the live model cannot validate a harness that only
+mis-prices DISAGREEMENT. Frozen reproducing to the cent proved nothing about the arms that mattered.
+H1 forward ledger 14:4x: n=337, −0.084/fire, halves −0.066 / −0.101.
+
+**Open on the owner's side:** Mumbai's dashboards are bound to 127.0.0.1 because DASHBOARD_PASSWORD died with the
+12.12.2 process and lives nowhere on disk. Relaunching 8787 on 0.0.0.0 needs the owner to write the value into
+~/pm_paper_8787/deploy.env himself; V and Mumbai neither ask for nor print it.
