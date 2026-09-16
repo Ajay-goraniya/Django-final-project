@@ -52,9 +52,12 @@ source, not a forecasting edge.
 
 ## 4. What this does to the venue-stage evidence
 
-**What it damages.** `p_venue` is v10's largest coefficient by a wide margin (1.663 standardized).
-**81% of the `p_venue` values it was fitted on are trade prints, not executable quotes, and five of
-eight days have no book at all.** That is a train/serve mismatch: live, `p_venue` is a real book
+**What it damages.** *(Corrected — see `task_r17_executable_rows.md`. I originally wrote that
+`p_venue` is v10's largest coefficient at 1.663. That was wrong: 1.663 is **`move_bps`**, rank 1;
+`p_venue` is **−0.0387, rank 16 of 30**. The venue enters through **`lv` = logit(p_venue), +1.5514,
+rank 2** — so the substance holds, through a different coefficient than I named.)*
+The venue is v10's second-largest input, and **81% of the venue values it was fitted on are trade
+prints, not executable quotes, and five of eight days have no book at all.** That is a train/serve mismatch: live, `p_venue` is a real book
 touch. And the direction of the mismatch is not neutral — v10's calibration was dominated by exactly
 the rows where the price is already as good as the model, which would push the fit to lean *harder*
 on `p_venue`. That is consistent with R-13's result that `p ≈ p_venue` and is a plausible mechanism
