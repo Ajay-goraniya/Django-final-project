@@ -3539,3 +3539,12 @@ builds - the difference is the finding.
 or frozen?), quote_age_s() as the single dial (what is ev_settings.quote_age_ms on 8787 vs 8793?), and
 require_depth in _gate_on_padded_ev (is order_plan refusing with "book too thin at cap"?).
 (4) Verdict in <=6 lines: market, config, or engine defect. If defect, name the code path. Do NOT change any engine.
+
+## Task 107 - PUSH ref_stream.sqlite3.gz (H1 is blocked on it). Your Chainlink capture is the only measurement of how
+wrong our Binance TWAP60 proxy is, and every R-16/R-22 number rests on that proxy. Do: sqlite3 online-backup
+ref_stream.sqlite3 -> gzip -> learner/live_backup/ref_stream.sqlite3.gz on the branch, commit and push, then keep it
+refreshed hourly alongside your other snapshots. One line in analysis/aws/task98_ref_stream.md: rows, span, gaps.
+If you still cannot push, say so and paste nothing - instead tell V the exact size and V will arrange a transfer.
+Context for you: R-22 confirmed the settlement line on 2,132 venue-graded candles (7.7 days, all we have): TWAP-vs-TWAP
+agrees with the venue 96.67%, close>=open 87.05%, discordant 249 split 91.2/8.8 in the TWAP rule's favour, positive on
+9 of 9 days. The missing piece is exactly your file.
