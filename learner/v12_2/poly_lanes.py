@@ -526,12 +526,28 @@ class LaneEngine:
         detail = (f"signal flipped to {live} against MAIN {main['direction']}"
                   + ("" if placed else " (call only - MAIN order not placed)"))
         self.reversal_state = {"status": "firing", "detail": detail}
+        # 12.15.0: this flipped the probability TWICE and so handed order_plan the
+        # probability of the side it was NOT buying.
+        #
+        #   fair  = P(UP)
+        #   p_up  = fair if UP else 1-fair      <- already the SIDE's probability,
+        #                                          despite the name
+        #   p_side = p_up if UP else 1-p_up     <- flipped again: back to P(UP)
+        #
+        # Verified on the running module: a DOWN reversal with fair_p_up 0.0100
+        # was handed p=0.0100 when P(DOWN) was 0.9900, and reported
+        # probability_up=0.9900 when P(UP) was 0.0100. Both fields exactly swapped.
+        # _aligned_direction only names DOWN when fair_p_up <= GATED_ODDS_DOWN
+        # (0.40), so the p reaching the EV gate was always <= 0.40 against a DOWN
+        # ask around 0.60 - EV about -0.35. DOWN REVERSAL COULD NEVER FIRE, and it
+        # failed as "price fails model EV", which reads as a pricing problem. MAIN
+        # at line 476 flips once and has always been correct, so this was a
+        # deviation in this function and not a house convention.
         fair = safe_float(f.get("fair_p_up"), 0.5)
-        p_up = fair if live == "UP" else 1.0 - fair
+        p_side = fair if live == "UP" else 1.0 - fair
         self.reversal_signal = dict(direction=live, ts_ms=ts_ms)
         self.pending['REVERSAL'] = True
-        p_side = p_up if live == "UP" else 1.0 - p_up
-        return dict(kind="REVERSAL", side=live, p=p_side, probability_up=(fair if live == "UP" else 1.0 - fair),
+        return dict(kind="REVERSAL", side=live, p=p_side, probability_up=fair,
                     sec=int(phase), rv60=None,
                     reason=f"reversal at {phase:.0f}s: {detail}")
 

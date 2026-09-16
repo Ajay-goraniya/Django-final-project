@@ -2153,7 +2153,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.14.1'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.15.0'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0
@@ -2534,6 +2534,85 @@ class LaneSeed12141(unittest.TestCase):
         r.db = types.SimpleNamespace(sql=lambda *a: (_ for _ in ()).throw(RuntimeError('no such table')))
         r._seed_lane_history()                           # must not raise
         self.assertEqual(len(r.lanes.closed), 0)
+
+
+class ShadowStale12150(unittest.TestCase):
+    """The freshness bar blocks ~1,228 decide rows and we cannot grade any of them.
+
+    Task 116 could only measure book age on trades we TOOK, and found it carries
+    no information there. Whether the BLOCKED rows would have paid is a separate
+    question with no data behind it, because decide_now returns before the model
+    is consulted. _shadow_stale closes that by logging the decision that would
+    have been made. These tests pin the two things that make it safe: it writes,
+    and it cannot trade.
+    """
+    def _runner(self, ask_up=0.40, ask_dn=0.62, age_ms=9000.0, both=True):
+        import btc_model_v12_polymarket as E
+        temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
+        db = C.Journal(str(pathlib.Path(temp.name) / 's.db'), 'PAPER', 'h')
+        self.addCleanup(db.c.close)
+        r = E.PolyRunner.__new__(E.PolyRunner)
+        r.db = db; r._shadow_at = 0.0; r.market = {300: ('UP_TOK', 'DN_TOK')}
+        r.quote_age_s = lambda: 0.75
+        r.ev_setting = lambda: ('regime', None)
+        q = {'UP_TOK': {'ask': ask_up, 'bid': ask_up - 0.02, 'age_ms': age_ms},
+             'DN_TOK': {'ask': ask_dn, 'bid': ask_dn - 0.02, 'age_ms': age_ms}}
+        if not both: q.pop('DN_TOK')
+        r.books = types.SimpleNamespace(quote=lambda t, age: q.get(t))
+        self.seen = []
+        r.st = types.SimpleNamespace(on_venue_quote=lambda *a: self.seen.append(a))
+        r.m = types.SimpleNamespace(decide=lambda *a, **k: dict(
+            fire=True, side='UP', p=0.61, ask=ask_up, ev=0.18, threshold=0.25))
+        return r, db
+
+    def rows(self, db, kind='SHADOW_STALE'):
+        return [json.loads(x[0]) for x in
+                db.sql("SELECT detail FROM diagnostics WHERE detail LIKE '%" + kind + "%'")]
+
+    def test_writes_the_decision_it_would_have_made(self):
+        r, db = self._runner()
+        r._shadow_stale(300, 1000.0)
+        got = self.rows(db)
+        self.assertEqual(len(got), 1)
+        self.assertTrue(got[0]['fire']); self.assertEqual(got[0]['side'], 'UP')
+        self.assertAlmostEqual(got[0]['ev'], 0.18)
+        self.assertAlmostEqual(got[0]['age_ms'], 9000.0)
+        self.assertAlmostEqual(got[0]['bar_ms'], 750.0)
+
+    def test_restores_the_venue_quote_so_the_live_path_is_unchanged(self):
+        r, _ = self._runner()
+        r._shadow_stale(300, 1000.0)
+        self.assertEqual(self.seen[-1], (None, None, None, None),
+                         'publish() zeroed the quote; the shadow must leave it zeroed')
+
+    def test_a_genuinely_one_sided_book_is_not_shadowed(self):
+        r, db = self._runner(both=False)
+        r._shadow_stale(300, 1000.0)
+        self.assertEqual(self.rows(db), [], 'nothing to shadow without both sides')
+
+    def test_rate_limited(self):
+        r, db = self._runner()
+        for t in (1000.0, 1001.0, 1002.0, 1004.9):
+            r._shadow_stale(300, t)
+        self.assertEqual(len(self.rows(db)), 1, 'one row per SHADOW_EVERY_S')
+        r._shadow_stale(300, 1006.0)
+        self.assertEqual(len(self.rows(db)), 2)
+
+    def test_a_raising_model_is_recorded_and_does_not_escape(self):
+        r, db = self._runner()
+        def boom(*a, **k): raise ValueError('bad features')
+        r.m = types.SimpleNamespace(decide=boom)
+        r._shadow_stale(300, 1000.0)                       # must not raise
+        self.assertEqual(len(self.rows(db, 'SHADOW_STALE_ERROR')), 1)
+        self.assertEqual(self.seen[-1], (None, None, None, None))
+
+    def test_it_cannot_reach_the_executor(self):
+        """The safety property: instrumentation, not a trade."""
+        import inspect, btc_model_v12_polymarket as E
+        body = inspect.getsource(E.PolyRunner._shadow_stale)
+        for forbidden in ('fire(', 'order_plan', 'reserve(', 'self.ex', 'broker'):
+            self.assertNotIn(forbidden, body,
+                             'the shadow path must never touch the order path: ' + forbidden)
 
 
 if __name__ == '__main__':

@@ -49,7 +49,7 @@ class PolyRunner(Runner):
         self._seed_lane_history()
         self.lane_decision={}
         self.market={}; self.info={}; self.terms_age={}; self.last_decision={}; self.started=time.time()
-        self._wait_census={}; self._wait_flushed=time.monotonic()
+        self._wait_census={}; self._wait_flushed=time.monotonic(); self._shadow_at=0.
         self.cash=None; self.cash_at=0.; self.account_snapshot={}; self.account_positions=[]; self.current_candle={}; self.revision=0; self.error=''
         self.db.set('master',False) if a.live else None # explicit arming through old controls
         from poly_dashboard import Dashboard
@@ -222,9 +222,59 @@ class PolyRunner(Runner):
         if k.get('x'):
             self.lanes.on_closed_candle(c)
             self.db.sql('INSERT OR REPLACE INTO candles VALUES(?,?,?,?,?,?)',(ep,c['open'],c['high'],c['low'],c['close'],c['volume'])); self.revision+=1
+    SHADOW_AGE_S=60.0        # how stale a book we are willing to LOOK at (never to trade)
+    SHADOW_EVERY_S=5.0       # one shadow row per 5 s of blocking, not one per tick
+    def _shadow_stale(self,ep,now):
+        """12.15.0: record the decision the lane WOULD have made when the freshness
+        bar blocks it. Instrumentation only — it computes and writes, and cannot
+        reach the executor.
+
+        Why it exists. Task 116 gridded the 0.75 s bar against real outcomes on
+        1,598 graded fires and found book age carries NO information: matched on
+        fire second inside 30-45 s, age<=250 ms pays +0.3479 (n=89) and age>5 s
+        pays +0.3581 (n=82). But that grid can only see trades we TOOK. The 1,228
+        decide rows the bar blocked never became fires, so no side, no p and no
+        outcome exists for any of them — `decide_now` returns here, before the
+        model is consulted. Mumbai flagged that limit itself: the grid proves age
+        is not predictive among fires, NOT that the blocked rows would have paid.
+        This closes that hole the only honest way — by logging what we would have
+        decided, then grading those rows later against venues.outcome.
+
+        The venue quote is set from the stale book, used, and restored to None in
+        a finally, because publish() has already zeroed it and the live path must
+        see exactly what it would have seen without this call.
+        """
+        if now-self._shadow_at<self.SHADOW_EVERY_S: return
+        toks=self.market.get(ep,())
+        if len(toks)!=2: return
+        q=[self.books.quote(t,self.SHADOW_AGE_S) for t in toks]
+        if not all(q): return          # genuinely one-sided: nothing to shadow
+        self._shadow_at=now
+        u,d=q
+        try:
+            self.st.on_venue_quote(u['ask'],u['bid'],d['ask'],d['bid'])
+            mode,ev_thr=self.ev_setting()
+            dec=self.m.decide(self.st,ep*US,int(now*US),
+                              mode=('accuracy' if mode=='accuracy' else 'pnl'),
+                              ev_threshold=ev_thr)
+            self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(now,ep,json.dumps(dict(
+                kind='SHADOW_STALE',sec=round(now-ep,1),
+                fire=bool(dec.get('fire')),side=dec.get('side'),
+                p=dec.get('p'),ask=dec.get('ask'),ev=dec.get('ev'),
+                threshold=dec.get('threshold'),reason=dec.get('reason'),
+                ask_up=u['ask'],ask_dn=d['ask'],
+                age_ms=max(u['age_ms'],d['age_ms']),bar_ms=1000*self.quote_age_s()))))
+        except Exception as e:
+            self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(now,ep,json.dumps(dict(
+                kind='SHADOW_STALE_ERROR',error=f'{type(e).__name__}: {e}'))))
+        finally:
+            self.st.on_venue_quote(None,None,None,None)
+
     def decide_now(self):
         now=time.time(); ep=int(now//300)*300
-        if not self.publish(): return {'fire':False,'reason':'Waiting for fresh UP and DOWN books'}
+        if not self.publish():
+            self._shadow_stale(ep,now)
+            return {'fire':False,'reason':'Waiting for fresh UP and DOWN books'}
         bad=self.health.stale(('spot','perp','depth'))
         if bad: return {'fire':False,'reason':'Binance feed not usable: '+'; '.join(f'{k} {v}' for k,v in bad.items())}
         s,p=self.st.s_ts,self.st.p_ts

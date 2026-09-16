@@ -272,5 +272,64 @@ class SignalIsNotAPosition(unittest.TestCase):
         self.assertIn('EV', m['main_last_reason'])
 
 
+class ReversalProbability12150(unittest.TestCase):
+    """REVERSAL handed order_plan the probability of the side it was NOT buying.
+
+    The old code flipped twice: `p_up = fair if UP else 1-fair` (already the
+    side's probability) and then `p_side = p_up if UP else 1-p_up`. A DOWN
+    reversal with fair_p_up 0.0100 reached the EV gate as p=0.0100 when P(DOWN)
+    was 0.9900. Because _aligned_direction only names DOWN when fair_p_up <=
+    GATED_ODDS_DOWN, the p was always <= 0.40 against a ~0.60 ask, so DOWN
+    REVERSAL could never clear EV and failed as "price fails model EV".
+    These tests fail if anyone reintroduces the second flip.
+    """
+    def _reversal(self, down):
+        e = engine_with()
+        if down:
+            drive(e, 0, 100060.0, seconds=20, step_ms=100)          # MAIN calls UP
+            e.confirm('MAIN', placed=False)
+            fl = drive(e, 40000, 99930.0, seconds=30, step_ms=100,
+                       imbalance=-0.9, buy=False, candle_id=0)
+        else:
+            drive(e, 0, 99940.0, seconds=20, step_ms=100, imbalance=-0.9, buy=False)
+            e.confirm('MAIN', placed=False)
+            fl = drive(e, 40000, 100070.0, seconds=30, step_ms=100, candle_id=0)
+        revs = [d for _, d in fl if d['kind'] == 'REVERSAL']
+        self.assertTrue(revs, 'harness must produce a REVERSAL to test')
+        return e, revs[0]
+
+    def test_down_reversal_gets_the_probability_of_down(self):
+        e, d = self._reversal(down=True)
+        fair = e.feature['fair_p_up']
+        self.assertEqual(d['side'], 'DOWN')
+        self.assertAlmostEqual(d['p'], 1.0 - fair, places=9,
+                               msg='p must be P(the side being bought)')
+        self.assertGreater(d['p'], 0.5,
+                           'a DOWN reversal fires because DOWN is likely; p must reflect that')
+
+    def test_up_reversal_gets_the_probability_of_up(self):
+        e, d = self._reversal(down=False)
+        fair = e.feature['fair_p_up']
+        self.assertEqual(d['side'], 'UP')
+        self.assertAlmostEqual(d['p'], fair, places=9)
+
+    def test_probability_up_means_probability_of_up_on_both_sides(self):
+        for down in (True, False):
+            e, d = self._reversal(down=down)
+            self.assertAlmostEqual(d['probability_up'], e.feature['fair_p_up'], places=9,
+                                   msg='the field is named probability_up on both sides')
+
+    def test_main_and_reversal_agree_on_the_convention(self):
+        """MAIN was always right; the two must not drift apart again."""
+        e = engine_with()
+        fired = drive(e, 0, 100060.0, seconds=20, step_ms=100)
+        main = [d for _, d in fired if d['kind'] == 'MAIN'][0]
+        self.assertAlmostEqual(main['p'], main['probability_up'], places=9,
+                               msg='for an UP call both are P(UP)')
+        _, rev = self._reversal(down=False)
+        self.assertAlmostEqual(rev['p'], rev['probability_up'], places=9,
+                               msg='same for an UP reversal')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=1)

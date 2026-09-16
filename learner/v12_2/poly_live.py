@@ -118,13 +118,28 @@ class LiveBroker:
                     # reports one. The locally configured rate/exponent is only a
                     # fallback, and the basis string says which was used so the
                     # dashboard never presents an estimate as a venue figure.
+                    # 12.15.0: a reported rate of ZERO is not "the venue charges
+                    # nothing" - it is the trade tape not carrying the fee.
+                    # Polymarket books it at POSITION level as entry_fees_usdc,
+                    # and the old guard (present-and-non-empty) accepted 0.0 and
+                    # stamped an estimate of zero as a venue figure. Measured on
+                    # the live journal: 84 of 84 fills carried fees=0.0 with
+                    # basis VENUE_FEE_RATE_BPS, while the venue's own rows charged
+                    # 12.9947 over the same 83 settled epochs. The engine reported
+                    # +4.4866 where the account actually made -8.5073 - the entire
+                    # reported profit was uncharged fees, and the sign was wrong.
+                    # The local estimate was never the problem: fee(px,shares,.07,1)
+                    # reproduces venue_fees to 1e-5 on all 83. So: a positive rate
+                    # is the venue's, anything else falls back and says so.
                     bps=getattr(t,'fee_rate_bps',None)
-                    if bps is not None and str(bps)!='':
-                        f_amt=round(n*p*float(bps)/10000.0,6); f_basis='VENUE_FEE_RATE_BPS'
+                    try: bps_f=float(bps)
+                    except (TypeError,ValueError): bps_f=None
+                    if bps_f is not None and bps_f>0:
+                        f_amt=round(n*p*bps_f/10000.0,6); f_basis='VENUE_FEE_RATE_BPS'
                     else:
                         f_amt=fee(p,n,plan['rate'],plan['exponent']); f_basis='LOCAL_FEE_ESTIMATE'
                     fills.append((str(t.id),dict(shares=n,spent=n*p,price=p,fees=f_amt,
-                                                 fee_basis=f_basis,fee_rate_bps=(float(bps) if bps not in (None,'') else None))))
+                                                 fee_basis=f_basis,fee_rate_bps=bps_f)))
                 elif st not in ('FAILED','CANCELLED','CANCELED'):
                     unsettled=True
         return fills,seen_qty,unsettled

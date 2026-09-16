@@ -465,3 +465,37 @@ record rather than inferred. Unreadable candles table degrades to the old behavi
 Tests: `LaneSeed12141`, 6 cases, including one that fails if seeding changes no median. 215+71+23+6 -> 316 OK;
 SHA256SUMS 31/31.
 Credit: Mumbai found and measured it, and retracted its own "market state" reading to do so.
+
+## 12.15.0 — two verified defects from the nine-way line-by-line audit. One of them made the live PnL the wrong sign.
+
+### (a) `poly_live.py` — a venue fee rate of ZERO was accepted as "the venue charges nothing"
+`if bps is not None and str(bps)!=''` tested present-and-non-empty, so a reported `fee_rate_bps` of 0.0 passed and
+stamped `fees=0.0` with basis `VENUE_FEE_RATE_BPS` — an estimate of zero presented as a venue figure. Polymarket's
+trade tape does not carry the fee; it books it at POSITION level as `entry_fees_usdc`.
+**Verified by V directly against the live journal, not taken from the audit:**
+- 84 of 84 fills: `fees=0.0`, `fee_rate_bps=0.0`, basis `VENUE_FEE_RATE_BPS`.
+- 83 settled epochs: local `sum(pnl)` **+4.4866** against the venue's `sum(venue_pnl)` **−8.5073**.
+- Difference **12.9939** = `sum(venue_fees)` **12.9947**. The entire reported profit was uncharged fees.
+- `payout − spent − venue_fees == venue_pnl` on **83 of 83** rows: the venue charges once, on entry, on the right
+  base. Only our copy was missing.
+So the engine reported **+$4.49 where the account actually lost $8.51**, and every number derived from
+`results.pnl` — the dashboard PnL curve, `return_on_stake`, `daily()` and therefore the tp/sl daily halt — was too
+high by $0.09–$0.25 per trade. Wins/losses/accuracy are unaffected (no row's sign flips; 38W/45L on both bases).
+Fix: a positive rate is the venue's, anything else falls back to the local estimate and says so in the basis.
+The local estimate was never wrong — `fee(px,shares,0.07,1)` reproduces `venue_fees` to 1e-5 on all 83 rows.
+**This was seen before and misread.** R-19 observed `fills.fees` zero on all 76 rows and concluded the fee constant
+did not matter. It did; the zero was the bug, not the answer.
+
+### (b) `poly_lanes.py` — REVERSAL was handed the probability of the side it was NOT buying
+The probability was flipped twice: `p_up = fair if UP else 1-fair` (already the side's probability) and then
+`p_side = p_up if UP else 1-p_up`. **Verified on the running module:** a DOWN reversal with `fair_p_up` 0.0100 was
+handed **p=0.0100 when P(DOWN) was 0.9900**, and reported `probability_up=0.9900` when P(UP) was 0.0100 — both
+fields exactly swapped. `_aligned_direction` only names DOWN when `fair_p_up <= 0.40`, so the p reaching the EV
+gate was always ≤0.40 against a DOWN ask near 0.60: EV about −0.35. **DOWN REVERSAL COULD NEVER FIRE**, and it
+failed as "price fails model EV", which reads as a pricing problem. MAIN flips once and was always correct, so this
+was a deviation in that function, not a house convention. Four regression tests; they fail on the old module.
+
+Also in this build: `_shadow_stale` instrumentation (12.15.0) logs the decision the lane WOULD have made when the
+freshness bar blocks it, so Task 116's unanswerable 1,228 blocked rows become gradeable. Instrumentation only —
+a test asserts the function body cannot reach the order path.
+Tests 221 + 77 + 28 = 326 OK; SHA256SUMS 31/31 (now covers `poly_live.py`).
