@@ -467,7 +467,7 @@ class Tests(unittest.TestCase):
     def test_v120_database_migrates_additively(self):
         self.db.reserve(123,decision(),'up','condition')
         self.db.set('build','12.0'); self.db.c.close(); self.db=Journal(self.path,'PAPER','abc')
-        self.assertEqual(self.db.get('build'),'12.13.1')
+        self.assertEqual(self.db.get('build'),'12.14.0')
         self.assertEqual(self.db.sql('SELECT count(*) FROM signals WHERE epoch=123')[0][0],1)
         cols={r[1] for r in self.db.c.execute('PRAGMA table_info(orders)')}
         self.assertTrue({'error_json','timing_json','request_reached','reconcile_count','venue_live'}<=cols)
@@ -691,7 +691,6 @@ class DashboardTests(unittest.TestCase):
             for path in ['/','/controls','/data','/api/state','/api/history','/api/orders?kind=EF','/api/chart','/api/pnl','/export.csv']:
                 with urllib.request.urlopen(f'http://127.0.0.1:{server.server_port}'+path) as response:self.assertEqual(response.status,200)
         finally:server.shutdown();server.server_close();thread.join()
-if __name__=='__main__':unittest.main(verbosity=2)
 
 
 class PnLConditionsNeverHalt(unittest.TestCase):
@@ -844,3 +843,5 @@ class AttemptLoopIsPaperParity(unittest.TestCase):
             self.assertEqual(len(ts),2)
             self.assertGreaterEqual(ts[1]-ts[0],0.07,'paper waits 75 ms before the second shot')
         asyncio.run(run())
+
+if __name__=='__main__':unittest.main(verbosity=2)

@@ -423,4 +423,25 @@ model, constants copied with line provenance; 21 tests in test_lanes.py). The bl
 HEDGE on an open MAIN by design (build11 `_watch_reversal`: no MAIN, nothing to hedge), and `_main_oneshot_check`
 disarms MAIN after ONE filled order - a live instruction from 09-13 that, on a paper engine, ends the experiment at
 the first fill and takes REVERSAL with it. It now returns immediately unless `a.live`. Live behaviour is unchanged
-and pinned by a test; paper keeps MAIN armed. Tests 106+62+21 = 189 (counted, not carried over: the earlier "307" was my arithmetic, wrong); SHA256SUMS 31/31.
+and pinned by a test; paper keeps MAIN armed. Tests 215+71+21 = 307; SHA256SUMS 31/31.
+
+## 12.14.0 — REVERSAL watches the MAIN call, not the MAIN order (build11 parity)
+The port had REVERSAL wait for a PLACED MAIN (`poly_lanes.py` old line 490, `if not self.current_main`). build11
+does not: `btc_model_build11.py:17151` sets `current_main` when `store.add_prediction` succeeds — the prediction —
+and `_record_trade` consults `controls.may_execute(kind)` only afterwards, at 16804, to decide whether an order
+goes out. Consequence of the deviation: with MAIN's switch off, `current_main` was never set, so REVERSAL returned
+None on every candle and **EF + REVERSAL without MAIN orders could not be expressed at all**. That is why Task 113
+had to arm MAIN. Owner's 09-16 screenshot of the Tokyo v11 box: MAIN BLOCKED, EF BLOCKED, REVERSAL TRADING,
+runtime 5d 4h — the configuration that earns there is the one this port could not run.
+Change: `main = self.current_main or self.main_signal`; the flip test and the state detail read from that, and an
+unplaced MAIN is named in the detail as "(call only - MAIN order not placed)" rather than passed off as a hedge.
+`test_lanes.py` inverts `test_reversal_requires_a_real_main_position` on purpose and keeps a floor
+(`test_no_main_call_no_reversal`): no MAIN **call**, still no REVERSAL.
+Tests 215+71+23 = 309 OK (direct invocation, see the test-runner fix below); SHA256SUMS 31/31.
+
+## Test-runner defect fixed in the same commit
+`test_v122.py` carried `if __name__ == '__main__': unittest.main()` at line 1280 with 1190 lines after it, and
+`test_polymarket.py` the same at 694 with 152 after. Run as `python3 test_v122.py` the body reaches that block
+mid-file, runs the 106 tests defined so far and exits **printing OK** — silently skipping 109 tests, all of them
+the recent 12.10–12.13 work. `python3 -m unittest test_v122` was unaffected, which is why two sessions counted
+307 and 189 and both were right. Blocks moved to end of file; either invocation now runs the whole suite.

@@ -484,10 +484,28 @@ class LaneEngine:
         opposite the MAIN already on the books. No persistence requirement:
         build11 removed the old eight-check gate because it fired once in 57
         candles. This is a hedge leg, not a close - MAIN stays open."""
-        # Build 11 hedges an open MAIN. If MAIN was refused there is nothing to
-        # hedge, and firing here would be an outright position wearing the word
-        # hedge, so REVERSAL waits for a real one.
-        if not self.current_main or self.current_reversal is not None: return None
+        # 12.14.0: REVERSAL watches the MAIN *call*, not the MAIN *order*.
+        #
+        # This port had it the other way ("a refused MAIN is nothing to hedge"),
+        # and that was a deviation from build11 dressed up as prudence. Read
+        # build11 itself: btc_model_build11.py:17151 sets current_main the moment
+        # store.add_prediction succeeds - the prediction, not a fill - and
+        # _record_trade only consults controls.may_execute(kind) AFTERWARDS, at
+        # 16804, to decide whether an order goes out. So on the Tokyo box with
+        # MAIN switched OFF the MAIN prediction is still made, current_main is
+        # still set, and REVERSAL at 17209 still fires. The owner's 09-16
+        # screenshot is exactly that: MAIN BLOCKED, EF BLOCKED, REVERSAL TRADING,
+        # runtime 5d - and it is the configuration that earns there.
+        #
+        # Under the old rule, MAIN off meant current_main never set, so REVERSAL
+        # returned None on every candle forever. EF+REV without MAIN orders was
+        # not expressible, which is why Task 113 had to arm MAIN as well.
+        #
+        # Yes, a REVERSAL on an unplaced MAIN is an outright position. That is
+        # what build11 does and what the live Predict lane has been doing for
+        # five days; naming it honestly is the fix, refusing to port it was not.
+        main = self.current_main or self.main_signal
+        if not main or self.current_reversal is not None: return None
         if self.pending.get('REVERSAL'): return None
         if self.reversal_attempts >= self.MAIN_MAX_ATTEMPTS:
             self.reversal_state = {"status": "watching", "detail": "hedge not payable"}
@@ -500,11 +518,13 @@ class LaneEngine:
         if live is None:
             self.reversal_state = {"status": "watching", "detail": "no aligned signal"}
             return None
-        if live == self.current_main["direction"]:
+        if live == main["direction"]:
             self.reversal_state = {"status": "watching",
                                    "detail": f"signal still agrees with MAIN {live}"}
             return None
-        detail = f"signal flipped to {live} against MAIN {self.current_main['direction']}"
+        placed = self.current_main is not None
+        detail = (f"signal flipped to {live} against MAIN {main['direction']}"
+                  + ("" if placed else " (call only - MAIN order not placed)"))
         self.reversal_state = {"status": "firing", "detail": detail}
         fair = safe_float(f.get("fair_p_up"), 0.5)
         p_up = fair if live == "UP" else 1.0 - fair

@@ -1277,8 +1277,6 @@ class TickGridRounding(unittest.TestCase):
         self.assertAlmostEqual(self.plan(0.52, 0)['cap'], 0.52, places=9)
 
 
-if __name__ == '__main__':
-    unittest.main(verbosity=1)
 
 
 class LowBalanceIsWatchedNeverActedOn(unittest.TestCase):
@@ -2155,7 +2153,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.13.1'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.14.0'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0
@@ -2468,3 +2466,7 @@ class MainOneShot12131(unittest.TestCase):
         r, db, path = self._runner(False)
         r._main_oneshot_check(); self.assertIs(db.get('main_enabled'), True)
         db.c.close(); os.unlink(path)
+
+
+if __name__ == '__main__':
+    unittest.main(verbosity=1)

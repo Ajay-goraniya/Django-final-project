@@ -194,14 +194,44 @@ class SignalIsNotAPosition(unittest.TestCase):
         self.assertEqual([d for _, d in again if d['kind'] == 'MAIN'], [])
         self.assertIn('not payable after', e.main_block)
 
-    def test_reversal_requires_a_real_main_position(self):
-        # Hedging a position that was never taken is an outright bet, not a hedge.
+    def test_reversal_fires_on_the_main_call_even_if_no_order_was_placed(self):
+        """12.14.0 inverts the test that stood here. Deliberately.
+
+        The old test asserted 'no REVERSAL while MAIN holds nothing', on the
+        reasoning that hedging an untaken position is an outright bet. True, and
+        not what build11 does: btc_model_build11.py:17151 sets current_main when
+        the PREDICTION is stored, and may_execute(kind) is consulted afterwards
+        at 16804 to decide whether an order goes out. The owner's Tokyo box runs
+        MAIN OFF / EF OFF / REVERSAL ON and REVERSAL trades there.
+
+        So this must fail if anyone restores the 'real position' requirement.
+        """
         e = self._fired()
         e.confirm('MAIN', placed=False, reason='padded price fails model EV')
+        self.assertIsNone(e.current_main, 'nothing was bought')
         flipped = drive(e, 40000, 99930.0, seconds=30, step_ms=100,
                         imbalance=-0.9, buy=False, candle_id=0)
+        revs = [d for _, d in flipped if d['kind'] == 'REVERSAL']
+        self.assertTrue(revs, 'the MAIN call stands, so REVERSAL watches it')
+        self.assertEqual(revs[0]['side'], 'DOWN')
+        self.assertIn('call only', e.reversal_state['detail'],
+                      'and it says so: an unplaced MAIN is named, not hidden')
+
+    def test_reversal_names_a_placed_main_without_the_call_only_note(self):
+        e = self._fired()
+        e.confirm('MAIN', placed=True)
+        drive(e, 40000, 99930.0, seconds=30, step_ms=100,
+              imbalance=-0.9, buy=False, candle_id=0)
+        self.assertNotIn('call only', e.reversal_state['detail'])
+
+    def test_no_main_call_no_reversal(self):
+        """The floor that survives: REVERSAL still needs a MAIN *call*."""
+        e = engine_with()
+        self.assertIsNone(e.main_signal)
+        flipped = drive(e, 40000, 99930.0, seconds=8, step_ms=100,
+                        imbalance=-0.9, buy=False, candle_id=0)
         self.assertEqual([d for _, d in flipped if d['kind'] == 'REVERSAL'], [],
-                         'no REVERSAL while MAIN holds nothing')
+                         'with no MAIN call there is nothing to flip against')
 
     def test_reversal_fires_once_main_actually_holds(self):
         e = self._fired()

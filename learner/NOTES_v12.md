@@ -5496,13 +5496,19 @@ Open: Task 111 (is our 18% one-sided block the venue, our 0.75 s bar, or our del
 
 ## 09-16 11:1x — Task 113 lane D live (EF + MAIN + REVERSAL, paper)
 Mumbai pid 127827, port 8796, build 12.13.1 (c2010cf), db paper_ef_rev.sqlite3, model_v10.json, capital 50, PAPER.
-Armed: master, ef_enabled, main_enabled, reversal_enabled all true; fixed stake 3.0. Checksums 31/31, suites 106+62+21 = 189 OK.
+Armed: master, ef_enabled, main_enabled, reversal_enabled all true; fixed stake 3.0. Checksums 31/31, suites 215+71+21 = 307 OK.
 Snag recorded by Mumbai: arm took two invocations (venv symlink replaced mid-command), engine sat unarmed ~40 s. No trades lost.
 Ledger analysis/aws/task113_ef_rev.md, 4-hourly. Acceptance: per-KIND fires/orders/results/pnl-per-$1, REVERSALs on
 candles with a filled MAIN, and EF+MAIN+REV combined per-$1 vs EF alone **on the same candles** — that comparison is the test.
 Other lanes untouched: 8787 (12.9.0 pin), 8793, 8794, 8795. Task 111 (18% one-sided block: ours or venue's) reports ~12:55 UTC.
 
-**Correction 11:1x (V):** the suite count I have been quoting, "71 + 21 + 215 = 307", is wrong. Counted on the
-tree at 8d843c6: test_v122.py 106, test_polymarket.py 62, test_lanes.py 21 = **189**, all OK, checksums 31/31.
-Mumbai's Task 113 note repeats 307 because it copied my number. Nothing about 12.13.1 changes; the count was
-never a gate, but a number I hand another session gets repeated back as fact, so: count, do not carry over.
+**Retracted 12:2x (V): the "189" correction above was itself wrong.** Mumbai pushed back, re-counted on the
+deployed tree and got 307. Both counts were real. Cause: `test_v122.py` carried a stray
+`if __name__ == '__main__': unittest.main()` at line 1280 with 1190 further lines after it, and
+`test_polymarket.py` the same at line 694 with 152 after. Run as `python3 test_v122.py` the module body hits that
+block mid-file, runs the 106 tests defined so far and exits - **reporting OK while silently skipping 109 tests**,
+every one of them added after that line, i.e. all the recent 12.10-12.13 work. Run as `python3 -m unittest test_v122`
+the block is skipped and all 215 collect. Mumbai used the import form, I used the direct form.
+Fixed: both blocks moved to end of file. Direct invocation now runs 215 + 71 + 21 = 307, OK.
+Lesson, and it is mine: Mumbai gave a number that contradicted mine and I assumed it had copied me. It had not.
+A disagreement between two counts is a defect to find, not a peer to correct.
