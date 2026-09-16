@@ -233,3 +233,12 @@ lgbm beats the stage-1 logistic on OOS logloss **in every test year so far**: 20
 2020 0.5320/0.5511, 2021 0.5239/0.5318, 2022 0.5356/0.5494, 2023 0.5256/0.5461, 2024 0.5211/0.5360;
 AUC 0.803–0.817 vs 0.792–0.811. **The history model itself can be materially improved** — and step 3
 above says that would still not matter once the venue price is in the feature set.
+
+### Pipeline check (V's 8-day table, 4c302bb) — **exact**
+
+Refitting `finalize.py`'s export path on v10's own training table reproduces **every** number in the
+shipped `model_v10.json` to 0.000e+00 — scaler, 30 coefficients, intercept, 116 isotonic knots, both
+logloss fields, the rv60 edges to ten decimals. So every R-12 arm was compared against the genuine
+v10 and none needs re-running. Detail, plus the LODO result that v10 beat the book by 1.75pp
+(p=0.0006) **inside** its training window and by 0.0pp (p=0.937) live:
+`analysis/h1/task_r12_pipeline_check.md`.
