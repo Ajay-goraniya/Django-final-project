@@ -3525,3 +3525,17 @@ never end a call with it started and master off.
 (3) Verify from the box: curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8787/ (401 or 200 = up), the first
 decision row after restart, and master true in meta.
 (4) 8793 (12.8.11 control), the Task 98 ref logger and the Task 102 book logger: leave running, confirm alive.
+
+## Task 106 - URGENT DIAGNOSIS, and it matters for LIVE: why did 12.9.0 on 8787 stop firing for ~8 h while healthy?
+You restarted it, which fixes the symptom and destroys the evidence unless we read the old rows now. The live Zurich
+engine (12.12.1/12.12.2) is a descendant of exactly that build, so this is not a paper-only question.
+From paper_8787_2.sqlite3, the window 00:30-08:58 UTC, answer with numbers:
+(1) For the 142 fire=false rows with reason null in the last hour (and the same cut over the whole 8 h): what are p,
+ev, threshold, ask, sec in those rows? If ev is present and simply below threshold, it is the market and we close
+this. If p or ev is missing, frozen, or identical across rows, it is a BUG - say which.
+(2) Compare the same minutes on 8793 (12.8.11): its fire=true count, and its p/ev distribution. Same candles, two
+builds - the difference is the finding.
+(3) Check the 12.9.0-specific suspects explicitly: the FeatureState array cache (are features changing tick to tick,
+or frozen?), quote_age_s() as the single dial (what is ev_settings.quote_age_ms on 8787 vs 8793?), and
+require_depth in _gate_on_padded_ev (is order_plan refusing with "book too thin at cap"?).
+(4) Verdict in <=6 lines: market, config, or engine defect. If defect, name the code path. Do NOT change any engine.
