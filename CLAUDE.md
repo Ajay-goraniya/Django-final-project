@@ -57,6 +57,9 @@ The two channels that work:
   goes straight to the file, not into the chat first. Reports state the token budget in one line when known.
   **STRICT (user, 01:3x): everyone follows this, always. The only exception is a major matter that must be
   delivered right now (a live-money fault, a wrong deploy, a stop condition) - and even then, the numbers first.**
+  **09-16 19:3x, owner: "keep the token usages as minimal as you can, let everyone know, we are so low in tokens."**
+  From now: ledgers only at their scheduled hour, no interim reports, no narrative, no restating; pokes are one
+  line; verify by reading, not by re-running suites unless a build changed. Silence is the default.
 
 ## Session V is the head session, and that raises the bar on V
 
