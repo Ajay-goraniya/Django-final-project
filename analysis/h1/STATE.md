@@ -1014,6 +1014,9 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
   six checks it read −0.107 → −0.034 → −0.020 → −0.015 → −0.021 → −0.040 → −0.064, and the two
   halves have converged ON EACH OTHER at about −0.066 rather than on zero. Verdict REFUTED stands
   at 3.2x the pre-set bar.
+- **09-16 10:4x: n=325, −0.069/fire, halves −0.069 / −0.069 — the two halves now agree to
+  three decimals.** That is as clean as this verdict can get: the forward set is uniformly
+  −0.069 against a +0.018 baseline, with no remaining reading under which it drifts to zero.
 - (18:45: +4, n=305, −0.052 — the 16:45 move held rather than reverting.)
 - (16:45: +13 fires — a new fastest accrual — n=301, −0.053/fire, halves −0.072 / −0.034.) Both halves still negative and the verdict is unchanged, but this is the
   largest single-check move the ledger has made: **−0.086 → −0.053**, and the second half has come
