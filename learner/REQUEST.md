@@ -396,3 +396,24 @@ and to the worst 3-hour window, assuming the measured correlation - not assuming
 (4) Verdict: is multi-market worth building, and if yes which market is first and why. Mumbai's Task 109 supplies the
 venue-side map (liquidity, tick, minimum, one-sided rate). <=12 lines analysis/h1/task_r23_multimarket.md. No engine
 change follows this; it is the case for or against the next build.
+
+## R-26 — train on two weeks WITH the venue price (owner's ask, 09-16 12:5x)
+Owner: *"you have already trained it on 1 week data, then we collected at least 1 week again, so train it on 2 weeks."*
+**This is not R-12 repeated, and the distinction is the whole point.** `analysis/h1/r12_big_brain.md:8,99`: the
+109-month run MASKED 12 of 30 features, **including p_venue / lv / lv_x_sec**. It was blind to the market price,
+which by R-13 is where the signal is. A two-week fit that can SEE the venue price has never been run.
+
+Data verified on V's box (do not re-derive): week 1 = the built 30-feature table, 08-29..09-06, 2,272 candles /
+22,720 rows. Week 2 = `venues.q` 1 Hz venue quotes 09-08 15:25 -> 09-16 12:35, **2,176 distinct candles**, and
+`venues.outcome` **2,174 graded**. Gap: 09-07 has no venue quotes, stated not hidden. Four of the thirty cannot be
+rebuilt for week 2 — spread_bps, imb5, imb20, micro_bps — because we never logged BINANCE depth (`book1s.py` logs
+the venue book: ask_up/ask_dn/size) and the archive carries no 1 s depth. The other 26 rebuild from 1s klines +
+aggTrades + perp trades (data-api.binance.vision; api.binance.com is geo-blocked) plus the venue block.
+Disk is the constraint: 6.6 GB free, so stream day-by-day, download -> extract -> delete.
+
+Three arms on one held-out slice, and the middle one is not optional:
+(a) frozen v10, 30 features — the agreed benchmark; (b) 26 features, week 1 only; (c) 26 features, both weeks.
+**(b) vs (c) is the owner's actual question** — does the second week buy anything with the feature set held
+constant. (a) vs (c) decides whether it ships. A win in (c) without (b) is unattributable and V will not relay it.
+Same table as the R-12 verdict, halves() and paired() against frozen, walk-forward only, and state whether (c) is
+data-starved against (a). Assigned to H1.
