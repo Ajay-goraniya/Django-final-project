@@ -344,3 +344,19 @@ THE TEST THAT DECIDES IT, and the one that has killed every predecessor:
 Ship = paper twin on Mumbai with the selector in front of the existing EV rule; live only with the user.
 Deliverable analysis/h1/task_r20_selection.md <=15 lines + the sweep grid. Run it after R-19's fee answer, which may
 change how many fires exist to select from.
+
+## R-21 (09-16 07:0x) - QUOTE FRESHNESS, the one execution parameter never gridded. H1's queue is empty; this is next.
+Fact from R-18a: 72% of rejects are "the ask rose", and the median rise is 8 ticks (p90 19). An 8-tick move inside a
+~250 ms round trip is implausible as pure market movement - part of it is that we PRICED off a stale book. The engine
+accepts a quote up to `ev_settings.quote_age_ms` old; Zurich runs 750 ms today, and `book_age_ms` is recorded on
+every fire. Nobody has ever gridded it.
+Do, on real rows (Zurich journals + every paper lane, all of which carry book_age_ms and the fill/reject outcome):
+(1) fill rate and pnl/$1 by book_age bucket (0-100, 100-250, 250-500, 500-750, 750+ ms), n per cell, halves, per day.
+(2) Of the "ask rose" rejects, the distribution of book_age at decide - if stale quotes are over-represented, say by
+how much, with the non-stale control.
+(3) The cost side, because this is a trade-off not a free win: how many fires would a 250 ms limit have REFUSED
+(count from the wait census / decide rows), and what is the pnl/$1 of exactly those fires. Refusing profitable fires
+to chase a better fill rate is the obvious way this backfires - measure it, do not assume it.
+(4) If a tighter limit wins on BOTH fill rate and total PnL with halves holding, propose it as a one-line control
+change (ev_settings.quote_age_ms), gridded, for a paper twin first. If it does not, close it and say so.
+verify.py throughout. <=10 lines in analysis/h1/task_r21_quote_age.md.
