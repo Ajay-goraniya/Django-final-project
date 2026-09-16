@@ -5663,3 +5663,11 @@ null. That is the clean test, and it is the honest answer to the owner.
 
 Build drift is excluded as a confound: 12.8.11's decide() vs HEAD's over 22,720 rows is max |dp| = 0.
 Frozen v10 is the benchmark from here. Detail: analysis/h1/task_r12_verdict_vs_frozen.md.
+
+**Goal check 12:48 (V).** Last 3 h: R-25 dropped, R-12's bar answered (no retrain beats frozen v10), H1 forward
+ledger n=334 at -0.082/fire and **moving away from zero, not toward it** — that is now the watch item, since it is
+the same frozen signal the whole program has just been told to keep. Not a fault: no MASTER_OFF, no EF_FLOOR row,
+Zurich alive at 11:14 with master on. H1's queue is not empty (standing (a) R-14/R-18a awaits 3-5x submit_book
+orders), so no new work assigned and no new direction-model idea invented. Next hard checkpoint 13:36 UTC: does
+8796's MAIN rate converge to the siblings' 7-9/hr once its 2 h cold window fills, which is the falsifiable half of
+the 12.14.1 diagnosis.
