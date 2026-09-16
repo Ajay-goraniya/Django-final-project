@@ -39,3 +39,27 @@ priced right; we simply do not get most of them. Second, 1,228 decisions were bl
 DOWN books" - Mumbai's Task 111 measured that same bar refusing 24.7% of seconds where the venue WAS quoting both
 sides, purely because no delta had arrived for 5 s.
 Neither is a signal problem, and no amount of retraining touches either.
+
+CORRECTION TO THE LINE ABOVE, made before acting on it. "59% of orders die on one venue error" counts ATTEMPTS,
+not candles, and it is misleading. The retry apparatus works: the attempt histogram is {1: 164, 2: 37, 3: 8}, and
+of the 57 candles that needed more than one attempt, 44 went on to fill. **At the candle level we fill 84 of 129
+attempted = 65%,** not 40%. I had the denominator wrong.
+
+WHAT THE 45 UNFILLED CANDLES ACTUALLY ARE, checked in the journal rather than assumed. 42 of 45 stop at attempt 1
+with a median 1,977 ms of budget still unspent - so they did NOT run out of time. The retry fires, re-reads the
+book, and the re-plan then refuses: `order_plan` raises on the moved price and the lane releases rather than
+chasing. That is the EV guard doing its job. Paying up to follow a book that has moved away is exactly the trade
+the guard exists to decline, and "fix the rejections" would mean buying worse prices on purpose.
+**So there is no execution bug here to fix. I proposed one on a bad denominator.**
+
+WHERE THE ACTUAL GAP IS, and it is upstream of the order. The model calls 54% of candles; we place an order on
+35%. The missing ~19 points are decisions that never reach the executor at all, and one reason dominates:
+**1,228 decide rows blocked by "Waiting for fresh UP and DOWN books"** against 23 blocked by EV and 67 by warm-up.
+Mumbai's Task 111 measured that same bar from the other side: of the seconds it refuses, the venue was quoting
+BOTH sides on 87.3%, and the refusals are entirely the age test - 244 of 987 both-sided seconds (24.7%) blocked
+solely because no delta had arrived for 5 s or more, with zero attributable to one-sided books or delta handling.
+
+THAT is the candidate, and it is a THRESHOLD, so it does not move on an argument. It moves on a grid against real
+outcomes, both arms, every cell, or not at all. The data needed is per-second book age joined to what the trade
+would have settled at - Mumbai has the raw stream and the outcome table; the feature parquets carry no age column,
+so this cannot be gridded from here.
