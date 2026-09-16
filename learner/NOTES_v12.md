@@ -5671,3 +5671,31 @@ Zurich alive at 11:14 with master on. H1's queue is not empty (standing (a) R-14
 orders), so no new work assigned and no new direction-model idea invented. Next hard checkpoint 13:36 UTC: does
 8796's MAIN rate converge to the siblings' 7-9/hr once its 2 h cold window fills, which is the falsifiable half of
 the 12.14.1 diagnosis.
+
+## 09-16 13:0x — R-26 answered: the second week COSTS money, and the "winner" is frozen v10 in a different hat
+H1, e2c9f21, analysis/h1/task_r26_twoweek.md.
+
+**My brief was wrong on one point and H1 corrected it.** I told H1 four features (spread_bps, imb5, imb20,
+micro_bps) could not be rebuilt for week 2 because we never logged Binance depth. The ENGINE logged them live -
+100% present and 100% non-zero on 34,121 ticks - so the full 30-feature arm ran and nothing needed downloading.
+Both feature sets are reported. Lesson for me: I checked the archive and the standalone loggers and did not check
+what the engine itself writes.
+
+| arm | 30 feats | 26 feats |
+|---|---|---|
+| (a) frozen v10 | +145.81 | +145.81 |
+| (b) week 1 only | **+182.17** | +178.66 |
+| (c) week 1 + week 2 | +175.47 | +161.02 |
+
+**The second week costs money in both: -$6.70 and -$17.64, and costs logloss.** verify.py on (c) vs (b): halves
++0.180 / -0.128 sign flip, McNemar p=0.675, loses the null. The owner's two-week ask is answered and the answer is
+no - more recent data made it worse, not better.
+
+**The trap, and it is the real finding.** (b) beats frozen by $36 with halves +0.095/+0.094 and 7 of 8 days - it
+would have passed every gate. But **(b) IS frozen v10**: coef, scaler and intercept match to 0.000e+00. The only
+difference is the isotonic calibrator - 152 knots vs 116, GroupKFold(4) vs (8). Median |dp| 0.0077; the direction
+call differs on 0.511% of rows. An arbitrary calibrator detail is worth $36 per 1,033 fires **because it moves
+which candles clear the EV threshold.** That is not an edge to ship, it is a measurement of how sensitive the
+threshold is at the margin - and it lands on the same spot as V's slippage grid (analysis/v/ev_threshold_grid.txt):
+the money is decided at the fill/threshold boundary, not in the brain.
+H1 also flagged the asterisk on its own earlier line: (b) beats frozen, and (b) is not a retrain.
