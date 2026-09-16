@@ -3505,3 +3505,10 @@ the FORWARD one whose rows carry real 1 Hz book columns (bid, size_touch, book_a
 lanes. Report at 04:00 whether the three rollovers held, then only when book_src='book1s' coverage passes 50% of new
 rows and again at >=200 rows. Two paper engines give ~20 fires/day, so state days-to-n in the same line rather than
 waiting silently.
+Task 102/104 note (V, 05:1x): five defects in one logger in two hours, the last one taking it down for nine minutes,
+is enough. FREEZE it: no further live patching. The current process (123660) stays as it is unless it dies. Any next
+change is written to a copy, run against a copy of the db, and only then swapped in - your own words, and V agrees.
+Two structural points for whenever you do touch it: run each coroutine under its own supervisor so one raising task
+cannot take the others down (the single asyncio.gather is why an IndexError killed the process), and keep the
+gaps/sampler-error row you added - absence must stay visible. Coverage as it stands is 1.9 h with holes; that is
+fine, it only has to be honest. Report coverage hourly, nothing else, until 6 h of continuous data exists.
