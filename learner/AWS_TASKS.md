@@ -3512,3 +3512,16 @@ Two structural points for whenever you do touch it: run each coroutine under its
 cannot take the others down (the single asyncio.gather is why an IndexError killed the process), and keep the
 gaps/sampler-error row you added - absence must stay visible. Coverage as it stands is 1.9 h with holes; that is
 fine, it only has to be honest. Report coverage hourly, nothing else, until 6 h of continuous data exists.
+
+## Task 105 - URGENT, USER: "start 12.9 paper on mumbai it's not working". The user is looking at the paper
+dashboard on 8787 and it is down or not trading. Do now, report in <=4 lines:
+(1) State first: ps for btc_model_v12_polymarket on 8787 and 8793, their pids/builds/argv, and the last decision +
+last result timestamp in each db. Say which of the three is true - process dead, process alive but master off /
+halted, or alive and trading and the user is seeing a stale page.
+(2) Bring 8787 back: same db paper_8787_2.sqlite3, PAPER execution, --host 0.0.0.0, master true, stake fixed 3.0,
+DASHBOARD_PASSWORD from the environment. Build: the branch HEAD (12.12.1, a5eeb55) unless it does not start, in
+which case fall back to whatever is already staged and SAY which build you used. Stop/start/arm in ONE command -
+never end a call with it started and master off.
+(3) Verify from the box: curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8787/ (401 or 200 = up), the first
+decision row after restart, and master true in meta.
+(4) 8793 (12.8.11 control), the Task 98 ref logger and the Task 102 book logger: leave running, confirm alive.
