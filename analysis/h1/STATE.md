@@ -999,6 +999,8 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
   list, but the "converging on zero" reading is no longer supported by the last point.
 - (20:45: +3, n=308, −0.048, halves −0.082 / −0.015.)
 - (09-16 00:33: +0 new candles in the 23:44 snapshot, n=309 unchanged, −0.051, halves −0.082 / −0.021.)
+- (09-16 02:4x: +0 again on the 01:14 snapshot, n=309, −0.051. The engine has produced no new
+  forward candle since 09-15 20:50; lanes are paused, so the ledger is parked, not stalled.)
 - (18:45: +4, n=305, −0.052 — the 16:45 move held rather than reverting.)
 - (16:45: +13 fires — a new fastest accrual — n=301, −0.053/fire, halves −0.072 / −0.034.) Both halves still negative and the verdict is unchanged, but this is the
   largest single-check move the ledger has made: **−0.086 → −0.053**, and the second half has come
