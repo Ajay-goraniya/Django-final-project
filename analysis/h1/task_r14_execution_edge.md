@@ -56,13 +56,36 @@ mechanism is established, the payoff is not measurable yet.**
 The remaining **17 of 43 rejects had a cap AT or ABOVE the ask** and were killed anyway — those are
 pure round-trip losses, and no cap change reaches them.
 
+## (4b) MEASURED after V pushed a fresh `venues` snapshot — still does not ship
+
+My `venues` copy was stale (ended 09-15 01:10); the branch snapshot reaches **09-15 23:00, 2,019
+rows**. Coverage over the reject candles: **47 of 63 (75%)** — gaps are hours where V's container
+was reclaimed and the collector died with it. Provenance: the Zurich journal's own `actual` agrees
+with `venues.outcome` on **53 of 53** fills, independent files.
+
+| | n | win% | pnl/$1 | total |
+|---|---|---|---|---|
+| current fills | 53 | 50.9% | +0.137 | +7.25 |
+| **counterfactual — cap at the ask, on the 26 rejects priced below it** | **26** | 65.4% | **+0.170** | +4.42 |
+
+**And pricing at the ask does not buy a fill either: of 59 orders priced at or above the ask, 42
+filled — 71.2%.** Nearly a third still die to the round trip. At that rate the counterfactual
+returns **+3.14**, not +4.42.
+
+verify.py: **NOT A FINDING** — **sample size FAIL (n=26, under the 60 bar)** and **halves FAIL
+(+0.566 / −0.226, sign flips)**. Costs and null pass; on 26 trades that is not evidence. The
+fill-rate figure is n=59, itself one short of the bar, and is not read either.
+
+**So part 4 is now measurable and the answer is: positive, unreadable, do not ship.** It needs
+roughly 2.5x the reject sample before the cell clears the bar.
+
 ## Verdict
 
 **No execution change is proposed for shipping.** One candidate is ruled out as already satisfied
 (size), the other is mechanically supported but unmeasurable until reject candles carry outcomes.
 
-**What would make this answerable — one line for V:** have the engine record the venue resolution
-for *every* candle it fired on, not only the ones that filled. That single change turns 63 rejects
-from unmeasurable into a gradeable counterfactual, and R-14 part 4 becomes a real grid.
+**Superseded:** I asked V to record venue resolutions for every fired candle. V pointed out the
+data already existed — my snapshot was simply stale. Measured above; the blocker was mine, not the
+engine's. What it actually needs now is **more rejects**, not more instrumentation.
 
 Token budget: R-14, ~25k.
