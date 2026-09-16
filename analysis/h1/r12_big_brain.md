@@ -242,3 +242,11 @@ logloss fields, the rv60 edges to ten decimals. So every R-12 arm was compared a
 v10 and none needs re-running. Detail, plus the LODO result that v10 beat the book by 1.75pp
 (p=0.0006) **inside** its training window and by 0.0pp (p=0.937) live:
 `analysis/h1/task_r12_pipeline_check.md`.
+
+### Drawdown on the step-3 arms (user ask, 09-16 00:4x)
+
+maxDD / worst-underwater / DD-per-profit, $1 stake units: frozen v10 13.09 / **9.45** / 0.13;
+8d+30 10.86 / 2.21 / 0.14; 8d+30+p_hist 9.88 / 1.00 / 0.11; **p_hist alone 14.94 / 6.68 / 0.26**
+(worst on every path measure, 3/5 positive days). The live model needs the biggest bankroll -
+$94.50 under water at the $10 stake before it makes anything. Verdict unchanged.
+Detail: `analysis/h1/r12s3_drawdown.md`.
