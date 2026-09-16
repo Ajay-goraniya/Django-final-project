@@ -2151,4 +2151,28 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.9.0'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.10.0'); db.c.close(); os.unlink(path)
+
+
+# ---------------------------------------------------------------- 12.10.0
+class RefProxy12100(unittest.TestCase):
+    """R-16: settlement-reference proxy features are logged beside the model's own, never inside FEATURES."""
+    def test_twap_reference_features(self):
+        import btc_model_v10 as M
+        US = M.US; st = M.FeatureState(); op = 1_000_000 * US
+        st.on_spot_trade(op - 90 * US, 100.0, 1.0, False)   # in force through the pre-open minute
+        st.on_spot_trade(op, 102.0, 1.0, False)               # candle open trade
+        st.on_spot_trade(op + 30 * US, 104.0, 1.0, True)      # now
+        f = st.features(op, op + 30 * US)
+        self.assertNotIn('ref_open_bps', M.FEATURES)
+        self.assertAlmostEqual(f['ref_open_bps'], 200.0, places=6)    # open 102 vs pre-open TWAP 100
+        self.assertAlmostEqual(f['ref_move_bps'], 100.0, places=6)    # last-60s TWAP 101 vs 100
+        self.assertAlmostEqual(f['ref_gap_bps'], 400.0, places=6)     # spot 104 vs 100
+        self.assertAlmostEqual(f['move_bps'], (104 / 102 - 1) * 1e4, places=6)   # untouched
+    def test_no_pre_open_trade_falls_back_to_open(self):
+        import btc_model_v10 as M
+        US = M.US; st = M.FeatureState(); op = 1_000_000 * US
+        st.on_spot_trade(op, 102.0, 1.0, False); st.on_spot_trade(op + 5 * US, 103.0, 1.0, False)
+        f = st.features(op, op + 5 * US)
+        self.assertAlmostEqual(f['ref_open_bps'], 0.0, places=9)
+        self.assertTrue(math.isfinite(f['ref_move_bps']) and math.isfinite(f['ref_gap_bps']))

@@ -3437,3 +3437,7 @@ to the market's settlement rule as documented, and record the price-to-beat sepa
 The websocket has NO replay/backfill: reconnect immediately on drop, log the gap, and START NOW - every minute
 unrecorded is lost. Keep the on-chain aggregator read as a secondary column only if cheap. Verify 3 settled markets
 reproduce venues.outcome before reporting "correct". Priority: above Task 97.
+
+## Task 99 - 8787 paper -> 12.10.0 (logging-only; decisions identical). Stage learner/v12_2 at the 12.10.0 commit,
+SHA256SUMS 30/30, suites 282, restart 8787 with the same db and argv; verify build 12.10.0 and ref_* keys in the next
+decision row. 8793 (12.8.11 control) untouched. Task 98 logger untouched. ≤3 lines in the ledger.

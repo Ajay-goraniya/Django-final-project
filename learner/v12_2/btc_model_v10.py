@@ -123,6 +123,22 @@ class FeatureState:
         self.venue = (f(ask_up), f(bid_up), f(ask_dn), f(bid_dn))
 
     # ---- feature computation (must match learner/build_features.py exactly)
+    @staticmethod
+    def _twap(ts, px, t0, t1):
+        """Time-weighted mean of the step-function spot price over [t0, t1); nan if no trade in force."""
+        if t1 <= t0 or len(ts) == 0:
+            return np.nan
+        j0 = int(np.searchsorted(ts, t0, side="right")) - 1   # trade in force at t0
+        j1 = int(np.searchsorted(ts, t1, side="left"))         # first trade at/after t1
+        if j1 <= 0:
+            return np.nan
+        j0 = max(j0, 0)
+        t = np.concatenate(([t0], ts[j0 + 1:j1], [t1])).astype(np.float64)
+        w = np.diff(t)
+        if w.sum() <= 0:
+            return np.nan
+        return float(np.dot(px[j0:j1], w) / w.sum())
+
     def _px_at(self, ts):
         i = bisect.bisect_right(self.s_ts, ts) - 1
         return self.s_px[i] if i >= 0 else np.nan
@@ -203,6 +219,17 @@ class FeatureState:
         lv = math.log(pvc / (1 - pvc)) if np.isfinite(pvc) else 0.0
         sec_left = 300 - off
         move = (p / open_px - 1) * 1e4
+        # 12.10.0 settlement-reference proxy (R-16). Polymarket's btc-5m-twap-60 markets settle on
+        # the Chainlink 60 s TWAP at close vs the same TWAP at the candle start - not on the Binance
+        # first trade `move_bps` is measured from. Until the venue feed is wired in, log the Binance
+        # proxy: time-weighted spot over the 60 s before open (ref_open) and the last 60 s (ref_now).
+        # Logged only - not in FEATURES, so the trained weights are untouched.
+        ref_open = self._twap(s_ts, s_px, candle_open_us - 60 * US, candle_open_us)
+        ref_now = self._twap(s_ts, s_px, now_us - 60 * US, now_us)
+        if not (np.isfinite(ref_open) and ref_open > 0):
+            ref_open = open_px
+        if not (np.isfinite(ref_now) and ref_now > 0):
+            ref_now = p
         f = dict(move_bps=move, ret5=ret(5), ret15=ret(15), ret30=ret(30), ret60=ret(60), rv60=rv60,
                  range_bps=rng / open_px * 1e4, pos_in_range=((p - lo) / rng) if rng > 0 else 0.5,
                  dist_hi_bps=(hi - p) / open_px * 1e4, dist_lo_bps=(p - lo) / open_px * 1e4,
@@ -210,7 +237,9 @@ class FeatureState:
                  perp_n15=n15, basis_bps=basis, spread_bps=spread, imb5=imb5, imb20=imb20, micro_bps=micro,
                  prev1_bps=prev1, prev2_bps=prev2, sec_left=sec_left, hod_sin=math.sin(hod), hod_cos=math.cos(hod),
                  p_venue=(p_venue if np.isfinite(p_venue) else 0.0), lv=lv,
-                 mv_x_sec=move * sec_left / 300.0, lv_x_sec=lv * sec_left / 300.0)
+                 mv_x_sec=move * sec_left / 300.0, lv_x_sec=lv * sec_left / 300.0,
+                 ref_open_bps=(open_px / ref_open - 1) * 1e4, ref_move_bps=(ref_now / ref_open - 1) * 1e4,
+                 ref_gap_bps=(p / ref_open - 1) * 1e4)
         f["_ask_up"], f["_ask_dn"], f["_price"] = ask_up, ask_dn, p
         f["_venue_ok"] = bool(np.isfinite(p_venue))   # both sides quoted -> venue features are real, not zero-filled
         return f

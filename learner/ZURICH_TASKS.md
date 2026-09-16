@@ -89,3 +89,12 @@ appears: stop, do not clear it, write hourly.md with the halt text; V decides. D
 ## Z-7 - CLOB round-trip geography (read-only). Same as AWS Task 96 from Zurich: 20 curl timings each of
 https://clob.polymarket.com/time and /book?token_id=<current token>; median/p90 connect + TTFB ms; traceroute -n -m 12
 first/last 3 hops. Write analysis/zurich/z7_clob_rtt.md (≤6 lines), git -C add/commit/push. Live engine untouched.
+
+## Z-8 - deploy 12.10.0 while master is OFF (user turned it off 00:49; ON is scheduled 03:00 UTC by trigger).
+Logging-only build (DEPLOYED.md 12.10.0): decisions identical to 12.9.0. Same §7 procedure: stage learner/v12_2 at the
+12.10.0 commit into a new deploy dir, `sha256sum -c SHA256SUMS.txt` 30/30, run the three suites (282), `rm -rf
+__pycache__`, stop pid 72358 cleanly (master is off, 0 open positions - confirm), start on 8787 with the SAME journal
+polymarket_v12_live_zurich_2.sqlite3 and the same argv; verify /api/state build 12.10.0, master false, and that the
+next signals row's decision.features carries ref_open_bps/ref_move_bps/ref_gap_bps. Write analysis/zurich/hourly.md
+(3 lines: old pid/new pid, build, first decision row with ref keys), push. Do NOT arm master - the 03:00 trigger does.
+If anything fails, leave the OLD build running and say so in hourly.md.
