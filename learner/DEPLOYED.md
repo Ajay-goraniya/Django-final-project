@@ -384,3 +384,13 @@ User: the "1429 ms since last trade" line reads like a fault. It was trade SILEN
 leads with the real feed lag (local receipt minus Binance event time, the number that says whether data is late) and
 prints silence in seconds: "LIVE · lag 112 ms · quiet 1.4 s". Dashboard only; no engine behaviour, no decisions.
 Tests 71+21+201 = 293; SHA256SUMS 30/30.
+
+## 12.12.0 (09-16 03:3x UTC) - the owner's bankroll floor: EF off below it
+USER ORDER: "ef off if bankroll goes below 30$ in central 2". New meta control `ef_cash_floor` (audited; absent =
+no behaviour, so paper and every other box are unaffected until it is set). `PolyRunner._floor_check`, on the 60 s
+monitor cadence: acts on EQUITY = spendable cash + venue_state.open_value (never bare cash - the 09-13 halt of a
+solvent account is documented in _wipeout_check and this is built not to repeat it), does nothing when open_value is
+unknown, and requires 6 reads AND >=360 s below the floor (longer than one settlement cycle) before it acts. It sets
+`ef_enabled` false only: master, the other lanes and halt are untouched, and it never re-enables itself - that is the
+owner's call from the dashboard. Writes one EF_FLOOR diagnostics row with equity, cash, open_value, reads, held_s.
+Tests 71+21+206 = 298; SHA256SUMS 30/30. Deploy: Zurich sets ef_cash_floor=30 after the restart.

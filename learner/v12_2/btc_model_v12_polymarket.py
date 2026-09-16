@@ -478,6 +478,7 @@ class PolyRunner(Runner):
                     self.cash=max(0.,self.a.capital+self.db.metrics()['pnl']-held)
                 self.cash_at=time.monotonic(); self.ui.update_stake()
                 if self._due('wipeout',self.MONITOR_EVERY_S): self._wipeout_check()
+                if self._due('floor',self.MONITOR_EVERY_S): self._floor_check()
                 self._sample_ambient_age(int(time.time()//300)*300)
                 self._flush_wait_census(int(time.time()//300)*300)
                 if self._due('retention',self.RETENTION_EVERY_S):
@@ -485,6 +486,55 @@ class PolyRunner(Runner):
                     self.db.sql('DELETE FROM candles WHERE epoch<?',(time.time()-30*86400,))
             except Exception as e: self.error='Metadata/balance: '+type(e).__name__
             await asyncio.sleep(5)
+    FLOOR_CONFIRMATIONS=6
+    FLOOR_MIN_SPAN_S=360.0
+    def _floor_check(self):
+        """USER ORDER, 09-16 03:2x: "ef off if bankroll goes below 30$ in central 2".
+
+        The only automatic stop in this engine, and it exists because the owner
+        asked for it by name. It is deliberately narrow:
+
+        * EQUITY, not cash. The 09-13 mistake this file already documents halted a
+          solvent account because `cash` reads ZERO for a position that has graded
+          and not yet paid. Equity here is spendable cash plus `venue_state.open_value`,
+          the settled-but-unpaid money. If open_value is unknown the check does
+          NOTHING - an unreadable number is not evidence of a low balance.
+        * PERSISTENCE. A payout can take five minutes, so the floor must hold for
+          FLOOR_CONFIRMATIONS reads AND at least FLOOR_MIN_SPAN_S seconds - longer
+          than one full settlement cycle - before it acts. Any read above the floor
+          resets both counters.
+        * IT TURNS OFF EF, NOTHING ELSE. `master` stays as the operator set it, the
+          other lanes are untouched, no halt is written, and it never re-enables
+          itself: coming back is the owner's decision, through the dashboard.
+        * It is OFF unless `ef_cash_floor` is set in meta. No floor, no behaviour.
+        """
+        if not self.a.live or self.cash is None: return
+        floor=self.db.get('ef_cash_floor')
+        if floor is None: return
+        try: floor=float(floor)
+        except (TypeError,ValueError): return
+        if not (floor>0): return
+        if not self.db.get('ef_enabled',True):
+            self._floor_reads=0; self._floor_since=None; return
+        r=self.db.sql('SELECT open_value FROM venue_state ORDER BY ts DESC LIMIT 1')
+        opened=float(r[0][0]) if r and r[0][0] is not None else None
+        if opened is None: return                      # unknown != low; act on nothing
+        equity=self.cash-self.db.live_reserve()+opened
+        now=time.time()
+        if equity>=floor:
+            self._floor_reads=0; self._floor_since=None; return
+        self._floor_reads=getattr(self,'_floor_reads',0)+1
+        if getattr(self,'_floor_since',None) is None: self._floor_since=now
+        if self._floor_reads<self.FLOOR_CONFIRMATIONS or now-self._floor_since<self.FLOOR_MIN_SPAN_S: return
+        self.db.set('ef_enabled',False)                # audited write; master untouched
+        self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(now,0,json.dumps(dict(
+            kind='EF_FLOOR',floor=floor,equity=round(equity,4),cash=round(self.cash,4),
+            open_value=round(opened,4),reads=self._floor_reads,
+            held_s=round(now-self._floor_since,1),acted=True))))
+        print('[ef floor] equity %.2f below %.2f on %d reads over %.0f s - EF DISABLED'
+              ' (master untouched; re-enable from the dashboard)'
+              %(equity,floor,self._floor_reads,now-self._floor_since),flush=True)
+        self._floor_reads=0; self._floor_since=None
     WIPEOUT_CONFIRMATIONS=3
     def _wipeout_check(self):
         """MONITOR ONLY. Records a low-balance reading and stops nothing.

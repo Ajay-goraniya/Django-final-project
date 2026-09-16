@@ -2152,7 +2152,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.11.3'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.12.0'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0
@@ -2297,3 +2297,54 @@ class StatusLine12113(unittest.TestCase):
         self.assertIn("'lag '", line)
         self.assertIn("'quiet '", line)
         self.assertNotIn('since last trade', src)
+
+
+class EFFloor12120(unittest.TestCase):
+    """The owner's bankroll floor: EF off below it, on EQUITY, only after it persists."""
+    def _runner(self, cash, open_value, floor=30.0, live=True):
+        import btc_model_v12_polymarket as E, poly_core as C, tempfile, types
+        path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'LIVE' if live else 'PAPER', 'abc')
+        db.set('ef_enabled', True)
+        if floor is not None: db.set('ef_cash_floor', floor)
+        if open_value is not None:
+            db.sql('INSERT INTO venue_state(ts,cash,open_value) VALUES(?,?,?)', (time.time(), cash, open_value))
+        r = types.SimpleNamespace(db=db, cash=cash, a=types.SimpleNamespace(live=live),
+                                  _floor_reads=0, _floor_since=None,
+                                  FLOOR_CONFIRMATIONS=E.PolyRunner.FLOOR_CONFIRMATIONS,
+                                  FLOOR_MIN_SPAN_S=E.PolyRunner.FLOOR_MIN_SPAN_S)
+        r._floor_check = types.MethodType(E.PolyRunner._floor_check, r)
+        return r, db, path
+    def _hammer(self, r, reads, age_s):
+        for _ in range(reads):
+            r._floor_check()
+            if r._floor_since is not None: r._floor_since -= age_s / max(reads, 1)
+    def test_disables_ef_only_after_confirmations_and_time(self):
+        r, db, path = self._runner(cash=10.0, open_value=5.0)          # equity 15 < 30
+        r._floor_check(); self.assertIs(db.get('ef_enabled'), True)     # one read is not enough
+        self._hammer(r, 8, 600)
+        self.assertIs(db.get('ef_enabled'), False)
+        row = [json.loads(x[2]) for x in db.sql('SELECT * FROM diagnostics') if 'EF_FLOOR' in (x[2] or '')]
+        self.assertEqual(row[0]['floor'], 30.0); self.assertAlmostEqual(row[0]['equity'], 15.0)
+        self.assertIs(db.get('master', None), None)                     # master untouched
+        db.c.close(); os.unlink(path)
+    def test_pending_payout_does_not_trip_it(self):
+        r, db, path = self._runner(cash=2.0, open_value=40.0)           # cash low, equity 42
+        self._hammer(r, 10, 900); self.assertIs(db.get('ef_enabled'), True)
+        db.c.close(); os.unlink(path)
+    def test_unknown_open_value_acts_on_nothing(self):
+        r, db, path = self._runner(cash=1.0, open_value=None)
+        self._hammer(r, 10, 900); self.assertIs(db.get('ef_enabled'), True)
+        db.c.close(); os.unlink(path)
+    def test_no_floor_configured_is_a_no_op(self):
+        r, db, path = self._runner(cash=1.0, open_value=1.0, floor=None)
+        self._hammer(r, 10, 900); self.assertIs(db.get('ef_enabled'), True)
+        db.c.close(); os.unlink(path)
+    def test_recovery_resets_and_paper_is_untouched(self):
+        r, db, path = self._runner(cash=10.0, open_value=5.0)
+        self._hammer(r, 4, 400); self.assertIs(db.get('ef_enabled'), True)
+        r.cash = 50.0; db.sql('INSERT INTO venue_state(ts,cash,open_value) VALUES(?,?,?)', (time.time(), 50.0, 5.0))
+        r._floor_check(); self.assertEqual(r._floor_reads, 0); self.assertIsNone(r._floor_since)
+        db.c.close(); os.unlink(path)
+        r2, db2, p2 = self._runner(cash=1.0, open_value=1.0, live=False)
+        self._hammer(r2, 10, 900); self.assertIs(db2.get('ef_enabled'), True)
+        db2.c.close(); os.unlink(p2)

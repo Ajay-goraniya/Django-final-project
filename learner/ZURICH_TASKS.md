@@ -98,3 +98,12 @@ polymarket_v12_live_zurich_2.sqlite3 and the same argv; verify /api/state build 
 next signals row's decision.features carries ref_open_bps/ref_move_bps/ref_gap_bps. Write analysis/zurich/hourly.md
 (3 lines: old pid/new pid, build, first decision row with ref keys), push. Do NOT arm master - the 03:00 trigger does.
 If anything fails, leave the OLD build running and say so in hourly.md.
+
+## Z-11 - deploy 12.12.0 and set the owner's floor. USER ORDER: "ef off if bankroll goes below 30$ in central 2".
+Cash was 45.71 at 03:05, so this is not urgent-urgent, but it is the owner's stop and it should exist tonight.
+UNTIL IT IS DEPLOYED you are the floor: at every hourly, if equity (cash + venue_state.open_value) < 30, set
+ef_enabled false through the audited apply and say so in hourly.md. Then: git pull; stage learner/v12_2 at the
+12.12.0 commit; sha256sum -c 30/30; suites 71+21+206=298; rm -rf __pycache__; at a clean moment restart 8787 on the
+same journal/argv; re-arm master (the user's setting); then set meta ef_cash_floor=30 through the audited path and
+verify /api/state or the journal shows it. Report 3 lines: pid/build, floor set + current equity, master/halt.
+The floor turns EF off only - never master, never a halt - and does not re-enable itself.
