@@ -243,7 +243,9 @@ class Dashboard:
         # operator saw a master toggle that bounced with no visible cause and had
         # no control to clear the thing causing it. Reported by the user on 09-13:
         # "I'm not even able to turn onn master it's not turning onn".
+        _off=getattr(self.r,'_master_off_since',None)
         return dict(master_enabled=self.db.get('master'),halt=self.db.get('halt'),
+          master_off_s=(round(time.time()-_off,1) if _off else None),
           clock=now.strftime('%H:%M:%S'),timezone='Europe/London',
           execution=dict(ready=ready,missing=[] if ready else ['waiting for feed / balance readiness']),
           kinds=kinds,

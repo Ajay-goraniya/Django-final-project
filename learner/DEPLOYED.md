@@ -394,3 +394,12 @@ unknown, and requires 6 reads AND >=360 s below the floor (longer than one settl
 `ef_enabled` false only: master, the other lanes and halt are untouched, and it never re-enables itself - that is the
 owner's call from the dashboard. Writes one EF_FLOOR diagnostics row with equity, cash, open_value, reads, held_s.
 Tests 71+21+206 = 298; SHA256SUMS 30/30. Deploy: Zurich sets ef_cash_floor=30 after the restart.
+
+## 12.12.2 (09-16 08:4x UTC) - a disarmed live engine says so
+09-16: the 12.12.1 deploy parked master OFF by safe-start (correct) and the re-arm waited on a permission prompt for
+4 h 02 m. 962 decide rows, 4 fires the model wanted and could not send, and nothing anywhere reported it - the engine
+was healthy, which is exactly why the silence held. `PolyRunner._master_watch` on the 60 s monitor cadence: when a
+LIVE engine has master false for >300 s it writes a MASTER_OFF diagnostics row (off_s, fires_gated) and prints, then
+repeats at most every 30 min; the dashboard controls payload gains `master_off_s`. Observation only - it never arms
+anything, master stays the operator's. Paper engines and an armed engine are silent. Tests 71+21+210 = 302;
+SHA256SUMS 30/30.

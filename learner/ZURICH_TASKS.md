@@ -107,3 +107,12 @@ ef_enabled false through the audited apply and say so in hourly.md. Then: git pu
 same journal/argv; re-arm master (the user's setting); then set meta ef_cash_floor=30 through the audited path and
 verify /api/state or the journal shows it. Report 3 lines: pid/build, floor set + current equity, master/halt.
 The floor turns EF off only - never master, never a halt - and does not re-enable itself.
+
+## Z-13 - deploy 12.12.2, and one standing rule that matters more than the build.
+STANDING RULE from the 4-hour gap: the restart and the re-arm are ONE step. Never end a tool call with a live engine
+restarted and master off - put the stop, the start and the audited arm in the same command, and verify master true in
+that same output. If an approval is needed, get it before the restart, not after.
+Deploy: git pull; stage learner/v12_2 at the 12.12.2 commit; sha256sum -c 30/30; suites 71+21+210=302; rm -rf
+__pycache__; at a clean boundary stop/start/re-arm in one command on the same journal + argv; verify meta.build
+12.12.2, master true, ef_cash_floor 30. Then confirm in hourly.md that the next MASTER_OFF row appears only if master
+is genuinely off past 5 minutes (it should not appear at all in normal running).

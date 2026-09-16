@@ -479,6 +479,7 @@ class PolyRunner(Runner):
                 self.cash_at=time.monotonic(); self.ui.update_stake()
                 if self._due('wipeout',self.MONITOR_EVERY_S): self._wipeout_check()
                 if self._due('floor',self.MONITOR_EVERY_S): self._floor_check()
+                if self._due('master_watch',self.MONITOR_EVERY_S): self._master_watch()
                 self._sample_ambient_age(int(time.time()//300)*300)
                 self._flush_wait_census(int(time.time()//300)*300)
                 if self._due('retention',self.RETENTION_EVERY_S):
@@ -486,6 +487,36 @@ class PolyRunner(Runner):
                     self.db.sql('DELETE FROM candles WHERE epoch<?',(time.time()-30*86400,))
             except Exception as e: self.error='Metadata/balance: '+type(e).__name__
             await asyncio.sleep(5)
+    MASTER_OFF_WARN_S=300.0
+    MASTER_OFF_REPEAT_S=1800.0
+    def _master_watch(self):
+        """Say it out loud when a LIVE engine is sitting disarmed.
+
+        09-16: a deploy at 03:40 parked master OFF by safe-start, as it is meant to, and the
+        re-arm step waited on a permission prompt until 07:42. Four hours, 962 decide rows,
+        four fires the model wanted and could not send, and nothing anywhere said so - the
+        engine looked healthy because it was healthy. Silence is the defect, not the state.
+
+        Observation only: it never arms anything (master is the operator's alone). It writes
+        a MASTER_OFF diagnostics row and prints, once past MASTER_OFF_WARN_S and then every
+        MASTER_OFF_REPEAT_S, and `_master_off_since` is what the dashboard reports."""
+        if not self.a.live: return
+        if self.db.get('master',False):
+            self._master_off_since=None; self._master_off_said=0.0; return
+        now=time.time()
+        if getattr(self,'_master_off_since',None) is None:
+            self._master_off_since=now; self._master_off_said=0.0; return
+        off=now-self._master_off_since
+        if off<self.MASTER_OFF_WARN_S: return
+        said=getattr(self,'_master_off_said',0.0)
+        if said and now-said<self.MASTER_OFF_REPEAT_S: return
+        self._master_off_said=now
+        wanted=self.db.sql('SELECT count(*) FROM diagnostics WHERE ts>=? AND detail LIKE ?',
+                           (self._master_off_since,'%"fire": true%'))[0][0]
+        self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(now,0,json.dumps(dict(
+            kind='MASTER_OFF',off_s=round(off,1),fires_gated=wanted,acted=False))))
+        print('[master off] %.0f min, engine live and healthy, %d fires gated - nothing is trading'
+              %(off/60.0,wanted),flush=True)
     FLOOR_CONFIRMATIONS=6
     FLOOR_MIN_SPAN_S=360.0
     def _floor_check(self):

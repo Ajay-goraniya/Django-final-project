@@ -2152,7 +2152,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.12.1'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.12.2'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0
@@ -2368,4 +2368,43 @@ class SubmitBook12121(unittest.TestCase):
         self.assertAlmostEqual(sb['ask'], 0.40); self.assertAlmostEqual(sb['bid'], 0.39)
         self.assertAlmostEqual(float(sb['size']), 120.0)     # displayed size, the thing a fill needs
         self.assertIsNotNone(sb['ts_ms']); self.assertIsNotNone(sb['age_ms'])
+        db.c.close(); os.unlink(path)
+
+
+class MasterWatch12122(unittest.TestCase):
+    """12.12.2: a live engine sitting disarmed says so; it never arms anything."""
+    def _runner(self, master, live=True):
+        import btc_model_v12_polymarket as E, poly_core as C, tempfile, types
+        path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'LIVE' if live else 'PAPER', 'abc')
+        db.set('master', master)
+        r = types.SimpleNamespace(db=db, a=types.SimpleNamespace(live=live),
+                                  _master_off_since=None, _master_off_said=0.0,
+                                  MASTER_OFF_WARN_S=E.PolyRunner.MASTER_OFF_WARN_S,
+                                  MASTER_OFF_REPEAT_S=E.PolyRunner.MASTER_OFF_REPEAT_S)
+        r._master_watch = types.MethodType(E.PolyRunner._master_watch, r)
+        return r, db, path
+    def _rows(self, db):
+        return [json.loads(x[2]) for x in db.sql('SELECT * FROM diagnostics') if 'MASTER_OFF' in (x[2] or '')]
+    def test_warns_once_past_the_window_and_counts_gated_fires(self):
+        r, db, path = self._runner(False)
+        r._master_watch(); self.assertEqual(self._rows(db), [])          # first read only starts the clock
+        db.sql('INSERT INTO diagnostics VALUES(?,?,?)', (time.time(), 0, json.dumps({'fire': True})))
+        r._master_off_since -= 400                                       # past MASTER_OFF_WARN_S
+        r._master_watch(); rows = self._rows(db)
+        self.assertEqual(len(rows), 1); self.assertGreaterEqual(rows[0]['off_s'], 400)
+        self.assertEqual(rows[0]['fires_gated'], 1); self.assertIs(rows[0]['acted'], False)
+        r._master_watch(); self.assertEqual(len(self._rows(db)), 1)      # quiet until the repeat window
+        self.assertIs(db.get('master'), False)                           # never arms anything
+        db.c.close(); os.unlink(path)
+    def test_master_on_and_paper_are_silent(self):
+        r, db, path = self._runner(True)
+        r._master_watch(); r._master_watch(); self.assertEqual(self._rows(db), [])
+        db.c.close(); os.unlink(path)
+        r2, db2, p2 = self._runner(False, live=False)
+        r2._master_watch(); r2._master_off_since = time.time() - 4000; r2._master_watch()
+        self.assertEqual(self._rows(db2), []); db2.c.close(); os.unlink(p2)
+    def test_recovery_clears_the_clock(self):
+        r, db, path = self._runner(False)
+        r._master_watch(); self.assertIsNotNone(r._master_off_since)
+        db.set('master', True); r._master_watch(); self.assertIsNone(r._master_off_since)
         db.c.close(); os.unlink(path)
