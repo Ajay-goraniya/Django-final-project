@@ -360,3 +360,21 @@ to chase a better fill rate is the obvious way this backfires - measure it, do n
 (4) If a tighter limit wins on BOTH fill rate and total PnL with halves holding, propose it as a one-line control
 change (ev_settings.quote_age_ms), gridded, for a paper twin first. If it does not, close it and say so.
 verify.py throughout. <=10 lines in analysis/h1/task_r21_quote_age.md.
+
+## R-22 (09-16 09:1x, USER) - test the TWAP-60 settlement line on ALL the data we hold, not 8 days.
+User: "test that new twap 60 stream with our 8 weeks of data". R-16 measured the line on 1,797 candles (09-07..09-14,
+Binance proxy) and found TWAP60(end)>=TWAP60(open) agrees with venues.outcome 96.66% vs 86.81% for close>=open.
+Extend it to every venue-graded candle we hold and to the live feed we now capture:
+(1) COVERAGE FIRST, before any number: list every source with venue-settled outcomes and its date range and count -
+venues.sqlite3 outcome, poly_pnl trades (1005), v10_poly_long4 (777), v12_poly_lane (568), the Zurich journals, the
+paper lanes. State the true span. If "8 weeks" of venue-graded candles does not exist, say exactly what does exist -
+do not stretch Binance-only candles into a claim about settlement, that is the R-1 error in a new coat.
+(2) On that full span: the two rules vs the venue oracle (agreement %, discordant split, binomial p), per day and per
+week, halves. Same table as R-16, wider.
+(3) PROXY ERROR, the new part: Mumbai's Task 98 ref_stream has real Chainlink 60 s TWAP values since 09-16 01:44
+(learner/live_backup/ref_stream.sqlite3.gz when pushed; ask V if it is missing). For the candles covered by BOTH,
+measure |Binance-TWAP60 proxy - Chainlink value| in bps at the open and at the close, and how often the two disagree
+on the DIRECTION of the settlement. That number is the error budget on every R-16 claim.
+(4) Verdict: does the wider sample keep the +9.9 point advantage, and is the proxy good enough to use where the live
+feed does not reach. <=12 lines analysis/h1/task_r22_twap_wide.md. verify.py. No model change follows from this -
+R-16's retrain already failed - this is about the grading line and the feed we now depend on.
