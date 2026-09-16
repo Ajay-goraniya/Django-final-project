@@ -239,3 +239,9 @@ Zurich live) grid: sign(move from Binance open) vs sign(price - price_to_beat) a
 outcome; is the loss concentration reproducible (halves, per day)? (3) If yes: feature = distance and movement relative
 to the settlement reference (not a substitution into existing weights), retrain chronologically with the venue stage,
 paired vs frozen v10, verify.py; report loss-run change. ≤15 lines analysis/h1/task_r16_settlement_ref.md, verdict poke.
+R-16 addendum (reviewer via user, 01:4x; reviewer reproduced the 76-fill table exactly: Binance 45/76 vs venue 35/76):
+(1) entry-time only - the reference distance must be computable before the order, no future information; (2) training
+labels verified against venue outcomes; (3) chronological evaluation on real executable quotes reporting PnL, drawdown,
+frequency. Also flagged from r12 reports: 17,449 synthetic-book vs 4,117 real-book training rows, real-book coverage
+concentrated on two days - confirm and state what that does to the venue-stage evidence. Mumbai Task 98 starts
+recording the reference stream now (Chainlink BTC/USD + price-to-beat, source and arrival timestamps).

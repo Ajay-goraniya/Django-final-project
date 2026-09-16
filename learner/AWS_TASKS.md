@@ -3420,3 +3420,13 @@ v10_poly_long4.sqlite3.gz (777), v12_poly_lane.sqlite3.gz (568), zurich_2 + zuri
 (oracle). Same three questions on the pooled ~2,400 graded fires; feat JSON carries the engine features at the fire.
 Coordinate with H1's R-15 (analysis/h1/task_r15_signal.md) - do not duplicate its GBM; your lane is the loss-run
 anatomy and per-cell grid. Keep the 4-h cadence.
+
+## Task 98 - START RECORDING THE SETTLEMENT REFERENCE (read-only logger, always-on box). Polymarket 5-min BTC markets
+settle on a Chainlink BTC/USD reference against the market's opening "price to beat"; none of our logs carry either.
+New logger on Mumbai (own venv, own sqlite `ref_stream.sqlite3`, no engine touched): (a) every 1 s: Chainlink BTC/USD
+latest round via a public Polygon RPC (aggregator latestRoundData: answer, updatedAt, roundId) with arrival ts_ms;
+(b) every 5-min market: the price-to-beat / opening reference as Polymarket publishes it (gamma/clob market metadata
+or the market page's source - find it, cite the endpoint) with its source timestamp and arrival ts_ms; (c) Binance
+spot last price at the same second for the gap. Verify against 3 settled markets that answer-at-close vs price-to-beat
+reproduces venues.outcome before calling it correct. Push an hourly gz snapshot to learner/live_backup/ref_stream.sqlite3.gz
+and one line to analysis/aws/task98_ref_stream.md (endpoint, rows, verified 3/3 or not). Never print keys; public RPC only.
