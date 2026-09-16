@@ -11,8 +11,15 @@ right, still +12.9 at median ask 0.43 — buying under fair). Do not restart dir
 **+0.0004 Brier** on top of the full feature set; frozen v10 still wins on money. Step 2: lgbm beats
 the stage-1 logistic on OOS logloss **8 of 8 years**. Step 4 (GBM history through the venue stage)
 was running at handover — check `/tmp/claude-0/r12s4.log` and `analysis/h1/r12s4_gbm_venue.py`.
-**Outstanding request to V:** v10's OWN 8 training days (08-29..09-06) with all 30 features; not on
-the branch, needed for the literal pipeline check.
+**CLOSED (09-16 00:3x):** V pushed v10's own 8 training days (4c302bb,
+`learner/live_backup/v10_features_8days.parquet.gz`). The literal pipeline check is **exact** -
+refitting `finalize.py`'s export path on it reproduces every field of `model_v10.json` at
+0.000e+00 (scaler, 30 coefs, intercept, 116 iso knots, both logloss fields, rv60 edges to 10dp), so
+every R-12 arm was compared against the genuine v10 and none needs re-running. It also confirms
+R-13 with a mechanism: v10 beats the book by +1.75pp (McNemar p=0.0006) *inside* its own training
+window and by 0.0pp (p=0.937) live - the edge was in the design selection, not in the model.
+Not a finding either way (only 2 readable real-book days in that window).
+`analysis/h1/task_r12_pipeline_check.md`, `r12_pipeline_check.py`.
 
 **R-14 is the live task — execution, where the edge actually is.** Brief in `learner/REQUEST.md`.
 Four parts: (1) ask paid vs venue mid at signal / +1s / +5s / +60s, and where the cheap ask comes
@@ -991,6 +998,7 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
   −0.015 → **−0.021**. It turned away from zero this check instead of crossing. Kept on the watch
   list, but the "converging on zero" reading is no longer supported by the last point.
 - (20:45: +3, n=308, −0.048, halves −0.082 / −0.015.)
+- (09-16 00:33: +0 new candles in the 23:44 snapshot, n=309 unchanged, −0.051, halves −0.082 / −0.021.)
 - (18:45: +4, n=305, −0.052 — the 16:45 move held rather than reverting.)
 - (16:45: +13 fires — a new fastest accrual — n=301, −0.053/fire, halves −0.072 / −0.034.) Both halves still negative and the verdict is unchanged, but this is the
   largest single-check move the ledger has made: **−0.086 → −0.053**, and the second half has come
