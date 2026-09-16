@@ -664,3 +664,30 @@ untouched** — a vol-scaled EF is R-28 for H1 to grid first (rule: threshold gr
 Mumbai, 8 post-restart lane rows: the field never left `poly_lanes` — set in the feature dict, absent from the
 MAIN/REVERSAL decision dicts the engine journals and from `monitor()`. Now on both and on `lanes.adapt_ratio`.
 Tests +2 = 377; SHA256SUMS 31/31.
+
+## 12.17.0 — the venue becomes a seam: `--venue predict` (paper only)
+Owner, 09-16 22:2x: *"we are moving to predict, not polymarket anymore ... i like the signal logics and
+everything we have now it does so well in this, but when it comes to execution and fees predict is way cheaper,
+with almost 98% fill rate."* Context: R-30b found the Polymarket live fee is **4.01% of stake, charged on
+winners and losers alike**, against a gross edge of **−0.50% of stake** — the toll, not the signal, is what the
+account has been losing to. So the signal moves venue and nothing else changes.
+
+New `predict_venue.py` (+`test_predict_venue.py`, 26 tests) does market discovery and book translation only,
+lifted from the engine that already trades there: `/v1/markets?marketVariant=CRYPTO_UP_DOWN` ranked to the exact
+candle (build11:9843), `/v1/markets/{id}/orderbook` bootstrap (build11:9965), and `predictOrderbook/{id}` over
+`wss://ws.predict.fun/ws` (build11:10262). It emits the **same `BookCache` event shape** Polymarket already
+sends, so `poly_core`, `poly_lanes` and `btc_model_v10` are untouched — a test asserts none of the three imports
+it. Engine gains `--venue {polymarket,predict}` and `venue_predict()`; `resolve_market` delegates.
+
+**The one real difference, and it is not cosmetic.** Polymarket quotes two independent token books; Predict
+quotes ONE YES-centric ladder whose NO side is the exact complement (build11:9440), so `ask_dn == 1 − bid_up`
+by construction and the two sides can never both look cheap. `p_venue`/`lv` therefore come from a single ladder.
+Six tests pin the complement, because a sign error there inverts every DOWN trade silently.
+
+**Paper only, by construction, not by policy:** `LiveBroker` signs Polymarket orders, so there is no Predict
+order path in this build and `--venue predict --live` is refused in `args()` with a test to prove it. The
+adapter has no signing, order or wallet surface (asserted on the parsed AST).
+
+Not yet proven: model_v10's `p_venue`/`lv` were trained on **Polymarket** prices. R-31b is measuring whether
+Predict's price is the same forecast; if it is not, the venue input needs a re-fit before any of this is worth
+running. Tests 377 → 403; SHA256SUMS 31 → 33.

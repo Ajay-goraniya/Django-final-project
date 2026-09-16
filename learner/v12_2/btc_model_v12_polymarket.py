@@ -6,6 +6,7 @@ from btc_model_v10_runner import Runner, http_json, GAMMA, CLOB, POLY_WS, US
 import poly_feeds, poly_lanes
 from poly_core import BookCache, Journal, Executor, PaperBroker, order_plan
 from poly_live import LiveBroker
+import predict_venue
 
 
 def official_result(m):
@@ -30,7 +31,15 @@ class PolyRunner(Runner):
         try: fcntl.flock(self.process_lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         except BlockingIOError: raise SystemExit('Database already used by another process')
         self.db=Journal(a.db,'LIVE' if a.live else 'PAPER',self.hash)
-        self.books=BookCache(); self.broker=LiveBroker(self.books) if a.live else PaperBroker(self.books,self.db)
+        self.books=BookCache()
+        # 12.17.0: the venue is a seam, not a rewrite. `predict` swaps ONLY market
+        # discovery and the book socket (predict_venue.py); the model, EV, lanes,
+        # executor and journal are byte-identical on both. LiveBroker is Polymarket's
+        # signer, so --venue predict is paper-only by construction: there is no
+        # Predict order path in this build and --live is refused in args().
+        self.venue_name=getattr(a,'venue','polymarket')
+        self.pv=predict_venue.PredictVenue() if self.venue_name=='predict' else None
+        self.broker=LiveBroker(self.books) if a.live else PaperBroker(self.books,self.db)
         self.executor=Executor(self.db,self.books,self.broker,a.quote_age_ms/1000,a.pad_ticks,
                                budget_s=getattr(a,'execution_budget_ms',2000)/1000,
                                post_timeout_s=getattr(a,'post_timeout_ms',1200)/1000,
@@ -106,6 +115,11 @@ class PolyRunner(Runner):
 
     async def resolve_market(self,ep):
         if self.market.get(ep): return self.market[ep]
+        if self.pv is not None:
+            m=await asyncio.to_thread(self.pv.resolve,ep)
+            if not m: return None
+            self.market[ep]=(m[1],m[2]); self.info[ep]=self.pv.info.get(ep,{})
+            return self.market[ep]
         data=await asyncio.to_thread(http_json,GAMMA.format(ep))
         try:
             ms=[m for e in data for m in e.get('markets',[]) if m.get('slug')==f'btc-updown-5m-{ep}']
@@ -137,7 +151,52 @@ class PolyRunner(Runner):
         self.health.arrival['venue']=time.time(); self.health.lag['venue']=max(u['age_ms'],d['age_ms'])/1000.
         self.health.msgs['venue']=self.health.msgs.get('venue',0)+1
         return True
+    async def venue_predict(self):
+        """Predict.fun book feed. Same contract as venue(): keep self.books fed
+        and call publish(); everything downstream is unchanged.
+
+        Two differences from the Polymarket loop, both forced by the venue:
+        one socket carries ONE market, so the current and next candle need two
+        subscriptions on the same connection; and Predict sends whole ladder
+        snapshots rather than deltas, so there is nothing to patch and a missed
+        frame cannot leave a stale half-book behind.
+        """
+        import websockets
+        while True:
+            ep=int(time.time()//300)*300
+            cur,nxt=await asyncio.gather(self.resolve_market(ep),self.resolve_market(ep+300))
+            toks=[t for pair in (cur,nxt) if pair for t in pair]
+            if not toks:
+                self.error='Predict: '+(self.pv.error or 'no market'); await asyncio.sleep(2); continue
+            self.books.prune(toks)
+            try:
+                async with websockets.connect(predict_venue.WS,ping_interval=20,max_size=2**23) as w:
+                    for i,e in enumerate((ep,ep+300)):
+                        f=await asyncio.to_thread(self.pv.subscribe_frame,e,i+1)
+                        if f: await w.send(f)
+                    # REST bootstrap once per candle, exactly as build11 does: the
+                    # socket sends the next update, not the current state, so
+                    # without this the first fires of a candle price off nothing.
+                    for e in (ep,ep+300):
+                        for evt in await asyncio.to_thread(self.pv.snapshot,e): self.books.apply(evt)
+                    self.publish()
+                    while time.time()<ep+345:
+                        msg=await asyncio.wait_for(w.recv(),15)
+                        evts=self.pv.on_message(msg)
+                        if not evts:
+                            self._venue_skipped=getattr(self,'_venue_skipped',0)+1; continue
+                        for evt in evts: self.books.apply(evt)
+                        self.publish(); self.msgs['venue']=self.msgs.get('venue',0)+1
+            except Exception as e: self.error='Venue reconnect: '+type(e).__name__; await asyncio.sleep(1)
+            finally:
+                self.books.prune(toks); self.publish()
+                self.pv.prune(ep-600)
+                for old in list(self.market):
+                    if old<ep-600:
+                        for t in self.market.pop(old): self.books.terms.pop(t,None); self.terms_age.pop(t,None)
+
     async def venue(self):
+        if self.pv is not None: return await self.venue_predict()
         import websockets
         while True:
             ep=int(time.time()//300)*300
@@ -1185,6 +1244,7 @@ class PolyRunner(Runner):
 
 def args():
     p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--venue',choices=['polymarket','predict'],default='polymarket')
     p.add_argument('--live',action='store_true'); p.add_argument('--port',type=int,default=8787); p.add_argument('--host',default='127.0.0.1')
     p.add_argument('--model',default=str(pathlib.Path(__file__).with_name('model_v10.json')))
     p.add_argument('--db',default='polymarket_v12_paper.sqlite3'); p.add_argument('--capital',type=float,default=50)
@@ -1208,6 +1268,11 @@ def args():
     if not 100<=a.post_timeout_ms<=a.execution_budget_ms: p.error('post timeout must be 100ms..budget')
     if not 1<=a.max_attempts<=10: p.error('max attempts must be 1..10')
     if not pathlib.Path(a.model).is_file(): p.error('model_v10.json required')
+    # 12.17.0: this build has no Predict order path. LiveBroker signs Polymarket
+    # orders, so --venue predict --live would read one venue's book and trade the
+    # other's market. Refused here rather than guarded downstream.
+    if a.venue=='predict' and a.live:
+        p.error('--venue predict is paper-only in this build (no Predict order path)')
     return a
 if __name__=='__main__':
     try: asyncio.run(PolyRunner(args()).main())
