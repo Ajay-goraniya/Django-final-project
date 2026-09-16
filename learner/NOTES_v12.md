@@ -5424,3 +5424,5 @@ Implication for R-16: an entry-time proxy exists from Binance alone - TWAP60(spo
 
 ### 09-16 02:3x - Zurich: master re-armed 01:19:27 from the dashboard (user; V was told off until 03:00 - treated as the user's change per "if you see it unusual it's me"). Z-8 (12.10.0) correctly HELD by Zurich because the restart parks master off. Superseded: Z-8b = deploy 12.11.0 (18ee20a) at a candle boundary, then re-arm via audited apply. 01:55: 77 res 35W/42L -0.66, cash 48.70.
 12.11.0 = the feed change the user asked for: engine now consumes Polymarket's public Chainlink BTC/USD stream (the settlement reference) as a first-class feed; ref_open/ref_now from it (ref_src=1) else Binance proxy; model flag open_reference decides whether open-relative features measure from the settlement line (train == serve). model_v10.json stays first_trade -> decisions unchanged until H1's retrained model (R-16 next step) ships as open_reference=twap60.
+
+### 09-16 02:0x - USER: "deploy. v12.11 on central -2" -> Zurich ordered to deploy 12.11.1 (4c6e889) at the next candle boundary, restore master ON after, report in hourly.md. Trigger trig_016mp6EBBH13hced9b9YoXUb fired 02:03.
