@@ -318,3 +318,29 @@ venues, halves, per day. If high-EV live fires are systematically the ones where
 mechanism, cheap ask = we are wrong), then EV as a fire rule needs rebuilding around price capture, and that is the
 answer to the user's question.
 Deliverable analysis/h1/task_r19_ev_audit.md <=12 lines. verify.py. Priority: after R-18a's grid, before R-18 resting.
+
+## R-20 (09-16 03:3x) - WHICH CANDLES TO BE IN. The last untried route, and it is aimed straight at the user's goal.
+Goal, restated by the user twice: accuracy AND PnL (PnL first) AND adaptive frequency AND no session like 09-15
+evening where nearly every trade loses. Closed and not to be re-opened: direction = the venue price (R-13 + six
+negatives), price capture loses to the touch (R-18), loss runs are at chance (R-15), regimes carry no direction
+information (R-12c). What has NEVER been fitted is the tradeability of a candle: not "which way", but "is this fire
+worth sending at the price we can actually pay".
+TARGET: realized pnl per $1 AT THE PAID PRICE, graded on venues.outcome. Not direction, not calibrated p - both of
+those are done and dead.
+INPUTS (all available at the fire second, none of them forecasts): p and lv, ask and spread, displayed size at the
+touch, book age, sec, rv60, the candle's own move so far, distance to the settlement line (ref_* from 12.11.x), and
+the recent live state (last-k fill/reject, quote staleness). If an input is not computable live, it is out.
+METHOD: walk-forward BY DAY, fit on days <= T, select on day T+1. The model scores every fire; take the top X% and
+sweep X from 100 down to 10 - that sweep IS the frequency dial and it is adaptive by construction, because the score
+moves with the book and the volatility, not with a hand-set threshold.
+THE TEST THAT DECIDES IT, and the one that has killed every predecessor:
+ (a) NULL = a RANDOM subset of the same size on the same days. Firing less looks good by luck; if the fitted selector
+     does not beat random selection of equal count, it is nothing. Report both.
+ (b) paired vs the current EV rule on the same candles (discordant only, McNemar), halves, permutation of the
+     selector's own scores, costs at the real paid price.
+ (c) THE USER'S ACTUAL COMPLAINT: per 3-hour window, worst window pnl/$1 and worst run of the day, candidate vs
+     current, every day. A model that lifts the mean but keeps the 13:00-22:00 shape has not answered the ask.
+ (d) accuracy reported alongside, never optimised for.
+Ship = paper twin on Mumbai with the selector in front of the existing EV rule; live only with the user.
+Deliverable analysis/h1/task_r20_selection.md <=15 lines + the sweep grid. Run it after R-19's fee answer, which may
+change how many fires exist to select from.
