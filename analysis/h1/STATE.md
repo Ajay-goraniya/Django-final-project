@@ -1,3 +1,39 @@
+# HANDOVER — read this first if you are a successor picking up R-14 (written 09-16 00:1x)
+
+**The one fact that reframes everything: R-13.** The live model's direction call is statistically
+identical to reading the Polymarket price — 92.1% agreement, and on the 2,531 discordant candles
+1,263 vs 1,268, McNemar p=0.937. `corr(p, p_venue)=0.9808`. So **EV is the book spread**
+(`corr(EV, p_venue−ask)=0.9569`), not a forecast. **The engine is a spread-capture strategy.**
+V confirmed it independently on the 70 live Zurich fills (63 disagree with the venue side, 48%
+right, still +12.9 at median ask 0.43 — buying under fair). Do not restart direction-model work.
+
+**R-12 is closed** (`r12_big_brain.md`): 109 months / 4.75M rows trained and tested; history adds
+**+0.0004 Brier** on top of the full feature set; frozen v10 still wins on money. Step 2: lgbm beats
+the stage-1 logistic on OOS logloss **8 of 8 years**. Step 4 (GBM history through the venue stage)
+was running at handover — check `/tmp/claude-0/r12s4.log` and `analysis/h1/r12s4_gbm_venue.py`.
+**Outstanding request to V:** v10's OWN 8 training days (08-29..09-06) with all 30 features; not on
+the branch, needed for the literal pipeline check.
+
+**R-14 is the live task — execution, where the edge actually is.** Brief in `learner/REQUEST.md`.
+Four parts: (1) ask paid vs venue mid at signal / +1s / +5s / +60s, and where the cheap ask comes
+from; (2) reject anatomy — 105/108 FAK kills were for size, so grid order size vs displayed size;
+(3) fire-second (15–240) × ask bucket grid, full grid; (4) at most TWO concrete execution changes,
+gridded, verify.py, paired. Output `analysis/h1/task_r14_execution_edge.md`, ≤15 lines.
+
+**Data (V, 00:10 — use all of it, no permission needed):** `learner/live_backup/` has
+`zurich_2.sqlite3.gz` (live journal, hourly), `zurich_v1`, `polybook`/`book1s` (1 Hz books),
+`venues.sqlite3.gz` (Polymarket oracle), `poly_pnl`/`v10_poly_long4`/`v12_poly_lane` (labelled).
+Fresh Binance via `analysis/h1/fetch_rest_klines.py` (daily zips lag a day). Need a fresher file?
+One-line trigger to V.
+
+**Reusable helpers already written** — do not rebuild these:
+`r12_train.lane_ticks/test_store/fire_set/book`, `task_r8_taker_feature.oracle/ev_of/threshold/per1`,
+`r12_extract.build` (handles the ms/µs timestamp switch), `r12b_frozen_on_history.masked_vec`.
+**Gotchas paid for already:** Binance changed the archive timestamp unit mid-history (µs in recent
+files) and it fails silently; streak features must be per-CANDLE not per-tick or they leak; grading
+live Zurich rows on my `venues` snapshot silently drops most of them (use the journal's own
+`actual`, which is the venue resolution — verified).
+
 # H1 STATE — single source of truth for the check-in loop
 Last updated: 2026-09-14 14:15 UTC. Update this file at the end of every check.
 
