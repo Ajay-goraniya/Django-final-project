@@ -299,3 +299,22 @@ pad chosen by a fitted rule on (sec, rv60, spread, displayed size), not a hand-s
 +0.131 best). Instead answer the one open question: with the best pad from (1), does the EV threshold sweep move at
 all? Full sweep, both arms, PnL not accuracy.
 Deliverable analysis/h1/task_r18a_pad_grid.md <=12 lines + grid file. verify.py. Then the resting simulator (R-18).
+
+## R-19 (09-16 03:2x, from the user challenging the EV formula - and the first check already found something)
+The user asked how we know the EV/PnL rule is right. Two V findings on the running artifact, both to be settled properly:
+(1) FEE ASSUMPTION. model_v10.json fee_rate=0.07 and Model.cost(q)=q/(1-0.07(1-q)), so breakeven at ask 0.50 is
+0.5181. On all 76 graded Zurich fills the venue charged ZERO fees (realized fee / notional median 0.0%). If Polymarket
+charges no taker fee on these markets, our EV is understated by ~1.8c of price at 0.50 and we are firing less often
+than the true edge allows. Verify against (a) the venue's own fee schedule/API, (b) fills across every lane and venue,
+(c) whether fees appear only above a size or on certain markets. Then grid fee_rate in {0.07, 0.03, 0.0} on the
+labelled lanes: fires/day, hit, pnl/$1, halves - PnL first. Changing it changes decisions, so it ships only after the
+paired test and a paper twin.
+(2) DOES EV ORDER PnL? On the big lanes it does, monotonically: poly_pnl n=1005 by EV bucket +0.015 / +0.104 / +0.291
+/ +0.415; v10_long4 n=777 -0.006 / +0.050 / +0.295 / +0.392. But on the 76 live Zurich fills it INVERTS: EV 0.15-0.25
+-> +0.593, 0.25-0.40 -> -0.129, 0.40-0.60 -> -0.265 (n 12/49/8, insufficient, but the sign is the opposite of paper).
+Explain the difference, do not hand-wave it: the live arm pays a real ask and is selected by what the venue lets fill,
+the paper arms are not. Grid the same EV buckets on fills-only vs all-fires, and on paid-price vs quoted-ask, both
+venues, halves, per day. If high-EV live fires are systematically the ones where the market disagrees (R-13's
+mechanism, cheap ask = we are wrong), then EV as a fire rule needs rebuilding around price capture, and that is the
+answer to the user's question.
+Deliverable analysis/h1/task_r19_ev_audit.md <=12 lines. verify.py. Priority: after R-18a's grid, before R-18 resting.
