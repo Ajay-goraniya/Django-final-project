@@ -1,5 +1,5 @@
 {
- "last_epoch": 1789535100,
+ "last_epoch": 1789547400,
  "fires": [
   {
    "epoch": 1789079400,
@@ -3742,6 +3742,150 @@
    "side": "DOWN",
    "ask": 0.48,
    "bi": 2,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789537500,
+   "day": "2026-09-16",
+   "hour": 5,
+   "wknd": false,
+   "S": 30,
+   "side": "UP",
+   "ask": 0.42,
+   "bi": 0,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789537800,
+   "day": "2026-09-16",
+   "hour": 5,
+   "wknd": false,
+   "S": 60,
+   "side": "UP",
+   "ask": 0.46,
+   "bi": 1,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789538100,
+   "day": "2026-09-16",
+   "hour": 5,
+   "wknd": false,
+   "S": 15,
+   "side": "UP",
+   "ask": 0.46,
+   "bi": 2,
+   "hit": true,
+   "pnl": 1.1304347826086953
+  },
+  {
+   "epoch": 1789539600,
+   "day": "2026-09-16",
+   "hour": 6,
+   "wknd": false,
+   "S": 60,
+   "side": "UP",
+   "ask": 0.53,
+   "bi": 1,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789540200,
+   "day": "2026-09-16",
+   "hour": 6,
+   "wknd": false,
+   "S": 45,
+   "side": "UP",
+   "ask": 0.43,
+   "bi": 0,
+   "hit": true,
+   "pnl": 1.2790697674418605
+  },
+  {
+   "epoch": 1789541700,
+   "day": "2026-09-16",
+   "hour": 6,
+   "wknd": false,
+   "S": 45,
+   "side": "DOWN",
+   "ask": 0.52,
+   "bi": 1,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789544700,
+   "day": "2026-09-16",
+   "hour": 7,
+   "wknd": false,
+   "S": 30,
+   "side": "DOWN",
+   "ask": 0.4,
+   "bi": 0,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789545600,
+   "day": "2026-09-16",
+   "hour": 8,
+   "wknd": false,
+   "S": 30,
+   "side": "UP",
+   "ask": 0.38,
+   "bi": 0,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789546500,
+   "day": "2026-09-16",
+   "hour": 8,
+   "wknd": false,
+   "S": 20,
+   "side": "DOWN",
+   "ask": 0.36,
+   "bi": 0,
+   "hit": true,
+   "pnl": 1.7222222222222219
+  },
+  {
+   "epoch": 1789546800,
+   "day": "2026-09-16",
+   "hour": 8,
+   "wknd": false,
+   "S": 60,
+   "side": "DOWN",
+   "ask": 0.43,
+   "bi": 0,
+   "hit": true,
+   "pnl": 1.2790697674418605
+  },
+  {
+   "epoch": 1789547100,
+   "day": "2026-09-16",
+   "hour": 8,
+   "wknd": false,
+   "S": 15,
+   "side": "DOWN",
+   "ask": 0.6,
+   "bi": 3,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789547400,
+   "day": "2026-09-16",
+   "hour": 8,
+   "wknd": false,
+   "S": 45,
+   "side": "DOWN",
+   "ask": 0.43,
+   "bi": 0,
    "hit": false,
    "pnl": -1.0
   }
