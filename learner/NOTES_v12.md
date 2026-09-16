@@ -5633,3 +5633,33 @@ right and bought nothing; recorded as such.
 currently does not: retraining on the recent window is not producing a better brain, it is producing a smaller,
 worse-calibrated one. Before R-12 reports a "trained on all regimes" model, it has to beat frozen v10 on a
 held-out window on this exact table, or the honest answer to the owner is that the bigger training run did not help.
+
+## 09-16 12:4x — R-12 ANSWERED, and the answer is no: the bigger training run did not help
+H1, in the words the bar asked for: **a model trained on all regimes does not beat frozen v10 on a held-out window.**
+Nine retrains this session, **not one** beats frozen on total PnL:
+
+| arm | quality | fires | per $1 | total | frozen on the same window |
+|---|---|---|---|---|---|
+| R-12 big (109 months, 4.75M rows) | Brier 0.1952 / LL 0.5715 | 1036 | +0.070 | +72.72 | **+121.43** |
+| R-12 step3 8d/30 feats | Brier 0.1697 | 453 | +0.171 | +77.63 | +98.02 |
+| R-12 step3 +p_hist | Brier 0.1701 | 480 | +0.179 | +85.99 | +98.02 |
+| R-16 twap60 venue labels | Brier 0.1711 | 440 | +0.183 | +80.71 | +99.56 |
+| R-17 executable rows | Brier 0.1707 | 448 | +0.170 | +75.96 | +99.56 |
+| R-25 plain 30 | LL 0.5092 | 505 | +0.176 | +89.12 | +122.41 |
+| R-25 +interactions x3 | LL 0.5099-0.5116 | 485-513 | - | 76-89 | +122.41 |
+
+The single arm that beat frozen on total was R-12 B2 (+100.96 vs +98.02) and **verify.py rejected it**: halves
++0.226 / -0.060 sign flip, 397 discordant 201v196, McNemar p=0.841. It is noise, and it is recorded as rejected.
+
+**The pattern is the finding.** Every retrain fires 440-510 where frozen fires 750-860. Better per $1, lower total.
+That is R-19's cheapness sort showing up again: the retrains keep the cheap half of the book and drop the expensive
+winners. Accuracy is not PnL, and per-$1 is not PnL either - **frequency is carrying the total**, which is exactly
+the "adjustive frequency" the owner keeps asking for and the opposite of what a tighter model delivers.
+
+**H1's own caveat, volunteered:** its walk-forward-by-day fits train on 2-6 days against a comparator fitted on 8
+with LODO+isotonic, so the logged-window retrains are data-starved and that comparison flatters frozen. The arm
+that is NOT starved is R-12 big - 109 months, 4.75M rows - and it lost on every measure, failing paired, costs and
+null. That is the clean test, and it is the honest answer to the owner.
+
+Build drift is excluded as a confound: 12.8.11's decide() vs HEAD's over 22,720 rows is max |dp| = 0.
+Frozen v10 is the benchmark from here. Detail: analysis/h1/task_r12_verdict_vs_frozen.md.
