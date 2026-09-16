@@ -5610,3 +5610,26 @@ against -0.0736 — a 0.0007/$1 gap, noise.
 **Verdict: 12.8.11 is not better and not worse; on the signal it is the same build.** Differences between builds
 since then are execution and plumbing. Nothing here defends the current live PnL - it says only that reverting
 would change nothing about the calls.
+
+## 09-16 12:1x — R-25 dropped, and the row that matters is the one nobody asked for
+H1's full grid (walk-forward by day, 28,141 rows, 7 held-out days):
+
+| arm | logloss | fires | hit% | per $1 | total |
+|---|---|---|---|---|---|
+| **frozen v10** | **0.4926** | 856 | 53.2% | +0.143 | **+122.41** |
+| plain 30 (retrained) | 0.5092 | 505 | 50.5% | +0.176 | +89.12 |
+| +4 venue-signed | 0.5102 | 513 | 48.7% | +0.149 | +76.33 |
+| +4 move-signed | 0.5099 | 488 | 50.2% | +0.182 | +89.00 |
+| +8 both | 0.5116 | 485 | 49.3% | +0.162 | +78.61 |
+
+The interaction question is answered and closed: every interaction arm is WORSE than plain 30, +8 worst, McNemar
+p 0.557 / 0.774 / 0.248, discordant counts 26 / 12 / 27 out of ~450 shared fires — the terms barely move the fire
+set, so there is no effect to size either way. Non-circular construction was H1's and is stated: sign(p_venue-0.5)
+and sign(move_bps), agreeing 75.7%, so neither signing carries the result alone. My architectural diagnosis was
+right and bought nothing; recorded as such.
+
+**The row to sit with is the first one. The FROZEN model beats every arm retrained on this data** — 0.4926 against
+0.5092 logloss and +122.41 against +89.12, from 856 fires against 505. That is a benchmark R-12 has to clear and
+currently does not: retraining on the recent window is not producing a better brain, it is producing a smaller,
+worse-calibrated one. Before R-12 reports a "trained on all regimes" model, it has to beat frozen v10 on a
+held-out window on this exact table, or the honest answer to the owner is that the bigger training run did not help.
