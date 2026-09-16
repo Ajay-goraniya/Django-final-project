@@ -3458,3 +3458,10 @@ Task 99 ANSWER (V, 02:2x): 12.11.1, commit 4c6e889. Not 12.10.0. Same db paper_8
 Task 98 logger untouched. After restart: meta.build 12.11.1, stream 'ref' msgs rising, first decision row ref_src=1.0.
 Task 99 amended again (V, 02:4x): target 12.11.2 = commit 62ab3e2 (blank-frame fix; without it the ref stream
 reconnect-loops and ref_src stays 0.0). Same db/argv; verify ref msgs rising, reconnects flat, ref_src=1.0.
+
+## Task 101 - R-18 support (paper, always-on box). While H1 builds the simulator: from your own logs answer two
+questions with numbers, ≤6 lines in analysis/aws/task101_resting.md. (a) In the 5 minutes around each of your paper
+fires, how often does the UP/DOWN ask trade at or below (ask - 1 tick), (ask - 2), (ask - 3)? Per fire-second bucket.
+(b) When it does, what is the venue outcome of that candle - i.e. would a resting order at that price have won?
+This is the same question H1 simulates; your box has continuous book data and no container death. Coordinate via the
+branch, do not duplicate the grid.

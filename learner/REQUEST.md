@@ -256,3 +256,26 @@ from the actual UP/DOWN touch at the fire second, quote age recorded), same 30 f
 paired vs frozen v10 on held-out days (discordant, McNemar), halves, permutation, costs, null; PnL/drawdown/frequency
 on executable quotes only. (4) Report the p_venue coefficient and calibration of the retrained arm vs v10. Ship = paper
 twin on Mumbai with the json (engine 12.11.1 loads any feature list). <=15 lines analysis/h1/task_r17_book_only.md.
+
+## R-18 (09-16 03:0x) - THE GOAL PROGRAM: stop paying the ask. Owner V, priority 1, everything else pauses.
+User's goal restated: accuracy AND PnL (PnL first) AND adaptive frequency AND no evening where almost every trade loses.
+What tonight established (do not re-derive): the direction forecast equals the venue price (R-13, six negatives:
+R-6/8/9/12/16/17); loss runs are at chance (R-15); our money comes from buying BELOW fair, and R-14 showed the orders
+that would have won are exactly the ones the venue KILLS - fills pay mid+0.5c and win 51%, the 26 killed orders priced
+under the ask would have won 65% (+0.170/$1). We have only ever sent FAK taker orders at the touch. The untested
+structural lever is to REST the order under fair instead of chasing it.
+(1) FILL SIMULATOR on the logged book tape (polybook 1 s snapshots + book1s + the live journals). For each candle and
+each fire second, simulate a limit buy resting at cap = ask - k ticks (k = 0..5) with a TTL (cancel at T-30 s, T-60 s,
+end of candle): filled iff the book's ask trades at/through cap while the order rests, size = displayed at that price.
+Grade on venues.outcome. Report the FULL grid k x TTL x fire-second: fill rate, hit%, pnl/$1, n, halves, per day.
+Never the best cell. Compare against the actual FAK arm on the same candles (paired, McNemar).
+(2) ADVERSE SELECTION is the thing that kills this idea: a resting order fills when the market moves against it.
+Measure it directly - for each simulated fill, the venue outcome vs the outcome of the same candle when we did NOT
+fill. If pnl/$1 at k>=1 is not positive after that, say so and the idea dies there.
+(3) FILL MODEL, only if (1) survives: P(fill | cap, displayed size, sec, rv60, spread) fitted on real orders (190+
+live and growing, plus every paper arm). Expected value per attempt = p_win x payoff x P(fill) - cost. Frequency then
+adapts by itself: quiet thin candles price themselves out, and no threshold is hand-set. verify.py on every cell.
+(4) Deliverable: analysis/h1/task_r18_resting.md (<=15 lines + the grid file), and if it survives, a PAPER lane on
+Mumbai that posts resting orders beside the live FAK engine so the two are comparable on the same candles.
+Constraints unchanged: real data only, >=60 graded per cell or "insufficient", halves, paired, permutation, costs,
+null. Nothing live without the user. This is not a gate on the score - it is how the order is placed.
