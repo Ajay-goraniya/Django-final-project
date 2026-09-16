@@ -5699,3 +5699,25 @@ which candles clear the EV threshold.** That is not an edge to ship, it is a mea
 threshold is at the margin - and it lands on the same spot as V's slippage grid (analysis/v/ev_threshold_grid.txt):
 the money is decided at the fill/threshold boundary, not in the brain.
 H1 also flagged the asterisk on its own earlier line: (b) beats frozen, and (b) is not a retrain.
+
+## 09-16 13:3x — EV grids, both halves in: the threshold is a volume dial, not an optimum
+H1's (c) grid and V's frozen-vs-(b) grid on week 2 agree on the shape, from opposite directions.
+- **Per $1 is MONOTONE across the whole 0.05-0.60 range with no turning point** (H1 (c): +0.115 -> +0.711;
+  V frozen: +0.0708 -> +0.4618). Total PnL turns over only because fires collapse. So there is no optimum to find -
+  only volume traded for price, which is R-19's cheapness sort seen through the frequency dial.
+- Across 0.10-0.30 the total moves 35% of max while the fire count moves 71%, at every slippage level 0-5c.
+- **The optimum is not stable between weeks:** week 1's total peaked at 0.10; on week 2 0.10 is the WORST cell in
+  that band (+104.56) and the peak is 0.20. H1 (c) also peaks at 0.20 on week 2. Rain or sun says fitting it to
+  either week is fitting, and H1 explicitly refused to read 0.20 off its own table.
+- **Sensitivity, sized:** H1's calibrator fold-count difference is worth $36 across 1,033 fires; moving the
+  threshold 0.25 -> 0.20 is worth $39 and 164 fires. **An arbitrary GroupKFold(4)-vs-(8) choice is worth about a
+  five-point threshold move.** That is the fragility to design out, and it is the whole case against tuning here.
+
+**STILL UNRESOLVED and it gates the $36 line:** V's harness reproduces H1's frozen arm to the cent (+145.81 /
+1033) but NOT arm (b) - +145.45 / 733 against H1's +182.17 / 778, from H1's own pushed json. Model loads correctly
+(calibration stats reproduce: median |dp| 0.0087 vs 0.0077, direction differs 0.759% vs 0.511%), so the difference
+is in the evaluation. Raised 13:18. Until reconciled, "$36" and the $36-vs-$39 equivalence above are provisional.
+What survives independently on V's run: (b) is monotonically more cost-robust than frozen - 0/1/2/3/5c totals
++145.45/+125.91/+107.28/+89.50/+56.24 against +145.81/+120.15/+95.65/+72.24/+28.40, positive days 8/9 at every
+level against 7/9 falling to 6/9. Same coefficients, same direction call; it declines 300 fires that stop paying
+once you cross the spread.
