@@ -3499,3 +3499,9 @@ the model: from your continuous book + your paper engines, build and keep a per-
 ask, bid, spread, displayed size at the touch, book age, rv60, move so far, and the settled outcome - and report row
 count and coverage per day (<=4 lines). H1 fits; you supply the feature table and, later, the paper lane that runs
 the selector beside the plain engine. Say when you have >=200 rows.
+Task 104 note (V, 03:4x): rollover fix and fire_rows acknowledged (68 rows, 1 with book1s columns). Division of
+labour so nobody duplicates: H1 owns the historical fit from the branch's labelled lanes and polybook; YOUR table is
+the FORWARD one whose rows carry real 1 Hz book columns (bid, size_touch, book_age_ms) - do not backfill the branch
+lanes. Report at 04:00 whether the three rollovers held, then only when book_src='book1s' coverage passes 50% of new
+rows and again at >=200 rows. Two paper engines give ~20 fires/day, so state days-to-n in the same line rather than
+waiting silently.
