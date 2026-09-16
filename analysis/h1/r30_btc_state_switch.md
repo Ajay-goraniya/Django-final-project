@@ -85,3 +85,87 @@ the bad day without also picking out good ones.
    the weakest of the seven.
 3. 1,762 of 2,080 fires survive the 24 h contiguity requirement; 09-11 is absent from the record.
 4. Paper fills at the quoted ask are an upper bound and are not comparable to live fills.
+
+---
+
+# R-30b LIVE — the owner is right, and the reason is the fee, not the regime
+
+Script `analysis/h1/r30b_live.py`. **Snapshot is stale:** `learner/live_backup/zurich_2.sqlite3.gz`
+is the 09-16 09:11 push (commit `e6b9927`). No newer Zurich gz and no per-day venue table has landed
+on the branch, so live coverage ends **09-16 08:20 UTC** — today is only part-counted.
+
+## The finding, and it is a correction of my own numbers
+
+The live journal carries **two** PnL columns and they differ by the fee:
+
+`pnl − venue_pnl − venue_fees == 0` on all 83 rows, max residual 1e-4. **`pnl` is GROSS.
+`venue_pnl` is what the account actually received.** Everything I reported to the owner earlier
+today came off `pnl`, which is why I said 09-15 was +14.11. **It was not. It lost.**
+
+| | 88 settled live fires |
+|---|---|
+| gross (`pnl`) | **−1.69** |
+| venue fees | **13.61** |
+| **net (`venue_pnl`)** | **−15.30** |
+
+Total staked 339.55, so **fees are 4.01% of stake** while the **gross edge is −0.50% of stake**.
+
+**The fee is charged on losers too:** winners pay 3.92% of stake (n=39), losers 4.08% (n=49). The
+paper model `per1()` charges 7% of *winnings* and **nothing on a loss**. So every paper per-$1 figure
+in this repository — including every arm I graded in R-26 through R-29 — is measured against a cost
+structure the live venue does not use. On live the cost is a flat ~4% of stake per fire, win or lose.
+
+That is the whole gap between "paper says +0.159/$1" and "the account went 50 → 40".
+
+## Step 1 — the LIVE daily table (venue_pnl)
+
+| day | n | W% | venue_pnl | venue_fees | cumulative |
+|---|---|---|---|---|---|
+| 09-15 | 77 | 46.8% | **−4.33** | 12.27 | −4.33 |
+| 09-16 | 11 | 27.3% | **−10.97** | 1.35 | **−15.30** |
+
+**Losing days from the live table: 09-15 AND 09-16 — both of them.** The owner said he lost on both.
+He did. My R-30 daily table said Mon/Tue were the two best days; that table was paper, and on the
+paper fee model. Retracted for any live purpose.
+
+## Step 2 — the seven state buckets on live fires (terciles frozen from R-30, not refitted)
+
+88 of 88 live fires have a full 24 h of prior BTC candles. Four cells reach n≥60:
+
+| feature.bucket | n | net/fire | net total | halves | share of live |
+|---|---|---|---|---|---|
+| ret24.LO | 71 | −0.5833 | −41.42 | **+0.285 / −1.428** | 81% |
+| rangeatr.HI | 60 | −0.5074 | −30.44 | **+0.867 / −1.882** | 68% |
+| samedir.MID | 60 | +0.0601 | +3.61 | **+1.743 / −1.622** | 68% |
+| posrange.LO | 76 | −0.0118 | −0.90 | **+1.499 / −1.522** | 86% |
+
+**All four flip sign between halves**, and each holds 68–86% of the entire live sample. A bucket
+containing five sixths of the data is not a detector, it is the data — what these four are measuring
+is that the second half (09-16) lost. Live spans ~30 h, so both halves sit inside one contiguous
+window, which this repo already records as nearly worthless. The other 17 cells are under 60 and are
+not read.
+
+## Steps 3 and 4 — no switch, and no detector
+
+**No bucket qualifies.** Where the two live losing days actually land, scored on the big paper
+sample, all 14 checks:
+
+| day | the bucket it sits in | paper n | paper per $1 |
+|---|---|---|---|
+| 09-15 | ret24.LO / rv24.MID / volratio.MID / rangeatr.HI / autocorr.HI / samedir.MID / posrange.LO | 580–1108 | +0.116 … +0.245, **all positive** |
+| 09-16 | ret24.LO / rv24.HI / volratio.MID / rangeatr.MID / autocorr.HI / samedir.MID / posrange.MID | 583–1108 | +0.116 … +0.189, **all positive** |
+
+**Every single bucket the losing days fall into is positive on the large sample.** That is the
+answer to "can we identify this state and stop": **no detector exists** in these seven features.
+Step 4 does not run — nothing qualified.
+
+## What this changes
+
+The regime question was the wrong question. At 4% of stake per fire charged win or lose, the engine
+needs a gross edge above 4% of stake to break even; it is currently running at **−0.50%**. No state
+switch, threshold, or model change in this repo addresses a flat per-fire cost — only firing less
+often, firing larger, or a venue with a different fee schedule does.
+
+**Recommended next measurement, not a change:** re-grade R-26…R-29 arms under the live fee model
+(4% of stake per fire, both outcomes) instead of `per1()`, and report which, if any, is still
+positive. I expect most are not. I am not proposing any live change off this file.
