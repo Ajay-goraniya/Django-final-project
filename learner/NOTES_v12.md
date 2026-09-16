@@ -5920,3 +5920,24 @@ set stake fixed THEN master true, both audited, with read-back; then tell the ow
 back to "master on expected". If the lanes are not clean or Zurich is silent: do not arm, say so, re-arm +60 min.
 The honest record going in: n=103, W46/L57, -18.09 on the venue's basis. Arming is to prove the fixed engine on
 real fills at fixed stake, not a bet that the edge improved.
+
+## 09-16 17:5x — FIRST REVERSAL ORDER EVER, a DOWN: the leg the 12.15.0 fix unblocked. And a design question.
+Mumbai, lane D (8796). ep 1789574700, 16:05 UTC, sec 74, DOWN, p 0.651, filled 8.9375 sh at 0.32 for $2.996,
+settled DOWN, WON. Under the pre-fix code the same call carried p = 1-0.651 = 0.349 and was refused as "price
+fails model EV". REVERSAL signal history: 12:55 DOWN p0.3438 SKIPPED (censored, pre-fix) | 13:10 UP p0.6117 SKIPPED
+(genuine EV) | 16:05 DOWN p0.651 FILLED | 17:40 DOWN p0.6138 SKIPPED. Post-fix the DOWN leg reaches the gate with a
+real p and correctly still fails sometimes. All four "call only" - REVERSAL has yet to fire on a placed MAIN.
+
+**The thing to decide before the sample grows - Mumbai flagged it, and it is the 12.14.0 comment made concrete.**
+On that same candle EF ALSO bought DOWN (0.3040, $2.989). With main_enabled false there is no MAIN position, so
+REVERSAL is an outright, and when EF agrees the "hedge" is a DOUBLING: $5.99 staked on one candle returning +12.33.
+Concentration, not offset. On the Tokyo box this cannot happen because EF is OFF there (MAIN BLOCKED / EF BLOCKED /
+REVERSAL TRADING). Here the owner asked for EF + REV together, so it can and did. n=1, it won; the shape is what
+matters, not the outcome. Three options, none taken yet:
+ (a) accept it - two independent signals agreeing is the highest-conviction case; cost is 2x stake on those candles,
+     which is dynamic sizing by another route and touches "stake stays fixed";
+ (b) REVERSAL skips a candle on which EF already holds the same side - keeps one stake per candle per side, keeps
+     REV's opposite-side and EF-idle cases, and is a lane rule rather than a signal gate;
+ (c) run REV with EF off, exactly Tokyo's configuration.
+V's recommendation: (b), because fixed stake per candle is the owner's rule and (a) breaks it quietly. Owner's call.
+Lane totals, insufficient: 8796 35 graded W18 +26.53 | 8795 37 W19 +19.31 | 8794 0. SIGNAL_CHANGED 0 on all three.
