@@ -5908,3 +5908,15 @@ and the divergence stays visible for them, by design. Cash 43.52, equity 43.52 v
 **Go-live criteria status:** (1) Zurich responsive on 12.15.4 master off - MET. (2) paper lanes >= 4 h clean on
 12.15.4 - ~19:30 UTC. (3) stake mode FIXED before arming - owner's write, NOT DONE. (4) equity vs floor from the
 whole account - MET (43.52 vs 30). (5) stated purpose - recorded. Earliest: ~19:30 UTC, after the owner sets fixed.
+
+## 09-16 17:4x — OWNER AUTHORISATION: "when met just make it live"
+Verbatim, in reply to the go-live criteria. This authorises V to arm master on Zurich once criteria 1-4 are met,
+overriding "re-arming is the owner's alone" for this one arming. Criteria 1 and 4 are met; 2 is met at ~19:25 UTC
+if the paper lanes stay clean on 12.15.4; 3 (stake FIXED) will be set by V through the audited control path as
+part of the arming, because the owner's standing rule IS stake fixed and arming on `streak` would violate it -
+fixed 3.0, the pinned value, min 3 / max 50. Gate scheduled 19:30 UTC as a one-shot to this session: verify Mumbai
+clean (no TASK_CRASH, no lane_dropped/SIGNAL_CHANGED storm, seeds warm, MAIN rate in band), then ONE Zurich poke to
+set stake fixed THEN master true, both audited, with read-back; then tell the owner; then flip the check-in routine
+back to "master on expected". If the lanes are not clean or Zurich is silent: do not arm, say so, re-arm +60 min.
+The honest record going in: n=103, W46/L57, -18.09 on the venue's basis. Arming is to prove the fixed engine on
+real fills at fixed stake, not a bet that the edge improved.
