@@ -3441,3 +3441,8 @@ reproduce venues.outcome before reporting "correct". Priority: above Task 97.
 ## Task 99 - 8787 paper -> 12.10.0 (logging-only; decisions identical). Stage learner/v12_2 at the 12.10.0 commit,
 SHA256SUMS 30/30, suites 282, restart 8787 with the same db and argv; verify build 12.10.0 and ref_* keys in the next
 decision row. 8793 (12.8.11 control) untouched. Task 98 logger untouched. ≤3 lines in the ledger.
+
+## Task 100 - commit the Task 98 logger source + samples (needed by V for engine 12.11.0, which will consume the
+same feed as a first-class stream). Push: analysis/aws/ref_stream_logger.py (the running script, secrets none) and
+analysis/aws/ref_stream_samples.jsonl (5 raw messages each from crypto_prices_chainlink and crypto_prices, verbatim,
+plus one subscribe ack). ≤2 lines in task98_ref_stream.md. Priority: now.
