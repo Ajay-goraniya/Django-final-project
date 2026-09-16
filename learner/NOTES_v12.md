@@ -5780,3 +5780,27 @@ gate before a side or p is computed, so their intent is not recoverable from the
 predictive AMONG FIRES; it does not prove the blocked 1,228 would have earned the 30-45 s rate. Closing that needs a
 lane that logs the decision it WOULD have made with the bar off — instrumentation, no orders, no live behaviour
 change. That is the next build and it is the honest way to finish this.
+
+## 09-16 14:3x — 12.15.3 on the paper lanes, and the REVERSAL defect confirmed in the lane's own journal
+Mumbai, 083c178. 8794/8795/8796 on 12.15.3, checksums 31/31 and 350 tests verified BEFORE anything was stopped,
+all three seed "64 closed candles; warm", zero LANE_SEED_COLD, arming byte-identical, and all three read the same
+features on start (vol_ratio 1.0740/1.0736/1.0739). 8787 (12.9.0) and 8793 (12.8.11) untouched, same pids.
+
+**Independent confirmation of the REVERSAL probability bug, from live lane data rather than my reasoning.** The
+12:55 candle fired DOWN with recorded **p=0.3438** against ask 0.79-0.84. A DOWN buy carrying 0.344 IS the engine
+quoting P(UP); true P(DOWN) was 0.656. The split is exactly the shape the defect predicts:
+- REVERSAL **DOWN**: 6 decisions / 1 signal / **0 orders**, p 0.344-0.346 — censored, completely.
+- REVERSAL **UP**: 6 decisions / 1 signal / 0 orders, p 0.603-0.612 at ask 0.54-0.61, EV +0.116 under the 0.25
+  floor — a genuine refusal, not the bug.
+
+**Mumbai then did the arithmetic that stops me overclaiming the fix**, unprompted: corrected to true p 0.656, that
+candle gives EV **-0.17 at ask 0.79 and -0.22 at 0.84**. So the fix makes DOWN *possible*; it would NOT have made
+that candle fire. Worth stating plainly - the defect censored half the lane, but the visible refusals were not all
+caused by it.
+Consequence recorded in the Task 114 ledger: **every REVERSAL figure in Tasks 113 and 114 is DOWN-censored and is
+not readable as evidence about the lane.** The REVERSAL sample restarts from this deploy.
+
+Lane D at 2.9 h, all insufficient: EF 11 fires / 11 FILLED / 11 graded / W5 / staked 32.95 / pnl +0.46 =
+**+0.0140 per $1** (against live Zurich's +0.0138 on the same signal - a coincidence at these n, not a finding).
+MAIN 12 calls 0 orders, correct with main_enabled false. REVERSAL 12 decisions, 2 signals, 0 orders, call-only 2/2.
+Mumbai is watching the MAIN/REVERSAL call rate against the MEDIAN_WINDOW 23 change.
