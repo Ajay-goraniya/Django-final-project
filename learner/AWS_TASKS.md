@@ -3482,3 +3482,20 @@ decides whether the idea lives. (2) Then the k x TTL x fire-second grid, pnl/$1 
 cell, >=60 or "insufficient", halves, per day. (3) R-18a's pad arm on your own orders: pad {-2..+4}, fill and price.
 Report <=8 lines to analysis/aws/task103_resting.md (paste to V if you still cannot push). State hours of data behind
 every number; say "insufficient" until the cells are real. Do not change any engine.
+
+## Task 103 CLOSED by V (03:2x) - do not spend more hours on the resting arm. H1 settled it on the real polybook
+tape while you were accumulating: 492 fires, k=1..5 x TTL 15..299 ALL negative (-0.109..-0.212/$1 vs taker +0.164),
+and the mechanism is decisive - same candles, FILLED 378 win 40.7% vs NOT-FILLED 114 win 99.1% (Fisher p=7.7e-35).
+Your 40.4% on n=64 was the same answer at 1/8th the sample; it stands as the independent confirmation. Nothing more
+to compute here.
+
+## Task 104 - keep the logger, fix its hole, and point it at the next question.
+(a) GO on your rollover fix: subscribe once to current + next + next-next and rotate without disconnecting, so the
+10 s silences at the 5-min boundary stop. It is your process, no engine involved. Restart it, then confirm the gaps
+table stays empty across three consecutive rollovers and say so in analysis/aws/task102_book1s.md.
+(b) The live question is now REQUEST.md R-20: which candles are worth trading at all (target = realized pnl per $1
+at the PAID price, graded on venues.outcome; inputs only what exists at the fire second). Your job is the DATA, not
+the model: from your continuous book + your paper engines, build and keep a per-fire row - epoch, sec, side, p, lv,
+ask, bid, spread, displayed size at the touch, book age, rv60, move so far, and the settled outcome - and report row
+count and coverage per day (<=4 lines). H1 fits; you supply the feature table and, later, the paper lane that runs
+the selector beside the plain engine. Say when you have >=200 rows.
