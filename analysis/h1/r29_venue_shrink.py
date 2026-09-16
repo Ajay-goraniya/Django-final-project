@@ -189,3 +189,51 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+def by_day():
+    """R-29b (owner, 09-16 21:5x): "test both in last 2 days data". 09-15 and 09-16 UTC, separately
+    and combined. These are the two days the owner is asking about, and 09-16 is the losing one -
+    which makes this the rain-or-sun test rather than another pooled average."""
+    import datetime as dt
+    t0, px = A.second_series()
+    r = A.returns_series(t0, px)
+    F0, _ = fires()
+    F = []
+    for f in F0:
+        raw, eng = A.ratio_at(t0, r, f['ep'] + f['sec'])
+        if raw is None:
+            continue
+        f['raw'], f['eng'] = raw, eng
+        f['ev_s'] = R8.ev_of(f['p'], f['ask'])
+        f['day'] = dt.datetime.utcfromtimestamp(f['ep']).strftime('%m-%d')
+        F.append(f)
+
+    def block(sel, label):
+        G = [f for f in F if sel(f)]
+        if not G:
+            print('  %-14s (no fires)' % label)
+            return
+        by_ev = sorted(G, key=lambda z: -z['ev_s'])
+        rows = []
+        for name, m in (('frozen v10', 0.0), ('candidate m=1', 1.0)):
+            g = refire(G, m)
+            s = cell(g)
+            if not s:
+                continue
+            h = halves(g) if s[0] >= MIN_CELL else (None, None)
+            rows.append((name, s, h, len(g)))
+        if rows:
+            n = rows[-1][3]
+            nul = [(x['p'], x['ask'], x['win'], False, x['ep']) for x in by_ev[:n]]
+            rows.append(('topEV null @%d' % n, cell(nul), (None, None), n))
+        for name, s, h, _ in rows:
+            hs = ('%+8.3f %+8.3f' % (h[0][2], h[1][2])) if h[0] else '   n<60 -       '
+            print('  %-14s %-8s n=%-5d W=%5.1f%%  per $1 %+7.3f  total %+8.2f  %s'
+                  % (label, name, s[0], 100 * s[1], s[2], s[3], hs))
+
+    print('\n  R-29b -- THE LAST TWO DAYS (owner)')
+    for d in ('09-15', '09-16'):
+        block(lambda f, d=d: f['day'] == d, d)
+        print()
+    block(lambda f: f['day'] in ('09-15', '09-16'), 'both')

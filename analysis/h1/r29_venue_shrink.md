@@ -67,3 +67,50 @@ never changes which side gets bought, on any of 2,079 fires. That is R-13 stated
 model and the book already agree on direction, so anchoring to the book can only ever change *size
 of conviction*, never the call. It also means the wrong-side-ask hazard I guarded for did not fire
 here — the guard stays in the script, because the next venue-anchored candidate may not be so tame.
+
+---
+
+# R-29b — "test both in last 2 days data" (owner, 09-16 21:5x)
+
+Same machinery, sliced by UTC day. 09-15 is the winning day, 09-16 the losing one, so this is the
+rain-or-sun test rather than another pooled average. Halves shown where n ≥ 60.
+
+## 09-15 (the good day)
+
+| arm | n | W% | per $1 | total | h1 | h2 |
+|---|---|---|---|---|---|---|
+| frozen v10 | 188 | 60.1% | **+0.297** | **+55.84** | +0.413 | +0.181 |
+| candidate m=1 | 137 | 59.9% | +0.275 | +37.66 | +0.256 | +0.293 |
+| top-EV null @137 | 137 | 56.9% | +0.279 | +38.21 | n<60 | — |
+
+## 09-16 (the losing day — the one the candidate exists for)
+
+| arm | n | W% | per $1 | total | h1 | h2 |
+|---|---|---|---|---|---|---|
+| frozen v10 | 185 | 42.7% | −0.081 | **−15.05** | −0.195 | +0.031 |
+| candidate m=1 | 153 | 39.2% | **−0.175** | **−26.70** | −0.386 | +0.034 |
+| top-EV null @153 | 153 | 42.5% | −0.046 | −7.02 | n<60 | — |
+
+**This is the finding.** The candidate is sold as adaptive protection in accelerating volatility.
+On the one day in this window that actually went wrong it did the opposite: it **lost 77% more
+money** than frozen v10 (−26.70 vs −15.05) and its win rate fell further (39.2% vs 42.7%). It also
+lost to the trivial EV null, which was the best arm of the three on that day (−7.02).
+
+## Both days combined
+
+| arm | n | W% | per $1 | total | h1 | h2 |
+|---|---|---|---|---|---|---|
+| frozen v10 | 373 | 51.5% | **+0.109** | **+40.80** | +0.311 | −0.091 |
+| candidate m=1 | 290 | 49.0% | +0.038 | +10.96 | +0.205 | −0.129 |
+| top-EV null @290 | 290 | 49.0% | +0.099 | +28.84 | n<60 | — |
+
+## Verdict, unchanged and now stronger
+
+Worse on the winning day, **much** worse on the losing day, worse combined, and worse than the null
+on all three. It fails rain-or-sun in both directions — there is no regime in this window where it
+is the right arm. The R-29 verdict stands: do not ship it.
+
+Caveat kept in view: both days' halves straddle zero for every arm (frozen v10 combined runs
++0.311 → −0.091), so two days remains two days. That is an argument against reading *any* arm's
+two-day number as an edge, not a rescue for the candidate — on the same two days it is behind on
+every cut.
