@@ -5754,3 +5754,29 @@ notes above.
 side's own ask from the start, so it never had the bug — and its result is now the real finding: (b) declines ~300
 fires that stop paying once you cross the spread, 8/9 positive days at every slippage level against frozen's 7/9
 falling to 6/9. Same coefficients, same direction call, better selection.
+
+## 09-16 13:5x — Task 116: the freshness bar filters on something that carries no information
+Mumbai, 0904981, analysis/aws/task116_freshness_bar.md. 1,598 graded fires / 658 candles / 6 days, all 1,598
+matched to venues.outcome with zero fallbacks.
+
+The naive sweep says the bar costs money — refused beats admitted at EVERY bar (live 0.75 s: admitted +0.1602 on
+1,448 against refused +0.3370 on 150). **Mumbai then refuted its own sweep**, which is the right instinct: the
+refused cohort is not a staleness cohort, it is a FIRE-SECOND cohort. Its `sec` is p10 31 / median 35 / p90 39, and
+142 of 150 sit in 30-45 s — the second after rollover, before the new book has been quoted. Admitted `sec` is
+p10 18 / median 69 / p90 185. Paid price is nearly identical (0.470 vs 0.450), so it is not an extreme-odds artifact.
+
+**The decisive cell, matched on fire second: within 30-45 s, age<=250 ms gives +0.3479 on n=89 and age>5 s gives
++0.3581 on n=82. A gap of 0.01.** No sign flip in halves on either side; both survive costs (+0.215 / +0.224 per $1
+at 5 c against +0.069 for everything after 45 s). **Book age carries no information about the outcome.**
+
+**What does: the fire second.** 30-45 s returns +0.345/$1, against +0.195 for 45-300 s and -0.001 for 0-30 s. The
+bar refuses that window disproportionately — 142 fires worth +$467 at 0 c and +$280 at 5 c over six days. Finer age
+splits inside 30-45 s are non-monotone (+0.348 / +0.323 / -0.039 / +0.442 / +0.358) with every middle cell under 60:
+noise, not read, and Mumbai marked it so without being asked.
+
+**The limit, stated by Mumbai unprompted and the reason we do not act yet:** the 1,228 blocked decide rows never
+became fires, so no outcome exists for any of them and none is in this sample. `decide_now` returns at the publish
+gate before a side or p is computed, so their intent is not recoverable from the journal. The grid proves age is not
+predictive AMONG FIRES; it does not prove the blocked 1,228 would have earned the 30-45 s rate. Closing that needs a
+lane that logs the decision it WOULD have made with the bar off — instrumentation, no orders, no live behaviour
+change. That is the next build and it is the honest way to finish this.
