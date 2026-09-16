@@ -1023,6 +1023,9 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
   earlier, the direction of travel is now unambiguous and it is downward.
 - (09-16 14:4x: +4 candles, +3 fires, n=337, −0.084/fire, halves −0.066 / −0.101.)
 - (09-16 16:4x: +53 candles, +10 fires, n=347, −0.081/fire, halves −0.072 / −0.090.)
+- (09-16 18:4x: +0, n=347 unchanged — and the reason is snapshot lag, not a stall. The 18:23
+  push carries venues.q to 17:25 and build11.candles to 17:20, about an hour behind the live
+  engines, so a 2-hourly check will sometimes find nothing new. Clock verified, no drift.)
 - (18:45: +4, n=305, −0.052 — the 16:45 move held rather than reverting.)
 - (16:45: +13 fires — a new fastest accrual — n=301, −0.053/fire, halves −0.072 / −0.034.) Both halves still negative and the verdict is unchanged, but this is the
   largest single-check move the ledger has made: **−0.086 → −0.053**, and the second half has come
