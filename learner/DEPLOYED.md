@@ -499,3 +499,16 @@ Also in this build: `_shadow_stale` instrumentation (12.15.0) logs the decision 
 freshness bar blocks it, so Task 116's unanswerable 1,228 blocked rows become gradeable. Instrumentation only —
 a test asserts the function body cannot reach the order path.
 Tests 221 + 77 + 28 = 326 OK; SHA256SUMS 31/31 (now covers `poly_live.py`).
+
+## 12.15.1 — the journal recorded inputs the decision never saw, on half of every fired row
+`_decide_once` replaced `d['features']` — the vector the model decided on — with a fresh `features()` read taken
+later, after `publish()`, `decide()`, `_calibrate()` and the padded-EV gate, immediately before `executor.fire`.
+**Measured on the live journal:** the decision's own `rv60` disagrees with `features['rv60']` on **43 of 90 fired
+diagnostics rows (48%)** and **37 of 88 signals rows**, max delta 0.444 — against **4,775 of 4,775 non-fired rows
+agreeing exactly**. That 100%-versus-52% split is the overwrite's fingerprint: only the fire path re-read.
+Consequences: half of every fired row was unreproducible, so any study that replayed the model on journal features
+— R-11, R-13, R-12 stage A — graded fires against inputs they did not use. It also dropped `ts_ms` (the
+`features()` dict has no such key), which is why every EF order records `signal_ts_ms` null while the lanes record
+it, making EF invisible to any decision-to-submit latency study.
+Fix: the decision keeps its own features; the later read is still taken and recorded beside it as
+`submit_features`. Two regression tests. 328 tests OK, SHA256SUMS 31/31.

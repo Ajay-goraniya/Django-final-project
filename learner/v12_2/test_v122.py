@@ -2153,7 +2153,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.15.0'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.15.1'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0
@@ -2613,6 +2613,32 @@ class ShadowStale12150(unittest.TestCase):
         for forbidden in ('fire(', 'order_plan', 'reserve(', 'self.ex', 'broker'):
             self.assertNotIn(forbidden, body,
                              'the shadow path must never touch the order path: ' + forbidden)
+
+
+class DecisionFeaturesAreTheDecisions12151(unittest.TestCase):
+    """The journal must record the vector the model DECIDED on, not a later read.
+
+    Until 12.15.1 the fire path replaced d['features'] with a fresh features()
+    call taken after publish(), decide(), _calibrate() and the padded-EV gate.
+    On the live journal the decision's own rv60 disagreed with features['rv60']
+    on 43 of 90 fired diagnostics rows and 37 of 88 signals rows, while all
+    4,775 non-fired rows agreed exactly - so half the fired audit trail could
+    not be replayed, and every study that replayed it graded the wrong inputs.
+    """
+    def test_the_fire_path_does_not_overwrite_the_decision_features(self):
+        import inspect, btc_model_v12_polymarket as E
+        body = inspect.getsource(E.PolyRunner._decide_once)
+        after = body.split('no_terms', 1)[-1]
+        self.assertNotIn("d['features']=", after,
+                         'the pre-submit read must not replace the decision it is submitting')
+        self.assertIn("d['submit_features']=", after,
+                      'it is still recorded, under its own name')
+
+    def test_the_decision_features_carry_ts_ms(self):
+        """The overwrite dropped ts_ms, which is why EF orders logged signal_ts_ms null."""
+        import inspect, btc_model_v12_polymarket as E
+        body = inspect.getsource(E.PolyRunner.decide_now)
+        self.assertIn("d['features']['ts_ms']", body)
 
 
 if __name__ == '__main__':

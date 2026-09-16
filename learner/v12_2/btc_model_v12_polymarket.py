@@ -401,8 +401,28 @@ class PolyRunner(Runner):
                         reason='no_terms',kind='EF',side=d.get('side'),
                         since_tick_change_s=self._since_tick_change(token)))))
                 if token in self.books.terms and stake<=max(0,self.cash-reserved):
+                    # 12.15.1: this used to OVERWRITE d['features'] - the vector the
+                    # model actually decided on - with a fresh read taken later, after
+                    # publish(), decide(), _calibrate() and the padded-EV gate. The
+                    # journal then recorded inputs the decision never saw, and only on
+                    # the rows that fired.
+                    #
+                    # Measured on the live journal: the decision's own rv60 disagrees
+                    # with features['rv60'] on 43 of 90 fired diagnostics rows (48%)
+                    # and 37 of 88 signals rows, max delta 0.444 - against 4,775 of
+                    # 4,775 non-fired rows agreeing exactly. That 100%-vs-52% split is
+                    # the overwrite's fingerprint: only the fire path re-read.
+                    # Half of every fired row in the audit trail was unreproducible,
+                    # so any study replaying the model on journal features - R-11,
+                    # R-13, R-12 stage A - graded fires against inputs they did not
+                    # use. It also silently dropped ts_ms (features() has no such key),
+                    # which is why every EF order records signal_ts_ms null while the
+                    # lanes record it.
+                    # The later read is still worth having; it just is not the
+                    # decision, so it is recorded beside it under its own name.
                     f=self.st.features(ep*US,int(time.time()*US)) or {}
-                    d['features']={k:float(v) for k,v in f.items() if isinstance(v,(int,float)) and math.isfinite(v)}
+                    d['submit_features']={k:float(v) for k,v in f.items()
+                                          if isinstance(v,(int,float)) and math.isfinite(v)}
                     d['signal_price']=float(self.st.s_px[-1]) if self.st.s_px else None
                     await self.executor.fire(ep,d,token,self.info[ep]['conditionId'],stake,lambda: self.decide_now() if self.ui.allowed() else {'fire':False})
                     self.revision+=1
