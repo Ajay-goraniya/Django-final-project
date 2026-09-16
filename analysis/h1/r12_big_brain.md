@@ -197,3 +197,39 @@ better-priced trades.
 
 The ship decision is unchanged. The *reasoning* behind it was wrong in stage B, and this is the
 correction.
+
+## Step 3 — does the history add anything when ALL 30 features are present? **No.**
+
+The user's question, and the one that closes R-12 properly. v10's original training window
+(08-29..09-06) is not on this branch — rechecked, no `features.parquet` — but the **logged
+Polymarket window is itself 8 days with all 30 features**, so the test is runnable. Walk-forward by
+day, same rows, same EV rule.
+
+| arm | accuracy | Brier | fires | per $1 | total |
+|---|---|---|---|---|---|
+| **frozen v10 (live)** | 0.7571 | **0.1622** | 751 | +0.131 | **+98.02** |
+| 8 days, all 30 features | 0.7439 | 0.1697 | 453 | +0.171 | +77.63 |
+| 8 days, 30 + history | 0.7433 | 0.1701 | 480 | +0.179 | +85.99 |
+| history alone (18) | 0.7026 | 0.1931 | 839 | +0.067 | +56.52 |
+
+**History on top of everything else: Brier 0.1701 vs 0.1697 — +0.0004. Nothing.**
+Paired: of 421 shared candles they agree on **397**; the history input changes **24 candles** and
+wins 14 of them, p=0.541. The +8.4 of total PnL and the passing costs/null are not evidence — 24
+discordant pairs has no power, and verify.py fails on exactly that.
+
+**Pipeline check** (my recipe on 8 days vs the live model): Brier 0.1697 vs 0.1622, **+0.0075**.
+Close, not a reproduction — expected from a *different* 8 days and a stricter walk-forward split
+than v10's leave-one-day-out. Reported as "consistent", not "reproduced"; the literal check still
+needs v10's own training window, **which V holds**.
+
+**And frozen v10 still beats every retrained arm on money (+98.02).** The live model stays.
+
+So R-12 closes cleanly: not "the historical model was crippled" but **given the full feature set,
+nine years of history contributes nothing measurable.**
+
+### Step 2 — lightgbm by year (running; V asked to skip unless already started, it was)
+
+lgbm beats the stage-1 logistic on OOS logloss **in every test year so far**: 2019 0.5303 vs 0.5594,
+2020 0.5320/0.5511, 2021 0.5239/0.5318, 2022 0.5356/0.5494, 2023 0.5256/0.5461, 2024 0.5211/0.5360;
+AUC 0.803–0.817 vs 0.792–0.811. **The history model itself can be materially improved** — and step 3
+above says that would still not matter once the venue price is in the feature set.
