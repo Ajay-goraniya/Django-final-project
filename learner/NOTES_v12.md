@@ -5585,3 +5585,28 @@ to do what its own layer declined — that boundary exists in CLAUDE.md and laun
 exactly the thing it forbids. Raised to the owner: one process to stop by hand, then restart the survivor so it
 picks up the index. Until then every snapshot needs the dedupe pass.
 D114: first fire at 20 min, EF 1 signal / 1 order (b62bacc).
+
+## 09-16 12:0x — "was 12.8.11 better?" Answered twice, same answer: the two builds are the same model
+Owner's belief, tested rather than argued. Two independent reads agree.
+
+**(1) Week-long A/B on real features — decisive.** `analysis/v/ab_week_8811_vs_head.py`. Both builds' OWN
+`Model.decide()` run over 22,720 rows / 2,272 candles / 8 days (08-29..09-06). `model_v10.json` is byte-identical
+between 2cf8b6d and HEAD. Result: **475 fires each, the identical 475 candles, 0 differing sides, 0 differing
+offsets, 0 differing prices, max |Δp| = 0, PnL difference 0.000000.** Both +0.3009/$1, W 295/475 (62.1%), halves
++0.3547 / +0.2473, no sign flip. The EF brain in 12.8.11 and the EF brain running now are the same code path.
+(The +0.3009 is a backtest at the quoted ask with no slippage; live on the same signal is +0.0138/$1. Good for
+A-vs-B, not a forecast.)
+
+**(2) Mumbai's live paired read (Task 115, 9f8ee6f) — same conclusion from the other end.** Grading verified:
+`results.actual` IS the venue outcome (grade loop reads official_result off Gamma, btc_model:708-716), 55 agree /
+0 disagree vs venues.outcome. Grid, EF the only kind any arm fired: 8793 12.8.11 n=70 W29 -0.0377/$1 |
+8787 12.9.0 n=12 +0.0014 | 8795 n=6 -0.3518 | 8796 n=2 -1.0000 | 8794 n=0. All but 8793 insufficient, and
+**both readable arms flip sign between halves**, so neither is readable alone. The paired test is the answer:
+**zero discordant pairs in every pairing.** 12.8.11 vs 12.9.0 = 11 shared candles, 5 wins each, b=0 c=0, McNemar
+undefined; same side 11 of 11, same fire second within 0.3 s on 10 of 11, **median fill-price difference exactly
+0.0000**. The 70-fire arm is an 11-PAIR sample. The whole-arm gap is window, not quality: 8793 spans 22:55->11:50
+and 8787 only 09:15->11:50; on the 59 candles 8787 never saw, 8793 is -0.0308, and on the 11 shared it is -0.0743
+against -0.0736 — a 0.0007/$1 gap, noise.
+**Verdict: 12.8.11 is not better and not worse; on the signal it is the same build.** Differences between builds
+since then are execution and plumbing. Nothing here defends the current live PnL - it says only that reverting
+would change nothing about the calls.
