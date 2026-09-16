@@ -1008,6 +1008,7 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
   (ended 09-15 22:35) because I skipped the kline-extend step. Both fixed: klines fetched to
   09-16 05:05, paths rebuilt (+77 candles), correct db refreshed. **76 forward candles appeared,
   +2 fires, n=311.** Refresh BOTH paths and `<scratchpad>/db` at every check from now on.
+- (09-16 06:4x, correct procedure: +7 candles, +1 fire, n=312, −0.061/fire, halves −0.081 / −0.040.)
 - (18:45: +4, n=305, −0.052 — the 16:45 move held rather than reverting.)
 - (16:45: +13 fires — a new fastest accrual — n=301, −0.053/fire, halves −0.072 / −0.034.) Both halves still negative and the verdict is unchanged, but this is the
   largest single-check move the ledger has made: **−0.086 → −0.053**, and the second half has come

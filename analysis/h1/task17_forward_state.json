@@ -1,5 +1,5 @@
 {
- "last_epoch": 1789533000,
+ "last_epoch": 1789535100,
  "fires": [
   {
    "epoch": 1789079400,
@@ -3730,6 +3730,18 @@
    "side": "UP",
    "ask": 0.37,
    "bi": 0,
+   "hit": false,
+   "pnl": -1.0
+  },
+  {
+   "epoch": 1789534500,
+   "day": "2026-09-16",
+   "hour": 4,
+   "wknd": false,
+   "S": 120,
+   "side": "DOWN",
+   "ask": 0.48,
+   "bi": 2,
    "hit": false,
    "pnl": -1.0
   }
