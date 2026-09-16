@@ -184,7 +184,19 @@ class LiveBroker:
             return dict(terminal=False,fills=fills,live=False,reason=json.dumps(order_error,ensure_ascii=False))
         # FAK cannot remain resting. If it is absent from open-order state, has no trade,
         # and this absence has been observed twice after a grace period, it is proven no-fill.
-        if order_missing and not trade_unsettled and age>=2.0 and misses>=2:
+        # 12.15.3: this used to declare a verified NO_FILL at age>=2.0 s / misses>=2,
+        # which is FASTER THAN A GENUINE FILL BECOMES VISIBLE. Measured on the live
+        # journal: all 84 filled orders took 6.7 s at the fastest (p50 8.5 s, max
+        # 16.0 s) for the trade tape to confirm. A matched FAK does not rest, so
+        # get_order 404 is exactly what a filled FAK looks like once the venue drops
+        # it from open-order state - and the only thing standing between that and a
+        # false NO_FILL was a tape that is provably 4.7 s slower than the old bar.
+        # Once NO_FILL is written the order leaves the reconcile set and is never
+        # re-checked: a real position with no fills row, no result, no PnL.
+        # The branch directly above already had the right standard for the same
+        # question (ABSENT_PROOF listings over ABSENT_PROOF_AGE_S). Use it here too.
+        if (order_missing and not trade_unsettled
+                and age>=self.ABSENT_PROOF_AGE_S and misses>=self.ABSENT_PROOF):
             return dict(terminal=True,fills=[],live=False,verified_no_fill=True,reason='not present in open orders and no matching account trade after repeated venue checks')
         return dict(terminal=False,fills=[],live=False,reason='venue reconciliation in progress')
     # A 5-minute candle's position is OPEN only while the candle is live. Once it

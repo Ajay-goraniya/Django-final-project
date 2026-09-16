@@ -160,8 +160,19 @@ class PolyRunner(Runner):
                         # subscribed from this cycle.
                         while time.time()<ep+345:
                             msg=await asyncio.wait_for(w.recv(),15)
-                            if msg=='PONG': continue
-                            data=json.loads(msg)
+                            # 12.15.3: the same guard poly_feeds got in 12.11.2, on the
+                            # feed the money is priced against. A blank frame, a binary
+                            # frame, or one control frame the parser cannot read used to
+                            # raise into the handler below, tear the socket down and
+                            # resubscribe - which is exactly the shape of the incident
+                            # that produced 591 reconnects and zero data. Counted, so a
+                            # flapping venue feed is visible instead of silent.
+                            if isinstance(msg,(bytes,bytearray)): msg=msg.decode('utf-8','replace')
+                            if not str(msg).strip() or msg=='PONG': continue
+                            try: data=json.loads(msg)
+                            except ValueError:
+                                self._venue_skipped=getattr(self,'_venue_skipped',0)+1
+                                continue
                             for ev in data if isinstance(data,list) else [data]:
                                 if isinstance(ev,dict): self.books.apply(ev)
                             self.publish(); self.msgs['venue']=self.msgs.get('venue',0)+1
@@ -503,18 +514,27 @@ class PolyRunner(Runner):
         except Exception: pass
         self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',
                     (now,ep,json.dumps(dict(decision,lane=kind,**_px))))
-        if not self.ui.allowed(kind): return
-        if self.cash is None or time.monotonic()-self.cash_at>=15: return
-        if ep not in self.market or ep not in self.info: return
+        # 12.15.3: TELL THE LANE. evaluate() has already set pending[kind]=True, and
+        # every one of these returns used to leave it set - so the lane stopped
+        # calling for the REST of the candle, counted no attempt against its own
+        # retry budget, and wrote nothing that said why. A 15-second gap in
+        # account_snapshot was enough to kill MAIN and REVERSAL silently.
+        # _lane_drop clears pending, records the reason, and lets the lane retry.
+        if not self.ui.allowed(kind): return self._lane_drop(ep,kind,'lane not permitted')
+        if self.cash is None or time.monotonic()-self.cash_at>=15:
+            return self._lane_drop(ep,kind,'cash unknown or stale')
+        if ep not in self.market or ep not in self.info:
+            return self._lane_drop(ep,kind,'market or terms not resolved')
         self._sync_executor_dials()             # live execution dials
         token=self.market[ep][0 if decision['side']=='UP' else 1]
         if token not in self.books.terms:
             self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(dict(
                 reason='no_terms',kind=kind,side=decision.get('side'),
                 since_tick_change_s=self._since_tick_change(token)))))
-            return
+            return self._lane_drop(ep,kind,'no tick terms for the token')
         stake=self.db.get('next_stake',1.); reserved=self.db.live_reserve()
-        if stake>max(0,(self.cash or 0)-reserved): return
+        if stake>max(0,(self.cash or 0)-reserved):
+            return self._lane_drop(ep,kind,'stake exceeds free cash')
         d=dict(decision); d['fire']=True
         # The lane supplies the side and its probability; the EV bar the order
         # must clear is the same regime threshold the venue book is priced
@@ -552,6 +572,21 @@ class PolyRunner(Runner):
         if not placed:
             print(f'[{kind}] signal not executed - {reason}',flush=True)
         self.revision+=1
+    def _lane_drop(self,ep,kind,why):
+        """A lane decision that never reached the executor. Clear pending, say why.
+
+        The lane marks pending[kind] when it returns a decision and clears it only
+        when the engine calls confirm(). Any path that returns in between freezes
+        that lane until the next candle, with no journal row naming the cause.
+        """
+        try: self.lanes.confirm(kind,False,why)
+        except Exception: pass
+        try:
+            self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(dict(
+                reason='lane_dropped',kind=kind,detail=why))))
+        except Exception: pass
+        print(f'[{kind}] decision dropped before the executor - {why}',flush=True)
+
     def _since_tick_change(self,token):
         """Seconds since this token's last tick_size_change, or None."""
         tc=getattr(self.books,'tick_changes',{}).get(str(token))

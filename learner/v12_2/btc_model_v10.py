@@ -314,6 +314,17 @@ class Model:
         assert not unknown, f"features not computed by FeatureState: {unknown}"
         self.mean = np.array(j["scaler_mean"]); self.scale = np.array(j["scaler_scale"])
         self.coef = np.array(j["coef"]); self.b = j["intercept"]
+        # 12.15.3: the names were checked, the LENGTHS never were. A json with 30
+        # feature names and 29 coefficients loads, and numpy broadcasts the dot
+        # product against the shorter array instead of raising - every p silently
+        # computed from a shifted feature-to-weight mapping, with nothing to see.
+        # This is the cheapest possible guard on the one file that decides trades.
+        n = len(self.features)
+        assert self.coef.shape == (n,), f"coef has {self.coef.shape}, expected ({n},)"
+        assert self.mean.shape == (n,), f"scaler_mean has {self.mean.shape}, expected ({n},)"
+        assert self.scale.shape == (n,), f"scaler_scale has {self.scale.shape}, expected ({n},)"
+        assert np.all(np.isfinite(self.coef)) and np.all(np.isfinite(self.mean)), "non-finite weights"
+        assert np.all(self.scale > 0), "scaler_scale must be positive"
         self.iso_x = np.array(j["iso_x"]); self.iso_y = np.array(j["iso_y"])
         self.fee = j["fee_rate"]; self.thr = j["ev_threshold_default"]
         self.open_ref = j.get("open_reference", "first_trade")

@@ -97,13 +97,22 @@ function tickRuntime(){
 function formatTime(ms){try{return londonHMS(ms);}catch(_){return '--';}}
 function formatNumber(value,digits){return value == null ? '--' : Number(value).toFixed(digits == null ? 3 : digits);}
 function requestJSON(url,callback){
-  var xhr=new XMLHttpRequest();
+  // 12.15.3: the callback is fired AT MOST ONCE.
+  // It used to be wired to onreadystatechange AND ontimeout AND onerror. On a
+  // timeout the DONE readystatechange fires first with status 0, then the
+  // timeout event fires - two callbacks for one request. pollState re-arms
+  // itself at the end of its callback, so every timeout permanently DOUBLED the
+  // poll rate, and each later failure doubled it again: unbounded /api/state
+  // chains, each one a server thread contending for the same sqlite lock the
+  // trading loop serialises on. One browser blip and only a reload recovered it.
+  var xhr=new XMLHttpRequest(),done=false;
+  function finish(err,data){ if(done)return; done=true; callback(err,data); }
   xhr.open('GET',url+(url.indexOf('?')>=0?'&':'?')+'_='+Date.now(),true);
   xhr.timeout=5000;
-  xhr.onreadystatechange=function(){if(xhr.readyState!==4)return;if(xhr.status>=200&&xhr.status<300){try{callback(null,JSON.parse(xhr.responseText));}catch(err){callback(err);}}else{callback(new Error('HTTP '+xhr.status));}};
-  xhr.ontimeout=function(){callback(new Error('request timeout'));};
-  xhr.onerror=function(){callback(new Error('request failed'));};
-  try{xhr.send();}catch(err){callback(err);}
+  xhr.onreadystatechange=function(){if(xhr.readyState!==4)return;if(xhr.status>=200&&xhr.status<300){try{finish(null,JSON.parse(xhr.responseText));}catch(err){finish(err);}}else{finish(new Error('HTTP '+xhr.status));}};
+  xhr.ontimeout=function(){finish(new Error('request timeout'));};
+  xhr.onerror=function(){finish(new Error('request failed'));};
+  try{xhr.send();}catch(err){finish(err);}
 }
 var live=null;
 var chartData={candles:[],markers:[],history:[]};
@@ -238,7 +247,28 @@ function updateUI(state){
       text('revDirection','NOT TRIGGERED');cls('revDirection','big rev');
       text('revMeta',(L.reversal&&L.reversal.detail)||'one maximum per candle');text('revReason','');
     }
-  })();text('capBan',live.lane+' · '+(controls.master_enabled?'MASTER ON':'MASTER OFF')+(live.halt?' · '+live.halt:''));
+  })();
+  // 12.15.3: this line used to say MASTER and nothing else, so an engine that had
+  // stopped trading still read "LIVE - MASTER ON". ef_enabled False - INCLUDING
+  // after the owner's bankroll floor fires - a daily tp/sl halt, a ban rule and a
+  // state-X pause were all invisible. The whole point of the floor is that the
+  // operator finds out, so every gate that can stop a lane is named here.
+  (function(){
+    var bits=[live.lane,(controls.master_enabled?'MASTER ON':'MASTER OFF')];
+    var K=controls.kinds||{},off=[];
+    ['EF','MAIN','REVERSAL'].forEach(function(k){
+      var c=K[k]; if(!c) return;
+      if(c.manual_enabled===false) off.push(k+' OFF');
+      else if(c.effective_enabled===false) off.push(k+' BLOCKED');
+    });
+    if(off.length) bits.push(off.join(' · '));
+    if(live.halt) bits.push('HALT: '+live.halt);
+    if(controls.daily_stopped) bits.push('DAILY STOP');
+    if(controls.ef_cash_floor) bits.push('floor $'+Number(controls.ef_cash_floor).toFixed(2));
+    text('capBan',bits.join(' · '));
+    var bad=!controls.master_enabled||off.length>0||!!live.halt||!!controls.daily_stopped;
+    cls('capBan','small '+(bad?'down':'up'));
+  })();
   renderBook(live);
   if(activePnlRange==='1D')renderTradePnl(live);
   liveCandleTick(live);

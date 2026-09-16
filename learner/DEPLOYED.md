@@ -546,3 +546,48 @@ Fix: the decision keeps its own features; the later read is still taken and reco
    is FILLED **or** has any fill against it.
 Also: the 12.15.0 shadow rows were contaminating `_master_watch`'s "fires gated" count and could surface as a
 lane's skip reason — both reads now exclude them. Tests 336 OK; SHA256SUMS 31/31.
+
+## 12.15.3 — the rest of the audit. Everything actionable is now fixed or explicitly deferred with a reason.
+1. **`reconcile` declared a verified NO_FILL faster than a real fill can appear.** The 404 branch terminalised at
+   `age>=2.0 s` / 2 misses; on the live journal every one of 84 fills needed **6.7 s at the fastest** (p50 8.5 s,
+   max 16.0 s) for the trade tape to confirm, and a MATCHED FAK 404s on `get_order` exactly like an unmatched one.
+   A false NO_FILL abandons a real position — no fills row, no result, no PnL, never re-checked. Now uses the same
+   `ABSENT_PROOF` / `ABSENT_PROOF_AGE_S` standard the sibling branch already used.
+2. **The venue book socket had no blank/non-JSON frame guard** — the exact shape of the incident that produced 591
+   reconnects and zero data, on the feed the money is priced against. Guarded and counted (`_venue_skipped`).
+3. **`release()` could orphan a live order.** `reconcile` and `grade` both INNER JOIN orders to signals, so a
+   deleted signals row means an order that can never be reconciled and an epoch that can never be graded. All 41
+   orphans in the live journal are REJECTED, so nothing is stranded today — but that was incidental, not enforced.
+   Re-arm now refuses while any order on the candle is SUBMITTING/UNKNOWN/PENDING/FILLED and records why.
+4. **Lane decisions that never reached the executor froze the lane for the rest of the candle.** `evaluate()` sets
+   `pending[kind]`; five returns in `lane_loop` left it set, so MAIN and REVERSAL went quiet with no row naming the
+   cause — a 15-second gap in `account_snapshot` was enough. `_lane_drop` clears pending, journals `lane_dropped`,
+   and lets the lane retry.
+5. **Port fidelity, `MEDIAN_WINDOW = 23`.** build11 medians a 24-deque that CONTAINS the live candle, filtered on
+   `closed` — 23 closed candles. This port kept closed candles separately, so `[-24:]` gave 24 and took the upper
+   middle. Both the move median (fair odds) and the volume median were affected, both biased the same way, so the
+   port was systematically tighter than build11 on BOTH lane gates on every candle.
+6. **`MAIN_MAX_ATTEMPTS` 6 → 4**, to match `MAX_ATTEMPTS_PER_CANDLE`. Attempts 5 and 6 could never reach the venue:
+   `fire()` returned at the reservation with no status write and the lane counted a silent no-op against its budget.
+7. **A placed MAIN with no signal no longer becomes `{}`** — falsy but `is not None`, which three call sites read
+   two different ways.
+8. **FeedHealth measured freshness on the wall clock.** A negative lag was clamped to zero, so on any host whose
+   clock sits behind the exchange the event-lag check — the module's entire stated purpose — was silently off
+   (clock 3 s behind, feed 2 s late, reported 0.000 and LIVE). The skew is now subtracted rather than clamped away,
+   and `arrival_age` uses `time.monotonic()` for real messages, so a backwards NTP step can no longer make a dead
+   socket read fresh. BookCache already did this and documents the incident that taught it.
+9. **`Model.__init__` never checked weight LENGTHS.** 30 names against 29 coefficients loads fine and numpy
+   broadcasts instead of raising — every p from a shifted feature-to-weight mapping, invisibly.
+10. **The dashboard named only MASTER.** `ef_enabled=False` — including after the bankroll floor fires — plus a
+    daily stop, a ban rule and a state-X pause all rendered as "LIVE · MASTER ON". The status line now names every
+    gate that can stop a lane, and the floor is in the payload at all.
+11. **One browser timeout permanently doubled the dashboard poll rate** (callback fired by both the readystate
+    handler and the timeout handler, and `pollState` re-arms in its callback). Fires once now.
+12. **The control WRITE path had no generic exception handler** — a sqlite or attribute error returned an HTML
+    traceback the page cannot parse, with no `note_error` trace, so a failed write could look like a success.
+
+**Deferred, with the reason — not silently skipped:** build11's `adapt_ratio` fair-odds volatility multiplier is
+genuinely missing from the port (`btc_model_build11.py:15976`, plus `_AdaptWindowStats` and ~260 lines of
+supporting code). It changes what fires, its magnitude here is unmeasured, and the lanes that use it are paper-only
+today. Porting it belongs in its own build with its own before/after, not bundled into a same-day live deploy.
+Tests 350 OK; SHA256SUMS 31/31.

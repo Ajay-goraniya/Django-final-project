@@ -398,10 +398,10 @@ class Journal:
         self.c.executescript('CREATE INDEX IF NOT EXISTS diagnostics_ts ON diagnostics(ts);')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.15.2')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.15.3')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1','12.12.2','12.13.0','12.13.1','12.14.0','12.14.1','12.15.0','12.15.1','12.15.2'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1','12.12.2','12.13.0','12.13.1','12.14.0','12.14.1','12.15.0','12.15.1','12.15.2','12.15.3'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -520,7 +520,26 @@ class Journal:
             if n>=self.MAX_ATTEMPTS_PER_CANDLE:
                 self.c.execute('UPDATE signals SET attempts=? WHERE epoch=? AND kind=?',(n,ep,kind))
                 return False
+            # 12.15.3: never delete a signals row while an order on that candle can
+            # still be alive at the venue.
+            #
+            # reconcile() and grade() both INNER JOIN orders to signals, so an order
+            # orphaned by this DELETE can never be reconciled and its epoch can never
+            # be graded - it would hold its reserve until it aged into `phantom` and
+            # block grading forever. Today that cannot happen: every one of the 41
+            # orphaned epochs in the live journal is REJECTED, because the only path
+            # that reaches here after a post is the retryable-rejection branch. But
+            # nothing in the code enforced that - one new `continue` after a
+            # non-terminal post and this becomes a permanently stranded live order.
+            # So make the invariant explicit rather than incidental.
+            alive=self.c.execute("SELECT count(*) FROM orders WHERE epoch=? AND coalesce(kind,'EF')=?"
+                                 " AND status IN ('SUBMITTING','UNKNOWN','PENDING','FILLED')",
+                                 (ep,kind)).fetchone()[0]
             self.c.execute('UPDATE signals SET attempts=? WHERE epoch=? AND kind=?',(n,ep,kind))
+            if alive:
+                self.c.execute('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(dict(
+                    reason='rearm_refused_order_alive',kind=kind,after=status,attempt=n,orders=alive))))
+                return False
             self.c.execute('DELETE FROM signals WHERE epoch=? AND kind=?',(ep,kind))
             self.c.execute('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(dict(
                 reason='candle_rearmed',kind=kind,after=status,attempt=n))))

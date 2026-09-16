@@ -55,6 +55,17 @@ MAIN_LAST_SECOND = 295.0
 GATED_ODDS_UP = 0.60
 GATED_ODDS_DOWN = 0.40
 GATED_VOL_MIN = 0.70
+# 12.15.3, port fidelity. build11 medians `list(self.candles)[-24:]` filtered on
+# `closed`, and its `candles` deque CONTAINS THE LIVE CANDLE as its last element
+# (btc_model_build11.py:15699-15708 updates it in place on every kline). After the
+# filter that is 23 closed candles, taking index 11. This port keeps closed candles
+# in a separate deque, so `[-24:]` gave 24 and took index 12 - the upper of the two
+# middles. Both the move median (fair odds) and the volume median are affected, and
+# both are biased the same way: a higher `typical` pulls fair_p_up toward 0.5 and a
+# higher volume median lowers volume_ratio, so the port was systematically tighter
+# than build 11 on BOTH lane gates, on every candle. Small, free to fix, and it is
+# the difference between a port and an approximation.
+MEDIAN_WINDOW = 23
 
 REVERSAL_MIN_SECOND = 30.0
 REVERSAL_LAST_SECOND = 285.0
@@ -303,7 +314,7 @@ class LaneEngine:
         """build11:15926. How decided the candle already is; not a forecast."""
         if not self.candle: return 0.5, 300.0
         seconds_left = max((int(self.candle["time"]) + CANDLE_MS - ts_ms) / 1000.0, 1.0)
-        moves = sorted(abs(float(c["close"]) - float(c["open"])) for c in list(self.closed)[-24:])
+        moves = sorted(abs(float(c["close"]) - float(c["open"])) for c in list(self.closed)[-MEDIAN_WINDOW:])
         typical = moves[len(moves) // 2] if moves else max(price * 4e-4, 1.0)
         per_second = max(typical / math.sqrt(CANDLE_MS / 1000.0), price * 1e-6)
         sigma = per_second * math.sqrt(seconds_left)
@@ -313,7 +324,7 @@ class LaneEngine:
     def volume_ratio(self, phase_second):
         """build11:16069. This candle's pace against the recent median."""
         if not self.candle: return 1.0
-        vols = sorted(float(c["volume"]) for c in list(self.closed)[-24:] if float(c.get("volume", 0)) > 0)
+        vols = sorted(float(c["volume"]) for c in list(self.closed)[-MEDIAN_WINDOW:] if float(c.get("volume", 0)) > 0)
         if not vols: return 1.0
         median = vols[len(vols) // 2]
         if median <= 0: return 1.0
@@ -424,7 +435,12 @@ class LaneEngine:
                       * feasibility_factor(required, self.sigma_per_root_second(), seconds_left))
         return clamp(0.5 + edge * confidence, 0.02, 0.98), confidence
 
-    MAIN_MAX_ATTEMPTS = 6
+    # 12.15.3: was 6 against poly_core's MAX_ATTEMPTS_PER_CANDLE of 4. The journal
+    # stops re-arming the candle at 4, so attempts 5 and 6 could never reach the
+    # venue: fire() returned at `not self.db.reserve(...)` with no status write, the
+    # caller read back the stale prior status, and the lane counted a silent no-op
+    # against its own retry budget. Two caps for one thing is one cap too many.
+    MAIN_MAX_ATTEMPTS = 4
     def confirm(self, kind, placed, reason=''):
         """Told by the engine what actually happened to the order.
 
@@ -436,9 +452,16 @@ class LaneEngine:
         self.pending[kind] = False
         if kind == 'MAIN':
             self.main_last_reason = reason or ''
-            if placed:
-                self.current_main = dict(self.main_signal or {})
-            else:
+            if placed and self.main_signal:
+                # 12.15.3: `dict(self.main_signal or {})` could set current_main to
+                # {} - falsy but `is not None` - and this file tests it both ways:
+                # `is not None` at the MAIN once-per-candle guard (would kill the
+                # lane), `or` at the REVERSAL reference (would fall through), and
+                # `is not None` again for `main_placed` (would claim a position that
+                # does not exist). Four sites, two truth tests, inconsistent answers.
+                # A placed MAIN with no signal is not a position; keep the guard.
+                self.current_main = dict(self.main_signal)
+            elif not placed:
                 self.main_attempts += 1
         elif kind == 'REVERSAL':
             if placed:

@@ -467,7 +467,7 @@ class Tests(unittest.TestCase):
     def test_v120_database_migrates_additively(self):
         self.db.reserve(123,decision(),'up','condition')
         self.db.set('build','12.0'); self.db.c.close(); self.db=Journal(self.path,'PAPER','abc')
-        self.assertEqual(self.db.get('build'),'12.15.2')
+        self.assertEqual(self.db.get('build'),'12.15.3')
         self.assertEqual(self.db.sql('SELECT count(*) FROM signals WHERE epoch=123')[0][0],1)
         cols={r[1] for r in self.db.c.execute('PRAGMA table_info(orders)')}
         self.assertTrue({'error_json','timing_json','request_reached','reconcile_count','venue_live'}<=cols)
@@ -508,9 +508,21 @@ class LiveBrokerSimulationTests(unittest.TestCase):
                 return gen()
             async def get_order(self,**kwargs): raise RequestRejectedError('order not found')
         self.b.client=Client()
-        base=dict(id='oid',token='up',plan=json.dumps(dict(rate=.07,exponent=1)),ts=time.time()-3,reconcile_count=0)
+        # 12.15.3 raised this bar and the test is updated deliberately. The old
+        # standard was age>=2.0 s and 2 misses - FASTER THAN A GENUINE FILL BECOMES
+        # VISIBLE. On the live journal every one of 84 filled orders needed at least
+        # 6.7 s (p50 8.5 s, max 16.0 s) for the trade tape to confirm, and a matched
+        # FAK 404s on get_order exactly like an unmatched one. Declaring a verified
+        # NO_FILL at 2 s could therefore abandon a real position: no fills row, no
+        # result, no PnL, and it never gets re-checked. The bar is now the same
+        # ABSENT_PROOF / ABSENT_PROOF_AGE_S standard the sibling branch already used.
+        young=dict(id='oid',token='up',plan=json.dumps(dict(rate=.07,exponent=1)),ts=time.time()-3,reconcile_count=5)
+        self.assertFalse(asyncio.run(self.b.reconcile(young))['terminal'],
+                         '3 s is inside the window a real fill needs to appear')
+        base=dict(id='oid',token='up',plan=json.dumps(dict(rate=.07,exponent=1)),
+                  ts=time.time()-(self.b.ABSENT_PROOF_AGE_S+5),reconcile_count=0)
         first=asyncio.run(self.b.reconcile(base)); self.assertFalse(first['terminal'])
-        base['reconcile_count']=1
+        base['reconcile_count']=self.b.ABSENT_PROOF
         second=asyncio.run(self.b.reconcile(base)); self.assertTrue(second['terminal']); self.assertTrue(second['verified_no_fill']); self.assertEqual(second['fills'],[])
     def test_confirmed_account_trade_proves_fill_when_order_endpoint_is_gone(self):
         class RequestRejectedError(Exception): status=404; code='NOT_FOUND'

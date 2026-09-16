@@ -255,6 +255,11 @@ class Dashboard:
           kinds=kinds,
           state_x=dict(enabled=self.db.get('sx_enabled'),active=self.db.get('sx_enabled') and time.time()<self.db.get('sx_until',0),loss_streak=self.db.get('sx_losses',0),resume_time=dt.datetime.fromtimestamp(self.db.get('sx_until',0),LONDON).strftime('%H:%M'),trigger_reason='2 consecutive settled losses'),
           ev=self.ev_controls(),
+          # 12.15.3: the page can only show what the payload carries. The bankroll
+          # floor - the owner's one automatic stop - was in neither, so a fired
+          # floor rendered as "LIVE - MASTER ON".
+          ef_cash_floor=self.db.get('ef_cash_floor'),
+          daily_stopped=bool((self.daily() or {}).get('halted')),
           daily_limits=self.daily(),shared_stake=self.db.get('stake_settings'),shared_next_stake=self.db.get('next_stake',1),win_streak=w,loss_streak=l,rules=self.db.get('rules'),lane='LIVE' if self.r.a.live else 'PAPER')
     def apply(self,path,p):
         if p.get('confirmed') is not True: raise ValueError('Confirmation required')
@@ -607,4 +612,16 @@ class Dashboard:
                     if 'application/json' not in self.headers.get('Content-Type',''): raise ValueError('JSON required')
                     self.send(ui.apply(urlsplit(self.path).path,json.loads(self.rfile.read(length))))
                 except (ValueError,TypeError,KeyError) as e: self.send({'ok':False,'error':str(e)},status=400)
+                except Exception as e:
+                    # 12.15.3: do_GET was hardened for exactly this; the WRITE path
+                    # was not. Anything other than the three above (a sqlite error,
+                    # an AttributeError) escaped to BaseHTTPRequestHandler, which
+                    # answers with an HTML traceback the controls page cannot parse
+                    # and leaves no trace in note_error - so a control write that
+                    # FAILED could look to the operator like one that succeeded.
+                    # This is the path master, the lane switches and the stake all
+                    # go through.
+                    try: ui.note_error(urlsplit(self.path).path,e)
+                    except Exception: pass
+                    self.send({'ok':False,'error':f'{type(e).__name__}: {e}'},status=500)
         return ThreadingHTTPServer((self.r.a.host,self.r.a.port),Handler)

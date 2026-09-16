@@ -114,6 +114,7 @@ class FeedHealth:
 
     def __init__(self, names=("spot", "perp", "depth", "venue")):
         self.arrival = {n: 0.0 for n in names}   # wall clock of last message
+        self.mono = {}                           # monotonic clock of last message
         self.lag = {n: None for n in names}      # seconds behind the event time
         self.msgs = {n: 0 for n in names}
         self.host = {n: None for n in names}
@@ -123,20 +124,42 @@ class FeedHealth:
 
     def note(self, name, event_ms=None, now=None):
         """Record one received message. event_ms is the message's own timestamp."""
+        simulated = now is not None
         now = time.time() if now is None else now
         self.arrival[name] = now
+        # Only stamp the monotonic clock for a REAL message. A caller that supplies
+        # `now` is simulating a time, and monotonic cannot be simulated - recording
+        # it here would make an injected past arrival look like it just happened.
+        if simulated: self.mono.pop(name, None)
+        else: self.mono[name] = time.monotonic()
         self.msgs[name] = self.msgs.get(name, 0) + 1
         if event_ms:
             lag = now - float(event_ms) / 1000.0
-            # A negative lag means our clock is behind the exchange's. Keep the
-            # magnitude as skew and clamp the lag at zero rather than reporting a
-            # feed as impossibly fresh.
-            if lag < 0:
-                self.clock_skew_s = min(self.clock_skew_s, lag)
-                lag = 0.0
-            self.lag[name] = lag
+            # 12.15.3: SUBTRACT the skew instead of clamping the lag away.
+            # A host whose clock sits behind the exchange produced a negative lag
+            # on EVERY message, which was clamped to 0.0 - so `stale()`'s
+            # `lag > max_lag` branch could never fire and the event-lag check, this
+            # module's entire stated reason for existing, was silently off. A clock
+            # 3 s behind with a feed running 2 s late reported event_lag 0.000 and
+            # a LIVE dashboard while EF decided on two-second-old microstructure.
+            # clock_skew_s is the most negative lag seen, i.e. our best estimate of
+            # the offset; removing it leaves the real transport lag.
+            if lag < self.clock_skew_s:
+                self.clock_skew_s = lag
+            self.lag[name] = max(0.0, lag - self.clock_skew_s)
 
     def arrival_age(self, name, now=None):
+        """Seconds since the last message, on the monotonic clock where possible.
+
+        12.15.3: this read time.time() only, so a backwards NTP step of N seconds
+        made the age negative and up to N seconds of a DEAD socket read as fresh -
+        on the only gate covering spot, perp and depth. BookCache already uses
+        time.monotonic() for exactly this reason and documents a real drifted-clock
+        incident. The two staleness systems now agree.
+        """
+        m = self.mono.get(name)
+        if m is not None and now is None:
+            return time.monotonic() - m
         last = self.arrival.get(name) or 0.0
         if not last:
             return None

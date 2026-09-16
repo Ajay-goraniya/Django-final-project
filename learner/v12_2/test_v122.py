@@ -2153,7 +2153,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.15.2'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.15.3'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0
@@ -2733,6 +2733,117 @@ class AuditFixes12152(unittest.TestCase):
         import inspect, btc_model_v12_polymarket as E
         body = inspect.getsource(E.PolyRunner._main_oneshot_check)
         self.assertIn('FROM fills f WHERE f.order_id=o.id', body)
+
+
+class AuditFixes12153(unittest.TestCase):
+    """Regressions for the 12.15.3 batch."""
+
+    def test_no_fill_is_not_declared_faster_than_a_fill_appears(self):
+        import inspect
+        from poly_live import LiveBroker
+        body = inspect.getsource(LiveBroker.reconcile)
+        code = [l for l in body.split(chr(10)) if not l.lstrip().startswith('#')]
+        cond = [l for l in code if 'order_missing and not trade_unsettled' in l or 'age>=' in l]
+        self.assertTrue(any('ABSENT_PROOF_AGE_S' in l for l in cond))
+        self.assertFalse(any('age>=2.0' in l for l in cond),
+                         'a real fill needs 6.7s minimum to become visible')
+
+    def test_the_venue_socket_survives_a_blank_frame(self):
+        import inspect, btc_model_v12_polymarket as E
+        body = inspect.getsource(E.PolyRunner.venue)
+        self.assertIn('except ValueError', body, 'a bad frame must not tear the socket down')
+        self.assertIn('_venue_skipped', body)
+
+    def test_rearm_refuses_while_an_order_may_be_live(self):
+        temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
+        db = C.Journal(str(pathlib.Path(temp.name) / 'r.db'), 'PAPER', 'h')
+        self.addCleanup(db.c.close)
+        ep = 1789500000
+        db.reserve(ep, dict(fire=True, side='UP', p=.8, threshold=.2, ask=.4, sec=30, ev=.9), 'tok', 'cond')
+        db.sql("INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,reason,kind)"
+               " VALUES('o1',?,1,'PENDING','{}',?,0,'','EF')", (ep, time.time()))
+        self.assertFalse(db.release(ep, 'SIGNAL_CHANGED', 'EF'),
+                         'a PENDING order must not have its signals row deleted')
+        self.assertTrue(db.sql('SELECT count(*) FROM signals WHERE epoch=?', (ep,))[0][0])
+        rows = [json.loads(x[0]) for x in
+                db.sql("SELECT detail FROM diagnostics WHERE detail LIKE '%rearm_refused_order_alive%'")]
+        self.assertEqual(len(rows), 1)
+
+    def test_rearm_still_works_when_nothing_is_live(self):
+        temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
+        db = C.Journal(str(pathlib.Path(temp.name) / 'r2.db'), 'PAPER', 'h')
+        self.addCleanup(db.c.close)
+        ep = 1789500300
+        db.reserve(ep, dict(fire=True, side='UP', p=.8, threshold=.2, ask=.4, sec=30, ev=.9), 'tok', 'cond')
+        db.sql("INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,reason,kind)"
+               " VALUES('o2',?,1,'REJECTED','{}',?,0,'','EF')", (ep, time.time()))
+        self.assertTrue(db.release(ep, 'SIGNAL_CHANGED', 'EF'))
+        self.assertEqual(db.sql('SELECT count(*) FROM signals WHERE epoch=?', (ep,))[0][0], 0)
+
+    def test_event_lag_survives_a_clock_behind_the_exchange(self):
+        """Clamping the lag to zero turned the event-lag check off entirely."""
+        import poly_feeds as F
+        h = F.FeedHealth(('spot',))
+        now = time.time()
+        for i in range(5):                       # clock 3s behind, feed 2s late
+            h.note('spot', (now - 3.0 + 3.0 - 2.0 + i * 0.001) * 1000, now=now + i * 0.001)
+        self.assertIsNotNone(h.event_lag('spot'))
+        h2 = F.FeedHealth(('spot',))
+        h2.note('spot', (now + 3.0) * 1000, now=now)          # pure skew, no real lag
+        self.assertAlmostEqual(h2.event_lag('spot'), 0.0, places=3)
+        self.assertLess(h2.clock_skew_s, 0)
+
+    def test_arrival_age_uses_the_monotonic_clock_for_real_messages(self):
+        import poly_feeds as F
+        h = F.FeedHealth(('spot',))
+        h.note('spot')
+        self.assertIn('spot', h.mono)
+        self.assertLess(h.arrival_age('spot'), 1.0)
+
+    def test_model_rejects_a_weights_length_mismatch(self):
+        import btc_model_v10 as M
+        j = json.loads((pathlib.Path(__file__).parent / 'model_v10.json').read_text())
+        j['coef'] = j['coef'][:-1]
+        temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
+        p = pathlib.Path(temp.name) / 'bad.json'; p.write_text(json.dumps(j))
+        with self.assertRaises(AssertionError): M.Model(str(p))
+
+    def test_lane_drops_clear_pending_and_say_why(self):
+        import inspect, btc_model_v12_polymarket as E
+        body = inspect.getsource(E.PolyRunner.lane_loop)
+        self.assertNotIn('if not self.ui.allowed(kind): return\n', body)
+        self.assertIn('_lane_drop', body)
+        self.assertIn('confirm', inspect.getsource(E.PolyRunner._lane_drop))
+
+    def test_the_lane_median_window_matches_build11(self):
+        import poly_lanes as L
+        self.assertEqual(L.MEDIAN_WINDOW, 23,
+                         'build11 filters a 24-deque that holds the LIVE candle -> 23 closed')
+
+    def test_the_two_attempt_caps_agree(self):
+        import poly_lanes as L, poly_core as PC
+        self.assertEqual(L.LaneEngine.MAIN_MAX_ATTEMPTS, PC.Journal.MAX_ATTEMPTS_PER_CANDLE)
+
+    def test_a_placed_main_without_a_signal_is_not_a_position(self):
+        import poly_lanes as L
+        e = L.LaneEngine(); e.main_signal = None
+        e.confirm('MAIN', True)
+        self.assertIsNone(e.current_main, 'an empty dict here reads as placed at three call sites')
+
+    def test_the_status_line_names_every_stop(self):
+        page = (pathlib.Path(__file__).parent / 'dashboard_html.html').read_text()
+        for token in ("k+' OFF'", "k+' BLOCKED'", 'HALT: ', 'DAILY STOP', 'floor $'):
+            self.assertIn(token, page, token)
+
+    def test_the_poll_callback_fires_once(self):
+        page = (pathlib.Path(__file__).parent / 'dashboard_html.html').read_text()
+        self.assertIn('function finish(err,data){ if(done)return;', page,
+                      'a timeout fired the callback twice and doubled the poll rate')
+
+    def test_the_control_write_path_has_a_generic_handler(self):
+        src = (pathlib.Path(__file__).parent / 'poly_dashboard.py').read_text()
+        head, _, tail = src.partition('def make_server')
+        self.assertIn('status=500', tail, 'a failed control write must not return an HTML traceback')
 
 
 if __name__ == '__main__':
