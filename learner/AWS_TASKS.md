@@ -3430,3 +3430,10 @@ or the market page's source - find it, cite the endpoint) with its source timest
 spot last price at the same second for the gap. Verify against 3 settled markets that answer-at-close vs price-to-beat
 reproduces venues.outcome before calling it correct. Push an hourly gz snapshot to learner/live_backup/ref_stream.sqlite3.gz
 and one line to analysis/aws/task98_ref_stream.md (endpoint, rows, verified 3/3 or not). Never print keys; public RPC only.
+Task 98 addendum (reviewer via user, 01:5x): source = Polymarket's PUBLIC Chainlink RTDS feed (no credentials; see
+Polymarket docs "real-time data" / Chainlink feed page) which carries Chainlink-computed 30 s and 60 s BTC/USD TWAPs.
+Use it instead of a Polygon RPC: record every message (twap_30s, twap_60s, source ts, arrival ts_ms), match the window
+to the market's settlement rule as documented, and record the price-to-beat separately with its own timestamps.
+The websocket has NO replay/backfill: reconnect immediately on drop, log the gap, and START NOW - every minute
+unrecorded is lost. Keep the on-chain aggregator read as a secondary column only if cheap. Verify 3 settled markets
+reproduce venues.outcome before reporting "correct". Priority: above Task 97.
