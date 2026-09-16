@@ -5941,3 +5941,17 @@ matters, not the outcome. Three options, none taken yet:
  (c) run REV with EF off, exactly Tokyo's configuration.
 V's recommendation: (b), because fixed stake per candle is the owner's rule and (a) breaks it quietly. Owner's call.
 Lane totals, insufficient: 8796 35 graded W18 +26.53 | 8795 37 W19 +19.31 | 8794 0. SIGNAL_CHANGED 0 on all three.
+
+## 09-16 18:1x — 12.15.5: the lanes stop using EF's EV threshold (owner's question, and a miss of mine)
+Owner: "are you using same ev for reversal as well? because reversal is different thing and it has different
+parameters." Verified in code: yes - `lane_loop` set `threshold = self.m.threshold(...)` (v10 regime 0.15/0.25) on
+every lane decision and order_plan refused on it. build11 (`_record_trade` 16804-16820) applies NO EV gate to a
+lane; its only REVERSAL price control is `v11_rev_max_entry` (default 0, off). The order_plan auditor named this
+at 14:0x and I recorded it without acting. Fixed and pushed as 12.15.5 (4340859): lane decisions carry their own
+`LANE_EV_FLOOR = 0.0` (breakeven only, kept because this venue charges a fee and build11's does not), the engine no
+longer overrides it, and `rev_max_entry` is a meta key so the owner can match Tokyo's cap without a build.
+369 tests, 31/31. Deploying to the paper lanes now. **Zurich stays on 12.15.4 for the 19:30 go-live** - the lane
+change has no live effect (MAIN/REV off there) and the gate should have as few moving parts as possible; 12.15.5
+rolls to live only if/when the owner wants REV live.
+Expect REVERSAL to place materially more paper orders from here; that is the first honest REV sample, and the EF+REV
+stacking count (same side / opposite) is the number the owner's pending decision needs.
