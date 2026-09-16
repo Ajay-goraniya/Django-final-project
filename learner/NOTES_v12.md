@@ -5830,3 +5830,16 @@ H1 forward ledger 14:4x: n=337, −0.084/fire, halves −0.066 / −0.101.
 **Open on the owner's side:** Mumbai's dashboards are bound to 127.0.0.1 because DASHBOARD_PASSWORD died with the
 12.12.2 process and lives nowhere on disk. Relaunching 8787 on 0.0.0.0 needs the owner to write the value into
 ~/pm_paper_8787/deploy.env himself; V and Mumbai neither ask for nor print it.
+
+## 09-16 15:2x — 12.15.4 on the paper lanes; MAIN p baseline captured before the four-feature change
+Mumbai, 485acd7. 8794/8795/8796 on 12.15.4 (0cae0bd), checksums 31/31 and 365 tests verified BEFORE stopping,
+all three seed warm, arming byte-identical, all three read the same features on start (vol_ratio 0.4183/0.4259/
+0.4177, fair_p_up 0.3579). 8787/8793 untouched, same pids.
+**The measurement that makes the four-feature port readable:** MAIN p under 12.15.3, taken from lane diagnostics
+immediately before the stop —
+8794 n=29 med 0.6956 (p25 0.6702, p75 0.7292) conf med 0.4935 | 8795 n=28 med 0.6859 | 8796 n=22 med 0.6622.
+After-sample is 0 rows minutes after start. Mumbai flagged unprompted that 22-29 rows is itself under the 60 bar,
+so the baseline is a weak distribution and the move will be DESCRIBED, not read as a result. Correct.
+Task 114 carried forward, all insufficient: at the restart lane D had EF 12 orders / 13 graded / W6 / pnl -0.06;
+REVERSAL 2 signals 0 orders (both call-only); MAIN 22 calls 0 orders. No REVERSAL order on any build since the
+DOWN fix. SIGNAL_CHANGED releases from `still_valid` go in the next ledger. Zurich 12.15.4 live deploy pending.
