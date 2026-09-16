@@ -5854,3 +5854,20 @@ grading and dashboard continue; it sends no live orders. **MASTER_OFF diagnostic
 Consequence for the fee-fix proof: with master off there will be no new live fill, so the 12.15.3 fee row cannot be
 produced on Zurich until he re-arms. It is provable on the paper lanes' fee path (LOCAL_FEE_ESTIMATE branch) but the
 VENUE_FEE_RATE_BPS=0 case only occurs on live; that proof waits.
+
+## 09-16 17:2x — check-in. Zurich SILENT since 14:59: master-off order (15:35) UNCONFIRMED.
+No commit from Zurich since the 14:59 hourly (12.15.3, master TRUE). The 12.15.4 deploy (15:11), the owner's
+master-OFF order (15:35) and a status poke (14:38) have all gone unanswered. Last KNOWN live state is 12.15.3 armed.
+This is reported to the owner as unconfirmed, not assumed either way. Fresh poke sent 17:26 with "if master is
+TRUE, set it off first, then report."
+
+**Mumbai, MAIN p before/after the four-feature port (12.15.4), 133 min of tape:**
+8794 29/0.6956 -> 27/0.6788 (-0.017) | 8795 28/0.6859 -> 29/0.6827 (-0.003) | 8796 22/0.6622 -> 26/0.6812 (+0.019).
+Shifts inconsistent in sign and all inside a quarter of the IQR; call rate 11.8-13.1/hr against 8-15/hr before.
+Mumbai's own reading, correct: NOT "the features do nothing" - every cell is 22-29 rows under the 60 bar, so
+2.05 of 8.75 anchor weight coming back produced no move THIS SAMPLE can detect; a real answer needs a few hundred
+MAIN calls per side. Mechanically live: pressure_text now carries the aggressive-quote dollar figure on all three.
+SIGNAL_CHANGED releases from still_valid: 0 on all three so far. Lane totals, all insufficient: 8794 0 graded
+(zero orders ever), 8795 33 graded W16 +9.92, 8796 31 graded W15 +18.94.
+Goal check: H1's only commit in 3 h is the R-26 correction (2f99ab2); queue not empty (standing (a)); nothing new
+assigned; no new direction-model idea. Twins ctrl n=212 +220.83 | cand n=231 +149.78, both looping, clean.
