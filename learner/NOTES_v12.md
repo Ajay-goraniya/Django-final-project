@@ -5410,3 +5410,5 @@ Speed lever next: where is the venue? Task 96 / Z-7: CLOB API RTT from Mumbai an
 Z-7 (Zurich): warm /time TTFB 35 ms, fresh 87 (TLS 49 once), /book 67; Cloudflare edge 0.8-2.4 ms (cf-ray ZRH). Mumbai 165. Origin is in Europe, Zurich is already the near box; a US/Asia box would be slower. The ~250 ms order round trip is venue-side processing, not geography. Geography lever CLOSED.
 
 ### 09-16 00:5x - user turned Zurich master OFF; order: back ON at 04:00 BST = 03:00 UTC. One-shot to Zurich at 03:00Z (audited /api/controls/apply, verify /api/state, hourly.md). V verifies at the 03:10 check-in. User: all opus sessions keep working on how the drawdowns can be stopped (signal side, trained brain, no gates) - H1 R-15, Mumbai Task 97.
+
+### 09-16 01:0x - R-12 (c) regime grid (H1, analysis/h1/r12s2c_regime_grid.md, 42cb177): 4.03M rows 2019-2026 walk-forward by year, 72/72 era x vol x trend cells readable, hit 70.5-73.3% every era; vs the momentum null (candle up so far) model 0.7225 vs 0.7278, loses 61/72 cells. No regime-specific direction edge in any era/vol/trend bucket; the history model's edge is calibration, not direction. CLOSED. No gate.
