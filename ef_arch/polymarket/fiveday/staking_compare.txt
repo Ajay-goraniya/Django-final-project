@@ -1,0 +1,30 @@
+
+END CAPITAL from $50, favourite @120s, fee 0.07   (bankrupt = path stopped below $1)
+rule                         08-22     08-24     08-27     08-31     09-05  5-day cont.    Aug01
+hybrid 3W/2L (yours)         13.09      4.08     11.65      7.03     64.25         0.98   115.86
+hybrid 3W/1L                 15.69      4.86     11.42      7.28     69.41         0.96   121.27
+10% every trade              13.89      4.60     10.42      6.97     71.52         0.98   122.23
+5% every trade               30.14     17.49     26.08     20.77     68.56         3.13    92.06
+2% every trade               42.13     33.96     39.75     36.06     58.64        19.24    66.23
+fixed $5                     12.28      0.00      0.53      0.00     95.34         0.00   126.39
+fixed $2                     34.92     13.50     29.08     18.91     68.14         0.21    80.55
+
+END CAPITAL from $50, favourite @120s, fee 0.00   (bankrupt = path stopped below $1)
+rule                         08-22     08-24     08-27     08-31     09-05  5-day cont.    Aug01
+hybrid 3W/2L (yours)         21.14      6.38     18.49      9.97    108.69         0.99   205.55
+hybrid 3W/1L                 24.73      7.41     17.72     10.00    115.27         0.99   212.54
+10% every trade              21.90      7.05     16.21      9.60    120.83         0.94   217.09
+5% every trade               38.05     21.78     32.70     24.46     89.85         9.53   127.17
+2% every trade               46.31     37.12     43.57     38.53     65.47        30.23    75.54
+fixed $5                     36.18      0.10     20.87      0.00    123.22         0.00   159.61
+fixed $2                     44.47     22.49     38.35     25.61     79.29         0.35    93.84
+
+trades per day: {'2026-08-22': 283, '2026-08-24': 288, '2026-08-27': 287, '2026-08-31': 224, '2026-09-05': 287, '2026-08-01 (real ladders, corrected rule)': 288}
+
+EXPECTED RETURN PER $1 STAKED (the thing staking cannot change):
+  2026-08-22                                 n 282  win  74.8%  avg fill 0.748   E[ret] fee7  -2.67%   fee0  -0.98%
+  2026-08-24                                 n 288  win  72.9%  avg fill 0.764   E[ret] fee7  -6.34%   fee0  -4.78%
+  2026-08-27                                 n 285  win  74.7%  avg fill 0.758   E[ret] fee7  -3.67%   fee0  -2.04%
+  2026-08-31                                 n 223  win  73.1%  avg fill 0.760   E[ret] fee7  -6.97%   fee0  -5.47%
+  2026-09-05                                 n 287  win  77.4%  avg fill 0.749   E[ret] fee7  +3.16%   fee0  +5.10%
+  2026-08-01 (real ladders, corrected rule)  n 288  win  74.7%  avg fill 0.699   E[ret] fee7  +5.30%   fee0  +7.61%

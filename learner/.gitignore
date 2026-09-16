@@ -1,0 +1,5 @@
+# generated data: rebuilt by build_features.py / train.py / collect_extra_days.py, too large for git
+*.parquet
+*.npy
+*.log
+__pycache__/

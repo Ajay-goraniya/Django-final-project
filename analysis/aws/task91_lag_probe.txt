@@ -1,0 +1,20 @@
+# reconnect ConnectionClosedError
+# reconnect ConnectionClosedError
+# reconnect ConnectionClosedError
+# reconnect ConnectionClosedError
+# reconnect ConnectionClosedError
+# reconnect ConnectionClosedError
+book: n=21242 p50=73ms p90=1075ms p99=5519ms max=5719ms  share>0.75s=12.141% share>2s=8.187%
+   hist {'-1000000000.0-0': 0, '0-0.1': 13465, '0.1-0.25': 2871, '0.25-0.75': 2327, '0.75-1': 402, '1-2': 438, '2-5': 1021, '5-8': 718, '8-1000000000.0': 0}
+price_change: n=361850 p50=71ms p90=309ms p99=5216ms max=5715ms  share>0.75s=5.183% share>2s=3.569%
+   hist {'-1000000000.0-0': 0, '0-0.1': 270459, '0.1-0.25': 46133, '0.25-0.75': 26505, '0.75-1': 2582, '1-2': 3255, '2-5': 8072, '5-8': 4844, '8-1000000000.0': 0}
+last_trade_price: n=9555 p50=82ms p90=1027ms p99=5536ms max=5718ms  share>0.75s=12.015% share>2s=8.069%
+   hist {'-1000000000.0-0': 0, '0-0.1': 5694, '0.1-0.25': 1649, '0.25-0.75': 1064, '0.75-1': 181, '1-2': 196, '2-5': 443, '5-8': 328, '8-1000000000.0': 0}
+gap 20096428: n=12271 p50=2ms p99=42ms max=602ms share>2s=0.000%
+gap 10504085: n=11990 p50=2ms p99=43ms max=602ms share>2s=0.000%
+gap 98565624: n=110918 p50=0ms p99=28ms max=738ms share>2s=0.000%
+gap 66327250: n=110218 p50=0ms p99=28ms max=739ms share>2s=0.000%
+gap 80541806: n=141395 p50=0ms p99=22ms max=951ms share>2s=0.000%
+gap 59086542: n=141592 p50=0ms p99=22ms max=951ms share>2s=0.000%
+gap 93970934: n=112943 p50=0ms p99=24ms max=1401ms share>2s=0.000%
+gap 80811901: n=113150 p50=0ms p99=24ms max=977ms share>2s=0.000%
