@@ -3585,3 +3585,25 @@ Stage 12.13.0 at branch HEAD, sha256sum -c 31/31, suites 71+21+213=305, rm -rf _
 with its arm step. Then every 4 h, one line in analysis/aws/task110_venue_arm.md: for each arm, fires, orders by
 status, results n/W/pnl, pnl per $1, and the count of candles where the two arms chose DIFFERENT sides - that last
 number is the comparison. Do not touch 8793, the loggers, or anything live.
+
+## Task 111 - 18% of our candles are blocked by US, not by the book. Your Task 109 sample says both sides are quoted
+99.8% of seconds on all eight families; our live WAIT_CENSUS says one-sided books block ~18% of BTC decide rows
+(UP:no_bids and DOWN:no_asks, mirrored, ~6.0M of 44M). Both cannot be true of the same book. Resolve it with data:
+(1) Run our own BookCache (learner/v12_2/poly_core.py, unchanged, from the 12.13.0 tree) against the SAME websocket
+stream your logger reads, side by side with your raw top-of-book, for 30 minutes on the BTC 5m tokens. Every second,
+record: your raw ask/bid per token, and BookCache.quote()'s result plus its block reason when it returns None.
+(2) Tabulate the disagreements: how often does the raw book show both sides while quote() returns no_asks / no_bids /
+stale / crossed? Split by the age of the last delta for that token. If our cache is dropping a side because its last
+update is older than the freshness bar, or because a price_change delta removed the last level and no snapshot
+followed, name which.
+(3) One line: is the 18% a property of the venue, of our 0.75 s bar, or of our delta handling. Do NOT change any
+engine - this decides whether an engine fix is worth building, and that is V's call after your numbers.
+
+## Task 112 - arm A is confounded: 8787 runs 12.9.0 (the user's choice) while arm B runs 12.13.0, so A-vs-B differs
+in build as well as model json. Do NOT touch 8787. Start a THIRD lane instead: port 8795, /home/ubuntu/pm_model_a,
+build 12.13.0, --db paper_model_a.sqlite3, --model model_v10.json, capital 50, master true, stake fixed 3.0, start
+and arm in one command. Then B-vs-8795 isolates the model with everything else identical, and 8787 stays as the
+user's 12.9.0 reference. Add its row to the same 4-h ledger.
+Also from Task 109, two things to carry: orderMinSize 5 sits ABOVE our 3.0 stake on every family including BTC, yet
+BTC fills - so either sizing is in USDC not shares or the field is not binding; say which, from a real filled order.
+And ETH's 8c spread and BNB's p10 size of 2 mean those two are not "token ids only" even if the others are.
