@@ -229,3 +229,13 @@ Specific question the user sees: runs of 7-9 same-side losses in one trend; repo
 loss-run frequency OOS (max run length per day, pnl in trend windows), full grid. Ship as PAPER twin if it passes.
 ≤15 lines in analysis/h1/task_r15_signal.md, one verdict poke to V. Do not stop; if a source is missing, substitute
 and say so.
+
+## R-16 (09-16 01:4x, from the user's review; V verified the lead) - SETTLEMENT REFERENCE. On 76 live fills: 12 lost
+where Binance direction said win (venue settled the other way), 2 the reverse; afternoon 9 vs 0; disagreement 18% vs
+~10% base. Do, real data only: (1) get the venue's price-to-beat per candle (Polymarket market metadata / description
+at open, or the Chainlink BTC/USD reference the market resolves on - polybook/venues logs may carry it; if not, say
+what is needed and V will add it to the logger). (2) On the labelled lanes (poly_pnl 1005, v10_long4 777, v12 lane 568,
+Zurich live) grid: sign(move from Binance open) vs sign(price - price_to_beat) agree/disagree x fills/rejects x
+outcome; is the loss concentration reproducible (halves, per day)? (3) If yes: feature = distance and movement relative
+to the settlement reference (not a substitution into existing weights), retrain chronologically with the venue stage,
+paired vs frozen v10, verify.py; report loss-run change. ≤15 lines analysis/h1/task_r16_settlement_ref.md, verdict poke.
