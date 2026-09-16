@@ -149,14 +149,30 @@ def lane_ticks(oc):
 
 
 def fire_set(rows, pup):
+    """One fire per candle at the first qualifying tick, priced at the CHOSEN SIDE'S OWN ask.
+
+    BUG FIXED 2026-09-16 13:2x, caught by V, and it inflated every retrained arm reported that day.
+    This used r['ask'] - which lane_ticks carries as the LANE'S chosen-side ask, not a side-neutral
+    price. Any arm that picked a different side from the lane was therefore priced at the other
+    side's quote, and since the two asks sum to roughly 1 that is a large, direction-of-error
+    dependent subsidy. Frozen v10 is immune because it IS the lane's model (side mismatch 0.0%),
+    which is exactly why it reproduced to the cent through two independent harnesses and hid this.
+    Measured inflation: (b) week-1 +36.71, (c) two weeks +105.99, plain-30 walk-forward +142.94,
+    frozen +0.00. The bug rewarded divergence from the live model, which is the worst possible
+    shape for it to have.
+    """
     by = {}
     for r, p in sorted(zip(rows, pup), key=lambda z: z[0]['ts']):
         if r['ep'] in by:
             continue
         side = 'UP' if p >= 0.5 else 'DOWN'
         ps = p if side == 'UP' else 1 - p
-        if R8.ev_of(ps, r['ask']) >= R8.threshold(r['feat']['rv60']):
-            by[r['ep']] = dict(r, side=side, ps=ps)
+        f = r['feat']
+        ask = f.get('_ask_up') if side == 'UP' else f.get('_ask_dn')
+        if ask is None or not (0 < ask < 1):
+            continue
+        if R8.ev_of(ps, ask) >= R8.threshold(f['rv60']):
+            by[r['ep']] = dict(r, side=side, ps=ps, ask=float(ask))
     return by
 
 
