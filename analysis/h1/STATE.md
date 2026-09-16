@@ -27,6 +27,32 @@ to V are **≤6 lines**, ledger entries **1 line**, **message only on a verdict 
 else lives in files. Always. **No acknowledgement of the rule itself** — V asked for none, so none
 was sent; this line is the record.
 
+## R-13 09-16 01:1x — **THE ENGINE IS A SPREAD-CAPTURE STRATEGY, NOT A DIRECTION MODEL.** `analysis/h1/task_r13_what_the_engine_actually_is.md`
+Came from the user's two pushes ("did you test our live model with the same data?", "it should be a
+fair comparison so do it"). Both were right and both were mine to have done unprompted.
+- **The model IS the venue price.** 32,175 logged ticks: frozen v10 direction accuracy **0.7494**,
+  the venue price alone **0.7496**. They **agree on 92.1%**; on the **2,531 discordant candles the
+  model is right 1,263 and the venue 1,268 — McNemar p=0.937.** `corr(p, p_venue)=0.9808`,
+  median `|p−p_venue|=0.028`. It DOES clear the momentum null (+3.4…+7.1 pts per second bin).
+- **So EV is a SPREAD, not an edge:** `corr(EV, p_venue−ask)=0.9569`.
+- **This retro-explains SEVEN independent negatives with one cause** — R-4, R-5, R-6, R-8/R-9,
+  R-10, R-12 B2, R-3. See the table in the doc.
+- **Implication: stop improving the direction forecast** — it is pinned to the market price.
+  The edge, if any, is in **execution**, which R-3 already measured (105/108 rejects FAK-killed for
+  missing size; ask moves +1.0c against the taker within a second; +0.004/$1 live vs +0.038 quoted).
+- **`verify.py` fixed:** exact McNemar overflowed at 2,531 discordant pairs; now normal
+  approximation with continuity correction above 1,000, exact below.
+
+## R-12c 09-16 01:0x — **MY OWN R-12 HEADLINE WAS UNFAIR; corrected.** `analysis/h1/r12_big_brain.md`
+Stage B compared frozen v10 with **all 30** features against R-12 big with **18**. I named the
+unfairness and reported it anyway. Measured cost of that: masking those 12 costs frozen
+**0.7516 → 0.5969 accuracy**, **0.1654 → 0.2308 Brier**.
+- **On EQUAL inputs the 109-month model BEATS the 8-day model: acc 0.6982 vs 0.5969, Brier 0.1952
+  vs 0.2308.** More data *does* improve the forecast. Stage B said the opposite and was wrong.
+- **But the money goes the other way** (+0.070 vs +0.099/$1) and verify.py fails all four gates.
+  The better forecaster makes less money — "accuracy is not PnL" in its sharpest form yet.
+- Ship decision unchanged; the *reasoning* in stage B was wrong.
+
 ## Task R-12 DONE 09-16 00:0x — **the big-regime retrain DOES NOT SHIP.** `analysis/h1/r12_big_brain.md`
 User order: "train it on almost all the regimes known... no excuse, no cheating." Done end to end.
 Trained on **4,753,000 rows / 950,600 candles / 109 months (2017-08..2026-08)**. Out of sample **by
