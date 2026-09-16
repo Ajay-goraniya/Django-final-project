@@ -3473,3 +3473,12 @@ the venue's public CLOB websocket + the same Binance spot stream the engine uses
 BOTH sides' best ask/bid AND the top-5 depth ladder with sizes, once a second, with arrival timestamps, plus the trade
 prints. Hourly gz snapshot to learner/live_backup/book1s_mumbai.sqlite3.gz. One line in analysis/aws/task102_book1s.md
 (pid, rows/hour, first/last ts). This is the data R-18 and everything after it needs.
+
+## Task 103 - run the R-18 resting-order test on YOUR OWN book data (you have it; you cannot push it, so do the work
+locally and report numbers). Read learner/REQUEST.md R-18 and R-18a for the definitions, then, as the Task 102 store
+accumulates: (1) ADVERSE SELECTION FIRST, before any grid - for each candle, would a limit resting at ask-k (k=1,2,3)
+have filled while it rested, and what was the venue outcome for filled vs not-filled candles. That single comparison
+decides whether the idea lives. (2) Then the k x TTL x fire-second grid, pnl/$1 graded on the venue outcome, n per
+cell, >=60 or "insufficient", halves, per day. (3) R-18a's pad arm on your own orders: pad {-2..+4}, fill and price.
+Report <=8 lines to analysis/aws/task103_resting.md (paste to V if you still cannot push). State hours of data behind
+every number; say "insufficient" until the cells are real. Do not change any engine.
