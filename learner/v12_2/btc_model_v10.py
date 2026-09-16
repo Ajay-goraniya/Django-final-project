@@ -407,15 +407,31 @@ class Model:
                 if key in rf:
                     cf, ef = float(rf[key]["conf_floor"]), float(rf[key]["ev_floor"])
             fire = bool(ps >= cf and ev >= ef)
-            thr = dict(conf_floor=cf, ev_floor=ef)
+            # 12.15.2: `threshold` must always be a NUMBER. It used to be this dict
+            # in accuracy mode, and order_plan does math.isfinite(d['threshold'])
+            # (poly_core.py:248), which raises TypeError on a dict - not ValueError,
+            # so neither _gate_on_padded_ev (catches ValueError) nor Executor.fire
+            # (catches ValueError, KeyError) caught it. One click on "accuracy" in
+            # the EV dropdown and the exception escaped decide_now into decide_loop's
+            # catch-all: EF never traded, and because the raise happened before
+            # `await self.lane_loop(ep)`, MAIN and REVERSAL died with it, ~4 times a
+            # second, showing nothing but "decide loop: TypeError".
+            # The EV bar in accuracy mode IS the ev_floor; the confidence floor is a
+            # separate test already applied above. So publish the number as the
+            # threshold and keep both floors beside it.
+            thr = ef
+            floors = dict(conf_floor=cf, ev_floor=ef)
         else:
+            floors = None
             thr = self.thr if ev_threshold is None else ev_threshold
             if ev_threshold is None and self.regime:
                 thr = self.threshold(f)
             fire = bool(ev >= thr)
-        return dict(fire=fire, mode=mode, side=side, p=round(ps, 4), ask=ask, ev=round(ev, 4),
-                    threshold=thr, breakeven=round(self.cost(ask), 4), rv60=round(f["rv60"], 3),
-                    sec=int(300 - f["sec_left"]))
+        out = dict(fire=fire, mode=mode, side=side, p=round(ps, 4), ask=ask, ev=round(ev, 4),
+                   threshold=thr, breakeven=round(self.cost(ask), 4), rv60=round(f["rv60"], 3),
+                   sec=int(300 - f["sec_left"]))
+        if floors: out["floors"] = floors
+        return out
 
 
 # ----------------------------------------------------------------- self-test

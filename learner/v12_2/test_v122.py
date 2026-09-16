@@ -2153,7 +2153,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.15.1'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.15.2'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0
@@ -2312,7 +2312,8 @@ class EFFloor12120(unittest.TestCase):
         r = types.SimpleNamespace(db=db, cash=cash, a=types.SimpleNamespace(live=live),
                                   _floor_reads=0, _floor_since=None,
                                   FLOOR_CONFIRMATIONS=E.PolyRunner.FLOOR_CONFIRMATIONS,
-                                  FLOOR_MIN_SPAN_S=E.PolyRunner.FLOOR_MIN_SPAN_S)
+                                  FLOOR_MIN_SPAN_S=E.PolyRunner.FLOOR_MIN_SPAN_S,
+                                  FLOOR_OPEN_VALUE_MAX_AGE_S=E.PolyRunner.FLOOR_OPEN_VALUE_MAX_AGE_S)
         r._floor_check = types.MethodType(E.PolyRunner._floor_check, r)
         return r, db, path
     def _hammer(self, r, reads, age_s):
@@ -2639,6 +2640,99 @@ class DecisionFeaturesAreTheDecisions12151(unittest.TestCase):
         import inspect, btc_model_v12_polymarket as E
         body = inspect.getsource(E.PolyRunner.decide_now)
         self.assertIn("d['features']['ts_ms']", body)
+
+
+class AuditFixes12152(unittest.TestCase):
+    """Regressions for the 12.15.2 batch out of the nine-way audit."""
+
+    def test_accuracy_mode_threshold_is_a_number(self):
+        """It was a dict, and order_plan calls math.isfinite on it -> TypeError,
+        which neither _gate_on_padded_ev (ValueError) nor fire (ValueError,KeyError)
+        catches. One dropdown click stopped EF, MAIN and REVERSAL together."""
+        import btc_model_v10 as M, poly_core as PC
+        m = M.Model(str(pathlib.Path(__file__).parent / 'model_v10.json'))
+        feat = {k: 0.0 for k in m.features}
+        feat.update(rv60=0.25, sec_left=120.0, _ask_up=0.40, _ask_dn=0.62, _venue_ok=True)
+        class St:
+            def features(self, *a, **k): return feat
+        for mode in ('pnl', 'accuracy'):
+            d = m.decide(St(), 0, 0, mode=mode)
+            self.assertIsInstance(d['threshold'], float, mode)
+            self.assertTrue(math.isfinite(d['threshold']), mode)
+        acc = m.decide(St(), 0, 0, mode='accuracy')
+        self.assertEqual(set(acc['floors']), {'conf_floor', 'ev_floor'})
+        self.assertAlmostEqual(acc['threshold'], acc['floors']['ev_floor'])
+
+    def test_the_floor_treats_a_stale_open_value_as_unknown(self):
+        import btc_model_v12_polymarket as E
+        temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
+        db = C.Journal(str(pathlib.Path(temp.name) / 'f.db'), 'LIVE', 'h')
+        self.addCleanup(db.c.close)
+        db.set('ef_enabled', True); db.set('ef_cash_floor', 30.0)
+        old = time.time() - 10 * E.PolyRunner.FLOOR_OPEN_VALUE_MAX_AGE_S
+        db.sql('INSERT INTO venue_state(ts,cash,open_value) VALUES(?,?,?)', (old, 5.0, 0.0))
+        r = types.SimpleNamespace(db=db, cash=5.0, a=types.SimpleNamespace(live=True),
+                                  _floor_reads=0, _floor_since=None,
+                                  FLOOR_CONFIRMATIONS=E.PolyRunner.FLOOR_CONFIRMATIONS,
+                                  FLOOR_MIN_SPAN_S=E.PolyRunner.FLOOR_MIN_SPAN_S,
+                                  FLOOR_OPEN_VALUE_MAX_AGE_S=E.PolyRunner.FLOOR_OPEN_VALUE_MAX_AGE_S)
+        r._floor_check = types.MethodType(E.PolyRunner._floor_check, r)
+        for _ in range(20): r._floor_check()
+        self.assertIs(db.get('ef_enabled'), True,
+                      'equity is unknown when open_value is stale; unknown must not act')
+        self.assertEqual(r._floor_reads, 0)
+
+    def test_the_monitors_are_not_inside_the_venue_try(self):
+        """A metadata timeout used to skip the owner's only automatic stop."""
+        import inspect, btc_model_v12_polymarket as E
+        body = inspect.getsource(E.PolyRunner.housekeeping)
+        head, _, tail = body.partition("except Exception as e: self.error='Metadata/balance: '")
+        self.assertIn('_floor_check', tail, 'the floor must run after the venue handler, not inside it')
+        self.assertNotIn('_floor_check', head)
+
+    def test_gathered_tasks_are_supervised(self):
+        import inspect, btc_model_v12_polymarket as E
+        body = inspect.getsource(E.PolyRunner.main)
+        for task in ('reconcile_loop', 'grade_loop', 'venue_truth_loop', 'decide_loop'):
+            self.assertIn(f"_supervise('{task}'", body, task)
+
+    def test_a_crashing_task_is_recorded_and_restarted(self):
+        import btc_model_v12_polymarket as E
+        temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
+        db = C.Journal(str(pathlib.Path(temp.name) / 's.db'), 'PAPER', 'h')
+        self.addCleanup(db.c.close)
+        r = E.PolyRunner.__new__(E.PolyRunner); r.db = db; r.error = ''
+        r.SUPERVISE_BACKOFF_S = 0.0
+        self.calls = 0
+        async def flaky():
+            self.calls += 1
+            if self.calls < 3: raise RuntimeError('boom')
+            raise asyncio.CancelledError()
+        async def go():
+            try: await r._supervise('flaky', flaky)
+            except asyncio.CancelledError: pass
+        asyncio.run(go())
+        self.assertEqual(self.calls, 3, 'it must come back rather than take the engine down')
+        rows = [json.loads(x[0]) for x in
+                db.sql("SELECT detail FROM diagnostics WHERE detail LIKE '%TASK_CRASH%'")]
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]['task'], 'flaky')
+
+    def test_shadow_rows_do_not_count_as_gated_fires(self):
+        import inspect, btc_model_v12_polymarket as E
+        self.assertIn('SHADOW_STALE', inspect.getsource(E.PolyRunner._master_watch))
+
+    def test_every_stake_mode_obeys_the_operator_bounds(self):
+        import inspect, poly_dashboard as D
+        body = inspect.getsource(D.Dashboard.update_stake)
+        self.assertNotIn("if s['mode']!='ladder': current=max", body,
+                         'ladder was exempt from min/max stake')
+
+    def test_one_shot_counts_shares_not_bookkeeping(self):
+        """reconcile writes fills before it writes status=FILLED."""
+        import inspect, btc_model_v12_polymarket as E
+        body = inspect.getsource(E.PolyRunner._main_oneshot_check)
+        self.assertIn('FROM fills f WHERE f.order_id=o.id', body)
 
 
 if __name__ == '__main__':

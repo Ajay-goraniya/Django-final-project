@@ -153,7 +153,11 @@ class Dashboard:
                 self.db.set('rung',pending)
             elif s['mode']=='fixed': current=s['fixed_stake']
             elif s['mode']=='percent': current=equity*s['percent']/100
-            if s['mode']!='ladder': current=max(s['min_stake'],min(s['max_stake'],current))
+            # 12.15.2: the operator's bounds apply to EVERY mode. Ladder was exempt,
+            # so a panel showing "Max stake $5" would still stake $20 at $210 equity -
+            # the one number an operator uses to cap risk, silently not applied on the
+            # mode that scales fastest with the bankroll.
+            current=max(s['min_stake'],min(s['max_stake'],current))
             self.db.set('next_stake',round(current,2))
     def ev_controls(self):
         """EV mode and slippage allowance, as live settings.

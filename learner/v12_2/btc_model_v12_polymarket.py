@@ -532,7 +532,12 @@ class PolyRunner(Runner):
         placed=status in ('PENDING','FILLED','RESERVED')
         reason=''
         if not placed:
-            diag=self.db.sql('SELECT detail FROM diagnostics WHERE epoch=? ORDER BY ts DESC LIMIT 1',(ep,))
+            # 12.15.2: skip the shadow rows. _shadow_stale writes into this table
+            # every 5 s on a blocked book, so the newest row for the epoch could be a
+            # decision that never happened, and the lane would report it as its own
+            # skip reason.
+            diag=self.db.sql("SELECT detail FROM diagnostics WHERE epoch=?"
+                             " AND detail NOT LIKE '%SHADOW_STALE%' ORDER BY ts DESC LIMIT 1",(ep,))
             # Say WHY in numbers, not just that it happened.
             #
             # User, 09-13: "i just don't see better with my eyes that's why i was
@@ -593,15 +598,32 @@ class PolyRunner(Runner):
                     held=self.db.sql('SELECT coalesce(sum(spent+fees),0) FROM fills WHERE epoch NOT IN (SELECT epoch FROM results)')[0][0]
                     self.cash=max(0.,self.a.capital+self.db.metrics()['pnl']-held)
                 self.cash_at=time.monotonic(); self.ui.update_stake()
-                if self._due('wipeout',self.MONITOR_EVERY_S): self._wipeout_check()
-                if self._due('floor',self.MONITOR_EVERY_S): self._floor_check()
-                if self._due('master_watch',self.MONITOR_EVERY_S): self._master_watch()
+            except Exception as e: self.error='Metadata/balance: '+type(e).__name__
+            # 12.15.2: THE MONITORS RUN WHETHER OR NOT THE VENUE ANSWERED.
+            #
+            # All of this used to sit inside the try above, which opens with up to
+            # four 8 s metadata() awaits and an 8 s account_snapshot(). One timeout
+            # jumped straight to the handler and skipped _floor_check entirely -
+            # the owner's ONLY automatic stop - leaving a one-line error string as
+            # the sole evidence, while venue_truth_loop kept `cash` fresh so the
+            # engine carried on trading. A bankroll floor that stops being evaluated
+            # exactly when the venue is sick is not a floor.
+            # The monitors are local and read the journal, so they cannot be the
+            # thing that raised; each is guarded so one cannot take out the others.
+            for _name,_fn,_every in (('wipeout',self._wipeout_check,self.MONITOR_EVERY_S),
+                                     ('floor',self._floor_check,self.MONITOR_EVERY_S),
+                                     ('master_watch',self._master_watch,self.MONITOR_EVERY_S)):
+                if self._due(_name,_every):
+                    try: _fn()
+                    except Exception as _e:
+                        print(f'[monitor {_name}] {type(_e).__name__}: {_e}',flush=True)
+            try:
                 self._sample_ambient_age(int(time.time()//300)*300)
                 self._flush_wait_census(int(time.time()//300)*300)
                 if self._due('retention',self.RETENTION_EVERY_S):
                     self.db.sql('DELETE FROM diagnostics WHERE ts<?',(time.time()-7*86400,))
                     self.db.sql('DELETE FROM candles WHERE epoch<?',(time.time()-30*86400,))
-            except Exception as e: self.error='Metadata/balance: '+type(e).__name__
+            except Exception as e: self.error='Housekeeping: '+type(e).__name__
             await asyncio.sleep(5)
     MASTER_OFF_WARN_S=300.0
     MASTER_OFF_REPEAT_S=1800.0
@@ -627,7 +649,13 @@ class PolyRunner(Runner):
         said=getattr(self,'_master_off_said',0.0)
         if said and now-said<self.MASTER_OFF_REPEAT_S: return
         self._master_off_said=now
-        wanted=self.db.sql('SELECT count(*) FROM diagnostics WHERE ts>=? AND detail LIKE ?',
+        # 12.15.2: exclude the shadow rows. _shadow_stale writes `fire` with the same
+        # serialization into the same table every 5 s, so this LIKE counted decisions
+        # the engine was never going to make, priced off books it refuses to trade on -
+        # inflating "fires gated" during exactly the blocked-book stretches the shadow
+        # logger exists to study. The intended source is the 15 s decide row below.
+        wanted=self.db.sql("SELECT count(*) FROM diagnostics WHERE ts>=? AND detail LIKE ?"
+                           " AND detail NOT LIKE '%SHADOW_STALE%'",
                            (self._master_off_since,'%"fire": true%'))[0][0]
         self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(now,0,json.dumps(dict(
             kind='MASTER_OFF',off_s=round(off,1),fires_gated=wanted,acted=False))))
@@ -635,6 +663,9 @@ class PolyRunner(Runner):
               %(off/60.0,wanted),flush=True)
     FLOOR_CONFIRMATIONS=6
     FLOOR_MIN_SPAN_S=360.0
+    # venue_truth_loop writes venue_state every 20 s; three missed cycles is a feed
+    # that has stopped, not a slow one, and open_value older than that is unknown.
+    FLOOR_OPEN_VALUE_MAX_AGE_S=90.0
     def _floor_check(self):
         """USER ORDER, 09-16 03:2x: "ef off if bankroll goes below 30$ in central 2".
 
@@ -663,9 +694,23 @@ class PolyRunner(Runner):
         if not (floor>0): return
         if not self.db.get('ef_enabled',True):
             self._floor_reads=0; self._floor_since=None; return
-        r=self.db.sql('SELECT open_value FROM venue_state ORDER BY ts DESC LIMIT 1')
+        # 12.15.2: STALE IS ALSO UNKNOWN.
+        # This read had no age bound. venue_state is written only by
+        # venue_truth_loop, whose handler sets self.error and leaves the old row in
+        # place, while self.cash is refreshed independently by housekeeping. So with
+        # venue-truth failing and positions settling into cash, `cash` climbed while
+        # `opened` stayed frozen at the same money - equity overstated, floor never
+        # fires. The docstring already reasons that "unknown != low" and returns on
+        # None; a row of unknown age is exactly as unknown as no row at all.
+        r=self.db.sql('SELECT open_value,ts FROM venue_state ORDER BY ts DESC LIMIT 1')
         opened=float(r[0][0]) if r and r[0][0] is not None else None
         if opened is None: return                      # unknown != low; act on nothing
+        age=time.time()-float(r[0][1] or 0)
+        if age>self.FLOOR_OPEN_VALUE_MAX_AGE_S:
+            self._floor_reads=0; self._floor_since=None
+            print(f'[ef floor] open_value is {age:.0f}s old (>{self.FLOOR_OPEN_VALUE_MAX_AGE_S:.0f}s);'
+                  ' equity unknown, floor not evaluated',flush=True)
+            return
         equity=self.cash-self.db.live_reserve()+opened
         now=time.time()
         if equity>=floor:
@@ -809,7 +854,17 @@ class PolyRunner(Runner):
             except (ValueError,TypeError): continue
             if d.get('key')=='main_enabled' and d.get('new') is True: armed=r['ts']; break
         if armed is None: return          # armed before auditing existed; do not guess
-        n=self.db.sql("SELECT count(*) FROM orders WHERE kind='MAIN' AND status='FILLED' AND ts>?",
+        # 12.15.2: count FILLS, not orders marked FILLED.
+        # reconcile writes the fill rows first and only sets status='FILLED' when the
+        # venue agrees the order is terminal (poly_core.py:1077-1082). A partial or
+        # slow-to-confirm MAIN therefore has real shares on the books while its order
+        # still reads PENDING, this check sees n=0, and since it only runs once a
+        # minute while lane state resets at every candle boundary, MAIN re-arms and
+        # can send a SECOND live order. The instruction is "main off after 1 filled
+        # order, whatever happens" - so the test is whether we own shares, not whether
+        # the bookkeeping has caught up.
+        n=self.db.sql("SELECT count(*) FROM orders o WHERE o.kind='MAIN' AND o.ts>? AND ("
+                      "o.status='FILLED' OR EXISTS(SELECT 1 FROM fills f WHERE f.order_id=o.id))",
                       (armed,))[0][0]
         if not n: return
         self.db.set('main_enabled',False)
@@ -980,6 +1035,30 @@ class PolyRunner(Runner):
             for k in data:
                 if k[0]/1000+300<time.time(): self.db.sql('INSERT OR IGNORE INTO candles VALUES(?,?,?,?,?,?)',(int(k[0])//1000,*map(float,k[1:6])))
             self.revision+=1
+    SUPERVISE_BACKOFF_S=2.0
+    async def _supervise(self,name,coro,once=False):
+        """Keep one background task alive, and leave evidence when it dies.
+
+        CancelledError is re-raised so shutdown still works. Anything else is
+        journalled as TASK_CRASH and the task is restarted after a short backoff,
+        because the alternative - what this replaces - is the whole engine exiting
+        and coming back with master OFF.
+        """
+        while True:
+            try:
+                await coro()
+                if once: return
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                detail=dict(kind='TASK_CRASH',task=name,error=f'{type(e).__name__}: {e}',restarting=not once)
+                try: self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),0,json.dumps(detail)))
+                except Exception: pass
+                self.error=f'{name}: {type(e).__name__}'
+                print(f'[TASK CRASH] {name}: {type(e).__name__}: {e}',flush=True)
+                if once: return
+            await asyncio.sleep(self.SUPERVISE_BACKOFF_S)
+
     async def main(self):
         if self.a.live:
             check=await asyncio.to_thread(http_json,'https://polymarket.com/api/geoblock')
@@ -999,7 +1078,28 @@ class PolyRunner(Runner):
         server=self.ui.make_server(); threading.Thread(target=server.serve_forever,daemon=True).start()
         print('Polymarket v12.1', 'LIVE (master OFF)' if self.a.live else 'PAPER',f'http://{self.a.host}:{self.a.port}',flush=True)
         try:
-            await asyncio.gather(self.chart_seed(),self._stream('spot',self.on_spot),self._stream('perp',self.on_perp),self._stream('depth',self.on_depth),self._stream('chart',self.on_kline),self._ref_stream(),self.venue(),self.decide_loop(),self.housekeeping(),self.reconcile_loop(),self.grade_loop(),self.claim_loop(),self.venue_truth_loop())
+            # 12.15.2: one raise in any of these used to unwind main(). asyncio.run
+            # then cancelled the rest, systemd restarted, and safe-start parked
+            # master OFF - which is the 09-16 incident where the engine sat disarmed
+            # for four hours. decide_loop, housekeeping and venue_truth_loop carry
+            # their own handlers; reconcile_loop, grade_loop, chart_seed and part of
+            # venue() do not, and grade_loop in particular iterates whatever JSON
+            # Gamma returns.
+            # A supervised task logs, waits and restarts instead of taking the engine
+            # down with it. chart_seed is one-shot so it is left to finish or fail
+            # alone; everything else is a loop and belongs up again.
+            await asyncio.gather(
+                self._supervise('chart_seed',self.chart_seed,once=True),
+                self._stream('spot',self.on_spot),self._stream('perp',self.on_perp),
+                self._stream('depth',self.on_depth),self._stream('chart',self.on_kline),
+                self._ref_stream(),
+                self._supervise('venue',self.venue),
+                self._supervise('decide_loop',self.decide_loop),
+                self._supervise('housekeeping',self.housekeeping),
+                self._supervise('reconcile_loop',self.reconcile_loop),
+                self._supervise('grade_loop',self.grade_loop),
+                self._supervise('claim_loop',self.claim_loop),
+                self._supervise('venue_truth_loop',self.venue_truth_loop))
         finally:
             server.shutdown(); server.server_close()
             if self.a.live: await self.broker.close()

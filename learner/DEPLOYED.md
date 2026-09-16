@@ -512,3 +512,37 @@ Consequences: half of every fired row was unreproducible, so any study that repl
 it, making EF invisible to any decision-to-submit latency study.
 Fix: the decision keeps its own features; the later read is still taken and recorded beside it as
 `submit_features`. Two regression tests. 328 tests OK, SHA256SUMS 31/31.
+
+## 12.15.2 — six more from the nine-way audit. Two of them decide whether the engine trades at all.
+1. **`accuracy` EV mode raised an uncaught `TypeError` and stopped everything.** `decide()` returned `threshold`
+   as a **dict** in accuracy mode; `order_plan` does `math.isfinite(d['threshold'])`, which raises TypeError —
+   not ValueError, so neither `_gate_on_padded_ev` (catches ValueError) nor `Executor.fire` (ValueError, KeyError)
+   caught it. One click on "accuracy" in the EV dropdown and the raise escaped into `decide_loop`'s catch-all
+   ~4x/second: EF never traded, and because it raised BEFORE `await self.lane_loop(ep)`, **MAIN and REVERSAL died
+   with it** — showing nothing but "decide loop: TypeError". The EV bar in accuracy mode is the `ev_floor`
+   (confidence is a separate test already applied), so `threshold` is now always a number and both floors are
+   published beside it as `floors`.
+2. **The owner's only automatic stop could be skipped silently.** `_floor_check`, `_wipeout_check` and
+   `_master_watch` sat inside the housekeeping try-block that opens with up to four 8 s `metadata()` awaits and an
+   8 s `account_snapshot()`. One timeout jumped to the handler and the floor was simply not evaluated, leaving one
+   error string as evidence — while `venue_truth_loop` kept `cash` fresh so trading carried on. The monitors are
+   local and read the journal; they now run outside that block, each guarded so one cannot take out the others.
+3. **The floor could read a frozen equity.** `open_value` was `ORDER BY ts DESC LIMIT 1` with no age bound, and
+   `venue_state` is written only by `venue_truth_loop` — whose handler leaves the old row in place while
+   housekeeping keeps `cash` current. Positions settling into cash while venue-truth is down overstated equity and
+   the floor never fires. A row older than `FLOOR_OPEN_VALUE_MAX_AGE_S` (90 s, three missed 20 s cycles) is now
+   treated exactly as `None` already was: unknown, act on nothing, say so.
+4. **One raise could disarm the engine for hours.** `asyncio.gather` had no `return_exceptions` and
+   `reconcile_loop`, `grade_loop`, `chart_seed` and part of `venue()` were unguarded: any exception unwound
+   `main()`, systemd restarted, and safe-start parked master OFF — the 09-16 four-hour silent disarm, reachable
+   from a single bad frame. `_supervise` now journals `TASK_CRASH` and restarts the loop.
+5. **Ladder staking ignored the operator's own `max_stake`.** `if s['mode']!='ladder'` exempted the mode that
+   scales fastest with the bankroll, so a panel reading "Max stake $5" would still stake $20 at $210 equity.
+   The bounds now apply to every mode.
+6. **The MAIN one-shot counted bookkeeping, not shares.** `reconcile` writes the fill rows first and sets
+   `status='FILLED'` only once the venue agrees the order is terminal, so a partial or slow-to-confirm MAIN left
+   the check seeing zero; it runs once a minute while lane state resets every candle, so MAIN could re-arm and
+   send a SECOND live order against "main off after 1 filled order, whatever happens". It now counts an order that
+   is FILLED **or** has any fill against it.
+Also: the 12.15.0 shadow rows were contaminating `_master_watch`'s "fires gated" count and could surface as a
+lane's skip reason — both reads now exclude them. Tests 336 OK; SHA256SUMS 31/31.
