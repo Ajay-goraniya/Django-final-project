@@ -2126,7 +2126,8 @@ class DashboardLatencyFields(unittest.TestCase):
     def test_page_labels_and_poll_interval(self):
         import poly_dashboard as D
         html = pathlib.Path(D.__file__).with_name('dashboard_html.html').read_text()
-        self.assertIn("' ms since last trade'", html)
+        self.assertIn("'quiet '", html)          # 12.11.3: silence in seconds, labelled as silence
+        self.assertIn("'lag '", html)             # and the real feed lag leads the line
         self.assertIn('setTimeout(pollState,1000)', html); self.assertNotIn('setTimeout(pollState,250)', html)
 
 
@@ -2151,7 +2152,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.11.2'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.11.3'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0
@@ -2284,3 +2285,15 @@ class BlankFrame12112(unittest.TestCase):
         self.assertEqual(h.reconnects.get('ref', 0), 0)    # and no reconnect was counted
         self.assertEqual(h.skipped.get('ref', 0), 1)       # 'not json' counted as skipped
         self.assertEqual(json.loads(sent[0]), {'a': 1})    # subscribe frame was sent
+
+
+class StatusLine12113(unittest.TestCase):
+    """The top line leads with feed lag; trade silence is seconds, and labelled as silence."""
+    def test_status_line_wording(self):
+        src = (pathlib.Path(__file__).resolve().parent / 'dashboard_html.html').read_text()
+        i = [n for n, l in enumerate(src.splitlines()) if "text('topStatus'" in l][0]
+        line = ' '.join(src.splitlines()[i:i + 2])      # the call spans two lines
+        self.assertIn('exchange_latency_ms', line)
+        self.assertIn("'lag '", line)
+        self.assertIn("'quiet '", line)
+        self.assertNotIn('since last trade', src)

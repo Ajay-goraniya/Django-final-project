@@ -128,7 +128,11 @@ function renderHistory(){ loadHistory(); }
 function updateUI(state){
   live=state||{};
   var candle=live.candle||{},feature=live.feature||{},feed=live.feed||{},processing=live.processing||{},metrics=live.metrics||{};
-  text('topStatus',(feed.status||'--')+' · '+(feed.last_event_age_ms==null?'no data':feed.last_event_age_ms+' ms since last trade'));
+  // 12.11.3: lead with feed LAG (local receipt minus Binance event time) - that is the number
+  // that says whether the data is late. Trade silence follows it, in seconds, because a quiet
+  // minute prints seconds and reads like a fault when written as four digits of milliseconds.
+  text('topStatus',(feed.status||'--')+' · '+(feed.exchange_latency_ms==null?'lag --':'lag '+feed.exchange_latency_ms+' ms')
+       +' · '+(feed.last_event_age_ms==null?'no spot data':'quiet '+(feed.last_event_age_ms/1000).toFixed(1)+' s'));
   text('price',candle.close?Number(candle.close).toFixed(1):'--');
   cls('price','big '+(candle.close>=candle.open?'up':'down'));
   if(candle.time){

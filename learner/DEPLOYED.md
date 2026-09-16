@@ -378,3 +378,9 @@ subscribe ack and run_stream's json.loads raised, which the reconnect handler tr
 blank frame is skipped and a non-JSON frame is counted in health.skipped_frames instead of reconnecting; the stall
 timer still force-reconnects a genuinely silent stream. No other behaviour changes; decisions unchanged
 (model_v10.json, 30 features). Tests 71+21+200 = 292; SHA256SUMS 30/30.
+
+## 12.11.3 (09-16 02:5x UTC) - dashboard top line says what the numbers are
+User: the "1429 ms since last trade" line reads like a fault. It was trade SILENCE, added in 12.9.0 by V. Now the line
+leads with the real feed lag (local receipt minus Binance event time, the number that says whether data is late) and
+prints silence in seconds: "LIVE · lag 112 ms · quiet 1.4 s". Dashboard only; no engine behaviour, no decisions.
+Tests 71+21+201 = 293; SHA256SUMS 30/30.
