@@ -224,6 +224,27 @@ class SignalIsNotAPosition(unittest.TestCase):
               imbalance=-0.9, buy=False, candle_id=0)
         self.assertNotIn('call only', e.reversal_state['detail'])
 
+    def test_reversal_fires_when_the_engine_never_confirms_at_all(self):
+        """The exact path Task 114 runs, and the one confirm()-based tests miss.
+
+        With main_enabled False the engine drops the MAIN decision at
+        `ui.allowed(kind)` (btc_model_v12_polymarket.py) and returns BEFORE
+        `lanes.confirm(...)`, so the lane is never told anything: pending['MAIN']
+        stays True and current_main stays None for the whole candle. REVERSAL
+        must still fire off main_signal. Tested here because the other reversal
+        tests all call confirm() and would pass even if this path did not work.
+        """
+        e = engine_with()
+        fired = drive(e, 0, 100060.0, seconds=20, step_ms=100)
+        self.assertTrue([d for _, d in fired if d['kind'] == 'MAIN'])
+        self.assertTrue(e.pending['MAIN'], 'no confirm arrived, so the call is still outstanding')
+        self.assertIsNone(e.current_main)
+        flipped = drive(e, 40000, 99930.0, seconds=30, step_ms=100,
+                        imbalance=-0.9, buy=False, candle_id=0)
+        revs = [d for _, d in flipped if d['kind'] == 'REVERSAL']
+        self.assertTrue(revs, 'REVERSAL must not depend on the engine confirming MAIN')
+        self.assertEqual(revs[0]['side'], 'DOWN')
+
     def test_no_main_call_no_reversal(self):
         """The floor that survives: REVERSAL still needs a MAIN *call*."""
         e = engine_with()

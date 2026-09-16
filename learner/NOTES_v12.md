@@ -5528,3 +5528,18 @@ By last-delta age on both-sided rows: <750 ms 4/617 blocked (0.6%); 0.75-2 s 8/9
 The 144 genuinely one-sided raw rows are the venue's: 12.7% of seconds. So of the ~18% live block, the venue is the
 smaller half and our own 0.75 s bar on a 5 s-stale book is the larger. **Nothing changed.** A freshness threshold
 moves only after a grid against real outcomes, both arms; and execution work is parked by the owner's instruction.
+
+**Pinned the path Task 114 actually runs (310 tests).** All the other reversal tests call `confirm()`. With
+main_enabled False the engine never does: it drops the MAIN decision at `ui.allowed(kind)` and returns before
+`lanes.confirm(...)`, so `pending['MAIN']` stays True and `current_main` stays None for the whole candle. Checked
+against the lane module rather than assumed — REVERSAL fires DOWN off `main_signal`, detail "(call only - MAIN order
+not placed)". `test_reversal_fires_when_the_engine_never_confirms_at_all` now pins it; without it the suite would
+have passed on a config the live lane cannot run.
+
+**First Mumbai read on 110/113/114 (4773ed1) — everything insufficient, nothing to conclude.**
+113 CLOSED: EF 1 fire, MAIN 4 signals -> 1 order, REVERSAL 0. The 3 unplaced MAIN calls were invisible to the
+12.13.1 order-watching trigger, which is the defect 12.14.0 fixes — evidence FOR the change, not a result.
+Arm B (8794) is not broken: 250 decide rows vs C 241, p on 142 vs 121, p median 0.835 vs 0.791. Every non-fire on
+both arms is EV under the 0.25 floor (B -0.0065..-0.0156, C -0.0007..-0.0224). C cleared it 4x, B 0x — 4-to-0 is
+noise, not a p_source verdict. Lane pnl, all under the 60-fire bar: A 10 EF +6.05; 8793 68 EF -1.91; C 4 EF -0.33;
+D113 1 EF -2.99. D114 0 fires at 7 min. Read none of these.
