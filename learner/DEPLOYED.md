@@ -403,3 +403,15 @@ LIVE engine has master false for >300 s it writes a MASTER_OFF diagnostics row (
 repeats at most every 30 min; the dashboard controls payload gains `master_off_s`. Observation only - it never arms
 anything, master stays the operator's. Paper engines and an armed engine are silent. Tests 71+21+210 = 302;
 SHA256SUMS 30/30.
+
+## 12.13.0 (09-16 10:3x UTC) - the R-23 arm: a json may decide on the venue price instead of the model
+R-23 measured the EV rule with p = the venue's own price: 547 fires, +0.296/$1, +161.93, maxDD 13.45, against frozen
+v10's 1,033 fires, +0.141/$1, +145.81, maxDD 14.09 - more money on half the fires at a lower drawdown, consistent
+with R-13/R-18/R-19 (we are paid for a lagging book, not a forecast). New model-json field `p_source` ("model"
+default, "venue"), read in Model.p_up; with "venue" the probability is the clipped p_venue and a candle without a
+two-sided book returns NaN, which decide() now refuses explicitly ("no venue probability for this candle") instead of
+guessing. `model_venue.json` is model_v10.json with that one field changed - same features, same coefficients,
+byte-identical otherwise - so the two arms differ in exactly one thing. PAPER ONLY: no live engine loads it, and
+model_v10.json is untouched. Tests 71+21+213 = 305; SHA256SUMS 31/31 (the new json is in the manifest).
+CAVEAT that ships with it: R-23's halves are +0.493/+0.100 and the per-day edge decays +0.573 -> +0.077 across
+09-09..09-15. That decay must be explained before this goes anywhere near live money.

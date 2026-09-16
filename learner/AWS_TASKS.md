@@ -3575,3 +3575,13 @@ our BTC lane is blocked ~18% of the time by one-sided books, so that number is t
 minimum is useless at our $3 stake).
 (4) One line per family: could the existing engine trade it unchanged apart from the token ids, or does it need a
 different model. Do NOT propose trading anything yet - this is the map.
+
+## Task 110 - run the R-23 arm as a PAPER twin, beside the standard one, same candles. Build 12.13.0 (branch HEAD).
+The user said "test and ship"; this is the test. Two paper engines, identical except the model json:
+ A = existing paper on 8787 (model_v10.json, whatever build you are on - say which).
+ B = NEW paper lane, port 8794, --db paper_venue_p.sqlite3, --model model_venue.json (p_source "venue"), capital 50,
+     master true, stake fixed 3.0, --host 127.0.0.1 is fine (no dashboard password needed for B).
+Stage 12.13.0 at branch HEAD, sha256sum -c 31/31, suites 71+21+213=305, rm -rf __pycache__, start B in ONE command
+with its arm step. Then every 4 h, one line in analysis/aws/task110_venue_arm.md: for each arm, fires, orders by
+status, results n/W/pnl, pnl per $1, and the count of candles where the two arms chose DIFFERENT sides - that last
+number is the comparison. Do not touch 8793, the loggers, or anything live.

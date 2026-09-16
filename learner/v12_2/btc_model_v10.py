@@ -318,6 +318,8 @@ class Model:
         self.fee = j["fee_rate"]; self.thr = j["ev_threshold_default"]
         self.open_ref = j.get("open_reference", "first_trade")
         assert self.open_ref in ("first_trade", "twap60"), "unknown open_reference"
+        self.p_source = j.get("p_source", "model")
+        assert self.p_source in ("model", "venue"), "unknown p_source"
         self.regime = j.get("regime") or {}
         acc = j.get("accuracy_mode") or {}
         self.mode = j.get("mode_default", "pnl")
@@ -326,6 +328,18 @@ class Model:
         self.acc_rv_edges = acc.get("rv60_edges") or self.regime.get("rv60_edges") or [0.17, 0.37]
 
     def p_up(self, f):
+        # 12.13.0, R-23: `p_source: "venue"` in the json makes the decision read the venue's own
+        # price instead of the fitted model. It is not a shortcut - it is the measured result:
+        # replaying the EV rule with p = p_venue gave +0.296/$1 on 547 fires against the model's
+        # +0.141 on 1,033, at a lower drawdown, because what we are paid for is a lagging book
+        # rather than a forecast (R-13, R-18, R-19). Kept behind a json field so the two run side
+        # by side on the same candles and the comparison is an observation, not an argument.
+        # Off unless a json asks for it; model_v10.json does not.
+        if self.p_source == "venue":
+            pv = f.get("p_venue")
+            if not (pv is not None and np.isfinite(pv) and f.get("_venue_ok")):
+                return float("nan")             # no two-sided book -> decide() refuses, as it does today
+            return float(min(0.98, max(0.02, pv)))
         x = np.array([f[k] for k in self.features], dtype=np.float64)
         x = np.nan_to_num(x, nan=0.0)
         z = float(((x - self.mean) / self.scale) @ self.coef + self.b)
@@ -364,6 +378,8 @@ class Model:
         if f is None:
             return dict(fire=False, reason="no spot history in candle")
         p = self.p_up(f)
+        if not np.isfinite(p):
+            return dict(fire=False, reason="no venue probability for this candle")
         side, ps, ask = ("UP", p, f["_ask_up"]) if p >= 0.5 else ("DOWN", 1 - p, f["_ask_dn"])
         off = 300 - f["sec_left"]
         # Only decide inside the window the model was trained and validated on

@@ -2152,7 +2152,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.12.2'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.13.0'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0
@@ -2408,3 +2408,39 @@ class MasterWatch12122(unittest.TestCase):
         r._master_watch(); self.assertIsNotNone(r._master_off_since)
         db.set('master', True); r._master_watch(); self.assertIsNone(r._master_off_since)
         db.c.close(); os.unlink(path)
+
+
+class VenueP12130(unittest.TestCase):
+    """12.13.0 (R-23): a json may say the decision reads the venue price instead of the model."""
+    def _state(self, ask_up=0.40, ask_dn=0.62):
+        import btc_model_v10 as M
+        US = M.US; st = M.FeatureState(); op = 1_000_000 * US
+        for k in range(-120, 31):
+            st.on_spot_trade(op + k * US, 100.0 + 0.01 * k, 1.0, k % 2 == 0)
+        st.on_venue_quote(ask_up, ask_up - 0.01, ask_dn, ask_dn - 0.01)
+        return M, US, st, op
+    def test_venue_json_uses_the_book_and_v10_does_not(self):
+        import btc_model_v10 as M, pathlib
+        here = pathlib.Path(__file__).resolve().parent
+        M2, US, st, op = self._state()
+        f = st.features(op, op + 30 * US)
+        venue = M.Model(here / 'model_venue.json'); model = M.Model(here / 'model_v10.json')
+        self.assertEqual(venue.p_source, 'venue'); self.assertEqual(model.p_source, 'model')
+        pv = f['p_venue']
+        self.assertAlmostEqual(venue.p_up(f), min(0.98, max(0.02, pv)), places=9)
+        self.assertNotAlmostEqual(model.p_up(f), venue.p_up(f), places=6)
+        self.assertEqual(venue.features, model.features)          # one field differs, nothing else
+        self.assertEqual(list(venue.coef), list(model.coef))
+    def test_no_two_sided_book_refuses_instead_of_guessing(self):
+        import btc_model_v10 as M, pathlib, numpy as np
+        here = pathlib.Path(__file__).resolve().parent
+        M2, US, st, op = self._state()
+        st.on_venue_quote(float('nan'), float('nan'), float('nan'), float('nan'))
+        venue = M.Model(here / 'model_venue.json')
+        d = venue.decide(st, op, op + 30 * US)
+        self.assertFalse(d['fire']); self.assertIn('venue probability', d['reason'])
+    def test_unknown_p_source_is_rejected_at_load(self):
+        import btc_model_v10 as M, json, pathlib, tempfile
+        j = json.loads((pathlib.Path(__file__).resolve().parent / 'model_v10.json').read_text())
+        j['p_source'] = 'oracle'; p = tempfile.mktemp(suffix='.json'); pathlib.Path(p).write_text(json.dumps(j))
+        with self.assertRaises(AssertionError): M.Model(p)
