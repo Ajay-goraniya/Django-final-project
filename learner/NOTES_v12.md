@@ -5405,3 +5405,5 @@ Consequence: training cannot raise accuracy above the price. The lever is execut
 Speed lever next: where is the venue? Task 96 / Z-7: CLOB API RTT from Mumbai and Zurich (curl timing, 20 samples, median/p90) to decide whether a box nearer Polymarket's servers would cut the ~250 ms order round trip. User decides any new box.
 
 ### 09-16 00:4x - R-12 pipeline check (H1, task_r12_pipeline_check.md): refit on v10_features_8days reproduces model_v10.json exactly (scaler, 30 coefs, intercept, 116 iso knots, 0.000e+00). All R-12 arms were vs the genuine v10. LODO on v10's own window: v10 0.7411 vs price 0.7236 (p=0.0006); live window p=0.937 -> the over-price edge was design selection on the 8 days, gone live. Only 2 readable real-book days there; not a finding either way.
+
+### 09-16 00:4x - Task 96 (Mumbai): clob.polymarket.com behind Cloudflare, edge 1.7 ms away; TTFB /time p50 165 p90 196 ms, /book p50 166 p90 177 (n=20 each). All of it is edge->origin->edge. Zurich Z-7 pending to triangulate the origin.
