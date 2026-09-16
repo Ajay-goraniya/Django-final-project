@@ -1313,3 +1313,29 @@ the one that works, at ~6 cents. Untested: deeper book state than imb5/imb20, tr
 `scratchpad/build/paths.npz` — 252 days of Binance spot 1s klines, 72,576 five-minute candles
 (2026-01-01..09-09), plus `feat.npz`. Builders: `analysis/h1/build_paths.py`, `tree.py`, `gates.py`,
 `reversal_profile.py`.
+
+## R-16 .. R-27 ledger (added 09-16 20:2x, H1)
+
+Compact index — full working in the named files. All Polymarket arms graded on `venues.outcome`.
+
+| id | question | verdict | file |
+|---|---|---|---|
+| R-16 | what line does the venue settle on? | **TWAP60(open)**, not the open. 96.67% vs 87.05% agreement on 2,132 venue-settled candles, positive 9/9 days. But `p_venue` already prices it (0.7453 vs the TWAP rule, 0.6839 vs close≥open), so the twap60 retrain buys nothing. Does not ship. | `task_r16_twap_rule.md`, `task_r16_retrain.md` |
+| R-17 | fit on executable quotes | recipe drops `move_bps` entirely (+1.6629 → −0.0161) and puts everything on `lv` (+1.8045) | `task_r17_executable_rows.md` |
+| R-18 | pay less than the touch? | **dead.** All 25 cells negative. Filled 40.7% win vs non-filled 99.1%, Fisher p=7.7e-35 | `task_r18_resting.md` |
+| R-19 | is the EV formula right? | yes (max diff 1.26e-4 / 16,852 rows; fire rule 1033/1033). But **EV ranks cheapness, not accuracy**: win% flat 54.3/53.1/52.8/53.3 while ask falls 0.514→0.382, corr(ev,win)=−0.034 | `task_r19_ev_audit.md` |
+| R-20 | can we choose among fires? | **no.** Fitted selector loses to EV at all ten frequencies, below random at 90%/80%. Model picks are more accurate and worse paid | `task_r20_selection.md` |
+| R-26 | retrain arms for V | artifacts in `analysis/h1/r26/`. **EV threshold is not tunable**: week 1 peaks at 0.10, week 2 peaks at 0.20 and 0.10 is week 2's *worst* cell | `r26_export.py`, `task_r26_CORRECTION.md` |
+| R-27 | EF parameters per vol regime | **it is not high vol.** rv6 (prior 6 candles, cuts 4.05/8.56bps), 2,076 fires: LOW +0.200 (n=685), MID +0.095 (n=706), HIGH +0.114 (n=685). EV floor and max entry price move the same direction in every bucket → cheapness selection, not regime params. Only sign-dependent axis is the fire second: first 30s LOW +0.148 / MID −0.057 / HIGH −0.139 (halves −0.142/−0.136); 30s+ positive in all three. **Not shippable** — post-hoc from 560 cells, n=109, gate-shaped | `r27_vol_regime.md`, `r27_grid_full.txt` |
+
+**Coverage correction:** only **7.7 days** of venue-graded candles exist, not 8 weeks. Every
+"weeks" figure above is days.
+
+**The harness bug that inflated a day of results (fixed 09-16 13:2x, caught by V).**
+`r12_train.fire_set` priced every arm at `r['ask']`, which `lane_ticks` carries as the *lane's*
+chosen-side ask, not a side-neutral price. Any arm that picked a different side from the lane paid
+the other side's quote — a large, direction-of-error-dependent subsidy. Measured inflation: frozen
+v10 **+0.00**, R-26 (b) **+36.71**, (c) **+105.99**, R-17/R-25 plain-30 **+142.94** (that arm
+actually loses money). Fixed to `_ask_up`/`_ask_dn`. **Lesson: an arm that agrees with the live
+model cannot validate a harness that only mis-prices disagreement** — frozen v10 reproduced to the
+cent through two independent harnesses and hid this for a day.
