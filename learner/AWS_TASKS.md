@@ -3562,3 +3562,16 @@ vs chainlink and the agreement of each with the venue. n per cell; say "insuffic
 (3) Exclude epochs touching your 30 gaps (747 s) and say how many that removes - a gap at the open or close second
 breaks the TWAP and must not be silently averaged over.
 (4) One line: is the Binance proxy safe to use where the live feed does not reach, and with what error budget in bps.
+
+## Task 109 - DISCOVERY for multi-market (user: "i need pnl okay and less drawdowns in different markets"). Read-only,
+no engine change, no orders. Answer with numbers, <=8 lines, from gamma + the public CLOB, on YOUR box:
+(1) What short-horizon crypto markets does Polymarket actually run right now? For each family (asset x duration, e.g.
+btc 5m, eth 5m, sol 5m, btc 1h...) give: cryptoMarketConfig (twapEnabled, lookback), resolutionSource, how many
+markets per day, and whether they are continuous or only during some hours.
+(2) LIQUIDITY, which decides whether our edge exists there at all: for each family, sample the book once a second for
+10 minutes and report best ask, spread in cents, displayed size at the touch, and how often BOTH sides are quoted -
+our BTC lane is blocked ~18% of the time by one-sided books, so that number is the go/no-go.
+(3) The tick size and minimum order size per family (order_plan refuses below the minimum - a market with a $5
+minimum is useless at our $3 stake).
+(4) One line per family: could the existing engine trade it unchanged apart from the token ids, or does it need a
+different model. Do NOT propose trading anything yet - this is the map.

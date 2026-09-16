@@ -378,3 +378,21 @@ on the DIRECTION of the settlement. That number is the error budget on every R-1
 (4) Verdict: does the wider sample keep the +9.9 point advantage, and is the proxy good enough to use where the live
 feed does not reach. <=12 lines analysis/h1/task_r22_twap_wide.md. verify.py. No model change follows from this -
 R-16's retrain already failed - this is about the grading line and the feed we now depend on.
+
+## R-23 (09-16 10:2x, USER: "i need pnl okay and less drawdowns in different markets") - the multi-market question,
+done honestly. Everything tested so far tried to make ONE market pay more and all of it closed negative. Trading the
+same edge on several markets multiplies fires at the same per-$ edge and smooths the equity curve if the markets are
+not perfectly correlated. Before any engine work, answer with data:
+(1) Is the edge market-specific or mechanism-specific? Our money comes from the half-spread at the touch on a lagging
+book (R-13/R-18/R-19). Nothing in that mechanism is BTC-specific - but v10's FEATURES are BTC microstructure and its
+weights are fitted on BTC. So: which part travels? Test by replaying the EV rule with p taken from the VENUE PRICE
+ALONE (no v10) on our BTC data - if that is also positive per $1, the mechanism travels and a new market needs only a
+venue feed, not a new brain. If it is not, every new market needs its own trained model and the cost is real.
+(2) Correlation, which is the whole drawdown argument: on Binance 1s data we already hold, compute 5-minute candle
+direction correlation between BTC and ETH/SOL/XRP over the last 8 weeks, and the correlation of |move| (the vol). If
+5-minute directions are ~0.8 correlated, a second market does NOT halve the drawdown and I want that said plainly.
+(3) Sizing arithmetic: at the current +0.15/$1 and ~50 fills/day, what do 2, 3 and 4 markets do to expected daily PnL
+and to the worst 3-hour window, assuming the measured correlation - not assuming independence.
+(4) Verdict: is multi-market worth building, and if yes which market is first and why. Mumbai's Task 109 supplies the
+venue-side map (liquidity, tick, minimum, one-sided rate). <=12 lines analysis/h1/task_r23_multimarket.md. No engine
+change follows this; it is the case for or against the next build.
