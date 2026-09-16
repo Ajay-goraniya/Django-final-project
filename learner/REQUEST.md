@@ -213,3 +213,19 @@ pnl/$1 per bucket; what size would have filled and at what pnl.
 (4) From (1)-(3) propose at most two concrete execution changes (e.g. size <= displayed, limit-with-TTL vs FAK, a
 different fire window) with their gridded pnl/$1 vs current, verify.py, paired where same candles. No gates on the
 score; these are execution rules. <=15 lines in analysis/h1/task_r14_execution_edge.md, one verdict poke to V.
+
+## R-15 (09-16 00:5x, USER ORDER) - SIGNAL ONLY. User: "the issue is the signal that fails to predict correctly, not the
+execution." Execution threads (R-14, geography, dashboard) are parked. Goal: information the venue price does not have,
+trained at scale on the 9-year store, tested walk-forward, then paired vs frozen v10 on the live window. Two sources,
+both computable live from data the engine already has or can poll:
+(a) higher-timeframe state from the same 1s klines: 5m/15m/1h/4h returns, vol ratios (rv60 / rv15m / rv1h), distance
+from 1h/4h VWAP and range, same-direction candle streak length, time since last reversal. The refuted "trend guard"
+was an on/off rule; this is learned features, different method.
+(b) taker buy/sell ratio and open-interest change from data.binance.vision futures metrics (5-min bars, R-7 found
+58.5/56.6/50.7 by tercile 7/7 days on one week); available for years - add to the store at the prev-completed bar.
+Method: GBM walk-forward BY YEAR, OOS logloss/AUC per year: stage-1 (18) vs +(a) vs +(b) vs +(a)+(b). Then venue stage
+on the logged window, paired vs frozen v10 (discordant, McNemar), halves, permutation of predictions, verify.py.
+Specific question the user sees: runs of 7-9 same-side losses in one trend; report whether the (a) features cut the
+loss-run frequency OOS (max run length per day, pnl in trend windows), full grid. Ship as PAPER twin if it passes.
+≤15 lines in analysis/h1/task_r15_signal.md, one verdict poke to V. Do not stop; if a source is missing, substitute
+and say so.
