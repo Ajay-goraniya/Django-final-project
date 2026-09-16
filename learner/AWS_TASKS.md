@@ -3465,3 +3465,11 @@ fires, how often does the UP/DOWN ask trade at or below (ask - 1 tick), (ask - 2
 (b) When it does, what is the venue outcome of that candle - i.e. would a resting order at that price have won?
 This is the same question H1 simulates; your box has continuous book data and no container death. Coordinate via the
 branch, do not duplicate the grid.
+
+## Task 102 - 1 Hz Polymarket book logger on Mumbai (always-on box; V's box dies hourly, which is why we have gaps).
+Copy the pattern of V's poly1s/book1s loggers (see learner/live_backup/book1s.sqlite3.gz for the schema: ts_ms, epoch,
+sec, price, open, ask_up, size_up, age_up, ask_dn, ...). Own venv, own sqlite book1s_mumbai.sqlite3, read-only against
+the venue's public CLOB websocket + the same Binance spot stream the engine uses; no engine touched, no orders. Record
+BOTH sides' best ask/bid AND the top-5 depth ladder with sizes, once a second, with arrival timestamps, plus the trade
+prints. Hourly gz snapshot to learner/live_backup/book1s_mumbai.sqlite3.gz. One line in analysis/aws/task102_book1s.md
+(pid, rows/hour, first/last ts). This is the data R-18 and everything after it needs.
