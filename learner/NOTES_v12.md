@@ -5957,3 +5957,4 @@ Expect REVERSAL to place materially more paper orders from here; that is the fir
 stacking count (same side / opposite) is the number the owner's pending decision needs.
 
 - 09-16 18:5x goal check (V): H1 Tokyo forward n=347 -0.081/fire, snapshot lag not stall; master off by owner since 15:34 (regime, not fault); Task 117 EF+REV vs EF-only running on Mumbai 12.15.5 fresh dbs from 18:28, first ledger 22:30; go-live gate 19:30 UTC.
+- 09-16 21:5x goal check (V): R-27 (vol regime) no, R-28 (adapt->0.5) no, R-29 (owner upload, shrink->venue) no: +185.70 vs +281.84 total, top-n null wins, 0 side flips at any strength. Adaptive stays lanes-only (12.16.1 paper). Zurich master off since 20:13. EF direction: closed remains closed.
