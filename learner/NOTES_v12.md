@@ -5721,3 +5721,36 @@ What survives independently on V's run: (b) is monotonically more cost-robust th
 +145.45/+125.91/+107.28/+89.50/+56.24 against +145.81/+120.15/+95.65/+72.24/+28.40, positive days 8/9 at every
 level against 7/9 falling to 6/9. Same coefficients, same direction call; it declines 300 fires that stop paying
 once you cross the spread.
+
+## 09-16 13:3x — RETRACTED: the "$36 of calibration noise" line, and every non-frozen arm number H1 published today
+H1 found the bug in its own harness after V's arm-(b) figure failed to reproduce. **V's +145.45 on 733 fires was
+correct to the cent; H1's +182.17 was the bug.**
+
+**THE BUG.** `r12_train.lane_ticks` carries `r['ask']` as the LANE's chosen-side ask, not a side-neutral price.
+`fire_set` picked its own side and then priced at that logged ask — so any arm that chose a DIFFERENT side from the
+live lane paid the OTHER side's quote. The two asks sum to about 1, so the subsidy is large and signed by the
+direction of the disagreement: **the bug rewarded divergence from the live model**, which is the worst possible
+shape for it. Frozen v10 is immune at 0.0% side mismatch because frozen IS the lane's model — which is exactly why
+it reproduced to the cent through both harnesses and hid the bug from both of us.
+
+| arm | as published | corrected | inflation |
+|---|---|---|---|
+| frozen v10 | 1033 f +145.81 | 1033 f +145.81 | +0.00 |
+| R-26 (b) week 1 | 778 f +182.17 | **733 f +145.45** | +36.71 |
+| R-26 (c) two weeks | 588 f +175.47 | **315 f +69.48** | +105.99 |
+| R-17/R-25 plain 30 | 551 f +125.88 | **444 f −17.06** | +142.94 |
+
+The plain-30 retrain does not merely underperform frozen — **it loses money.** Fixed in `fire_set` (prices
+`feat['_ask_up']`/`['_ask_dn']` for the chosen side); H1 is re-running the affected arms for one corrected table.
+
+**What this changes and what it does not.** Retracted: "an arbitrary calibrator detail is worth $36" — the true gap
+is −$0.36 — and with it the $36-vs-$39 equivalence recorded above at 13:3x. Every "does not ship" verdict today
+stands and stands HARDER: (c) now costs $76 against (b), not $6.70. The conclusions were right; the numbers
+supporting them were not. Any figure V relayed to the owner today for a non-frozen arm — the R-12 verdict table and
+the R-25 grid included — is inflated by this bug and must be re-quoted from H1's corrected table, not from the
+notes above.
+
+**What survives untouched:** V's week-2 grid (analysis/v/ev_week2_frozen_vs_b.txt) priced each trade at the chosen
+side's own ask from the start, so it never had the bug — and its result is now the real finding: (b) declines ~300
+fires that stop paying once you cross the spread, 8/9 positive days at every slippage level against frozen's 7/9
+falling to 6/9. Same coefficients, same direction call, better selection.
