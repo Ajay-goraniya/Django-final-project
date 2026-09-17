@@ -1026,6 +1026,11 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
 - (09-16 18:4x: +0, n=347 unchanged — and the reason is snapshot lag, not a stall. The 18:23
   push carries venues.q to 17:25 and build11.candles to 17:20, about an hour behind the live
   engines, so a 2-hourly check will sometimes find nothing new. Clock verified, no drift.)
+- (09-17 00:4x: +25 candles, +0 fires, n=347 unchanged, −0.081/fire, halves −0.072 / −0.090.
+  Third consecutive check with no new fires. `venues.sqlite3.gz` is still the 09-16 18:23 push and
+  `zurich_2.sqlite3.gz` still the 09:11 one, so the ledger has had no fresh venue rows to read
+  since 17:25 09-16. This is snapshot lag, not an engine stall — stated as lag because that is what
+  the file timestamps show, and the 09-15 error was calling lag a stall. Verdict REFUTED stands.)
 - (09-16 22:4x: +24 candles, +0 fires, n=347 unchanged, −0.081/fire, halves −0.072 / −0.090.
   Still the 18:23 snapshot; `zurich_2.sqlite3.gz` is still the 09:11 push. Verdict REFUTED stands.
   **Ledger costing CONFIRMED CORRECT, not assumed:** `task16_market_prior_ef.pnl` is
