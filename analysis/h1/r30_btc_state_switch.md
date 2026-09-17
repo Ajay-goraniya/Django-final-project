@@ -169,3 +169,60 @@ often, firing larger, or a venue with a different fee schedule does.
 **Recommended next measurement, not a change:** re-grade R-26…R-29 arms under the live fee model
 (4% of stake per fire, both outcomes) instead of `per1()`, and report which, if any, is still
 positive. I expect most are not. I am not proposing any live change off this file.
+
+---
+
+# R-30c — CORRECTION to R-30b. A fresh Zurich journal landed; the numbers got worse, and the *reason* changed.
+
+`zurich_2.sqlite3.gz` was refreshed (hash `7916cff4…` → `e569b5ce…`), extending live coverage from
+09-16 08:20 to **09-16 23:25**. Coverage is now read from the journal, not asserted — see the two
+stale-literal fixes at the bottom.
+
+## The live table, full days
+
+| day | n | W% | venue_pnl | fees | staked | cumulative |
+|---|---|---|---|---|---|---|
+| 09-15 | 77 | 46.8% | −4.33 | 12.27 | 307.56 | −4.33 |
+| **09-16** | **38** | **28.9%** | **−41.54** | 4.47 | 109.81 | **−45.87** |
+| **total** | **115** | 40.9% | **−45.87** | 16.73 | 417.36 | |
+
+09-16 was far worse than the part-day showed: **n=11 → 38 fires, −10.97 → −41.54**, win rate 28.9%.
+Cumulative **−45.87** on 417.36 staked. This is the owner's 50 → 40, and then some.
+
+## What I got wrong in R-30b, stated plainly
+
+R-30b reported live **gross −0.50% of stake** and concluded *"the fee is the problem; the gross edge
+is roughly flat"*. On the full two days:
+
+| | R-30b (part day) | **R-30c (full)** |
+|---|---|---|
+| gross | −0.50% of stake | **−7.27%** |
+| fees | 4.01% | 4.01% |
+| net | −4.5% | **−10.99%** |
+
+**Fees are now the smaller half of the loss.** Gross is −30.35 of the −45.87; fees are −16.73. The
+correct statement is: *the engine's own calls lost the money, and the fee made a bad result worse* —
+not the other way round.
+
+**This also weakens the Predict.fun case further (R-31).** I wrote there that switching venue turns
+a −4.5% loss into roughly −2.9%. Corrected: it turns **−10.99% into roughly −9.3%**. Predict is
+still the better venue on fee and fill, but it recovers about a sixth of the hole, not a third.
+
+## The regime answer is unchanged, and now on more data
+
+No bucket qualifies. Six live cells now reach n≥60, but each holds **52–77% of the entire live
+sample** (ret24 LO 89/115, rv24 HI 75/115, rangeatr HI 60/115, autocorr HI 65/115, samedir MID
+74/115, posrange LO 78/115) — a bucket holding most of the data is the data, not a detector. Live
+spans 47 h, so both halves sit in one contiguous window. And every bucket the two losing days land
+in is still **positive on the big paper sample** (+0.116 … +0.245, n 580–1108). **No detector.**
+
+## Two stale literals fixed in `r30b_live.py` — same bug, twice, in one file
+
+1. The header asserted *"snapshot is 09-16 09:11, coverage ends 08:20"*. Hardcoded; false the moment
+   a fresher gz arrived. Now derived from the journal's own first and last epoch.
+2. Step 3 printed *"each is 68-86% of the sample (ret24 LO 71/88, posrange LO 76/88, …)"*. Also
+   hardcoded, also stale. Now computed, which is how the cell list grew from four to six.
+
+This is the third stale-literal of the day (`task17_forward.py` had one too). The pattern: a caveat
+or count written as prose at the time of first writing, which keeps printing confidently after the
+data moves. **Anything describing the data must be computed from the data.**

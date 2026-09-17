@@ -47,9 +47,14 @@ def bucket(v, k):
 def main():
     L = live()
     print('R-30b  LIVE money, not paper')
-    print('  SNAPSHOT IS STALE: learner/live_backup/zurich_2.sqlite3.gz is the 09-16 09:11 push')
-    print('  (commit e6b9927). No newer Zurich gz and no per-day venue table has landed on the')
-    print('  branch. Live coverage therefore ends 09-16 08:20 UTC -- today is only part-counted.')
+    # Coverage is DERIVED from the rows, never hardcoded. The first version of this banner
+    # asserted "ends 09-16 08:20" and silently became false the moment a fresher gz landed --
+    # the same stale-caveat bug fixed in task17_forward.py on 09-16.
+    import datetime as _dt
+    _a = _dt.datetime.utcfromtimestamp(L[0]['ep']).strftime('%Y-%m-%d %H:%M')
+    _b = _dt.datetime.utcfromtimestamp(L[-1]['ep']).strftime('%Y-%m-%d %H:%M')
+    print('  live coverage, read from the journal itself: %s -> %s UTC (%d settled fires)'
+          % (_a, _b, len(L)))
 
     print('\n  *** THE TWO COLUMNS -- this is the finding ***')
     g = sum(r['gross'] for r in L); n = sum(r['net'] for r in L); f = sum(r['fee'] for r in L)
@@ -80,7 +85,7 @@ def main():
 
     print('\n  STEP 2 -- THE SEVEN STATE BUCKETS ON LIVE FIRES (terciles frozen from R-30)')
     S = R30.state_features()
-    LS = [r for r in L if r['ep'] in S]
+    LS = sorted((r for r in L if r['ep'] in S), key=lambda r: r['ep'])
     print('  %d of %d live fires have a full 24 h of prior BTC candles' % (len(LS), len(L)))
     print('  %-9s %-5s %5s %11s %10s  %s' % ('feature', 'bkt', 'n', 'net/fire', 'net total', 'read?'))
     for k in R30.FEATS:
@@ -102,12 +107,24 @@ def main():
     print('\n  STEP 3/4 -- where do the LIVE LOSING DAYS land, and is there a switch?')
     losing = [d for d in sorted({r['day'] for r in L})
               if sum(r['net'] for r in L if r['day'] == d) < 0]
-    print('  Four live cells reach %d fires -- but each is 68-86%% of the ENTIRE live sample'
-          % MIN_CELL)
-    print('  (ret24 LO 71/88, posrange LO 76/88, rangeatr HI 60/88, samedir MID 60/88). A bucket')
-    print('  holding five sixths of the data is not a regime detector, it is the data. And with')
-    print('  live spanning ~30 h, both "halves" sit inside one contiguous window, which CLAUDE.md')
-    print('  already records as nearly worthless. No bucket qualifies as a switch on live.')
+    # These counts are DERIVED, not written down -- the first version hardcoded "71/88, 76/88,
+    # 60/88, 60/88" and went stale the moment a fresher journal landed. Second instance of the
+    # same stale-literal bug in this one file; both are now computed.
+    big = []
+    for k in R30.FEATS:
+        for b in ('LO', 'MID', 'HI'):
+            c = sum(1 for r in LS if bucket(S[r['ep']][k], k) == b)
+            if c >= MIN_CELL:
+                big.append('%s %s %d/%d' % (k, b, c, len(LS)))
+    if big:
+        share = [int(x.split()[2].split('/')[0]) / len(LS) for x in big]
+        print('  %d live cells reach %d fires -- but each is %d-%d%% of the ENTIRE live sample'
+              % (len(big), MIN_CELL, round(100 * min(share)), round(100 * max(share))))
+        print('  (%s). A bucket holding most of the data is not a regime detector, it is the' % ', '.join(big))
+        print('  data. And live spans only %.0f h, so both "halves" sit inside one contiguous'
+              % ((LS[-1]['ep'] - LS[0]['ep']) / 3600.0))
+        print('  window, which CLAUDE.md already records as nearly worthless.')
+    print('  No bucket qualifies as a switch on live.')
     print('  Which buckets the losing days sit in, and what the BIG paper sample says there:')
     F = [x for x in R30.fires() if x['ep'] in S]
     print('  %-7s %-9s %-5s %6s %11s' % ('day', 'feature', 'bkt', 'paper n', 'paper per $1'))
