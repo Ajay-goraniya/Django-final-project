@@ -1026,6 +1026,13 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
 - (09-16 18:4x: +0, n=347 unchanged — and the reason is snapshot lag, not a stall. The 18:23
   push carries venues.q to 17:25 and build11.candles to 17:20, about an hour behind the live
   engines, so a 2-hourly check will sometimes find nothing new. Clock verified, no drift.)
+- (09-17 04:4x: +23 candles of klines, paths to 09-17 04:35. **Ledger recompute deliberately
+  skipped this check, and the reason is checked not assumed:** `venues.q`'s own max ts is
+  2026-09-16 17:27:45, identical to the last two checks, and `venues.sqlite3.gz` hashes to
+  4aba0a1d… unchanged. task17_forward is deterministic in its inputs, so re-running it on a
+  byte-identical venue snapshot can only reprint n=347 / −0.081. Verified by the file's CONTENTS
+  (max ts, row count 2232) rather than its mtime, because mtime alone would not have proved it.
+  Fifth stalled check; blocker already with V, not re-sent — a second poke would be status.)
 - (09-17 02:4x: +24 candles, +0 fires, n=347 unchanged, −0.081/fire, halves −0.072 / −0.090.
   **FOURTH consecutive check with no new venue rows, and it is now a blocker, not noise.**
   `venues.sqlite3.gz` has been byte-frozen at the 09-16 18:23 push and `zurich_2.sqlite3.gz` at
