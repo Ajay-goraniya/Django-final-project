@@ -1026,6 +1026,14 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
 - (09-16 18:4x: +0, n=347 unchanged — and the reason is snapshot lag, not a stall. The 18:23
   push carries venues.q to 17:25 and build11.candles to 17:20, about an hour behind the live
   engines, so a 2-hourly check will sometimes find nothing new. Clock verified, no drift.)
+- (09-17 08:4x: +24 candles, paths to 09-17 08:35. SEVENTH stalled check; `venues.sqlite3.gz`
+  still 4aba0a1d…, `zurich_2.sqlite3.gz` still 7916cff4…. **Correcting my own framing:** I have
+  been calling this "snapshot lag, not an engine stall". That was an overstatement. Every file I
+  can read comes from the one frozen 09-16 18:23 push, so I CANNOT distinguish a snapshot that is
+  not being pushed from engines that are not running — I only know the bytes have not changed for
+  ~15 h of wall clock. On 09-15 I made the mirror-image error (called lag a stall) and V caught it;
+  the honest statement is that the cause is unknown from here. Escalated to V a second time on that
+  basis, which is a change in the situation, not a status repeat.)
 - (09-17 06:4x: +24 candles, paths to 09-17 06:35. Sixth stalled check. `venues.sqlite3.gz`
   still hashes 4aba0a1d…, unchanged, so the ledger recompute is skipped again on the same
   verified-identical-input grounds. Klines are kept current so the next real advance is one step.)
