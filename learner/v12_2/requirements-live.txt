@@ -1,0 +1,2 @@
+-r requirements-paper.txt
+polymarket-client==0.10.0

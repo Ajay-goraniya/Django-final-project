@@ -1,0 +1,23 @@
+rows 22720, candles 2272, days 2026-08-29..2026-09-06
+12.8.11 : n=475 W=295 (62.1%) pnl/$1=+0.3009 total(on $1 each)=+142.93
+HEAD    : n=475 W=295 (62.1%) pnl/$1=+0.3009 total(on $1 each)=+142.93
+same candles fired: True | A only: 0 | B only: 0
+  differing side: 0 of 475
+  differing off: 0 of 475
+  differing p: 0 of 475
+  differing ask: 0 of 475
+  max |p_a - p_b| = 0
+  pnl difference total: +0.000000
+  halves 12.8.11: H1 +0.3547 / H2 +0.2473
+  halves HEAD: H1 +0.3547 / H2 +0.2473
+
+METHOD. Both builds' own Model.decide() is called - no reimplementation of the EV rule. 12.8.11's
+btc_model_v10.py is taken from commit 2cf8b6d, HEAD's from the branch, and each runs against a state whose
+features() returns the precomputed row, so a difference anywhere in the decision path would show as a different
+fire, side, offset or price. model_v10.json is byte-identical between the two commits (checked with diff).
+Data: learner/live_backup/v10_features_8days.parquet.gz, 22,720 rows / 2,272 candles / 8 days (08-29..09-06),
+label y = the venue settlement the model was trained on.
+CAVEAT, and it matters: +0.3009/$1 is a backtest paying the quoted ask with no slippage and assuming the fill.
+Live on the same signal is +0.0138/$1. The number here is only good for the A-vs-B comparison it was built for.
+SCOPE: the EF path (the v10 model), which is the only kind any lane has fired. MAIN/REVERSAL do differ between
+these builds (12.14.0 reversal trigger, 12.14.1 lane seeding) and have fired nothing yet, so they are untested here.

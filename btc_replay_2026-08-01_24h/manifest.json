@@ -1,0 +1,877 @@
+{
+  "dataset": "btc_replay_2026-08-01_24h",
+  "created_utc": "2026-09-05T22:49:41.286646+00:00",
+  "target_window_utc": {
+    "start": "2026-08-01T00:00:00Z",
+    "end": "2026-08-02T00:00:00Z",
+    "end_exclusive": true,
+    "expected_5m_candles": 288
+  },
+  "preroll_utc": {
+    "start": "2026-07-31T23:45:00Z",
+    "end": "2026-08-01T00:00:00Z",
+    "minutes": 15,
+    "coverage": "spot klines + spot aggTrades + perp aggTrades only; perp L2 depth NOT available (Tardis free tier is first-day-of-month only)"
+  },
+  "symbols": {
+    "spot": "BTCUSDT (Binance spot)",
+    "perp": "BTCUSDT (Binance USD-M perpetual)"
+  },
+  "providers": {
+    "tardis.dev": "BTCUSDT perpetual incremental_book_L2, trades, book_snapshot_25 (free first-day-of-month tier, unauthenticated)",
+    "Binance Vision": "spot 5m klines, spot aggTrades, USD-M perp aggTrades"
+  },
+  "timestamp_semantics": {
+    "canonical_column": "timestamp",
+    "canonical_unit": "microseconds since UNIX epoch, UTC",
+    "raw_binance_spot_klines": "microseconds (exchange clock)",
+    "raw_binance_spot_aggtrades": "microseconds (exchange clock)",
+    "raw_binance_perp_aggtrades": "MILLISECONDS in the archive; multiplied by 1000 during normalization. Original kept as transact_time_ms.",
+    "raw_tardis_timestamp": "microseconds, exchange clock",
+    "raw_tardis_local_timestamp": "microseconds, Tardis collector RECEIVE clock",
+    "receive_clock": "AVAILABLE for all Tardis-sourced rows via local_timestamp. Binance Vision archives carry exchange time only -> for those rows LIVE_RECEIVE_CLOCK_UNAVAILABLE. No latency was invented.",
+    "ordering_rule": "sort by (timestamp, then id/agg_trade_id); for depth, provider file order within equal (timestamp, local_timestamp)"
+  },
+  "missing_data_notes": [
+    "SPOT_DEPTH_UNAVAILABLE - Binance publishes no historical spot L2 depth publicly.",
+    "PREDICT_BOOK_HISTORY_UNAVAILABLE - api.predict.fun/v1/markets returns HTTP 401.",
+    "PRE_ROLL_PERP_DEPTH_UNAVAILABLE - Tardis free tier covers 2026-08-01 only.",
+    "SEQUENCE_IDS_UNAVAILABLE for depth - Tardis incremental_book_L2 CSV has no exchange update id column; ordering relies on provider chronological file order."
+  ],
+  "files": {
+    "raw": [
+      {
+        "path": "raw/binance/perp_aggTrades_2026-07-31.zip",
+        "bytes": 13739269,
+        "sha256": "84f079be767204630b3f624d69af2c5764086976ab9f1015d9183bf13c3770b2",
+        "source_url": "https://data.binance.vision/data/futures/um/daily/aggTrades/BTCUSDT/BTCUSDT-aggTrades-2026-07-31.zip",
+        "provider": "Binance Vision"
+      },
+      {
+        "path": "raw/binance/perp_aggTrades_2026-08-01.zip",
+        "bytes": 5049749,
+        "sha256": "6bfdb219726ab774c25ae782e4e8f4a5e4dbc69b807f1b7c200e71586d69b6fb",
+        "source_url": "https://data.binance.vision/data/futures/um/daily/aggTrades/BTCUSDT/BTCUSDT-aggTrades-2026-08-01.zip",
+        "provider": "Binance Vision"
+      },
+      {
+        "path": "raw/binance/spot_aggTrades_2026-07-31.zip",
+        "bytes": 11322149,
+        "sha256": "15dcb1d47546f14576a4a465ceafff1fed244beab1dc91dbf087aabfc220e014",
+        "source_url": "https://data.binance.vision/data/spot/daily/aggTrades/BTCUSDT/BTCUSDT-aggTrades-2026-07-31.zip",
+        "provider": "Binance Vision"
+      },
+      {
+        "path": "raw/binance/spot_aggTrades_2026-08-01.zip",
+        "bytes": 4143007,
+        "sha256": "59071e00012c8a766a25e6a2e8b90f7617cd2c18694b9084ab7fafbddb76bcc8",
+        "source_url": "https://data.binance.vision/data/spot/daily/aggTrades/BTCUSDT/BTCUSDT-aggTrades-2026-08-01.zip",
+        "provider": "Binance Vision"
+      },
+      {
+        "path": "raw/binance/spot_klines5m_2026-07-31.zip",
+        "bytes": 15323,
+        "sha256": "f1704ab4b062afa1cc8745bc4b449e0b367d793499d12f6a3a67acc5bf0a153b",
+        "source_url": "https://data.binance.vision/data/spot/daily/klines/BTCUSDT/5m/BTCUSDT-5m-2026-07-31.zip",
+        "provider": "Binance Vision"
+      },
+      {
+        "path": "raw/binance/spot_klines5m_2026-08-01.zip",
+        "bytes": 14630,
+        "sha256": "b60766767337a24f65309eea537e182603c52759b3bcc78c27e25e025c56accd",
+        "source_url": "https://data.binance.vision/data/spot/daily/klines/BTCUSDT/5m/BTCUSDT-5m-2026-08-01.zip",
+        "provider": "Binance Vision"
+      },
+      {
+        "path": "raw/tardis/binance-futures_book_snapshot_25_2026-08-01_BTCUSDT.csv.gz",
+        "bytes": 47692009,
+        "sha256": "b85c25edb44ff42031e3c44f96982976e5a909a5f3e3c36a9914adf84518d615",
+        "source_url": "https://datasets.tardis.dev/v1/binance-futures/book_snapshot_25/2026/08/01/BTCUSDT.csv.gz",
+        "provider": "tardis.dev"
+      },
+      {
+        "path": "raw/tardis/binance-futures_incremental_book_L2_2026-08-01_BTCUSDT.csv.gz",
+        "bytes": 423320166,
+        "sha256": "bc7b4e6206bdbd893da75d035f63128b518ed34f3dd6490da71f96c72fe2a4cc",
+        "source_url": "https://datasets.tardis.dev/v1/binance-futures/incremental_book_L2/2026/08/01/BTCUSDT.csv.gz",
+        "provider": "tardis.dev"
+      },
+      {
+        "path": "raw/tardis/binance-futures_trades_2026-08-01_BTCUSDT.csv.gz",
+        "bytes": 8954358,
+        "sha256": "27622702d5e33e6d374ec3d6f9040e8d7550ca9229641bccb6289d64256e4afe",
+        "source_url": "https://datasets.tardis.dev/v1/binance-futures/trades/2026/08/01/BTCUSDT.csv.gz",
+        "provider": "tardis.dev"
+      }
+    ],
+    "normalized": [
+      {
+        "path": "normalized/perp_aggtrades_00.parquet",
+        "bytes": 486396,
+        "sha256": "d7fcec9b460490b890b1957fde4ee0305384be8763073af37f223e30e84ce01f",
+        "rows": 17281,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_01.parquet",
+        "bytes": 335686,
+        "sha256": "4e7887e7d2021563680120b36b6e7809b8be8ac00b05f7f993e0b3b4fd1df15a",
+        "rows": 12260,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_02.parquet",
+        "bytes": 392353,
+        "sha256": "4aa8c52331cfb28051595956d29f9efa7e06ea7f6c5445242ac77f8b8355d865",
+        "rows": 14045,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_03.parquet",
+        "bytes": 385567,
+        "sha256": "ac33516e913cc7bac42f3117c7d0d548358c3dfda2781b3eedb35131aae354a8",
+        "rows": 14092,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_04.parquet",
+        "bytes": 250476,
+        "sha256": "e60d5678472b1e60d56f799baf931e96128156289025a1fde0c6a5c5e6c47556",
+        "rows": 8823,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_05.parquet",
+        "bytes": 378410,
+        "sha256": "16caa9678779c265e2bf0d86e7226051d5a630cfdd3a2211c340e0f830012d35",
+        "rows": 13222,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_06.parquet",
+        "bytes": 304271,
+        "sha256": "116cb1c59fbf099f40d6a1746f337a05680fe7dfbf1f88ff0cacc28a39ea3df7",
+        "rows": 11061,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_07.parquet",
+        "bytes": 263637,
+        "sha256": "3be18bebb391fb0a372174675e60b8d2250f6a04e723ece02eefc9d66334e68a",
+        "rows": 9230,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_08.parquet",
+        "bytes": 254363,
+        "sha256": "35de9a79d594a00229f1c4e2eb03fb29e42e647b95f43d18ef99d5610d54f0d5",
+        "rows": 9107,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_09.parquet",
+        "bytes": 281604,
+        "sha256": "7c48cd7fed0d488ed402e15be826e89c43f8a9a87e20d6312d48d8567e4f7ca1",
+        "rows": 9922,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_10.parquet",
+        "bytes": 358275,
+        "sha256": "533ac035484a7ae9c33d1a8b058529d7ce1263f448b795768696984f18bd5b1a",
+        "rows": 12371,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_11.parquet",
+        "bytes": 194215,
+        "sha256": "1bf7bb3536be8a1403d4937ed36947334ee9f58aed30b1dbf01e0f3a838f4e37",
+        "rows": 7159,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_12.parquet",
+        "bytes": 245683,
+        "sha256": "79ba2c0a533a690ca78d5d4f64011a1c9771a0d5765b397e3a22472d29b3c9bd",
+        "rows": 9229,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_13.parquet",
+        "bytes": 221545,
+        "sha256": "398cde1d4b636d1c84304ea251755ca7c378d82f6ea589369176f92cf59e0989",
+        "rows": 8288,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_14.parquet",
+        "bytes": 282483,
+        "sha256": "149ff2a8344ca2f61eea95df72b7b8359b2e05f43994465bc30bf55dc1f24f7c",
+        "rows": 10297,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_15.parquet",
+        "bytes": 259739,
+        "sha256": "f10cca62162eb3a760de5f2483e2892031f8b620d14e4387f57d3a02dba15af5",
+        "rows": 9158,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_16.parquet",
+        "bytes": 553815,
+        "sha256": "bd81138cab13487e5a3124f408f23f4213d92fdbd47f089aeb8e63e79dfc65fc",
+        "rows": 18932,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_17.parquet",
+        "bytes": 820705,
+        "sha256": "792816ac0c3e598dd16afb66ff17a51dc928eb7427421f252740e04a3404d1c6",
+        "rows": 28672,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_18.parquet",
+        "bytes": 2207582,
+        "sha256": "66a7ae26bf3c458941c71728da00e68b0155a127c84771192ced059beefead5a",
+        "rows": 77885,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_19.parquet",
+        "bytes": 782137,
+        "sha256": "5880f87ea0671007aa441055dde25569bd9b3fcdfb297010da3b3e7c63f401d7",
+        "rows": 28865,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_20.parquet",
+        "bytes": 573389,
+        "sha256": "ed8d94a41fb796b27b612ab6cdacf3bb2965a925cd1e12734086918387ccef50",
+        "rows": 20470,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_21.parquet",
+        "bytes": 665947,
+        "sha256": "5ee3bfe1d715cc9a179a4d45aae95e1f03fd3bacb6e440fd1aa8d25c97c3ffa7",
+        "rows": 24775,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_22.parquet",
+        "bytes": 310733,
+        "sha256": "cc69b9ba4815b933ba9bbf37ccc5eff258af7089699f352e34b0362a9fb8200f",
+        "rows": 11328,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_23.parquet",
+        "bytes": 352699,
+        "sha256": "c55f762268488af637df11de9e3d4ec3cb3f97e218c94986d3b5955d3ded8a8e",
+        "rows": 12747,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_aggtrades_preroll.parquet",
+        "bytes": 147083,
+        "sha256": "e382bcf1ace3a817a78510942bcedb42502d5084a67cb5a9511433db002a0b56",
+        "rows": 5104,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_00.parquet",
+        "bytes": 3207254,
+        "sha256": "5a969584eaf5d728d1d806e6a65e10999cff634519a7617bf360ce90b75f680e",
+        "rows": 132683,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_01.parquet",
+        "bytes": 3278324,
+        "sha256": "3612140694a20f0e6ee43a32e0acb1f23660217c18a0d5395b85f1567b9308cd",
+        "rows": 132583,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_02.parquet",
+        "bytes": 2946921,
+        "sha256": "29023a0429938e62504e453a491d3d5decd45716fd736666b8de82a8500b8db5",
+        "rows": 132757,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_03.parquet",
+        "bytes": 3007878,
+        "sha256": "aa3e3ac986309fb6869732f603ccb294632246a26bee6cb9d29c2681b0084df1",
+        "rows": 132840,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_04.parquet",
+        "bytes": 2729782,
+        "sha256": "e1ae89431d4211f5090a8d7e140cd881dd0f33ad7e3ff270467b4415d6fd8f98",
+        "rows": 133096,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_05.parquet",
+        "bytes": 3037187,
+        "sha256": "556c13bd8f7655bb1054df935d2a40f2a60a7c7c2dd3cd4b7dd8dae98c5a90bf",
+        "rows": 134668,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_06.parquet",
+        "bytes": 2976591,
+        "sha256": "2ce5c4ba80ae40c237fb59dd91c6c45fc2c1aba779af99b3fceb67000749ff7c",
+        "rows": 134596,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_07.parquet",
+        "bytes": 3053169,
+        "sha256": "fc932808ab590b849696afeb15a83b63bb62549e7e4b3b9dfec4ff06985e55c5",
+        "rows": 134489,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_08.parquet",
+        "bytes": 2839497,
+        "sha256": "fd703885718ea2ff78423b9786d05c92ee8127cb2548e14610b8f2b110a57e22",
+        "rows": 134556,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_09.parquet",
+        "bytes": 2916879,
+        "sha256": "e3998ebc76e8f78e5f9f0014cfe056afaa26bd9fcf0ea432745c4aa0835454ed",
+        "rows": 134452,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_10.parquet",
+        "bytes": 3216267,
+        "sha256": "f073e72e9593d30b5b050927cdca13a80095be504d0fcc8f5499269d08bdd23a",
+        "rows": 134346,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_11.parquet",
+        "bytes": 2828080,
+        "sha256": "de261d581e61b1d2784a0576f62341f66108c57f034964d1bc9c856aa5ddbb99",
+        "rows": 134237,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_12.parquet",
+        "bytes": 2689910,
+        "sha256": "61f3a93ef1ccf8bcf0183f02859c6fd050457263a236e2dc0902ada452b87384",
+        "rows": 134315,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_13.parquet",
+        "bytes": 2782340,
+        "sha256": "548723a0a8bf1e6e24d81f108920b83305c36c1514aaf861f62c762fe1b2040d",
+        "rows": 134162,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_14.parquet",
+        "bytes": 2822381,
+        "sha256": "90ffbedb35cb3a795ee581486740799dfa1747b7d02f3cbd9e4ce0d6ca2517db",
+        "rows": 134037,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_15.parquet",
+        "bytes": 2750478,
+        "sha256": "00aed81e43580d06f51bb9a686398ceef532d5745ea4c225281e0d7d595f74d4",
+        "rows": 134204,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_16.parquet",
+        "bytes": 3508151,
+        "sha256": "796fa98e484d88c37a9fe7038822f905fb2d3ae7cfc668bf35b44f6e8b5e050d",
+        "rows": 134475,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_17.parquet",
+        "bytes": 4026400,
+        "sha256": "d032de3c4cf77370058fe6a27bdb34546d971dc3fef89e35d9c37387e981f366",
+        "rows": 134625,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_18.parquet",
+        "bytes": 5334070,
+        "sha256": "4c6d466353a9610c263edf0f490ed1059c0d1d27092870f4aa163560b25cda4e",
+        "rows": 132771,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_19.parquet",
+        "bytes": 4128753,
+        "sha256": "9ebbb8b1aca86846b097edddfe578a7bc7761949e3a7728424166de2a7cade06",
+        "rows": 134941,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_20.parquet",
+        "bytes": 3596382,
+        "sha256": "69791220103d4674ec88309b804a0e9fff9494baa34fdff0a43a610a8b33153f",
+        "rows": 134614,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_21.parquet",
+        "bytes": 3840139,
+        "sha256": "3f557c1c3d10195c3c54d9e4e6eecb41b5ba12e1b791bbe051431eb8af343064",
+        "rows": 134781,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_22.parquet",
+        "bytes": 3110054,
+        "sha256": "4d50d183e12bad226836b304502f278f1d5dc411d474ac8454a932a2f2546300",
+        "rows": 134420,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_depth20_23.parquet",
+        "bytes": 3128001,
+        "sha256": "f6921bfb40769060f3b30b64734197aa9a61d86c5fc8b1d738e47e19382e7bec",
+        "rows": 134604,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_00.parquet",
+        "bytes": 812618,
+        "sha256": "b63cca0c1622cd7fae8f285a7aa355b43d50f43017cba4a02fd081a0d9062fa1",
+        "rows": 49244,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_01.parquet",
+        "bytes": 573543,
+        "sha256": "ab58ad59209a5f9dc893b2d570bb71e400b0a742f435ad25c9cedecde4da24a0",
+        "rows": 34786,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_02.parquet",
+        "bytes": 657155,
+        "sha256": "aaf61a2100e527b282ef9577cf0823c16bad0b000b000d211e02fc4ad6d9cfe9",
+        "rows": 37772,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_03.parquet",
+        "bytes": 607345,
+        "sha256": "d728342f560c6a309ef95f9989b429a9b509970e0e9080908f6f3047c85adecd",
+        "rows": 36063,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_04.parquet",
+        "bytes": 402985,
+        "sha256": "2a1a70a91ab208d4fa91d57834bcb7fe3d598a75e3ecfc495d1fa9e65be55f9d",
+        "rows": 23396,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_05.parquet",
+        "bytes": 637388,
+        "sha256": "567ee95b369fa62eec0da8a1781a1ab5d75601843de7c8be3b99fd501c76d975",
+        "rows": 35910,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_06.parquet",
+        "bytes": 474638,
+        "sha256": "1387b20885ee65f85b7bff81a373d0061c3944d9244c428a5693e70043cf31c9",
+        "rows": 27343,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_07.parquet",
+        "bytes": 457404,
+        "sha256": "813f4541d48871875354273de9fe43df26b8fe185709eafc617d7fbfde9274da",
+        "rows": 26315,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_08.parquet",
+        "bytes": 382794,
+        "sha256": "18e4dc2901c2293606242b68213f052a5fbd088b04a457244ae4e6ea6f09f833",
+        "rows": 21368,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_09.parquet",
+        "bytes": 451624,
+        "sha256": "41171778afc1fe39aa28958a0a7ee3476fb81cc35bdd6a3969e4e5c8c1fca1d8",
+        "rows": 25108,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_10.parquet",
+        "bytes": 591827,
+        "sha256": "e30de7fc2495c81bf1b196d81a1eb23a36e584bd87aaea0b78da80d03a055786",
+        "rows": 32650,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_11.parquet",
+        "bytes": 299662,
+        "sha256": "342220c6f7ba3e268e3ec5f1d79bc5a856adb758c20d579a028fcb1c5cf0136a",
+        "rows": 16998,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_12.parquet",
+        "bytes": 381494,
+        "sha256": "692ba74e844e70d19ab9ebae9359f8de5c1e487b3b7f9a113d9341ef673ef841",
+        "rows": 22188,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_13.parquet",
+        "bytes": 341571,
+        "sha256": "d009ab99931316aeebad7cd5652f3372f18feb55511b764b45a43ca4796595ce",
+        "rows": 19459,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_14.parquet",
+        "bytes": 446083,
+        "sha256": "ae41b38d67ba2c4d26c9e1fedfa7070bccfef1f962dc55d69b55c6ec96c36121",
+        "rows": 25785,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_15.parquet",
+        "bytes": 402588,
+        "sha256": "f0e5e480d121ba31a7dffe3be252d5c060c135a40b91027bff3bdf7eb292df33",
+        "rows": 22179,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_16.parquet",
+        "bytes": 985439,
+        "sha256": "fa97f21dcf36084448d7b2e444e8ec439c36c00937e6e015a43e7fe4bc01455a",
+        "rows": 56611,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_17.parquet",
+        "bytes": 1485624,
+        "sha256": "46080613a51923610c4fe9fd3aaf342b7dcfba77e8df084095cbb0119c76f3ee",
+        "rows": 83346,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_18.parquet",
+        "bytes": 3565649,
+        "sha256": "4b85361cb2a887636e0524be36c15fc95189eacee217fb43e8a6ad0fe2359204",
+        "rows": 211465,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_19.parquet",
+        "bytes": 1326029,
+        "sha256": "e199cef3bb59a9c0ca5dabd5b9191b32c04a700c09e2ee229fa12d0430d265e9",
+        "rows": 80560,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_20.parquet",
+        "bytes": 957760,
+        "sha256": "5d531601f18af4472ffe0b08ad65cc72308c630703e002113de848f62f34be3f",
+        "rows": 57074,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_21.parquet",
+        "bytes": 1067143,
+        "sha256": "a51e5d611f514efe7db96bf8214cf5d4e33dc3d4d16dc3963b67a189f3ae91cc",
+        "rows": 63223,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_22.parquet",
+        "bytes": 525086,
+        "sha256": "4171965272ed9a7dc103df78e80ba098030b30f849c6548333617c9bb3dce9b8",
+        "rows": 31574,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/perp_trades_23.parquet",
+        "bytes": 583150,
+        "sha256": "d57b5ba24e9fce2920c571b283c3717530b9d1b9b12433cc2eb9ebcc6972e7b8",
+        "rows": 33455,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_00.parquet",
+        "bytes": 456833,
+        "sha256": "aa66ee5317e2d05513b99b09bf657e8a965bad34371084e1617482fb9d47eeda",
+        "rows": 14016,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_01.parquet",
+        "bytes": 342145,
+        "sha256": "092d4c0a18f6f390ec93c6075d3facccb018faf1a377f80df938b446c49d890c",
+        "rows": 10132,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_02.parquet",
+        "bytes": 319543,
+        "sha256": "a604e3368f7cb779f75b39fe3d6a41646732e9fa180b13f4d7ed3e251da68782",
+        "rows": 9145,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_03.parquet",
+        "bytes": 347519,
+        "sha256": "099e7ca2261cf7ea63f292023ce10f691bae8aefd568bf4a454a45bb90491874",
+        "rows": 9999,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_04.parquet",
+        "bytes": 254714,
+        "sha256": "fb153cd1bc830773ae4a6f8c4ab685219f59d356bbbaf2671a60c3f7294db9fc",
+        "rows": 7319,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_05.parquet",
+        "bytes": 324658,
+        "sha256": "094b17047e79442c85a8a847c070f4101fa477dc48f667fe24e5af30ad3a9b3c",
+        "rows": 9153,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_06.parquet",
+        "bytes": 300665,
+        "sha256": "1804dd365b7303c7cdf9fa8dffffca6b1bfd5fd462a4b76e77ef13b40cf94a0b",
+        "rows": 8556,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_07.parquet",
+        "bytes": 275641,
+        "sha256": "80fa56484e01d946157ec8c303b63ab1395ed8e68dff29274bfe372496c2a4f6",
+        "rows": 8060,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_08.parquet",
+        "bytes": 225514,
+        "sha256": "9405e9792b8936b3ff74be29a0be0ca892b6fd35186c55cea1cd742851b16b85",
+        "rows": 6611,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_09.parquet",
+        "bytes": 294392,
+        "sha256": "dfe52247dd0fe3223158f8668f1ac0e9464ebaa00174677b8a864b9a01a429cd",
+        "rows": 8531,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_10.parquet",
+        "bytes": 367632,
+        "sha256": "58d3ca97fc2643b86c4faa4dcf7b8774f2b7ea7dfdaf2675624ab95093cccfd7",
+        "rows": 10380,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_11.parquet",
+        "bytes": 255640,
+        "sha256": "59fb00d224fe8d80a7ece290cf9e0c23d9682f5db29f9027198bbb99a12d6946",
+        "rows": 7489,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_12.parquet",
+        "bytes": 281029,
+        "sha256": "4e4bc732cc7cc504cf156a6f50ed262964f4ae84a03e032855b78ff4abbbc714",
+        "rows": 8107,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_13.parquet",
+        "bytes": 251318,
+        "sha256": "1c006a4c5cb60cd8ce781ebc12faf74fadd57e03d11abb03510d080420c634fb",
+        "rows": 7386,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_14.parquet",
+        "bytes": 350982,
+        "sha256": "87a0f4d7be0e169f90c6936b5120892612d87cc63a9cf5b435abb07812532826",
+        "rows": 10000,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_15.parquet",
+        "bytes": 263650,
+        "sha256": "f9b3334ace6cc99405aabaff49b0ef0c2b2f831a08b6a421f071238c11a6fa64",
+        "rows": 7607,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_16.parquet",
+        "bytes": 480129,
+        "sha256": "2d4b57fe8e043316f08ccb0f74f6d7b56eecf873691538c8fcc133916e1c408c",
+        "rows": 13922,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_17.parquet",
+        "bytes": 620294,
+        "sha256": "a023d6a9902592fe1d87c5872707a893218c4d944769717b5f64e375643806a5",
+        "rows": 17221,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_18.parquet",
+        "bytes": 1406344,
+        "sha256": "a09723eddfef28337f5ddf4ec7e6788a8e8441bfcf1103d8a37c2bccf5945259",
+        "rows": 39909,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_19.parquet",
+        "bytes": 508342,
+        "sha256": "4300ec767f92e6efa232db787f10fb337a6faa219a0ad187649b2a9b1f221d69",
+        "rows": 14341,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_20.parquet",
+        "bytes": 406015,
+        "sha256": "fb648f3e3ae32014af55f07b09da39a10e2439725fb70d4ee19b8e7a7eacdb97",
+        "rows": 11219,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_21.parquet",
+        "bytes": 469945,
+        "sha256": "461ec1c65761345ae447f229ee1ef91b8eafaf7615949323f04b952808b37050",
+        "rows": 13304,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_22.parquet",
+        "bytes": 247239,
+        "sha256": "8552a08b722ad0315a42057dfdf24f21c0965330df1d55e537620e6629e886b0",
+        "rows": 6974,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_23.parquet",
+        "bytes": 246764,
+        "sha256": "cfb197cab0ce48edbef8d60d24d306b08e1ffc78852d6fc10c9a0942d7685b33",
+        "rows": 6905,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_aggtrades_preroll.parquet",
+        "bytes": 118423,
+        "sha256": "10bd1d579d6665ce6eadd6275f6d953f6e9bd1a9858671a434e4871b265a1ddf",
+        "rows": 3252,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_klines_5m.parquet",
+        "bytes": 25917,
+        "sha256": "65b8421f0508027118b187dcb4d8eac839e6b6ce10a8e512f2905add027793a4",
+        "rows": 288,
+        "compression": "zstd"
+      },
+      {
+        "path": "normalized/spot_klines_5m_preroll.parquet",
+        "bytes": 7370,
+        "sha256": "796cf16a32d7b466391962f9df12df043756ed736c7880fba7e4d2ec0fa604d3",
+        "rows": 3,
+        "compression": "zstd"
+      }
+    ],
+    "validation": [
+      {
+        "path": "validation/normalize_trades_report.json",
+        "bytes": 1948,
+        "sha256": "80c0cc5dfeb15ee1cfc74064a750abca7f5f4a76bc1b5d7f94d77aab2c37c884"
+      },
+      {
+        "path": "validation/perp_depth20_recon_stats.json",
+        "bytes": 868,
+        "sha256": "d93e2a54cfbe4eec3f43b96c6a802d1542b83afebd8facc5ce2de59e5127eb3e"
+      },
+      {
+        "path": "validation/validation.json",
+        "bytes": 5525,
+        "sha256": "d2d340ad6c4bf000221910b1d1a44e5d6e654207d3790cb7a67d70a5e69c3263"
+      }
+    ],
+    "scripts": [
+      {
+        "path": "scripts/download_raw.sh",
+        "bytes": 1646,
+        "sha256": "8bd8e45ad3845ab02a5f846bf6fb887b0a5003cd3dec6e4449208a5745881a9e"
+      },
+      {
+        "path": "scripts/make_manifest.py",
+        "bytes": 5391,
+        "sha256": "b17e2038583a033d36b776e253939a813b0c1cadd4606466d1f3b33e048e1d51"
+      },
+      {
+        "path": "scripts/normalize_trades_klines.py",
+        "bytes": 7251,
+        "sha256": "e3bdff90cef48a99d37d06586a12e11d1d4e2682fad086dd2918697e3add4de7"
+      },
+      {
+        "path": "scripts/package.sh",
+        "bytes": 1312,
+        "sha256": "a7979cf1242c6ef3ff545db235f9cac407de0f8a5c08a0d628d4ff2bb64c39f8"
+      },
+      {
+        "path": "scripts/reconstruct_perp_depth20.py",
+        "bytes": 6741,
+        "sha256": "1e2f38d704d791fb9d41cf51cb1159bc73b5219d4ae4e13c9d0a281d8ce268da"
+      },
+      {
+        "path": "scripts/validate.py",
+        "bytes": 8682,
+        "sha256": "3c1699b2f862a2c03248b88abf76be5008cba96422cad873552ed457e2a27582"
+      }
+    ]
+  },
+  "totals": {
+    "raw": {
+      "files": 9,
+      "bytes": 514250660
+    },
+    "normalized": {
+      "files": 100,
+      "bytes": 116928937
+    },
+    "validation": {
+      "files": 3,
+      "bytes": 8341
+    },
+    "scripts": {
+      "files": 6,
+      "bytes": 31023
+    }
+  }
+}

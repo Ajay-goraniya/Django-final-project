@@ -1,0 +1,65 @@
+WHERE THE MONEY GOES - live Zurich, 369 candles (30.7 h), build 12.11.3/12.12.1
+
+  candles the MODEL calls (backtest, frozen, shipped rule, week 2)   54%
+  candles we place an order on                                       35% (129 of 369)
+  candles we actually FILL                                           23% (84)
+
+  orders 209 -> FILLED 84 (40%) / REJECTED 124 (59%)
+  every single rejection is the same venue error:
+     RequestRejectedError: no orders found to match wit 124
+
+  the trades we DO get are priced correctly - this is the part that is NOT broken:
+     live EF fills graded on venues.outcome: n=62, hit 48.4%, median ask 0.420
+     backtest, same model, ask bucket 0.35-0.45:  n=412, hit 48.5%
+     -> our fills hit exactly what the backtest says trades at that price hit.
+     fill price minus the ask at submit: median +0.0000 over the measurable fills.
+
+  so the loss is NOT price slippage and NOT the signal. It is volume:
+     54% called -> 35% ordered -> 23% filled.
+
+  and the blocked decisions have one dominant cause:
+     Waiting for fresh UP and DOWN books                  1228
+     Warming up: 10 minutes of spot / 60 seconds of perpe 67
+     outside decision window (15-240 s), at 10 s          24
+     EV at padded price: price fails model EV             23
+
+WHAT I TRIED AND WILL NOT SHIP (tested today, both weeks).
+The recalibrated model (R-26 arm b, identical coefficients, 152-knot isotonic) looked like the one real win:
+on week 2 it is better than frozen at every slippage level, 8/9 positive days against 7/9 falling to 6/9.
+I built it as a drop-in - learner/v12_2/model_v10_recal.json, one field group changed from the shipped artifact -
+and then ran it on WEEK 1, where it LOSES to frozen at every level: +135.79 against +142.93 at 0 cents,
+7/8 positive days against 8/8, on the identical 475 fires. Better one week, worse the other, same direction call.
+That is the rain-or-sun test and it fails it. Not shipping. The file stays in the tree as a tested artifact, unused.
+
+THE ONE DEFECT WORTH FIXING, and it is not in the model.
+124 of 209 live orders - 59% - die on a single venue error, "no orders found to match". That is a marketable
+order arriving at a price the resting book no longer has. It is one cause, not variance, and it is the whole
+difference between filling 23% of candles and filling the 35% we already try for. The trades we win are already
+priced right; we simply do not get most of them. Second, 1,228 decisions were blocked by "Waiting for fresh UP and
+DOWN books" - Mumbai's Task 111 measured that same bar refusing 24.7% of seconds where the venue WAS quoting both
+sides, purely because no delta had arrived for 5 s.
+Neither is a signal problem, and no amount of retraining touches either.
+
+CORRECTION TO THE LINE ABOVE, made before acting on it. "59% of orders die on one venue error" counts ATTEMPTS,
+not candles, and it is misleading. The retry apparatus works: the attempt histogram is {1: 164, 2: 37, 3: 8}, and
+of the 57 candles that needed more than one attempt, 44 went on to fill. **At the candle level we fill 84 of 129
+attempted = 65%,** not 40%. I had the denominator wrong.
+
+WHAT THE 45 UNFILLED CANDLES ACTUALLY ARE, checked in the journal rather than assumed. 42 of 45 stop at attempt 1
+with a median 1,977 ms of budget still unspent - so they did NOT run out of time. The retry fires, re-reads the
+book, and the re-plan then refuses: `order_plan` raises on the moved price and the lane releases rather than
+chasing. That is the EV guard doing its job. Paying up to follow a book that has moved away is exactly the trade
+the guard exists to decline, and "fix the rejections" would mean buying worse prices on purpose.
+**So there is no execution bug here to fix. I proposed one on a bad denominator.**
+
+WHERE THE ACTUAL GAP IS, and it is upstream of the order. The model calls 54% of candles; we place an order on
+35%. The missing ~19 points are decisions that never reach the executor at all, and one reason dominates:
+**1,228 decide rows blocked by "Waiting for fresh UP and DOWN books"** against 23 blocked by EV and 67 by warm-up.
+Mumbai's Task 111 measured that same bar from the other side: of the seconds it refuses, the venue was quoting
+BOTH sides on 87.3%, and the refusals are entirely the age test - 244 of 987 both-sided seconds (24.7%) blocked
+solely because no delta had arrived for 5 s or more, with zero attributable to one-sided books or delta handling.
+
+THAT is the candidate, and it is a THRESHOLD, so it does not move on an argument. It moves on a grid against real
+outcomes, both arms, every cell, or not at all. The data needed is per-second book age joined to what the trade
+would have settled at - Mumbai has the raw stream and the outcome table; the feature parquets carry no age column,
+so this cannot be gridded from here.

@@ -1,0 +1,3 @@
+accuracy-regime only               trades  422 (53/day)  acc 81.8%  $10 flat $+498 t=4.33  | your staking $50 -> $1538  maxDD $341  days+ 7/8
+pnl-mode only (EV>=0.20)           trades  498 (62/day)  acc 59.4%  $10 flat $+1041 t=4.46  | your staking $50 -> $4109  maxDD $486  days+ 8/8
+HYBRID: accuracy first, else pnl   trades  755 (94/day)  acc 68.6%  $10 flat $+764 t=3.36  | your staking $50 -> $2516  maxDD $1040  days+ 6/8
