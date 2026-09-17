@@ -1026,6 +1026,12 @@ its own halves it is a NEW hypothesis, not a rescue. It cleared. Holding to that
 - (09-16 18:4x: +0, n=347 unchanged — and the reason is snapshot lag, not a stall. The 18:23
   push carries venues.q to 17:25 and build11.candles to 17:20, about an hour behind the live
   engines, so a 2-hourly check will sometimes find nothing new. Clock verified, no drift.)
+- (09-17 02:4x: +24 candles, +0 fires, n=347 unchanged, −0.081/fire, halves −0.072 / −0.090.
+  **FOURTH consecutive check with no new venue rows, and it is now a blocker, not noise.**
+  `venues.sqlite3.gz` has been byte-frozen at the 09-16 18:23 push and `zurich_2.sqlite3.gz` at
+  09:11 across all four checks, so the ledger has read nothing past 17:25 on 09-16 — about nine
+  hours. Klines are current (paths to 09-17 02:40); the missing side is the venue snapshot, which
+  only V/Mumbai can refresh. Raised to V. Verdict REFUTED stands and is unaffected either way.)
 - (09-17 00:4x: +25 candles, +0 fires, n=347 unchanged, −0.081/fire, halves −0.072 / −0.090.
   Third consecutive check with no new fires. `venues.sqlite3.gz` is still the 09-16 18:23 push and
   `zurich_2.sqlite3.gz` still the 09:11 one, so the ledger has had no fresh venue rows to read
