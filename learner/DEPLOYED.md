@@ -691,3 +691,12 @@ adapter has no signing, order or wallet surface (asserted on the parsed AST).
 Not yet proven: model_v10's `p_venue`/`lv` were trained on **Polymarket** prices. R-31b is measuring whether
 Predict's price is the same forecast; if it is not, the venue input needs a re-fit before any of this is worth
 running. Tests 377 → 403; SHA256SUMS 31 → 33.
+
+## 12.17.0 PAPER (Zurich box) — written by the Zurich session
+
+Started 2026-09-21 14:12:35 UTC on the Zurich box, `/home/ubuntu/pm_paper_zurich`, **PID 137569**, argv `.venv/bin/python -u btc_model_v12_polymarket.py --mode pnl --capital 50 --host 0.0.0.0 --port 8787 --db polymarket_v12_zurich_paper1.sqlite3 --quote-age-ms 2000` — **no `--live`**. Owner via V, 14:1x: "Run eu central on paper please, it's live with master off."
+
+Predecessor: the LIVE process PID 104148 (12.17.0, db `polymarket_v12_live_zurich_3.sqlite3`, up since 09-16 23:35:01) stopped 14:12:34 at a clean point — open_value 0.00, 0 in-flight/UNKNOWN, 0 filled-ungraded. Its final state: 402 orders, 164 results, master false, ef true, rev false, **cash 1.65**. That journal is closed and untouched as the record.
+Paper environment proven from the engine's own API, not inferred: `/api/state` lane **PAPER**, `book.environment` **paper**, `api_key_configured` **False**; meta.lane "PAPER"; banner `Polymarket v12.17.0 PAPER`. The child process was started with the four Polymarket/Relayer credentials **removed from its environment** — only `DASHBOARD_PASSWORD` was passed — so this process cannot reach the venue with credentials even in principle.
+Flags set through the audited control path after start: EF true, REVERSAL true, MAIN false, master **true** (paper), stake `streak` fixed 5.0 / percent 5.0 / current 3.0 / min 3 / max 50, next_stake 3.0. `ef_cash_floor` left **unset** (paper, per the brief).
+First decision row 14:12:35. `[LANE SEED] 0 closed candles from the journal; COLD - volume_ratio is noise until 24 more` — the fresh db carries no candle history, so MAIN/REVERSAL volume_ratio is noise for the first ~2 h; EF is unaffected.
