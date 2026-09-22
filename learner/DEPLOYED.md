@@ -936,6 +936,12 @@ first byte 0.041-0.059 (p50 ~0.049). Zurich for comparison: connect 0.0018, TLS 
 from London is ~15 ms vs ~40 ms from Zurich; the venue's own POST processing (~180 ms seen from Zurich) is the number the
 SHADOW run's keepalive_ms and, later, live orders will show. Engine start (SHADOW, master OFF, dashboard 0.0.0.0:8787
 behind DASHBOARD_PASSWORD) pending the London session's start at 21:0x.
+**21:13 UTC - London box UNUSABLE for Polymarket.** Two boot exits: (1) 21:09 `poly_dashboard.py:45` DASHBOARD_PASSWORD 10 chars
+(<12) - owner fixed to 16; (2) 21:13 `btc_model_v12_polymarket.py:1287` 'Venue geographic eligibility check did not pass':
+`polymarket.com/api/geoblock` -> blocked:true, ip 13.40.72.11, country GB, region ENG. Polymarket blocks the UK. The check is a
+hard eligibility gate and is NOT to be bypassed. Nothing ran, no orders, no dashboard. Zurich (CH, eu-central-2) stays the only
+live-credentialed box. Owner to pick a permitted region near eu-west-2 (Ireland eu-west-1 or Frankfurt eu-central-1, ~10-15 ms
+to London; France/Belgium are blocked) or ask Polymarket whether its whitelist covers the geoblock endpoint.
 | 12.21.4 | 5ac70b2 | 2026-09-22 15:50:35 UTC | eu-central-2 (Zurich) | 37/37 == git show, test_master_lane 14 OK | pid 149446, live4 db, master OFF (SHADOW) | combined real 0 / shadow 5, shadow_pnl -7.352842941176469 == sum(results.shadow_pnl); :559 fixed | written by the Zurich session |
 | 12.22.0 | 3357a90 | 2026-09-22 19:05:54 UTC | eu-central-2 (Zurich) | 39/39 == git show, test_ef+test_master_lane 30 OK | pid 150792, live4 db, master OFF (SHADOW) | ef_engine None->build11 audited 19:05:54; ef_monitor 'EF engine build11 (lane)', lanes.ef.enabled true, line_open 86449.27 | written by the Zurich session |
 | 12.23.0 | e34549d | 2026-09-22 19:30:23 UTC | eu-central-2 (Zurich) | 39/39 == git show, test_ef+test_master_lane 34 OK | pid 151129, live4 db, master OFF (SHADOW) | micro_source PERP, memory_ready true, perp_ticks_32s 629->2021, depth_rows 83->89, tape1s 0.98 rows/s; ef_engine build11 carried in meta | written by the Zurich session |
