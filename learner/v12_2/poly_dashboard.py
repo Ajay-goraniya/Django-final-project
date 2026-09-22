@@ -56,6 +56,16 @@ class Dashboard:
         now=dt.datetime.now(LONDON); start=now.replace(hour=12,minute=0,second=0,microsecond=0)
         if now<start: start-=dt.timedelta(days=1)
         return start,start+dt.timedelta(days=1)
+    def lane_label(self):
+        """LIVE = credentials and master ON; SHADOW = credentials, master OFF (paper fills in the
+        live journal); PAPER = no credentials on this process, where master has no effect (12.21.0)."""
+        if not self.r.a.live: return 'PAPER'
+        return 'LIVE' if self.db.get('master',False) else 'SHADOW'
+    def _shadow(self,r):
+        """Was this row's money real? By the order's lane when the row carries one (12.21.0)."""
+        try: l=r['lane']
+        except Exception: l=None
+        return (l!='LIVE') if l else (not self.r.a.live)
     def settlement(self,f=None):
         """The line the venue settles on (12.20.0) - Chainlink BTC/USD 60 s TWAP at close vs at the
         open - as the engine sees it now. Plain numbers, None where a window is not covered."""
@@ -90,7 +100,10 @@ class Dashboard:
         return False
     def allowed(self,kind='EF'):
         key={'MAIN':'main_enabled','REVERSAL':'reversal_enabled','EF':'ef_enabled'}.get(kind,'ef_enabled')
-        return self.db.get('master',False) and self.db.get(key,True) and not self.db.get('halt') and not self.daily()['halted'] and not self.banned(kind) and not (self.db.get('sx_enabled') and time.time()<self.db.get('sx_until',0))
+        # 12.21.0: master no longer gates the fire - it picks the broker (Executor.route): OFF =
+        # shadow paper fills, ON = the venue. The lane switch, halt, daily limits, bans and the
+        # cash floor still stop both.
+        return bool(self.db.get(key,True)) and not self.db.get('halt') and not self.daily()['halted'] and not self.banned(kind) and not (self.db.get('sx_enabled') and time.time()<self.db.get('sx_until',0))
     def feed_state(self):
         """Both feed numbers, plus which streams are unusable and why.
 
@@ -277,7 +290,7 @@ class Dashboard:
           # floor rendered as "LIVE - MASTER ON".
           ef_cash_floor=self.db.get('ef_cash_floor'),
           daily_stopped=bool((self.daily() or {}).get('halted')),
-          daily_limits=self.daily(),shared_stake=self.db.get('stake_settings'),shared_next_stake=self.db.get('next_stake',1),win_streak=w,loss_streak=l,rules=self.db.get('rules'),lane='LIVE' if self.r.a.live else 'PAPER')
+          daily_limits=self.daily(),shared_stake=self.db.get('stake_settings'),shared_next_stake=self.db.get('next_stake',1),win_streak=w,loss_streak=l,rules=self.db.get('rules'),lane=self.lane_label())
     def apply(self,path,p):
         if p.get('confirmed') is not True: raise ValueError('Confirmation required')
         with self.db.lock:
@@ -453,7 +466,7 @@ class Dashboard:
             p=json.loads(r['plan']); d=json.loads(r['decision']); price=r['spent']/r['shares'] if r['shares'] else None
             timing=json.loads(r['timing_json'] or '{}') if 'timing_json' in r.keys() else {}
             err=json.loads(r['error_json'] or 'null') if 'error_json' in r.keys() else None
-            out.append(dict(utc=dt.datetime.fromtimestamp(r['ts'],LONDON).isoformat(),candle_id=r['epoch']*1000,seconds_into_candle=d.get('sec'),direction=r['side'],kind=(r['kind'] if 'kind' in r.keys() else None) or 'EF',ef_attempt_seq=r['attempt'],signal_price=d.get('signal_price'),quoted_price=p.get('signal_quote',p['quote']),pre_submit_quote=p.get('pre_submit_quote',p['quote']),price_cap=p.get('cap'),fill_price=price,shares=r['shares'],delay_ms=timing.get('total_attempt_ms',r['latency']),last_attempt_ms=r['latency'],book_age_ms=p['age_ms'],fee_collateral=r['fees'],market_id=r['condition_id'],order_id=r['id'],status=r['status'],filled=bool(r['shares']),failure_reason=r['reason'],error=err,timing=timing,request_reached=(err.get('request_reached') if isinstance(err,dict) and 'request_reached' in err else (bool(r['request_reached']) if 'request_reached' in r.keys() else None)),stake=(r['spent'] or 0)+(r['fees'] or 0) if r['shares'] else p['budget'],pnl=r['pnl'],correct=r['pnl']>0 if r['pnl'] is not None else None,financial_is_shadow=not self.r.a.live,quote_to_fill=(price-p.get('signal_quote',p['quote'])) if price is not None else None,ask_to_fill=(price-p.get('pre_submit_quote',p['quote'])) if price is not None else None,cap_to_fill=((p.get('cap')-price) if (price is not None and p.get('cap') is not None) else None)))
+            out.append(dict(utc=dt.datetime.fromtimestamp(r['ts'],LONDON).isoformat(),candle_id=r['epoch']*1000,seconds_into_candle=d.get('sec'),direction=r['side'],kind=(r['kind'] if 'kind' in r.keys() else None) or 'EF',ef_attempt_seq=r['attempt'],signal_price=d.get('signal_price'),quoted_price=p.get('signal_quote',p['quote']),pre_submit_quote=p.get('pre_submit_quote',p['quote']),price_cap=p.get('cap'),fill_price=price,shares=r['shares'],delay_ms=timing.get('total_attempt_ms',r['latency']),last_attempt_ms=r['latency'],book_age_ms=p['age_ms'],fee_collateral=r['fees'],market_id=r['condition_id'],order_id=r['id'],status=r['status'],filled=bool(r['shares']),failure_reason=r['reason'],error=err,timing=timing,request_reached=(err.get('request_reached') if isinstance(err,dict) and 'request_reached' in err else (bool(r['request_reached']) if 'request_reached' in r.keys() else None)),stake=(r['spent'] or 0)+(r['fees'] or 0) if r['shares'] else p['budget'],pnl=r['pnl'],correct=r['pnl']>0 if r['pnl'] is not None else None,financial_is_shadow=self._shadow(r),quote_to_fill=(price-p.get('signal_quote',p['quote'])) if price is not None else None,ask_to_fill=(price-p.get('pre_submit_quote',p['quote'])) if price is not None else None,cap_to_fill=((p.get('cap')-price) if (price is not None and p.get('cap') is not None) else None)))
         return dict(rows=out,total=self.db.sql("SELECT count(*) FROM orders WHERE coalesce(kind,'EF')=?",(kind,))[0][0],offset=offset)
     def history(self,offset,limit):
         """Settled candles, split by lane.
@@ -492,7 +505,7 @@ class Dashboard:
                     fill_price=(r['spent']/shares if shares else None),stake=cost,pnl=pnl,
                     correct=(pnl>0 if pnl is not None else None),
                     financial_result=(None if pnl is None else 'WIN' if pnl>0 else 'LOSS' if pnl<0 else 'FLAT'),
-                    financial_is_shadow=not self.r.a.live)
+                    financial_is_shadow=self._shadow(r))
             result='WIN' if total>0 else 'LOSS' if total<0 else 'FLAT'
             rows.append(dict(candle_id=ep*1000,actual=actual,main=lanes.get('MAIN',{}),
                 reversal=lanes.get('REVERSAL',{}),ef=lanes.get('EF',{}),lanes=sorted(lanes),
@@ -515,7 +528,7 @@ class Dashboard:
         candles=[dict(time=r['epoch']*1000,open=r['open'],high=r['high'],low=r['low'],close=r['close'],volume=r['volume']) for r in reversed(self.db.sql('SELECT * FROM candles ORDER BY epoch DESC LIMIT 500'))]
         markers=[]
         for r in self.db.sql('SELECT * FROM signals ORDER BY epoch DESC LIMIT 500'):
-            d=json.loads(r['decision']); markers.append(dict(candle_id=r['epoch']*1000,ts_ms=int(r['ts']*1000),time=r['epoch']*1000,kind=(r['kind'] if 'kind' in r.keys() else None) or 'EF',direction=r['side'],price=d.get('signal_price'),financial_is_shadow=not self.r.a.live))
+            d=json.loads(r['decision']); markers.append(dict(candle_id=r['epoch']*1000,ts_ms=int(r['ts']*1000),time=r['epoch']*1000,kind=(r['kind'] if 'kind' in r.keys() else None) or 'EF',direction=r['side'],price=d.get('signal_price'),financial_is_shadow=self._shadow(r)))
         return dict(candles=candles,markers=markers,history=[],revision=self.r.revision)
     def snapshot(self):
         if self.cache is not None and time.monotonic()-self.cache_at<.5: return self.cache
@@ -538,9 +551,10 @@ class Dashboard:
         # per-epoch net. Same real/shadow labelling as the combined card.
         lm=self.db.lane_metrics()
         def lane_metric(kind):
-            m=lm.get(kind) or dict(n=0,wins=0,losses=0,pnl=0.,accuracy=None)
-            return dict(accuracy=m['accuracy'],wins=m['wins'],losses=m['losses'],real=(m['n'] if r.a.live else 0),shadow=(0 if r.a.live else m['n']),
-                        basis='LOCAL_FROM_FILLS',local_pnl=m['pnl'])
+            m=lm.get(kind) or dict(real=dict(n=0,wins=0,losses=0,pnl=0.,accuracy=None),shadow=dict(n=0,wins=0,losses=0,pnl=0.,accuracy=None))
+            real,shadow=m['real'],m['shadow']; h=real if real['n'] else shadow      # headline: venue fills when there are any
+            return dict(accuracy=h['accuracy'],wins=h['wins'],losses=h['losses'],real=real['n'],shadow=shadow['n'],
+                        basis='LOCAL_FROM_FILLS',local_pnl=h['pnl'],real_pnl=real['pnl'],shadow_pnl=shadow['pnl'])
         metric=dict(accuracy=shown['accuracy'],wins=shown['wins'],losses=shown['losses'],
                     real=shown['n'] if r.a.live else 0,shadow=0 if r.a.live else shown['n'],
                     basis=('VENUE_POSITION_PNL' if live_venue else 'LOCAL_FROM_FILLS'),
@@ -573,7 +587,7 @@ class Dashboard:
                         venue_fees_paid=vt.get('fees_paid'),account_pnl=vt.get('account_pnl'),
                         venue_age_sec=(time.time()-vt['ts']) if vt.get('ts') else None,
                         pnl_basis=('VENUE_POSITION_PNL' if live_venue else 'LOCAL_FROM_FILLS'),
-                        local_vs_venue=divergence)),trades=self.pnl(),rolling=self.db.rolling(),latency=r.executor.latency_stats(),chart_revision=r.revision,error=r.error,dashboard_errors=list(getattr(self,'errors',[])),lane='LIVE' if r.a.live else 'PAPER',model_hash=r.hash,fee_basis=r.broker.basis,halt=self.db.get('halt'))
+                        local_vs_venue=divergence)),trades=self.pnl(),rolling=self.db.rolling(),latency=r.executor.latency_stats(),chart_revision=r.revision,error=r.error,dashboard_errors=list(getattr(self,'errors',[])),lane=self.lane_label(),model_hash=r.hash,fee_basis=r.broker.basis,halt=self.db.get('halt'))
         self.cache_at=time.monotonic(); return self.cache
     def page(self,name):
         # The build shown to the operator is READ FROM THE JOURNAL, never
@@ -615,7 +629,7 @@ class Dashboard:
                         rows=[dict(r) for r in ui.db.sql('''SELECT s.*,r.actual,r.pnl,r.payout,r.claim_status,(SELECT json_group_array(json_object('id',o.id,'attempt',o.attempt,'status',o.status,'plan',json(o.plan),'latency_ms',o.latency,'reason',o.reason)) FROM orders o WHERE o.epoch=s.epoch AND coalesce(o.kind,'EF')=coalesce(s.kind,'EF')) order_attempts,(SELECT json_group_array(json_object('id',f.id,'order_id',f.order_id,'shares',f.shares,'spent',f.spent,'fees',f.fees,'price',f.price,'basis',f.basis)) FROM fills f JOIN orders o2 ON o2.id=f.order_id WHERE f.epoch=s.epoch AND coalesce(o2.kind,'EF')=coalesce(s.kind,'EF')) fills FROM signals s LEFT JOIN results r USING(epoch) ORDER BY epoch''')]
                         b=io.StringIO(); fields=['model','lane']+list(rows[0]) if rows else ['model','lane','epoch','pnl']
                         w=csv.DictWriter(b,fieldnames=fields); w.writeheader()
-                        for row in rows: w.writerow(dict(model='v12_polymarket_v10',lane='LIVE' if ui.r.a.live else 'PAPER',**row))
+                        for row in rows: w.writerow(dict(model='v12_polymarket_v10',lane=ui.lane_label(),**row))
                         self.send(b.getvalue(),'text/csv; charset=utf-8')
                     else: self.send({'error':'Not found'},status=404)
                 except (ValueError,TypeError) as e:

@@ -807,3 +807,25 @@ Verified: `sha256sum -c SHA256SUMS.txt` **36/36**, every file byte-equal to `git
 `metrics.main` and `metrics.reversal` are no longer empty: **main** accuracy 0.875, wins 7, losses 1, real 0, shadow 8, basis LOCAL_FROM_FILLS, local_pnl +4.7213. **reversal** accuracy 0.25, wins 1, losses 3, real 0, shadow 4, basis LOCAL_FROM_FILLS, local_pnl −7.0669. `metrics` key set is now `combined, ef, main, reversal`.
 
 **12.19.0 window, closed early by this deploy.** 12.19.0 ran 11:40:38 → 12:00:54, **20 minutes, not the planned 60** — this deploy ended it. `latency_breakdown --since 1790077238` was captured from a `backup()` snapshot before the restart so the data was not lost, but it is **n=3 and unreadable**: orders with timing 3, all FILLED, decision_ms p50 0.4, sign_ms p50 0.1, fire_to_submit_ms p50 0.7, submit_ms p50 0.1, total_attempt_ms p50 1.0, book_age_ms p50 14.0, signal.ts→order.ts p50 1 ms, by attempt {1: (3,3)}. Those sub-millisecond submit figures are the PaperBroker's in-process fill, not a venue round trip, so they are not comparable to the live journals' submit_ms p50 ≈ 255 ms. A real 12.19.0 latency read needs either a dedicated 60-minute soak without an intervening deploy, or a live run.
+ 12.21.0 (09-22 12:xx UTC) - master OFF = shadow paper, master ON = live, one process
+
+Why: owner, 09-22 12:5x: "when master off it's paper and when master onn it's live, we don't have to set paper or live from
+terminal or anything, if master off it's paper and if master onn it's live it's that simple bro". Until now a process was
+paper OR live by the `--live` flag, and master OFF meant no orders at all - so a live box with master off produced nothing
+to grade, and the "real N · shadow M" labels on the cards were fixed by the flag, never by what the money did.
+Change:
+- A process started with `--live` (credentials) carries BOTH brokers. `Executor.route()`: master OFF -> the paper broker,
+  order lane 'PAPER' (shadow fills in the same journal); master ON -> the venue, lane 'LIVE'. `orders.lane` is new
+  (additive); old rows read as the journal's lane. `reconcile` and `fill` use the broker of the order's lane.
+- `Dashboard.allowed(kind)` no longer requires master: the lane switch, halt, daily limits, bans and the cash floor still
+  stop both lanes. Master is the ROUTE. A process without credentials ignores master (label PAPER, all fills paper).
+- `Journal.grade`: `results.pnl/payout` = the journal's own lane (LIVE on a live process), `results.shadow_pnl/shadow_payout`
+  = the paper broker's fills on the same candle. `metrics()`, the pnl curve, sizing and the cash floor stay on the venue
+  lane. `lane_metrics()` returns real/shadow blocks per lane; the cards read them (headline = venue fills when any).
+- `reserve_detail` counts only the journal's lane (a shadow order never holds venue reserve). `_main_oneshot_check`
+  counts LIVE MAIN fills only. `min_topup` is set per order from its lane (shadow may top up to 5 shares, live never).
+- Header label: LIVE (creds + master ON) · SHADOW (creds, master OFF) · PAPER (no creds). Export rows' `financial_is_shadow`
+  follow the order's lane.
+Startup is unchanged: a live process still boots with master OFF, i.e. SHADOW, and the owner arms it from Trade Controls.
+Tests: `test_master_lane.py` +10; two master-gate pins in `test_polymarket` re-pinned to routing. Green: 167 + 270 = 437.
+SHA256SUMS 36 -> 37. Rollout: Zurich PAPER (no creds: behaviour identical, master ignored), then London with credentials.

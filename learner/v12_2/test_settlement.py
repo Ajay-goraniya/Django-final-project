@@ -47,7 +47,7 @@ class LaneMetrics(unittest.TestCase):
             for kind, side, oid in (('MAIN', 'UP', 'o1'), ('REVERSAL', 'DOWN', 'o2'), ('EF', 'DOWN', 'o3')):
                 db.reserve(ep, {'side': side}, 'tok', 'c', kind); db.order(oid, ep, 1, {'cap': .5}, {}, kind)
                 db.fill(oid, ep, 'f' + oid, dict(shares=10., spent=4., fees=.1, price=.4), 'PAPER'); db.order_status(oid, 'FILLED'); db.status(ep, 'FILLED', kind)
-            db.grade(ep, 'DOWN'); m = db.lane_metrics()
+            db.grade(ep, 'DOWN'); m = {k: v['shadow'] for k, v in db.lane_metrics().items()}   # a paper journal: everything is shadow
             self.assertEqual((m['MAIN']['wins'], m['MAIN']['losses']), (0, 1)); self.assertAlmostEqual(m['MAIN']['pnl'], -4.1)
             self.assertEqual((m['REVERSAL']['wins'], m['EF']['wins']), (1, 1)); self.assertAlmostEqual(m['EF']['pnl'], 10 - 4.1)
             self.assertAlmostEqual(db.metrics()['pnl'], -4.1 + 5.9 + 5.9, places=6)    # the per-epoch net, once

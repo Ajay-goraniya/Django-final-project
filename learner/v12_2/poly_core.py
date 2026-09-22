@@ -411,6 +411,11 @@ class Journal:
         self._add_columns('fills',{'fee_basis':'TEXT','fee_rate_bps':'REAL'})
         self._add_columns('signals',{'kind':"TEXT DEFAULT 'EF'"})
         self._add_columns('orders',{'kind':"TEXT DEFAULT 'EF'"})
+        # 12.21.0: every order names the lane it went to. On a process with live credentials,
+        # master OFF sends orders to the paper broker ('PAPER', shadow) and master ON to the
+        # venue ('LIVE'); results carry the venue pnl in pnl/payout and the shadow pnl beside it.
+        self._add_columns('orders',{'lane':'TEXT'}); self._add_columns('results',{'shadow_payout':'REAL','shadow_pnl':'REAL'})
+        self.lane=lane
         self._migrate_signals_multilane()
         # After the multilane rebuild, not before: that rebuild recreates the
         # table from an explicit column list and would drop anything added
@@ -426,10 +431,10 @@ class Journal:
         self.c.executescript('CREATE INDEX IF NOT EXISTS diagnostics_ts ON diagnostics(ts);')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.20.0')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.21.0')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1','12.12.2','12.13.0','12.13.1','12.14.0','12.14.1','12.15.0','12.15.1','12.15.2','12.15.3','12.15.4','12.15.5','12.16.0','12.16.1','12.17.0','12.18.0','12.19.0','12.19.1','12.20.0'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1','12.12.2','12.13.0','12.13.1','12.14.0','12.14.1','12.15.0','12.15.1','12.15.2','12.15.3','12.15.4','12.15.5','12.16.0','12.16.1','12.17.0','12.18.0','12.19.0','12.19.1','12.20.0','12.21.0'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -582,9 +587,9 @@ class Journal:
             self.c.execute('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(dict(
                 reason='candle_rearmed',kind=kind,after=status,attempt=n))))
         return True
-    def order(self,oid,ep,n,plan,timing=None,kind='EF'):
-        self.sql('''INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,reason,timing_json,request_reached,reconcile_count,venue_live,kind)
-                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)''',(oid,ep,n,'SUBMITTING',json.dumps(plan),time.time(),None,None,json.dumps(timing or {}),0,0,0,kind))
+    def order(self,oid,ep,n,plan,timing=None,kind='EF',lane=None):
+        self.sql('''INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,reason,timing_json,request_reached,reconcile_count,venue_live,kind,lane)
+                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',(oid,ep,n,'SUBMITTING',json.dumps(plan),time.time(),None,None,json.dumps(timing or {}),0,0,0,kind,lane or self.lane))
     def order_status(self,oid,status,reason=None,latency=None,*,error=None,timing=None,request_reached=None,venue_live=None):
         fields=['status=?','reason=?','latency=coalesce(?,latency)']; vals=[status,reason,latency]
         if error is not None: fields.append('error_json=?'); vals.append(json.dumps(error,ensure_ascii=False))
@@ -606,14 +611,19 @@ class Journal:
             # Each lane is graded on its own fills: MAIN and REVERSAL can hold
             # opposite sides of the same candle, so summing them together would
             # net a hedge into a single meaningless number.
-            rows=self.c.execute('''SELECT s.kind,s.side,sum(f.shares),sum(f.spent+f.fees)
+            rows=self.c.execute('''SELECT s.kind,s.side,sum(f.shares),sum(f.spent+f.fees),coalesce(o.lane,?) lane
                                    FROM signals s JOIN orders o ON o.epoch=s.epoch AND coalesce(o.kind,'EF')=s.kind
                                    JOIN fills f ON f.order_id=o.id
-                                   WHERE s.epoch=? GROUP BY s.kind,s.side''',(ep,)).fetchall()
+                                   WHERE s.epoch=? GROUP BY s.kind,s.side,coalesce(o.lane,?)''',(self.lane,ep,self.lane)).fetchall()
             if not rows: return
-            payout=sum((r[2] if r[1]==actual else 0) for r in rows)
-            staked=sum(r[3] for r in rows)
-            self.c.execute('INSERT OR IGNORE INTO results(epoch,actual,payout,pnl,ts) VALUES(?,?,?,?,?)',(ep,actual,payout,payout-staked,time.time()))
+            # 12.21.0: pnl/payout are this journal's own lane (LIVE on a live process); shadow_* are
+            # the paper broker's fills on the same candle. On a paper process both are the same fills.
+            def tot(lane):
+                R=[r for r in rows if r[4]==lane]
+                return sum((r[2] if r[1]==actual else 0) for r in R),sum(r[3] for r in R)
+            payout,staked=tot(self.lane); sp,ss=tot('PAPER')
+            self.c.execute('INSERT OR IGNORE INTO results(epoch,actual,payout,pnl,ts,shadow_payout,shadow_pnl) VALUES(?,?,?,?,?,?,?)',
+                           (ep,actual,payout,payout-staked,time.time(),sp,sp-ss))
     def venue_snapshot(self,truth):
         if not isinstance(truth,dict): return
         self.sql('INSERT OR REPLACE INTO venue_state VALUES(?,?,?,?,?,?,?,?)',(
@@ -677,17 +687,20 @@ class Journal:
         row per epoch (the net across lanes), so the dashboard's MAIN and REVERSAL cards, which were
         handed empty dicts, showed 0 W / 0 L forever while the lane traded (owner, 09-22 12:53 BST:
         "Why no shadow grading here??"). A lane's candle is a win when its side is the venue's actual."""
-        rows=self.sql('''SELECT s.kind kind,s.epoch epoch,s.side side,r.actual actual,sum(f.shares) sh,sum(f.spent+f.fees) cost
+        rows=self.sql('''SELECT s.kind kind,s.epoch epoch,s.side side,r.actual actual,sum(f.shares) sh,sum(f.spent+f.fees) cost,coalesce(o.lane,?) lane
                          FROM results r JOIN signals s USING(epoch)
                          JOIN orders o ON o.epoch=s.epoch AND coalesce(o.kind,'EF')=s.kind
                          JOIN fills f ON f.order_id=o.id
-                         WHERE r.actual IN ('UP','DOWN') GROUP BY s.kind,s.epoch''')
+                         WHERE r.actual IN ('UP','DOWN') GROUP BY s.kind,s.epoch,coalesce(o.lane,?)''',(self.lane,self.lane))
         out={}
         for r in rows:
-            m=out.setdefault(r['kind'] or 'EF',dict(n=0,wins=0,losses=0,pnl=0.))
+            # 12.21.0: real = fills the venue took (LIVE), shadow = the paper broker's (PAPER)
+            m=out.setdefault(r['kind'] or 'EF',dict(real=dict(n=0,wins=0,losses=0,pnl=0.),shadow=dict(n=0,wins=0,losses=0,pnl=0.)))
+            b=m['real'] if r['lane']=='LIVE' else m['shadow']
             pnl=((r['sh'] or 0.) if r['side']==r['actual'] else 0.)-(r['cost'] or 0.)
-            m['n']+=1; m['wins']+=int(pnl>0); m['losses']+=int(pnl<=0); m['pnl']+=pnl
-        for m in out.values(): m['accuracy']=(m['wins']/m['n'] if m['n'] else None)
+            b['n']+=1; b['wins']+=int(pnl>0); b['losses']+=int(pnl<=0); b['pnl']+=pnl
+        for m in out.values():
+            for b in (m['real'],m['shadow']): b['accuracy']=(b['wins']/b['n'] if b['n'] else None)
         return out
     def metrics(self):
         n,w,l,pnl=self.sql('SELECT count(*),coalesce(sum(pnl>0),0),coalesce(sum(pnl<0),0),coalesce(sum(pnl),0) FROM results')[0]
@@ -785,7 +798,7 @@ class Journal:
         rows=self.sql('''SELECT id,status,venue_live,coalesce(venue_absent,0) absent,venue_checked,ts,
                          coalesce(json_extract(plan,'$.budget'),0) budget,
                          (SELECT count(*) FROM fills f WHERE f.order_id=orders.id) fills
-                         FROM orders WHERE status IN ('SUBMITTING','UNKNOWN','PENDING')''')
+                         FROM orders WHERE status IN ('SUBMITTING','UNKNOWN','PENDING') AND coalesce(lane,?)=?''',(self.lane,self.lane))
         out=dict(confirmed=0.0,unverified=0.0,phantom=0.0,rows=len(rows),phantom_ids=[])
         for r in rows:
             b=float(r['budget'] or 0)
@@ -946,8 +959,13 @@ class Executor:
     # absence. Under this much budget left the attempt is not posted; the
     # candle is released as BUDGET (re-arms like DEADLINE) and the timing kept.
     POST_FLOOR_S=0.4
-    def __init__(self,db,books,broker,age=.75,pad=1,budget_s=2.0,post_timeout_s=1.2,attempts=4):
+    def __init__(self,db,books,broker,age=.75,pad=1,budget_s=2.0,post_timeout_s=1.2,attempts=4,shadow=None):
         self.db=db; self.books=books; self.broker=broker; self.age=age; self.pad=pad; self.band=False
+        # 12.21.0: with a shadow (paper) broker beside a live one, `master` picks the broker per
+        # fire: OFF -> shadow, lane 'PAPER'; ON -> broker, lane = the journal's ('LIVE'). Owner,
+        # 09-22: "if master off it's paper and if master on it's live it's that simple". Without a
+        # shadow (paper process, tests) the single broker is used whatever master says.
+        self.shadow=shadow
         # A venue that fills partially does not need the pre-send depth check.
         self.require_depth=getattr(broker,'all_or_nothing',True)
         self._stuck_reported=set()   # 12.8.11: (order id, reason head) already written as RECONCILE_STUCK
@@ -983,6 +1001,7 @@ class Executor:
     async def fire(self,ep,d,token,condition,stake,reassess,kind='EF'):
         if self.db.get('halt') or not self.db.reserve(ep,d,token,condition,kind): return
         fire_start=time.monotonic(); deadline=min(fire_start+self.budget_s,fire_start+ep+240-time.time()); seq=-1; ticked=None
+        broker,lane=self.route()
         for n in range(1,self.max_attempts+1):
             timing={'attempt':n,'signal_ts_ms':d.get('features',{}).get('ts_ms')}
             if ticked is not None: timing['retry_ticked']=ticked   # 12.19.0: did the book change before this re-price
@@ -1021,6 +1040,7 @@ class Executor:
             _tc=getattr(self.books,'tick_changes',{}).get(token)
             timing['since_tick_change_s']=(round(time.monotonic()-_tc['at'],2) if _tc else None)
             timing['last_tick_change']=(_tc.get('new') if _tc else None)
+            new=dict(new,min_topup=(lane!='LIVE'))   # 12.21.0: paper/shadow may top up to the venue minimum; live never
             try: plan=order_plan(q,_terms,stake,new,self.pad,band=self.band,require_depth=self.require_depth)
             except (ValueError,KeyError) as e:
                 # This one exit is 97% of everything EF loses before the network,
@@ -1037,7 +1057,7 @@ class Executor:
                     band=self.band,pad=self.pad,stake=stake)))); return
             timing['signal_quote']=float(d.get('ask',plan['quote'])) if d.get('ask') is not None else plan['quote']
             t=time.monotonic()
-            try: signed,oid=await asyncio.wait_for(self.broker.prepare(token,plan),max(.001,deadline-time.monotonic()))
+            try: signed,oid=await asyncio.wait_for(broker.prepare(token,plan),max(.001,deadline-time.monotonic()))
             except Exception as e:
                 info=error_info(e,phase='prepare',request_reached=False)
                 self.db.release(ep,'PREPARE_FAILED',kind); self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(dict(info,reason='prepare_failed',kind=kind))))
@@ -1083,12 +1103,12 @@ class Executor:
                 timing['submit_book']=dict(ask=sb.get('ask'),bid=sb.get('bid'),
                     size=(sb['asks'][0][1] if sb.get('asks') else None),
                     age_ms=sb.get('age_ms'),seq=sb.get('seq'),ts_ms=int(time.time()*1000))
-            t=time.monotonic(); self.db.order(oid,ep,n,plan,timing,kind); start=time.monotonic()
+            t=time.monotonic(); self.db.order(oid,ep,n,plan,timing,kind,lane); start=time.monotonic()
             # 12.19.0: the honest pre-wire number. fire_to_submit_ms above stops BEFORE the
             # submit_book read and this INSERT; fire_to_wire_ms is stamped as the POST leaves.
             timing['db_order_ms']=1000*(start-t); timing['fire_to_wire_ms']=1000*(start-fire_start)
             try:
-                r=await asyncio.wait_for(self.broker.post(signed),min(self.post_timeout_s,max(.001,deadline-start)))
+                r=await asyncio.wait_for(broker.post(signed),min(self.post_timeout_s,max(.001,deadline-start)))
             except asyncio.CancelledError:
                 raise
             except Exception as e:
@@ -1140,6 +1160,12 @@ class Executor:
             self._sample(timing,'ACCEPTED')
             return
         self.db.status(ep,'EXHAUSTED',kind)
+    def route(self):
+        """(broker, lane) for the next order - see __init__ (12.21.0)."""
+        if self.shadow is not None and not self.db.get('master',False): return self.shadow,'PAPER'
+        return self.broker,getattr(self.db,'lane','PAPER')
+    def broker_for(self,lane):
+        return self.shadow if (self.shadow is not None and lane=='PAPER' and getattr(self.db,'lane','PAPER')!='PAPER') else self.broker
     async def _await_tick(self,token,seq,deadline):
         """12.19.0: True when the local book changed (seq) since the rejected attempt was
         priced, False when RETRY_TICK_WAIT_S (or the deadline) passed first. Local reads only."""
@@ -1155,7 +1181,7 @@ class Executor:
                             WHERE o.status IN ('SUBMITTING','UNKNOWN','PENDING')''')
         for row in rows:
             r=dict(row)
-            try: out=await asyncio.wait_for(self.broker.reconcile(r),8)
+            try: out=await asyncio.wait_for(self.broker_for(r.get('lane')).reconcile(r),8)
             except Exception as e:
                 info=error_info(e,phase='reconcile')
                 self.db.reconcile_touch(r['id'],venue_live=False)
@@ -1174,7 +1200,7 @@ class Executor:
                         self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),r['epoch'],json.dumps(dict(kind='RECONCILE_STUCK',order=str(r['id'])[-8:],
                             **{k:err.get(k) for k in ('class','message','phase','status')},reconcile_count=r.get('reconcile_count'),venue_absent=r.get('venue_absent')))))
                 except Exception: pass
-            for tid,f in out.get('fills',[]): self.db.fill(r['id'],r['epoch'],tid,f,self.broker.basis)
+            for tid,f in out.get('fills',[]): self.db.fill(r['id'],r['epoch'],tid,f,self.broker_for(r.get('lane')).basis)
             if out.get('terminal'):
                 has_fill=bool(self.db.sql('SELECT 1 FROM fills WHERE order_id=?',(r['id'],)))
                 state='FILLED' if has_fill else 'NO_FILL'

@@ -467,7 +467,7 @@ class Tests(unittest.TestCase):
     def test_v120_database_migrates_additively(self):
         self.db.reserve(123,decision(),'up','condition')
         self.db.set('build','12.0'); self.db.c.close(); self.db=Journal(self.path,'PAPER','abc')
-        self.assertEqual(self.db.get('build'),'12.20.0')
+        self.assertEqual(self.db.get('build'),'12.21.0')
         self.assertEqual(self.db.sql('SELECT count(*) FROM signals WHERE epoch=123')[0][0],1)
         cols={r[1] for r in self.db.c.execute('PRAGMA table_info(orders)')}
         self.assertTrue({'error_json','timing_json','request_reached','reconcile_count','venue_live'}<=cols)
@@ -645,7 +645,9 @@ class DashboardTests(unittest.TestCase):
         orders={r['order_id']:r for r in self.ui.orders()['rows']}
         self.assertIsNone(orders['fail']['pnl']);self.assertAlmostEqual(orders['ok']['pnl'],1.17)
     def test_master_toggle(self):
-        self.ui.apply('/api/controls/apply',dict(confirmed=True,system={'manual_enabled':False}));self.assertFalse(self.ui.allowed())
+        # 12.21.0: master OFF still fires - into the paper broker. The toggle is recorded, not a gate.
+        self.ui.apply('/api/controls/apply',dict(confirmed=True,system={'manual_enabled':False}));self.assertTrue(self.ui.allowed());self.assertFalse(self.ui.db.get('master'))
+        self.ui.apply('/api/controls/apply',dict(confirmed=True,system={'manual_enabled':True}));self.assertTrue(self.ui.db.get('master'))
     def test_main_rev_are_real_lanes_and_switch_from_trade_controls(self):
         # v12.0/12.1 reported these two as having no signal source, so the
         # toggles could never take effect. They are now the ported Build 11
@@ -660,10 +662,10 @@ class DashboardTests(unittest.TestCase):
             self.ui.apply('/api/controls/signal',dict(confirmed=True,kind=k,manual_enabled=False))
             self.assertFalse(self.ui.allowed(k),f'{k} must stop firing when switched off')
             self.assertFalse(self.ui.controls()['kinds'][k]['manual_enabled'])
-        # master off overrides an individually enabled lane
+        # 12.21.0: master no longer stops a lane - it routes it. OFF = shadow paper fills, ON = the venue.
         self.ui.apply('/api/controls/signal',dict(confirmed=True,kind='MAIN',manual_enabled=True))
         self.ui.apply('/api/controls/apply',dict(confirmed=True,system={'manual_enabled':False}))
-        self.assertFalse(self.ui.allowed('MAIN'))
+        self.assertTrue(self.ui.allowed('MAIN')); self.assertEqual(self.ui.lane_label(),'PAPER')
     def test_lanes_record_separately_per_candle(self):
         # MAIN and REVERSAL can hold opposite sides of one candle: REVERSAL is a
         # hedge beside an open MAIN, not a replacement, so both need their own row.

@@ -40,10 +40,12 @@ class PolyRunner(Runner):
         self.venue_name=getattr(a,'venue','polymarket')
         self.pv=predict_venue.PredictVenue() if self.venue_name=='predict' else None
         self.broker=LiveBroker(self.books) if a.live else PaperBroker(self.books,self.db)
+        # 12.21.0: a live process also carries a paper broker; master OFF routes every order to it.
+        self.shadow=PaperBroker(self.books,self.db) if a.live else None; self.live_ready=bool(a.live)
         self.executor=Executor(self.db,self.books,self.broker,a.quote_age_ms/1000,a.pad_ticks,
                                budget_s=getattr(a,'execution_budget_ms',2000)/1000,
                                post_timeout_s=getattr(a,'post_timeout_ms',1200)/1000,
-                               attempts=getattr(a,'max_attempts',4))
+                               shadow=self.shadow,attempts=getattr(a,'max_attempts',4))
         self.age={k:0. for k in ('spot','perp','depth','venue')}; self.msgs={}; self._agg=None
         # Arrival age AND event lag per stream; see poly_feeds for why both.
         self.health=poly_feeds.FeedHealth(('spot','perp','depth','venue'))
@@ -605,7 +607,7 @@ class PolyRunner(Runner):
         if stake>max(0,(self.cash or 0)-reserved):
             return self._lane_drop(ep,kind,'stake exceeds free cash')
         d=dict(decision); d['fire']=True
-        d['min_topup']=(getattr(self.db,'lane','PAPER')!='LIVE')   # 12.18.0: paper may top up to the venue minimum
+        # 12.21.0: min_topup is set per order in Executor.fire from the lane the order goes to.
         # 12.15.5: the lane supplies its OWN threshold (poly_lanes.LANE_EV_FLOOR,
         # breakeven only). Until now this line replaced it with EF's v10 regime
         # threshold, which build11 never applies to a lane - see the note at
@@ -993,7 +995,7 @@ class PolyRunner(Runner):
         # can send a SECOND live order. The instruction is "main off after 1 filled
         # order, whatever happens" - so the test is whether we own shares, not whether
         # the bookkeeping has caught up.
-        n=self.db.sql("SELECT count(*) FROM orders o WHERE o.kind='MAIN' AND o.ts>? AND ("
+        n=self.db.sql("SELECT count(*) FROM orders o WHERE o.kind='MAIN' AND o.ts>? AND coalesce(o.lane,'LIVE')='LIVE' AND ("
                       "o.status='FILLED' OR EXISTS(SELECT 1 FROM fills f WHERE f.order_id=o.id))",
                       (armed,))[0][0]
         if not n: return
@@ -1227,7 +1229,7 @@ class PolyRunner(Runner):
             except Exception as e:
                 self.error='Startup account verification: '+type(e).__name__+': '+str(e)
         server=self.ui.make_server(); threading.Thread(target=server.serve_forever,daemon=True).start()
-        print(f"Polymarket v{self.db.get('build') or '?'}", 'LIVE (master OFF)' if self.a.live else 'PAPER',f'http://{self.a.host}:{self.a.port}',flush=True)
+        print(f"Polymarket v{self.db.get('build') or '?'}", 'LIVE credentials (master OFF = shadow paper)' if self.a.live else 'PAPER',f'http://{self.a.host}:{self.a.port}',flush=True)
         try:
             # 12.15.2: one raise in any of these used to unwind main(). asyncio.run
             # then cancelled the rest, systemd restarted, and safe-start parked
