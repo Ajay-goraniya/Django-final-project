@@ -426,10 +426,10 @@ class Journal:
         self.c.executescript('CREATE INDEX IF NOT EXISTS diagnostics_ts ON diagnostics(ts);')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.19.0')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.19.1')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1','12.12.2','12.13.0','12.13.1','12.14.0','12.14.1','12.15.0','12.15.1','12.15.2','12.15.3','12.15.4','12.15.5','12.16.0','12.16.1','12.17.0','12.18.0','12.19.0'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1','12.12.2','12.13.0','12.13.1','12.14.0','12.14.1','12.15.0','12.15.1','12.15.2','12.15.3','12.15.4','12.15.5','12.16.0','12.16.1','12.17.0','12.18.0','12.19.0','12.19.1'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -1172,8 +1172,12 @@ class Executor:
             def pct(p): return round(vals[min(len(vals)-1,max(0,round((len(vals)-1)*p)))],1)
             return {'n':len(vals),'p50_ms':pct(.50),'p95_ms':pct(.95),'p99_ms':pct(.99),'max_ms':round(vals[-1],1)}
         S=self.latency_samples
-        if not S: return {}
-        out={'total':pcts([float(x['total_attempt_ms']) for x in S if x.get('total_attempt_ms') is not None])}
+        # 12.19.1: the transport/sign facts do not depend on having fired yet (Zurich: the
+        # early return hid them on a fresh paper process). Paper's broker has neither -> None.
+        b=getattr(self,'broker',None)
+        base={'keepalive_ms':getattr(b,'keepalive_ms',None),'keepalive_age_s':(round(time.monotonic()-b.keepalive_at,1) if getattr(b,'keepalive_at',None) else None),'sign_mode':getattr(b,'sign_mode',None)}
+        if not S: return base
+        out=dict(base,total=pcts([float(x['total_attempt_ms']) for x in S if x.get('total_attempt_ms') is not None]))
         for stage in ('quote_wait_ms','decision_ms','sign_ms','final_recheck_ms','fire_to_submit_ms','db_order_ms','fire_to_wire_ms','network_roundtrip_ms','book_age_ms'):
             v=[float(x[stage]) for x in S if x.get(stage) is not None]
             if v: out[stage]=pcts(v)
@@ -1184,7 +1188,4 @@ class Executor:
         out['by_outcome']={k:pcts(v) for k,v in by.items()}
         t=out.get('total') or {}
         out.update({k:t.get(k) for k in ('n','p50_ms','p95_ms','p99_ms','max_ms')})
-        # 12.19.0: the connection the POST rides on, and how the order is signed.
-        b=getattr(self,'broker',None); out['keepalive_ms']=getattr(b,'keepalive_ms',None); out['keepalive_age_s']=(round(time.monotonic()-b.keepalive_at,1) if getattr(b,'keepalive_at',None) else None)
-        out['sign_mode']=getattr(b,'sign_mode',None)
         return out

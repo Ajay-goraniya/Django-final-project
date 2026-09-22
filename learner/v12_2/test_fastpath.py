@@ -71,6 +71,11 @@ class FastPath(unittest.TestCase):
         self.assertIs(self.db.get('ef_enabled'),True)
         self.assertEqual(self.db.get('never_set','dflt'),'dflt'); self.assertEqual(self.db.get('never_set','dflt2'),'dflt2')
 
+    def test_transport_facts_are_reported_before_any_order(self):
+        ex=C.Executor(self.db,self.books,C.PaperBroker(self.books,self.db)); st=ex.latency_stats()
+        for k in ('sign_mode','keepalive_ms','keepalive_age_s'): self.assertIn(k,st)
+        class B(C.PaperBroker): sign_mode='inline'; keepalive_ms=12.5; keepalive_at=time.monotonic()
+        st=C.Executor(self.db,self.books,B(self.books,self.db)).latency_stats(); self.assertEqual((st['sign_mode'],st['keepalive_ms']),('inline',12.5))
     def test_paper_keepalive_is_a_noop(self):
         self.assertIsNone(asyncio.run(C.PaperBroker(self.books).keepalive()))
 
