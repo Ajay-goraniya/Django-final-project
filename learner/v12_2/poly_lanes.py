@@ -83,6 +83,16 @@ REVERSAL_LAST_SECOND = 285.0
 # even when right is not a strategy difference, it is a loss.
 LANE_EV_FLOOR = 0.0          # breakeven only; EF's regime table does not apply
 REV_MAX_ENTRY_DEFAULT = 0.0  # build11 v11_rev_max_entry default: no cap
+# 12.18.0: a lane's p is RECORDED, not a price gate (build11:17028 - "the blend sets
+# the recorded probability; it does not gate the fire"). v11's own MAIN fired with
+# p(side) at or below the quote on 58 of 73 calls (owner's 09-21 export) and was
+# right 85%. Routing MAIN/REVERSAL through EF's `p/cost-1 >= threshold` test refused
+# 86 of 101 MAIN plans on the Zurich paper lane in its first 45 minutes ON
+# ("price fails model EV", asks 0.60-0.98, p ~0.75). The lane's only price control
+# is a maximum entry: above LANE_MAX_ASK the payout cannot cover the fee at the hit
+# rates seen (v11 MAIN priced on Polymarket: hit 86% at ask 0.72, 100% at 0.83,
+# n=65/17). An economics floor, not a signal gate: grid it on paper, do not tune it.
+LANE_MAX_ASK = 0.90
 
 VOL_REFERENCE = 1.00
 VOL_FLOOR_FACTOR = 0.55
@@ -690,7 +700,8 @@ class LaneEngine:
         p_side = p_up if direction == "UP" else 1.0 - p_up
         return dict(kind="MAIN", side=direction, p=p_side, probability_up=p_up,
                     confidence=conf, sec=int(phase), rv60=None, adapt_ratio=self.adapt.value(), threshold=LANE_EV_FLOOR,
-                    reason=f"MAIN: {f.get('pressure_text')} with fair {f.get('fair_p_up'):.2f} held {held/1000:.0f}s")
+                    price_rule='lane_cap', max_ask=LANE_MAX_ASK,
+                    reason=f"MAIN:{f.get('pressure_text')} with fair {f.get('fair_p_up'):.2f} held {held/1000:.0f}s")
 
     # ---- REVERSAL (build11:17169 gate, 17232 emit) ----------------------
     def _watch_reversal(self, ts_ms, f):
@@ -763,6 +774,7 @@ class LaneEngine:
         self.pending['REVERSAL'] = True
         return dict(kind="REVERSAL", side=live, p=p_side, probability_up=fair,
                     sec=int(phase), rv60=None, adapt_ratio=self.adapt.value(), threshold=LANE_EV_FLOOR,
+                    price_rule='lane_cap', max_ask=LANE_MAX_ASK,
                     reason=f"reversal at {phase:.0f}s: {detail}")
 
     # ---- public ---------------------------------------------------------
@@ -820,6 +832,6 @@ class LaneEngine:
             aligned=self._aligned_direction(f) if f else None,
             thresholds=dict(odds_up=GATED_ODDS_UP, odds_down=GATED_ODDS_DOWN, vol_min=GATED_VOL_MIN,
                             hold_ms=MAIN_HOLD_MS, hold_reads=MAIN_HOLD_READS,
-                            main_last_second=MAIN_LAST_SECOND,
+                            main_last_second=MAIN_LAST_SECOND, lane_max_ask=LANE_MAX_ASK,
                             reversal_window=[REVERSAL_MIN_SECOND, REVERSAL_LAST_SECOND]),
         )

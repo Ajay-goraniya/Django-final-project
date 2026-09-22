@@ -700,3 +700,24 @@ Predecessor: the LIVE process PID 104148 (12.17.0, db `polymarket_v12_live_zuric
 Paper environment proven from the engine's own API, not inferred: `/api/state` lane **PAPER**, `book.environment` **paper**, `api_key_configured` **False**; meta.lane "PAPER"; banner `Polymarket v12.17.0 PAPER`. The child process was started with the four Polymarket/Relayer credentials **removed from its environment** — only `DASHBOARD_PASSWORD` was passed — so this process cannot reach the venue with credentials even in principle.
 Flags set through the audited control path after start: EF true, REVERSAL true, MAIN false, master **true** (paper), stake `streak` fixed 5.0 / percent 5.0 / current 3.0 / min 3 / max 50, next_stake 3.0. `ef_cash_floor` left **unset** (paper, per the brief).
 First decision row 14:12:35. `[LANE SEED] 0 closed candles from the journal; COLD - volume_ratio is noise until 24 more` — the fresh db carries no candle history, so MAIN/REVERSAL volume_ratio is noise for the first ~2 h; EF is unaffected.
+
+## 12.18.0 (09-22 10:xx UTC) - MAIN and REVERSAL are priced by a maximum entry, not by EF's model-EV test
+
+Why (from the running artifacts, not a reconstruction): MAIN was switched ON on the Zurich paper lane 09-22 01:49:42 UTC.
+In its first 45 min it evaluated 135 times and produced 101 order plans; **86 were refused "price fails model EV"** (asks
+0.60-0.98, median ~0.85, lane p ~0.75) and **15 "below venue minimum; stake not increased"** (5-share minimum x ask 0.85 =
+$4.25 > the $3 stake). Nothing else blocked it. On Mumbai 8796 (6 days, MAIN off) the lane produced 2,881 MAIN signals
+(3.9/candle, 87% "strong"), every one dropped at the permission gate - the signal is healthy. The owner's v11 export
+(Predict.fun build11, 09-21) shows build11's MAIN firing with p(side) <= quote on 58 of 73 calls and landing 85%; priced on
+Polymarket's own book at the same second those calls made +0.266/$1 (n=65, hit 86%, ask median 0.72; analysis/v/model/RESULT.md).
+build11's own comment (17028): "the blend sets the recorded probability; it does not gate the fire". The v12 port sent the lane
+through EF's `p/cost-1 >= threshold` in `order_plan`, which build11 never applies to a lane. That is why MAIN never traded.
+
+Change: `poly_lanes.LANE_MAX_ASK = 0.90`; MAIN and REVERSAL decisions carry `price_rule='lane_cap', max_ask`; `poly_core.order_plan`
+skips the model-EV test for `lane_cap` decisions and refuses only `ask > max_ask` ("above lane cap"). EF's path is untouched.
+`d['min_topup']` (engine sets it on PAPER lanes only) lets `order_plan` raise a lane plan to the venue's 5-share minimum instead of
+refusing; LIVE keeps "stake not increased" - the live stake stays the owner's. The 0.90 cap is an economics floor (fee cannot be
+covered above it at the hit rates seen), to be gridded on paper, not tuned. Tests: +6 (`test_lane_cap.py`, run against
+`order_plan` on Zurich's exact refused case ask 0.85 / p 0.75 / $3) = 409 green (6+36+71+270+26); SHA256SUMS 33 -> 34.
+Not shipped by V: the sandbox refuses V engine-changing instructions to Zurich. Deploy = Zurich pulls, restarts the PAPER process
+on the same db with 12.18.0, verifies `/api/state` build 12.18.0 and the first MAIN order row. Owner arms nothing; paper only.

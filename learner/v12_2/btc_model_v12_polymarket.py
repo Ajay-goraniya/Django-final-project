@@ -600,6 +600,7 @@ class PolyRunner(Runner):
         if stake>max(0,(self.cash or 0)-reserved):
             return self._lane_drop(ep,kind,'stake exceeds free cash')
         d=dict(decision); d['fire']=True
+        d['min_topup']=(getattr(self.db,'lane','PAPER')!='LIVE')   # 12.18.0: paper may top up to the venue minimum
         # 12.15.5: the lane supplies its OWN threshold (poly_lanes.LANE_EV_FLOOR,
         # breakeven only). Until now this line replaced it with EF's v10 regime
         # threshold, which build11 never applies to a lane - see the note at

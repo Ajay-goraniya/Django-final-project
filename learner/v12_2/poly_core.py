@@ -308,7 +308,12 @@ def order_plan(q,terms,stake,d,pad=1,band=False,require_depth=True):
     _px=min(_px,float(D(1)-D(tick)))
     f=rate*(_px*(1-_px))**exp
     cost=max(_px+f,_px/(1-f/_px))
-    if d['p']/cost-1<d['threshold']: raise ValueError('price fails model EV')
+    if d.get('price_rule')=='lane_cap':
+        # 12.18.0: MAIN/REVERSAL carry no model-EV test (build11 parity, see
+        # poly_lanes.LANE_MAX_ASK). Their one price control is a maximum entry.
+        _mx=float(d.get('max_ask',1.0))
+        if float(q['ask'])>_mx+1e-9: raise ValueError(f"ask {float(q['ask']):.2f} above lane cap {_mx:.2f}")
+    elif d['p']/cost-1<d['threshold']: raise ValueError('price fails model EV')
     levels=[rate*(p*(1-p))**exp/p for p,size in q['asks'] if p<=cap]
     if not levels: raise ValueError('no executable ask at cap')
     # Can the ladder absorb the whole stake at or under the cap?
@@ -354,7 +359,15 @@ def order_plan(q,terms,stake,d,pad=1,band=False,require_depth=True):
             if not levels: raise ValueError('no executable ask at cap')
             ratio=max(levels)
             amount=float((D(stake)/(1+D(ratio))).quantize(D('.01'),rounding=ROUND_DOWN))
-    if amount/cap+1e-8<minimum: raise ValueError('below venue minimum; stake not increased')
+    if amount/cap+1e-8<minimum:
+        # 12.18.0: a $3 stake cannot buy Polymarket's 5-share minimum above ask
+        # 0.60, which is where MAIN buys (15 of 101 Zurich refusals). With
+        # d['min_topup'] (set by the engine on PAPER lanes only) the plan is
+        # raised to the minimum; the live stake stays the owner's.
+        if d.get('min_topup'):
+            amount=float((D(minimum)*D(cap)).quantize(D('.01'),rounding=ROUND_CEILING))
+            stake=max(float(stake),float((D(amount)*(1+D(ratio))).quantize(D('.01'),rounding=ROUND_CEILING)))
+        else: raise ValueError('below venue minimum; stake not increased')
     return dict(cap=cap,amount=amount,max_shares=amount/cap,budget=stake,quote=q['ask'],pre_submit_quote=q['ask'],age_ms=q['age_ms'],rate=rate,exponent=exp,seq=q['seq'])
 
 
@@ -412,10 +425,10 @@ class Journal:
         self.c.executescript('CREATE INDEX IF NOT EXISTS diagnostics_ts ON diagnostics(ts);')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.17.0')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.18.0')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1','12.12.2','12.13.0','12.13.1','12.14.0','12.14.1','12.15.0','12.15.1','12.15.2','12.15.3','12.15.4','12.15.5','12.16.0','12.16.1','12.17.0'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1','12.12.2','12.13.0','12.13.1','12.14.0','12.14.1','12.15.0','12.15.1','12.15.2','12.15.3','12.15.4','12.15.5','12.16.0','12.16.1','12.17.0','12.18.0'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
