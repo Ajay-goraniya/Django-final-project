@@ -759,7 +759,7 @@ class PolyRunner(Runner):
         """Seconds since this token's last tick_size_change, or None."""
         tc=getattr(self.books,'tick_changes',{}).get(str(token))
         return round(time.monotonic()-tc['at'],2) if tc else None
-    # 12.9.0 cadences. Monitors (halt_check, _wipeout_check, _main_oneshot_check)
+    # 12.9.0 cadences. Monitors (halt_check, _wipeout_check; the MAIN one-shot guard was removed in 12.24.2 on the owner's order)
     # ran every 1-5 s for rows that change a few times an hour; the retention
     # DELETEs ran every 5 s over an unindexed table. All on the loop thread.
     MONITOR_EVERY_S=60.0
@@ -1036,57 +1036,9 @@ class PolyRunner(Runner):
                 row['age_%s_ms'%side]=(round((now-b['arrival'])*1000,1) if b and b.get('arrival') else None)
             self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(dict(kind='AMBIENT_AGE',**row))))
         except Exception: pass
-    def _main_oneshot_check(self):
-        """MAIN disarms itself after ONE filled order.
-
-        User, 09-13: "main off after 1 filled order, whatever happens, win or
-        lose i don't care". So the trigger is the FILL, not the outcome - it
-        fires without waiting for the candle to grade.
-
-        "One" counts from the moment MAIN was armed, taken from the control-write
-        audit trail, not from all time. MAIN already has one historical fill from
-        the 09-12 seeding bug; counting that would disarm the lane before the
-        operator's test ever ran.
-
-        In code rather than in an operator poll, because a poll can miss the
-        window and let a second order through, and the instruction is
-        unconditional.
-        """
-        # 12.13.1: LIVE ONLY. The instruction it implements was about live money
-        # ("main off after 1 filled order, whatever happens"), and on a paper
-        # engine it ends the experiment at the first fill - which also kills
-        # REVERSAL, since REVERSAL is a hedge on an open MAIN and cannot fire
-        # without one. Paper lanes therefore keep MAIN armed; live is unchanged.
-        if not self.a.live: return
-        if not self.db.get('main_enabled'): return
-        armed=None
-        for r in self.db.sql("SELECT ts,detail FROM diagnostics WHERE detail LIKE "
-                             "'%control_write%' AND detail LIKE '%main_enabled%' ORDER BY ts DESC"):
-            try: d=json.loads(r['detail'])
-            except (ValueError,TypeError): continue
-            if d.get('key')=='main_enabled' and d.get('new') is True: armed=r['ts']; break
-        if armed is None: return          # armed before auditing existed; do not guess
-        # 12.15.2: count FILLS, not orders marked FILLED.
-        # reconcile writes the fill rows first and only sets status='FILLED' when the
-        # venue agrees the order is terminal (poly_core.py:1077-1082). A partial or
-        # slow-to-confirm MAIN therefore has real shares on the books while its order
-        # still reads PENDING, this check sees n=0, and since it only runs once a
-        # minute while lane state resets at every candle boundary, MAIN re-arms and
-        # can send a SECOND live order. The instruction is "main off after 1 filled
-        # order, whatever happens" - so the test is whether we own shares, not whether
-        # the bookkeeping has caught up.
-        n=self.db.sql("SELECT count(*) FROM orders o WHERE o.kind='MAIN' AND o.ts>? AND coalesce(o.lane,'LIVE')='LIVE' AND ("
-                      "o.status='FILLED' OR EXISTS(SELECT 1 FROM fills f WHERE f.order_id=o.id))",
-                      (armed,))[0][0]
-        if not n: return
-        self.db.set('main_enabled',False)
-        print(f'[MAIN ONE-SHOT] {n} filled MAIN order(s) since arming - main_enabled OFF',flush=True)
     async def reconcile_loop(self):
         while True:
             await self.executor.reconcile()
-            if self._due('main_oneshot',self.MONITOR_EVERY_S):
-                try: self._main_oneshot_check()
-                except Exception as e: self.error='main one-shot: '+type(e).__name__
             await asyncio.sleep(1)
     async def grade_loop(self):
         while True:

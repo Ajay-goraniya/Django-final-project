@@ -1370,68 +1370,6 @@ class LowBalanceIsWatchedNeverActedOn(unittest.TestCase):
         self.assertNotIn('Account wiped out', src, 'the wipeout halt must not come back')
 
 
-class MainDisarmsAfterOneFill(unittest.TestCase):
-    """User, 09-13: "main off after 1 filled order, whatever happens,
-    win or lose i don't care". The trigger is the FILL, not the outcome."""
-    def setUp(self):
-        import btc_model_v12_polymarket as E
-        self.temp=tempfile.TemporaryDirectory()
-        self.db=C.Journal(str(pathlib.Path(self.temp.name)/'m.db'),'LIVE','h')
-        r=E.PolyRunner.__new__(E.PolyRunner); r.db=self.db
-        r.a=types.SimpleNamespace(live=True); r.error=''
-        self.r=r
-
-    def tearDown(self): self.db.c.close(); self.temp.cleanup()
-
-    def order(self,oid,kind,status,ts):
-        self.db.sql('INSERT INTO orders(id,epoch,attempt,status,plan,ts,latency,reason,kind)'
-                    " VALUES(?,?,1,?,'{}',?,0,'',?)",(oid,int(ts),status,ts,kind))
-
-    def test_the_historical_fill_does_not_count(self):
-        """MAIN has one fill from the 09-12 seeding bug. Counting it would
-        disarm the lane before the operator's test ever ran."""
-        self.order('old','MAIN','FILLED',100.0)      # predates arming
-        self.db.set('main_enabled',True)             # audit row written here
-        self.r._main_oneshot_check()
-        self.assertTrue(self.db.get('main_enabled'))
-
-    def test_one_fill_after_arming_disarms_it(self):
-        self.db.set('main_enabled',True)
-        ts=self.db.sql("SELECT max(ts) FROM diagnostics")[0][0]+1
-        self.order('new','MAIN','FILLED',ts)
-        self.r._main_oneshot_check()
-        self.assertFalse(self.db.get('main_enabled'))
-
-    def test_a_reject_is_not_a_fill(self):
-        self.db.set('main_enabled',True)
-        ts=self.db.sql("SELECT max(ts) FROM diagnostics")[0][0]+1
-        for st in ('REJECTED','UNKNOWN','NO_FILL','PENDING'):
-            self.order('o'+st,'MAIN',st,ts)
-        self.r._main_oneshot_check()
-        self.assertTrue(self.db.get('main_enabled'),'only a FILLED order counts')
-
-    def test_an_ef_fill_does_not_disarm_main(self):
-        self.db.set('main_enabled',True)
-        ts=self.db.sql("SELECT max(ts) FROM diagnostics")[0][0]+1
-        self.order('ef','EF','FILLED',ts)
-        self.r._main_oneshot_check()
-        self.assertTrue(self.db.get('main_enabled'))
-
-    def test_it_does_not_wait_for_the_candle_to_grade(self):
-        """win or lose, i do not care - no results row is needed."""
-        self.db.set('main_enabled',True)
-        ts=self.db.sql("SELECT max(ts) FROM diagnostics")[0][0]+1
-        self.order('new','MAIN','FILLED',ts)
-        self.assertEqual(self.db.sql('SELECT count(*) FROM results')[0][0],0)
-        self.r._main_oneshot_check()
-        self.assertFalse(self.db.get('main_enabled'))
-
-    def test_it_is_a_no_op_when_main_is_already_off(self):
-        self.db.set('main_enabled',False)
-        self.r._main_oneshot_check()
-        self.assertFalse(self.db.get('main_enabled'))
-
-
 class CalibrationIsOffUntilTurnedOn(unittest.TestCase):
     """Correct what the model overclaims - EF only, and inert by default.
 
@@ -2041,7 +1979,7 @@ class SigningOffTheLoop(unittest.TestCase):
 
 class HousekeepingCadence(unittest.TestCase):
     """Item 4. diagnostics(ts) indexed; retention DELETEs hourly, not every 5 s;
-    halt_check / _wipeout_check / _main_oneshot_check at most once a minute."""
+    halt_check / _wipeout_check at most once a minute (the MAIN one-shot guard was removed in 12.24.2)."""
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.db = C.Journal(str(pathlib.Path(self.temp.name)/'h.db'), 'LIVE', 'h')
@@ -2082,25 +2020,6 @@ class HousekeepingCadence(unittest.TestCase):
             clock[0] += step_s; n[0] += 1
             if n[0] >= iterations: raise Stop()
         with mock.patch.object(E.asyncio, 'sleep', fake_sleep), self.assertRaises(Stop): asyncio.run(coro)
-    def test_reconcile_loop_runs_main_oneshot_once_a_minute(self):
-        import btc_model_v12_polymarket as E
-        r = E.PolyRunner.__new__(E.PolyRunner); clock = [0.]; r._clock = lambda: clock[0]; r.error = ''
-        async def rec(): pass
-        r.executor = types.SimpleNamespace(reconcile=rec); calls = []; r._main_oneshot_check = lambda: calls.append(clock[0])
-        self._run_loop(E, r.reconcile_loop(), 1.0, 130, clock)
-        self.assertEqual(calls, [0., 60., 120.])
-    def test_main_oneshot_returns_at_once_when_main_is_off(self):
-        """Already true on 12.8.11 (kept as a pin): one meta read, no diagnostics scan."""
-        import btc_model_v12_polymarket as E
-        import types as _t
-        r = E.PolyRunner.__new__(E.PolyRunner); r.db = self.db
-        r.a = _t.SimpleNamespace(live=True)      # 12.13.1: the rule is live-only, so the pin runs a live stub
-        self.db.set('main_enabled', False)
-        calls = []; real = self.db.sql; self.db.sql = lambda *a, **k: (calls.append(a[0]), real(*a, **k))[1]
-        r._main_oneshot_check()
-        # 12.19.0: control reads are served from Journal's write-through cache, so the pin is
-        # 'no diagnostics scan, nothing but meta reads' - zero or one SELECT, never the scan.
-        self.assertLessEqual(len(calls), 1); self.assertTrue(all('meta' in c for c in calls)); self.assertFalse(any('diagnostics' in c for c in calls))
     def test_housekeeping_deletes_hourly_and_wipeout_checks_once_a_minute(self):
         r, E = _paper_runner(); clock = [0.]; r._clock = lambda: clock[0]
         wip = []; r._wipeout_check = lambda: wip.append(clock[0])
@@ -2183,7 +2102,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.24.1'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.24.2'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0
@@ -2487,27 +2406,6 @@ class VenueP12130(unittest.TestCase):
         with self.assertRaises(AssertionError): M.Model(p)
 
 
-class MainOneShot12131(unittest.TestCase):
-    """12.13.1: the one-fill disarm is a LIVE rule; paper keeps MAIN armed so REVERSAL can be tested."""
-    def _runner(self, live):
-        import btc_model_v12_polymarket as E, poly_core as C, tempfile, types, json as _json
-        path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'LIVE' if live else 'PAPER', 'abc')
-        db.set('main_enabled', True)          # this write is itself the arming audit row
-        db.sql("INSERT INTO orders(id,epoch,attempt,status,plan,ts,kind) VALUES('o',1,1,'FILLED','{}',?,'MAIN')",
-               (time.time() + 1,))            # a fill AFTER arming, which is what the rule counts
-        r = types.SimpleNamespace(db=db, a=types.SimpleNamespace(live=live))
-        r._main_oneshot_check = types.MethodType(E.PolyRunner._main_oneshot_check, r)
-        return r, db, path
-    def test_live_still_disarms_after_one_fill(self):
-        r, db, path = self._runner(True)
-        r._main_oneshot_check(); self.assertIs(db.get('main_enabled'), False)
-        db.c.close(); os.unlink(path)
-    def test_paper_keeps_main_armed(self):
-        r, db, path = self._runner(False)
-        r._main_oneshot_check(); self.assertIs(db.get('main_enabled'), True)
-        db.c.close(); os.unlink(path)
-
-
 class LaneSeed12141(unittest.TestCase):
     """A restarted lane must not spend two hours with a meaningless volume_ratio.
 
@@ -2766,13 +2664,6 @@ class AuditFixes12152(unittest.TestCase):
         body = inspect.getsource(D.Dashboard.update_stake)
         self.assertNotIn("if s['mode']!='ladder': current=max", body,
                          'ladder was exempt from min/max stake')
-
-    def test_one_shot_counts_shares_not_bookkeeping(self):
-        """reconcile writes fills before it writes status=FILLED."""
-        import inspect, btc_model_v12_polymarket as E
-        body = inspect.getsource(E.PolyRunner._main_oneshot_check)
-        self.assertIn('FROM fills f WHERE f.order_id=o.id', body)
-
 
 class AuditFixes12153(unittest.TestCase):
     """Regressions for the 12.15.3 batch."""
