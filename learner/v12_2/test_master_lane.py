@@ -96,6 +96,17 @@ class Controls(unittest.TestCase):
         self.db.set('master',True); self.assertEqual(self.ui.lane_label(),'PAPER','no credentials: master has no effect')
         self.ui.r.a.live=True; self.assertEqual(self.ui.lane_label(),'LIVE')
         self.db.set('master',False); self.assertEqual(self.ui.lane_label(),'SHADOW')
+    def test_venue_cash_gates_only_venue_orders(self):
+        # 12.21.1: the runner's four cash checks are guarded by _routing_live(); a shadow order on a
+        # live process with $1.65 in the wallet must still fire.
+        import pathlib, re
+        src=pathlib.Path(__file__).with_name('btc_model_v12_polymarket.py').read_text()
+        self.assertEqual(len(re.findall(r'self\._routing_live\(\)',src)),4)
+        self.assertIn("if self._routing_live() and stake>max(0,(self.cash or 0)-reserved):",src)
+        self.assertIn("if self._routing_live() and (self.cash is None or time.monotonic()-self.cash_at>=15):",src)
+        import btc_model_v12_polymarket as E, poly_core as C
+        r=E.PolyRunner.__new__(E.PolyRunner); r.a=SimpleNamespace(live=True); r.executor=C.Executor(self.db,C.BookCache(),C.PaperBroker(C.BookCache()),shadow=C.PaperBroker(C.BookCache()))
+        self.db.set('master',False); self.assertFalse(r._routing_live()); self.db.set('master',True); self.assertFalse(r._routing_live(),'a PAPER journal never routes live')
     def test_shadow_flag_follows_the_order_lane(self):
         self.assertTrue(self.ui._shadow({'lane':'PAPER'})); self.assertFalse(self.ui._shadow({'lane':'LIVE'})); self.assertTrue(self.ui._shadow({}))
 

@@ -462,11 +462,17 @@ class PolyRunner(Runner):
                     reason='decide_loop_error',error=type(e).__name__,detail=str(e)[:400]))))
                 except Exception: pass
             await asyncio.sleep(.25)
+    def _routing_live(self):
+        """12.21.1: will the next order go to the venue? (Executor.route: credentials AND master ON)"""
+        try: return self.executor.route()[1]=='LIVE'
+        except Exception: return bool(self.a.live)
     async def _decide_once(self):
         if True:
             d=self.decide_now(); ep=int(time.time()//300)*300; self.last_decision=d
             self._sync_executor_dials()
-            if d.get('fire') and self.ui.allowed() and self.cash is not None and time.monotonic()-self.cash_at<15:
+            # 12.21.1: the venue's cash gates only an order that goes to the venue. With master OFF on a
+            # live process the order is shadow paper - a near-empty live wallet must not silence it.
+            if d.get('fire') and self.ui.allowed() and (not self._routing_live() or (self.cash is not None and time.monotonic()-self.cash_at<15)):
                 token=self.market[ep][0 if d['side']=='UP' else 1]; stake=self.db.get('next_stake',1.)
                 reserved=self.db.live_reserve()
                 # A skip for missing terms used to be silent and therefore
@@ -478,7 +484,7 @@ class PolyRunner(Runner):
                     self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(dict(
                         reason='no_terms',kind='EF',side=d.get('side'),
                         since_tick_change_s=self._since_tick_change(token)))))
-                if token in self.books.terms and stake<=max(0,self.cash-reserved):
+                if token in self.books.terms and (not self._routing_live() or stake<=max(0,(self.cash or 0)-reserved)):
                     # 12.15.1: this used to OVERWRITE d['features'] - the vector the
                     # model actually decided on - with a fresh read taken later, after
                     # publish(), decide(), _calibrate() and the padded-EV gate. The
@@ -592,7 +598,7 @@ class PolyRunner(Runner):
         # account_snapshot was enough to kill MAIN and REVERSAL silently.
         # _lane_drop clears pending, records the reason, and lets the lane retry.
         if not self.ui.allowed(kind): return self._lane_drop(ep,kind,'lane not permitted')
-        if self.cash is None or time.monotonic()-self.cash_at>=15:
+        if self._routing_live() and (self.cash is None or time.monotonic()-self.cash_at>=15):
             return self._lane_drop(ep,kind,'cash unknown or stale')
         if ep not in self.market or ep not in self.info:
             return self._lane_drop(ep,kind,'market or terms not resolved')
@@ -604,7 +610,7 @@ class PolyRunner(Runner):
                 since_tick_change_s=self._since_tick_change(token)))))
             return self._lane_drop(ep,kind,'no tick terms for the token')
         stake=self.db.get('next_stake',1.); reserved=self.db.live_reserve()
-        if stake>max(0,(self.cash or 0)-reserved):
+        if self._routing_live() and stake>max(0,(self.cash or 0)-reserved):
             return self._lane_drop(ep,kind,'stake exceeds free cash')
         d=dict(decision); d['fire']=True
         # 12.21.0: min_topup is set per order in Executor.fire from the lane the order goes to.

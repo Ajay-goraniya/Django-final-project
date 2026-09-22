@@ -841,3 +841,14 @@ Verified: `sha256sum -c SHA256SUMS.txt` **37/37**, every file byte-equal to `git
 `--since 1790077238` (12.19.0 restart, spans 12.19.0 + 12.20.0, 11:40:38 → 12:10:20, ~30 min): orders with timing **4**, all FILLED. decision_ms p50 0.4 / max 0.4; quote_wait_ms p50 0.0; sign_ms p50 0.1 / max 0.2; final_recheck_ms p50 0.1 / max 0.2; fire_to_submit_ms p50 0.7 / max 1.0; submit_ms p50 0.2 / max 0.2; total_attempt_ms p50 1.0 / max 1.2; book_age_ms p50 14.0 / max 51.1; pre_submit_book_age_ms p50 14.7 / max 51.7; signal.ts→order.ts p50 1 ms; by attempt {1: (4,4)}.
 `--since 1790078469` (12.20.0 only, 12:01:09 → 12:10:20): **orders with timing 0** — no order fired in that 9-minute window, every stage reports `none`.
 Why this cannot be fixed by waiting: `PaperBroker.post()` fills in-process against the local book, so `submit_ms` measures a function call, not a venue round trip — p50 **0.2 ms** here against **255 ms** on the live journals (`live_zurich_3`, n=402). Paper latency numbers are not comparable to live and should not be used to judge the 12.19.0 fast-path work. That needs a live run, or a separate harness that times the SDK call directly.
+ 12.21.1 (09-22 12:3x UTC) - a shadow order is not gated by the live wallet's cash
+
+Owner, 12:3x, on the Zurich paper dashboard still reading PAPER: "Still not the one update?? The master off = paper and
+master onn = live". The 12.21.0 routing was there; the Zurich process runs with the credentials stripped, so it can only be
+PAPER. Starting it WITH credentials makes master OFF = SHADOW - but the runner's four cash checks ("cash unknown or stale",
+"stake exceeds free cash", and the EF equivalents) read the venue balance, and the Zurich live wallet holds $1.65 < the $3
+stake: every shadow order would have been dropped. `_routing_live()` (Executor.route()[1]=='LIVE') now guards all four; a
+venue order is gated exactly as before. Tests +1 (438), SHA256SUMS 37.
+Rollout on Zurich: a NEW process with the four credentials in its environment (`--live`), a NEW db (the paper journal's
+identity is PAPER and the 09-21 live journal is closed), boots master OFF = SHADOW; the paper process stops. The owner arms
+master from Trade Controls when they want the venue.
