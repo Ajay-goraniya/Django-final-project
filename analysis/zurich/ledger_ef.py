@@ -45,3 +45,25 @@ try: tape = c.execute('SELECT count(*),max(ts)-min(ts) FROM tape1s').fetchone()
 except Exception: tape = (0, 0)
 print('* a line under 60 graded fires is not a reading. Do not quote its per$1 as a result.')
 print(f"results n={tot[0]} sum(shadow_pnl)={tot[1]:+.4f} sum(pnl)={tot[2]:+.4f} | tape1s rows={tape[0]} span={tape[1] or 0:.0f}s")
+
+# ---- 12.24.1: what the Platt calibration removed (V, 09-22 22:4x) ----------------------------
+# EF decide rows carry p_raw and calibrated=true once _calibrate lowers a claim. The EF fire rule is
+# EV > 0 against the padded break-even, and `ev` in the row is already computed from the CALIBRATED p,
+# so ev_raw = ev + (p_raw - p). A fire "calibration removed" is one that clears on raw and not on
+# calibrated. Counted only from CAL_ON, and reported with the rows that had no p_raw at all.
+CAL_ON = 1790116840.0        # 22:40:40 UTC 09-22, audited calibration None -> platt a=1.0677 b=-0.3208
+tot = seen = removed = added = 0
+shrink = []
+for (d,) in c.execute('SELECT detail FROM diagnostics WHERE ts>=? ', (CAL_ON,)):
+    try: j = json.loads(d)
+    except Exception: continue
+    if 'breakeven' not in j or 'ev' not in j: continue          # EF decide rows only
+    tot += 1
+    if j.get('p_raw') is None: continue
+    seen += 1; shrink.append(j['p_raw'] - j['p'])
+    ev_raw = j['ev'] + (j['p_raw'] - j['p'])
+    if ev_raw > 0 and j['ev'] <= 0: removed += 1
+    if ev_raw <= 0 and j['ev'] > 0: added += 1
+print(f"calibration since 22:40:40: EF decide rows {tot}, carrying p_raw {seen}, "
+      f"fires REMOVED {removed}, fires added {added}"
+      + (f", median shrink p_raw-p {sorted(shrink)[len(shrink)//2]:+.4f}" if shrink else ""))

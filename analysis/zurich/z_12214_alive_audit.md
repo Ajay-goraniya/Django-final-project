@@ -154,3 +154,48 @@ REVERSAL          6   33.3%     20.34  -10.163    -0.500  PAPER  * insufficient 
 **Every line is under 60 graded fires, so no line here is a reading.** EF (build11) is n=2. The script
 prints the marker itself so the number cannot be quoted as a result by accident. EF (v10)'s +0.173
 on this journal is the nearest same-venue comparison to its known +0.22/$1 paper record, on n=28.
+
+---
+
+# 12.24.1 deploy + Platt calibration ON (09-22 22:40 UTC)
+
+| row | result |
+|---|---|
+| stage d90c1c9 | 41 files, SHA256SUMS **39/39 OK**, all == `git show` |
+| suites | **all 9 test modules, 463 tests, OK** (see note) |
+| clean point | 22:40:18, sec_into_candle 18, in-flight 0, stale-ungraded 0 |
+| stop | pid 151129 (12.23.0) SIGTERM, gone 22:40:19 |
+| deploy | 39 files, `__pycache__` cleared, re-verified 39/39 == d90c1c9 |
+| start | pid **152214**, 22:40:40, same live4 db, same argv, 5/5 creds |
+| master | **OFF** (meta master=false), lane **SHADOW** |
+| calibration | audited **22:40:40 `calibration` None -> platt**, `poly_dashboard.py:380 apply` |
+| ef_engine | unchanged `"v10"` |
+
+**Suite count note.** V expected "six suites, 395 OK". The staged tree has nine `test_*.py` modules
+and I ran all of them: ef 18, fastpath 11, lane_cap 6, lanes 36, master_lane 16, polymarket 72,
+predict_venue 26, settlement 6, v122 272 = **463, zero failures**. No subset of six sums to 395, so
+V's figure is stale rather than a miss; the superset passes.
+
+## calibration() exactly as the engine reads it
+`Runner.calibration()` = `dict(CALIBRATION_DEFAULT)` updated from meta `calibration`:
+```
+{"enabled": true, "cut": 0.8, "to": 0.784, "mode": "platt", "a": 1.0677, "b": -0.3208}
+```
+
+**The fit lowers p across the whole practical range, not just a tail.** Its fixed point is p=0.9913;
+below that `q<p` so the `min(p,q)` clamp never binds:
+
+| p_raw | 0.55 | 0.60 | 0.65 | 0.70 | 0.80 | 0.90 |
+|---|---|---|---|---|---|---|
+| calibrated p | 0.4734 | 0.5280 | 0.5842 | 0.6420 | 0.7612 | 0.8834 |
+
+Since `d['p']` is already the CHOSEN side's probability, a marginal EF fire at p_raw 0.55 is restated
+as 0.47 — the model then says the side it picked is less likely than not, and the EV gate drops it.
+That is the hook working as designed, but it means the removal rate near the fire boundary will be
+high, not marginal. Flagging the shape, not disputing the fit.
+
+`ef_monitor` at the check read "Warming up: 10 minutes of spot / 60 seconds of perpetual trades" —
+the restart's warm-up, not a fault. EF decide rows since 22:40:40: 0 at 22:47, as expected.
+
+Ledger extended: it now also prints, from `CAL_ON = 22:40:40`, the EF decide rows carrying `p_raw`,
+the fires **removed** by calibration (clears EV>0 on raw, fails on calibrated) and the median shrink.
