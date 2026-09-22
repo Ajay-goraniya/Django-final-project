@@ -90,3 +90,18 @@ Note on the clean-point rule: with master OFF every order is a PaperBroker fill 
 in-process, so the only losable state is an order mid-submit. The gate is now in-flight 0 plus no
 ungraded fill older than the just-closed candle. The previous "zero ungraded" form never opened at
 this firing rate (EF/MAIN/REVERSAL are placing every 5-15 min in shadow).
+
+## First EF (build11) shadow order — 19:10:58 UTC, 5 min after the switch
+epoch 1790104200 · **lane PAPER** · status FILLED · id `paper-f19b44bbe7e84b40baf6cd979c9d000b`
+
+- decision **`engine='build11'`**, **`how='STRUCTURE_CONFIRMED'`** (the 250 ms latch path, not the
+  STRUCTURE_DEVELOPED fast path), side DOWN, p 0.5697, sec 58, price_rule `lane_cap`, max_ask 0.60
+- `ef` block: real 0.646 · fake 0.173 · control 0.742 · exhaustion 0.463 · settle 0.741 · ext 0.13 ·
+  body 2.96 · ask 0.45
+- reason: `EF:STRUCTURE_CONFIRMED DOWN body +3.0 vs line, real 0.65 fake 0.17 p 0.57 ask 0.45`
+- plan: quote 0.45, cap 0.46, budget 4, amount 3.85, max_shares 8.37, age_ms 4.0
+- fill: 8.5556 shares, spent 3.85, fees 0.14823, basis `PAPER_DEPTH_FEE_ESTIMATE`
+
+Ledger format from here: **EF (build11)** is its own line — n / hit / per $1 on venue-graded shadow
+fills with `engine='build11'` (cut 19:05:54) — printed beside **EF (v10)**'s paper record, never
+merged into it.
