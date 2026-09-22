@@ -20,6 +20,12 @@ def official_result(m):
         return winner if winner in ('UP','DOWN') else None
     except (KeyError,TypeError,ValueError): return None
 
+def _floor_save(r):
+    """12.24.7: the EF cash floor's 6-read / 360 s confirmation lived in memory, so a restart inside the window
+    reset it and a crash loop could keep the owner's only automatic stop from ever acting."""
+    try: r.db.set('ef_floor_state',dict(reads=getattr(r,'_floor_reads',0),since=getattr(r,'_floor_since',None)))
+    except Exception: pass
+
 class PolyRunner(Runner):
     def __init__(self,a):
         self.a=a; self.m=Model(a.model); self.st=FeatureState()
@@ -63,6 +69,7 @@ class PolyRunner(Runner):
         self.lanes=poly_lanes.LaneEngine(_mw.get('weights') if isinstance(_mw,dict) else _mw)
         if _mw: print(f'[LANE WEIGHTS] loaded persisted model_weights ({len(self.lanes.model.weights)} names)',flush=True)
         self._seed_lane_history()
+        self._seed_ref_line()
         self.lane_decision={}
         self.market={}; self.info={}; self.terms_age={}; self.last_decision={}; self.started=time.time()
         self._wait_census={}; self._wait_flushed=time.monotonic(); self._shadow_at=0.
@@ -74,6 +81,17 @@ class PolyRunner(Runner):
         from poly_dashboard import Dashboard
         self.ui=Dashboard(self)
         self.executor.allowed=self.ui.allowed   # 12.19.0: the pre-post control check (replaces the 2nd reassess)
+    def _seed_ref_line(self):
+        """12.24.7: the settlement line (Chainlink TWAP60 ending at the open) needs the reference feed from BEFORE
+        the open, and that buffer is memory only. After a mid-candle restart ref_open fell back to the first trade
+        seen after the restart, so MAIN/REVERSAL fair odds and the build11 EF side were judged against a wrong line
+        for the rest of the candle, and the dashboard's "to beat" was wrong. tape1s keeps the reference price once
+        a second; the last 20 minutes of it are replayed into the buffer before the feeds start."""
+        try:
+            rows=self.db.sql('SELECT ts,ref_px FROM tape1s WHERE ts>=? AND ref_px>0 ORDER BY ts',(int(time.time())-20*60,))
+            for ts,px in rows: self.st.on_ref_price(int(ts)*US,float(px))
+            if rows: print(f'[REF] settlement line seeded from tape1s: {len(rows)} s',flush=True)
+        except Exception as e: print(f'[REF] seed skipped: {type(e).__name__}',flush=True)
     def _seed_lane_history(self):
         """12.14.1: a restarted lane is BLIND for two hours unless we do this.
 
@@ -630,6 +648,11 @@ class PolyRunner(Runner):
                 for _k,_side,_st,_ts in self.db.sql('SELECT kind,side,status,ts FROM signals WHERE epoch=?',(ep,)):
                     if _st in ('FILLED','PENDING','UNKNOWN','SUBMITTING') and _k in ('MAIN','REVERSAL','EF') and _side in ('UP','DOWN'):
                         self.lanes.restore(_k,_side,int((_ts or now)*1000))
+                # 12.24.7: a MAIN that was only CALLED or BLOCKED is still REVERSAL's reference (build11), so it is
+                # rebuilt too - without it a restart made MAIN re-call and REVERSAL watch the wrong side.
+                for _k,_side,_st,_ts,_p in self.db.sql('SELECT kind,side,status,ts,p FROM calls WHERE epoch=?',(ep,)):
+                    if _k in ('MAIN','REVERSAL','EF') and _side in ('UP','DOWN'):
+                        self.lanes.restore_call(_k,_side,int((_ts or now)*1000),_p,_st=='BLOCKED')
             except Exception as e: self.error=f'lane restore: {type(e).__name__}'
         # 12.22.0: hand the lane engine the settlement line and the venue ask for the EF reversal lane
         try:
@@ -698,16 +721,16 @@ class PolyRunner(Runner):
         try: self.db.call(ep,kind,decision.get('side'),decision.get('p'),'CALLED',_cq,decision.get('reason'))
         except Exception: pass
         if self._routing_live() and (self.cash is None or time.monotonic()-self.cash_at>=15):
-            return self._lane_drop(ep,kind,'cash unknown or stale')
+            return self._lane_drop(ep,kind,'cash unknown or stale',attempt=False)
         if ep not in self.market or ep not in self.info:
-            return self._lane_drop(ep,kind,'market or terms not resolved')
+            return self._lane_drop(ep,kind,'market or terms not resolved',attempt=False)
         self._sync_executor_dials()             # live execution dials
         token=self.market[ep][0 if decision['side']=='UP' else 1]
         if token not in self.books.terms:
             self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(dict(
                 reason='no_terms',kind=kind,side=decision.get('side'),
                 since_tick_change_s=self._since_tick_change(token)))))
-            return self._lane_drop(ep,kind,'no tick terms for the token')
+            return self._lane_drop(ep,kind,'no tick terms for the token',attempt=False)
         stake=self.db.get('next_stake',1.); reserved=self.db.live_reserve()
         if self._routing_live() and stake>max(0,(self.cash or 0)-reserved):
             return self._lane_drop(ep,kind,'stake exceeds free cash')
@@ -766,18 +789,27 @@ class PolyRunner(Runner):
         if not placed:
             print(f'[{kind}] signal not executed - {reason}',flush=True)
         self.revision+=1
-    def _lane_drop(self,ep,kind,why):
+    def _lane_drop(self,ep,kind,why,attempt=True):
         """A lane decision that never reached the executor. Clear pending, say why.
 
         The lane marks pending[kind] when it returns a decision and clears it only
         when the engine calls confirm(). Any path that returns in between freezes
         that lane until the next candle, with no journal row naming the cause.
         """
-        try: self.lanes.confirm(kind,False,why)
+        # 12.24.7: a TRANSIENT drop (cash not yet read, market/terms not yet resolved after a restart or a tick
+        # change) is not an order attempt. Counting it spent MAIN_MAX_ATTEMPTS in ~1 s (the lane re-fires every
+        # 0.25 s) and killed the lane for the candle with no order sent. Those clear pending only, and are logged
+        # once per candle and reason instead of four times a second.
+        try:
+            if attempt: self.lanes.confirm(kind,False,why)
+            else: self.lanes.pending[kind]=False
         except Exception: pass
+        _seen=getattr(self,'_drop_logged',set())
+        if (ep,kind,why) in _seen and not attempt: return
+        _seen.add((ep,kind,why)); self._drop_logged={x for x in _seen if x[0]>=ep-600}
         try:
             self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(dict(
-                reason='lane_dropped',kind=kind,detail=why))))
+                reason='lane_dropped',kind=kind,detail=why,attempt=attempt))))
         except Exception: pass
         print(f'[{kind}] decision dropped before the executor - {why}',flush=True)
 
@@ -931,7 +963,7 @@ class PolyRunner(Runner):
         except (TypeError,ValueError): return
         if not (floor>0): return
         if not self.db.get('ef_enabled',True):
-            self._floor_reads=0; self._floor_since=None; return
+            self._floor_reads=0; self._floor_since=None; _floor_save(self); return
         # 12.15.2: STALE IS ALSO UNKNOWN.
         # This read had no age bound. venue_state is written only by
         # venue_truth_loop, whose handler sets self.error and leaves the old row in
@@ -945,16 +977,20 @@ class PolyRunner(Runner):
         if opened is None: return                      # unknown != low; act on nothing
         age=time.time()-float(r[0][1] or 0)
         if age>self.FLOOR_OPEN_VALUE_MAX_AGE_S:
-            self._floor_reads=0; self._floor_since=None
+            self._floor_reads=0; self._floor_since=None; _floor_save(self)
             print(f'[ef floor] open_value is {age:.0f}s old (>{self.FLOOR_OPEN_VALUE_MAX_AGE_S:.0f}s);'
                   ' equity unknown, floor not evaluated',flush=True)
             return
         equity=self.cash-self.db.live_reserve()+opened
         now=time.time()
         if equity>=floor:
-            self._floor_reads=0; self._floor_since=None; return
+            self._floor_reads=0; self._floor_since=None; _floor_save(self); return
+        if not hasattr(self,'_floor_reads'):                       # 12.24.7: survive a restart
+            _fs=self.db.get('ef_floor_state') or {}
+            self._floor_reads=int(_fs.get('reads',0) or 0); self._floor_since=_fs.get('since')
         self._floor_reads=getattr(self,'_floor_reads',0)+1
         if getattr(self,'_floor_since',None) is None: self._floor_since=now
+        _floor_save(self)
         if self._floor_reads<self.FLOOR_CONFIRMATIONS or now-self._floor_since<self.FLOOR_MIN_SPAN_S: return
         self.db.set('ef_enabled',False)                # audited write; master untouched
         self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(now,0,json.dumps(dict(
@@ -964,7 +1000,7 @@ class PolyRunner(Runner):
         print('[ef floor] equity %.2f below %.2f on %d reads over %.0f s - EF DISABLED'
               ' (master untouched; re-enable from the dashboard)'
               %(equity,floor,self._floor_reads,now-self._floor_since),flush=True)
-        self._floor_reads=0; self._floor_since=None
+        self._floor_reads=0; self._floor_since=None; _floor_save(self)
     WIPEOUT_CONFIRMATIONS=3
     def _wipeout_check(self):
         """MONITOR ONLY. Records a low-balance reading and stops nothing.
@@ -1069,6 +1105,8 @@ class PolyRunner(Runner):
     async def grade_loop(self):
         while True:
             rows=self.db.sql('SELECT DISTINCT epoch FROM fills WHERE epoch<? AND epoch NOT IN (SELECT epoch FROM results)',(time.time()-390,))
+            # 12.24.7: blocked/untraded calls are graded too (they have no fills, so they never reached grade()).
+            rows=list(rows)+list(self.db.sql('SELECT DISTINCT epoch FROM calls WHERE actual IS NULL AND epoch<? AND epoch>? AND epoch NOT IN (SELECT epoch FROM fills)',(time.time()-390,time.time()-86400)))
             for row in rows:
                 ep=row[0]; data=await asyncio.to_thread(http_json,GAMMA.format(ep))
                 if not data: continue

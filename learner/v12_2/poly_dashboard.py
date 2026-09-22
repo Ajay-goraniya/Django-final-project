@@ -242,6 +242,13 @@ class Dashboard:
             reason='called, submitting'
         return dict(direction=sig.get('direction'),ts_ms=sig.get('ts_ms'),
                     probability_up=sig.get('probability_up',0.5),reason=reason,placed=bool(placed))
+    def _headline_lane(self):
+        """The lane the headline PnL is on - LIVE fills when there are any, else PAPER (shadow). The per-lane
+        split used to sum both, so MAIN+REVERSAL+EF did not equal the total on a live box."""
+        try:
+            if self.db.sql("SELECT 1 FROM orders o JOIN fills f ON f.order_id=o.id WHERE coalesce(o.lane,?)='LIVE' LIMIT 1",(self.db.lane,)): return 'LIVE'
+        except Exception: pass
+        return 'PAPER' if self.r.a.live else self.db.lane
     def pnl_by_kind(self):
         """Settled PnL split by lane. MAIN and REVERSAL can hold opposite sides
         of one candle, so a single blended number would hide the hedge."""
@@ -250,7 +257,8 @@ class Dashboard:
                             - coalesce(sum(f.spent+f.fees),0) pnl
                             FROM results r JOIN signals s USING(epoch)
                             JOIN orders o ON o.epoch=s.epoch AND coalesce(o.kind,'EF')=s.kind
-                            JOIN fills f ON f.order_id=o.id GROUP BY coalesce(o.kind,'EF')''')
+                            JOIN fills f ON f.order_id=o.id
+                            WHERE coalesce(o.lane,?)=? GROUP BY coalesce(o.kind,'EF')''',(self.db.lane,self._headline_lane()))
         out={r['kind']:r['pnl'] for r in rows}
         for k in ('EF','MAIN','REVERSAL'): out.setdefault(k,0.0)
         return out
@@ -503,7 +511,7 @@ class Dashboard:
         if not eps: return dict(rows=[],offset=offset,total=self.db.metrics()['n'])
         ph=','.join('?'*len(eps))
         ls=self.db.sql(f"""SELECT s.epoch,coalesce(s.kind,'EF') kind,s.side,s.decision,r.actual,
-        sum(f.shares) shares,sum(f.spent) spent,sum(f.fees) fees
+        sum(f.shares) shares,sum(f.spent) spent,sum(f.fees) fees,max(o.lane) lane
         FROM results r JOIN signals s ON s.epoch=r.epoch
         JOIN orders o ON o.epoch=s.epoch AND o.kind=s.kind JOIN fills f ON f.order_id=o.id
         WHERE r.epoch IN ({ph}) GROUP BY s.epoch,coalesce(s.kind,'EF')""",eps)
@@ -542,7 +550,9 @@ class Dashboard:
     def chart(self):
         candles=[dict(time=r['epoch']*1000,open=r['open'],high=r['high'],low=r['low'],close=r['close'],volume=r['volume']) for r in reversed(self.db.sql('SELECT * FROM candles ORDER BY epoch DESC LIMIT 500'))]
         markers=[]
-        for r in self.db.sql('SELECT * FROM signals ORDER BY epoch DESC LIMIT 500'):
+        # 12.24.7: the order's own lane, so a marker is not relabelled real/shadow when master flips
+        for r in self.db.sql('''SELECT s.*,(SELECT o.lane FROM orders o WHERE o.epoch=s.epoch AND coalesce(o.kind,'EF')=s.kind
+                                ORDER BY o.ts DESC LIMIT 1) lane FROM signals s ORDER BY s.epoch DESC LIMIT 500'''):
             d=json.loads(r['decision']); markers.append(dict(candle_id=r['epoch']*1000,ts_ms=int(r['ts']*1000),time=r['epoch']*1000,kind=(r['kind'] if 'kind' in r.keys() else None) or 'EF',direction=r['side'],price=d.get('signal_price'),financial_is_shadow=self._shadow(r)))
         return dict(candles=candles,markers=markers,history=[],revision=self.r.revision)
     def snapshot(self):

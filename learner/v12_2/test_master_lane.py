@@ -165,3 +165,25 @@ class CallsAreGraded12245(unittest.TestCase):
             q, st, why = db.sql("SELECT quote,status,reason FROM calls WHERE epoch=300 AND kind='MAIN'")[0]
             self.assertEqual((q, st, why), (0.67, 'BLOCKED', 'blend 0.20'), 'the forbidden call keeps its quote and reason')
             db.c.close()
+
+
+class RestartState12247(unittest.TestCase):
+    def test_floor_confirmations_survive_a_restart(self):
+        import tempfile, pathlib, types, btc_model_v12_polymarket as E
+        from poly_core import Journal
+        with tempfile.TemporaryDirectory() as d:
+            db = Journal(str(pathlib.Path(d) / 'f.db'), 'LIVE', 'h')
+            r = types.SimpleNamespace(db=db, _floor_reads=4, _floor_since=1000.0)
+            E._floor_save(r)
+            self.assertEqual(db.get('ef_floor_state'), dict(reads=4, since=1000.0))
+            db.c.close()
+
+    def test_transient_drops_do_not_spend_attempts(self):
+        import types, btc_model_v12_polymarket as E, poly_lanes as L
+        r = types.SimpleNamespace(lanes=L.LaneEngine(), db=types.SimpleNamespace(sql=lambda *a, **k: []))
+        r._lane_drop = types.MethodType(E.PolyRunner._lane_drop, r)
+        r.lanes.pending['MAIN'] = True
+        for _ in range(10): r._lane_drop(300, 'MAIN', 'cash unknown or stale', attempt=False)
+        self.assertEqual(r.lanes.main_attempts, 0); self.assertFalse(r.lanes.pending['MAIN'])
+        r._lane_drop(300, 'MAIN', 'stake exceeds free cash')
+        self.assertEqual(r.lanes.main_attempts, 1, 'a real refusal still counts')

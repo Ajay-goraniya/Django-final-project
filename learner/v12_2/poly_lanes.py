@@ -682,7 +682,7 @@ class LaneEngine:
         Lane state is memory only, so after a restart the card read NOT TRIGGERED on a candle REVERSAL had already
         traded (London 00:40:54 UP, card at 00:44 after a 00:42 restart). Rebuild the once-per-candle state from the
         journal so the card, REVERSAL's reference to MAIN and the once-per-candle guards all see the placed order."""
-        sig = dict(direction=side, ts_ms=int(ts_ms or 0), probability_up=(1.0 if side == 'UP' else 0.0), restored=True)
+        sig = dict(direction=side, ts_ms=int(ts_ms or 0), probability_up=None, restored=True)
         if kind == 'MAIN':
             self.main_signal = self.main_signal or dict(sig); self.current_main = dict(sig)
         elif kind == 'REVERSAL':
@@ -690,6 +690,18 @@ class LaneEngine:
             self.reversal_state = {"status": "fired", "detail": f"REVERSAL {side} placed this candle (restored from the journal)"}
         elif kind == 'EF':
             self.ef_signal = self.ef_signal or dict(sig, kind='EF', side=side); self.ef.fired = dict(sig, kind='EF', side=side)
+
+    def restore_call(self, kind, side, ts_ms, p=None, blocked=False):
+        """12.24.7: rebuild a CALLED/BLOCKED prediction (no order) after a restart - the call REVERSAL watches."""
+        pu = None
+        try: pu = float(p) if side == 'UP' else 1.0 - float(p)
+        except (TypeError, ValueError): pu = None
+        sig = dict(direction=side, ts_ms=int(ts_ms or 0), probability_up=pu, restored=True)
+        if kind == 'MAIN' and not self.main_signal: self.main_signal = sig
+        if blocked:
+            if not hasattr(self, 'blocked'): self.blocked = set()
+            self.blocked.add(kind)
+            if kind == 'MAIN': self.main_block = 'BLOCKED - MAIN switched off (prediction kept)'
 
     def block(self, kind, reason='switched off'):
         """12.24.5: the lane's Trade Controls switch is OFF. As in build11 (and the Predict.fun builds), the

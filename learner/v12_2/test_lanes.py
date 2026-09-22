@@ -459,3 +459,14 @@ class RestoreAfterRestart12246(unittest.TestCase):
         e.restore('MAIN', 'DOWN', 62000)
         self.assertTrue(e.monitor()['main_placed'])
         self.assertIsNone(e._try_main(70000, {}), 'MAIN does not fire twice in the candle')
+
+
+class RestoreCall12247(unittest.TestCase):
+    def test_a_blocked_main_call_is_rebuilt_as_reversals_reference(self):
+        e = engine_with()
+        e.on_candle(dict(time=0, open=100000.0, high=100000.0, low=100000.0, close=100000.0, volume=100.0))
+        e.restore_call('MAIN', 'UP', 60000, 0.83, blocked=True)
+        self.assertEqual(e.main_signal['direction'], 'UP'); self.assertAlmostEqual(e.main_signal['probability_up'], 0.83)
+        self.assertIn('MAIN', e.monitor()['blocked'])
+        self.assertIsNone(e._try_main(140000, {}), 'no second MAIN call after the restart')
+        self.assertFalse(e.monitor()['main_placed'], 'a call is not a position')
