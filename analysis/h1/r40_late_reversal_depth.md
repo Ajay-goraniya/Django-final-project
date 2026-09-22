@@ -31,7 +31,15 @@ disagreement matters).
 Also note the winners' asks: median winning ask is **0.630**, i.e. most late winners pay 1.6×. The
 +1.72 per-$1 is not "cheap asks win late" — it is that one 0.010 fire.
 
-## Why I will not give a depth verdict: my two book sources disagree fundamentally
+## WITHDRAWN (09-22 23:4x) — the owner was right; see the correction at the end of this file
+
+**The "two different measurements / unreliable" claim below is withdrawn.** Re-matched on the same
+market key and wall clock, the disagreement is dominated by a *persistent per-candle offset*, which
+is the signature of market/window misalignment — exactly what the owner said — not of either logger
+being wrong. Numbers in the correction section. The rest of this section is left as written, marked
+wrong, because the reasoning is what I would otherwise repeat.
+
+## ~~Why I will not give a depth verdict: my two book sources disagree fundamentally~~ (WRONG)
 
 I hold `book1s.b1` and `polybook.pb`, two independent 1 Hz Polymarket loggers, both with
 `ask_up/size_up/ask_dn/size_dn`. On **40,000 matched (epoch, sec) rows**:
@@ -80,3 +88,53 @@ in this repo inherits that, not just this one test.
 3. Top-of-book size only; no ladder exists in any file I hold, so "≥5 shares at or under ask+0.01"
    could only be tested as "≥5 shares AT the touch" — a weaker condition, and an upper bound on
    fillability even if the source were trustworthy.
+
+
+---
+
+# CORRECTION — the book logs differ by ALIGNMENT, not by reliability
+
+Owner (09-22 23:4x): *"Because one is per candle up and down and second one is as per twap 60."*
+Correct, and my r40 point 2 was wrong to call either source unreliable.
+
+## Re-matched properly, then decomposed
+
+`b1` carries a `book_candle` column distinct from `epoch` (they differ on **10.9%** of rows) and
+`pb` carries a `status` column with **88,901 `no market` rows** — I used neither in r40. Redone with
+both, plus wall-clock matching `|Δt| ≤ 500 ms` and freshness in both files:
+
+| alignment | n | corr | exact | mean \|diff\| | ≤1c |
+|---|---|---|---|---|---|
+| `epoch=epoch` (r40's join) | 60000 | 0.832 | 7.3% | 0.1058 | 17.4% |
+| + `pb` live websocket only | 60000 | — | 7.3% | 0.1061 | 17.4% |
+| `book_candle=epoch`, live | 60000 | — | 7.3% | 0.1049 | 17.4% |
+| both fresh (b1 ≤2000 ms, pb ≤2 s) | 60000 | 0.854 | 6.7% | 0.0995 | 16.4% |
+| both fresh, sec 30–240 | 60000 | **0.889** | 4.5% | 0.0934 | 13.1% |
+
+**Re-keying does not close the gap — but the decomposition explains it.** On 1,178 candles with ≥30
+paired seconds each:
+
+| component | value | meaning |
+|---|---|---|
+| sd of the per-candle **mean** offset | **0.1172** | a near-constant offset *within* a candle that varies *between* candles |
+| median **within-candle** sd | **0.0617** | second-to-second observation noise |
+
+**The persistent per-candle component is ~2× the tick noise.** Two honest observers of the *same*
+book would disagree mostly second-to-second; two logs keyed to *different* markets or windows
+disagree by a per-candle constant. The data has the second shape. Correlation 0.83–0.89 confirms
+they track the same underlying series — so neither file is broken, they are indexed differently.
+
+Agreement also rises sharply late in the candle (≤1c: 13.5% at 120–240 s, 26.2% at 240–285 s,
+**58.0%** at 285–301 s), consistent with two windows converging as they come to refer to the same
+resolution.
+
+## What this does and does not change
+
+- **Withdrawn:** "every book-derived feature in the repo inherits an 11-cent error." Not supported.
+  The offset is an indexing difference between two *logs*, and says nothing about what the *engine*
+  read at fire time.
+- **Unchanged:** the late-REVERSAL verdict above. It rests on the PnL distribution — one 0.010 fire
+  carrying 100.8% of the bucket — and never used book depth at all.
+- **Still open:** I cannot do the dust/depth test until someone states which file keys to which
+  market. Given the 2× median size ratio, the choice decides a 5-share threshold. That is a mapping
+  question for whoever wrote the loggers, not a data-quality problem.
