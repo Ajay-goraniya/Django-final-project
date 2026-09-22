@@ -581,7 +581,10 @@ class Dashboard:
         # single figure. A phantom row - repeatedly absent from the venue's open
         # orders with no fill - is excluded from what it holds back.
         rd=self.db.reserve_detail(); reserve=rd['effective']
-        fills=self.orders('EF',0,1)['rows']; last=fills[0] if fills else None
+        # 12.23.2: the card read EF's newest order only, so London's first LIVE fill (MAIN DOWN 22:20 UTC,
+        # 11.43 sh @ 0.42) showed "--" while the wallet had paid for it. Newest order across every lane.
+        fills=[r for k in ('EF','MAIN','REVERSAL') for r in self.orders(k,0,1)['rows']]
+        last=max(fills,key=lambda r: r.get('utc') or '') if fills else None
         if last: last.update(slippage=last.get('quote_to_fill'),attempts=last['ef_attempt_seq'],order_status=last['status'])
         current=dict(r.current_candle)
         if current: current['seconds_left']=max(0,current['time']/1000+300-time.time())
