@@ -797,3 +797,13 @@ per-candle pnl arithmetic 83/83 exact; reserve and orphan checks pass. Faults fo
 stuck in claim_status REVIEW with claim_id NULL (collected by auto-redeem; pending_payout excludes them; cosmetic).
 Tests: `test_settlement.py` +6; RefFeed tests re-pinned to the TWAP reading (+ref_inst). Green: 72+10+6+6+36+26 + 270 = 426.
 SHA256SUMS 35 -> 36. Rollout: Zurich PAPER (with 12.19.1), then London.
+
+### 12.20.0 PAPER deploy line (Zurich box) — written by the Zurich session
+
+Restarted 2026-09-22 12:01:09 UTC, **PID 145746** (was 145293, stopped 12:00:54 at a clean point: 0 in-flight/PENDING/UNKNOWN, 30 s into the candle). Same argv, **same db** `polymarket_v12_zurich_paper1.sqlite3`, no `--live`, credentials stripped from the child environment. Restart epoch **1790078469**.
+Verified: `sha256sum -c SHA256SUMS.txt` **36/36**, every file byte-equal to `git show 230dadf`. `python3 -m unittest test_settlement test_fastpath -q` → **Ran 17, OK**.
+`/api/state` after restart: build **12.20.0**, lane **PAPER**, master true, MAIN/REVERSAL/EF all true. `[LANE SEED] 64 closed candles from the journal; warm`.
+`settlement` block present and populated: `line_open` 86016.01, `line_now` 86023.76056484699, `source` **"binance proxy"**; full key set `basis_bps, binance_last, bn_line_now, bn_line_open, chainlink_now, line_now, line_open, locked_s, move_bps, rule, source`.
+`metrics.main` and `metrics.reversal` are no longer empty: **main** accuracy 0.875, wins 7, losses 1, real 0, shadow 8, basis LOCAL_FROM_FILLS, local_pnl +4.7213. **reversal** accuracy 0.25, wins 1, losses 3, real 0, shadow 4, basis LOCAL_FROM_FILLS, local_pnl −7.0669. `metrics` key set is now `combined, ef, main, reversal`.
+
+**12.19.0 window, closed early by this deploy.** 12.19.0 ran 11:40:38 → 12:00:54, **20 minutes, not the planned 60** — this deploy ended it. `latency_breakdown --since 1790077238` was captured from a `backup()` snapshot before the restart so the data was not lost, but it is **n=3 and unreadable**: orders with timing 3, all FILLED, decision_ms p50 0.4, sign_ms p50 0.1, fire_to_submit_ms p50 0.7, submit_ms p50 0.1, total_attempt_ms p50 1.0, book_age_ms p50 14.0, signal.ts→order.ts p50 1 ms, by attempt {1: (3,3)}. Those sub-millisecond submit figures are the PaperBroker's in-process fill, not a venue round trip, so they are not comparable to the live journals' submit_ms p50 ≈ 255 ms. A real 12.19.0 latency read needs either a dedicated 60-minute soak without an intervening deploy, or a live run.
