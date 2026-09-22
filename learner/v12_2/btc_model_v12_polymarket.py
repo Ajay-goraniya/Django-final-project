@@ -438,7 +438,11 @@ class PolyRunner(Runner):
         # call left it at order_plan's default True, so "book too thin at cap"
         # could refuse here a fire the executor would have sent.
         try:
-            plan=order_plan(q,terms,stake,d,pad,band=self.slippage_mode()=='band',require_depth=self.executor.require_depth)
+            # 12.21.2: the decide-stage gate must price the way the order will be placed. A shadow
+            # order (master OFF) may top up to the venue's 5-share minimum, a live one never does;
+            # without this, next_stake 1.0 on a fresh journal killed every EF candidate here as
+            # "below venue minimum" before Executor.fire could route it (Zurich live4, 372 decides, 0 fires).
+            plan=order_plan(q,terms,stake,dict(d,min_topup=not self._routing_live()),pad,band=self.slippage_mode()=='band',require_depth=self.executor.require_depth)
         except ValueError as e:
             out=dict(d,fire=False,reason=f'EV at padded price: {e}',ev_gate=str(e),
                      ev_gate_pad=pad,ev_gate_ask=q['ask'])

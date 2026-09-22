@@ -852,3 +852,12 @@ venue order is gated exactly as before. Tests +1 (438), SHA256SUMS 37.
 Rollout on Zurich: a NEW process with the four credentials in its environment (`--live`), a NEW db (the paper journal's
 identity is PAPER and the 09-21 live journal is closed), boots master OFF = SHADOW; the paper process stops. The owner arms
 master from Trade Controls when they want the venue.
+
+ 12.21.2 (09-22 14:5x UTC) - the EF decide-stage gate prices a shadow order the way it will be placed
+
+Zurich live4 (12.21.1, SHADOW, 13:16 -> 14:46): 372 decides, 0 fires. Not the cap, not EV (214 padded-EV reads, p50 +0.035,
+161 > 0), not the floor (unset). `_gate_on_padded_ev` calls `order_plan` with the bare decision, so `min_topup` was absent
+at the decide stage and next_stake 1.0 on the fresh journal died 8 times as "below venue minimum; stake not increased" -
+before `Executor.fire` (which does set min_topup per lane since 12.21.0) ever saw it. The gate now passes
+`min_topup = not self._routing_live()`: shadow may top up to the 5-share minimum, live never does. Tests +1 (439),
+SHA256SUMS 37. Note for the owner: the fresh live4 journal reset next_stake to 1.0 (paper1 had 5.47); live stake is theirs.

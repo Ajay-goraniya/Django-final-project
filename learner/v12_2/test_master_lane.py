@@ -101,12 +101,22 @@ class Controls(unittest.TestCase):
         # live process with $1.65 in the wallet must still fire.
         import pathlib, re
         src=pathlib.Path(__file__).with_name('btc_model_v12_polymarket.py').read_text()
-        self.assertEqual(len(re.findall(r'self\._routing_live\(\)',src)),4)
+        self.assertEqual(len(re.findall(r'self\._routing_live\(\)',src)),5)   # 4 cash checks + the 12.21.2 decide-gate min_topup
         self.assertIn("if self._routing_live() and stake>max(0,(self.cash or 0)-reserved):",src)
         self.assertIn("if self._routing_live() and (self.cash is None or time.monotonic()-self.cash_at>=15):",src)
         import btc_model_v12_polymarket as E, poly_core as C
         r=E.PolyRunner.__new__(E.PolyRunner); r.a=SimpleNamespace(live=True); r.executor=C.Executor(self.db,C.BookCache(),C.PaperBroker(C.BookCache()),shadow=C.PaperBroker(C.BookCache()))
         self.db.set('master',False); self.assertFalse(r._routing_live()); self.db.set('master',True); self.assertFalse(r._routing_live(),'a PAPER journal never routes live')
+    def test_decide_gate_prices_like_the_order_will_be_placed(self):
+        # 12.21.2: the EF decide-stage EV gate passes min_topup = not routing live, so a $1 stake on a
+        # shadow route is topped up to the 5-share minimum instead of dying as 'below venue minimum'.
+        import pathlib
+        src=pathlib.Path(__file__).with_name('btc_model_v12_polymarket.py').read_text()
+        self.assertIn("plan=order_plan(q,terms,stake,dict(d,min_topup=not self._routing_live()),pad,",src)
+        import poly_core as C
+        q=dict(ask=.76,asks=[(.76,200.),(.77,200.)],age_ms=20.,seq=1); terms=(.01,5.0,0.,1.); d=dict(p=.95,threshold=0.)
+        with self.assertRaises(ValueError): C.order_plan(q,terms,1.0,d,pad=1)                     # live: refused
+        plan=C.order_plan(q,terms,1.0,dict(d,min_topup=True),pad=1); self.assertGreaterEqual(plan['max_shares']+1e-9,5.0)   # shadow: topped up
     def test_shadow_flag_follows_the_order_lane(self):
         self.assertTrue(self.ui._shadow({'lane':'PAPER'})); self.assertFalse(self.ui._shadow({'lane':'LIVE'})); self.assertTrue(self.ui._shadow({}))
 
