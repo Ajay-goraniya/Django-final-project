@@ -861,3 +861,11 @@ at the decide stage and next_stake 1.0 on the fresh journal died 8 times as "bel
 before `Executor.fire` (which does set min_topup per lane since 12.21.0) ever saw it. The gate now passes
 `min_topup = not self._routing_live()`: shadow may top up to the 5-share minimum, live never does. Tests +1 (439),
 SHA256SUMS 37. Note for the owner: the fresh live4 journal reset next_stake to 1.0 (paper1 had 5.47); live stake is theirs.
+
+ 12.21.3 (09-22 15:0x UTC) - the page header follows the route, not the --live flag
+
+Owner, 15:56 BST screenshot of Zurich live4 (12.21.2, master OFF): header "PnL · LIVE" - "Master off paper is not working
+properly??". Master was OFF and every order routes to shadow; the header string is rendered server-side at page load from
+`self.r.a.live` (poly_dashboard.py:599), the one place 12.21.0 missed. It now renders `lane_label()` (LIVE / SHADOW / PAPER)
+and the dashboard JS updates `#buildStamp` from `/api/state` `lane` on every refresh, so arming or disarming master changes
+the header without a reload. Tests +1 (440), SHA256SUMS 37. Nothing in the order path changed.

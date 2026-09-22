@@ -117,6 +117,14 @@ class Controls(unittest.TestCase):
         q=dict(ask=.76,asks=[(.76,200.),(.77,200.)],age_ms=20.,seq=1); terms=(.01,5.0,0.,1.); d=dict(p=.95,threshold=0.)
         with self.assertRaises(ValueError): C.order_plan(q,terms,1.0,d,pad=1)                     # live: refused
         plan=C.order_plan(q,terms,1.0,dict(d,min_topup=True),pad=1); self.assertGreaterEqual(plan['max_shares']+1e-9,5.0)   # shadow: topped up
+    def test_page_header_follows_the_route_not_the_flag(self):
+        # 12.21.3: the owner's 15:56 screenshot read "PnL · LIVE" with master OFF - the page header was
+        # rendered from the --live flag at page load. It now renders lane_label() and the JS keeps it live.
+        import pathlib
+        py=pathlib.Path(__file__).with_name('poly_dashboard.py').read_text(); html=pathlib.Path(__file__).with_name('dashboard_html.html').read_text()
+        self.assertNotIn("('LIVE' if self.r.a.live else 'PAPER')",py); self.assertIn("' · v10 PnL · '+self.lane_label()",py)
+        self.assertIn("text('buildStamp',live.build+",html)
+        self.ui.r.a.live=True; self.db.set('master',False); self.assertEqual(self.ui.lane_label(),'SHADOW')
     def test_shadow_flag_follows_the_order_lane(self):
         self.assertTrue(self.ui._shadow({'lane':'PAPER'})); self.assertFalse(self.ui._shadow({'lane':'LIVE'})); self.assertTrue(self.ui._shadow({}))
 

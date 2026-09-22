@@ -578,7 +578,7 @@ class Dashboard:
         venue_positions=list(getattr(r,'account_positions',[]) or [])
         position_value=sum(float(x.get('current_value') or 0) for x in venue_positions if isinstance(x,dict))
         sizing_bankroll=self.equity()
-        self.cache=dict(feature_names=FEATURES,open_positions=positions,economics=self.pnl(),model=dict(version=10),learning=dict(status='Fixed v10 weights'),candle=current,settlement=self.settlement(),feature=d.get('features',{}),feed=self.feed_state(),metrics=dict(main=lane_metric('MAIN'),reversal=lane_metric('REVERSAL'),ef=lane_metric('EF'),combined=metric),main=self.lane_card('MAIN'),reversal=self.lane_card('REVERSAL'),lanes=(self.r.lane_decision or {}),main_block=(self.r.lane_decision or {}).get('main_block',''),ef=ef,ef_monitor=dict(status=d.get('reason') or f"v10 pnl · p {d.get('p','--')} · EV {d.get('ev','--')}"),book=book,last_fill=last,controls=ctr,capital=dict(balance=sizing_bankroll,sizing_bankroll=sizing_bankroll,wallet=cash,pending_payout=pending,open_position_value=position_value,free=cash,wallet_free=cash,funding_headroom=max(0,cash-reserve),reserve_detail=rd,fresh=age<15,balance_age_sec=age,realised=metrics['pnl'],reserved=reserve,next_stake=self.db.get('next_stake',1),truth=dict(source='Polymarket API (balance, positions, open orders, account PnL)',venue_positions=venue_positions,
+        self.cache=dict(feature_names=FEATURES,open_positions=positions,economics=self.pnl(),model=dict(version=10),learning=dict(status='Fixed v10 weights'),candle=current,settlement=self.settlement(),build=self.db.get('build'),feature=d.get('features',{}),feed=self.feed_state(),metrics=dict(main=lane_metric('MAIN'),reversal=lane_metric('REVERSAL'),ef=lane_metric('EF'),combined=metric),main=self.lane_card('MAIN'),reversal=self.lane_card('REVERSAL'),lanes=(self.r.lane_decision or {}),main_block=(self.r.lane_decision or {}).get('main_block',''),ef=ef,ef_monitor=dict(status=d.get('reason') or f"v10 pnl · p {d.get('p','--')} · EV {d.get('ev','--')}"),book=book,last_fill=last,controls=ctr,capital=dict(balance=sizing_bankroll,sizing_bankroll=sizing_bankroll,wallet=cash,pending_payout=pending,open_position_value=position_value,free=cash,wallet_free=cash,funding_headroom=max(0,cash-reserve),reserve_detail=rd,fresh=age<15,balance_age_sec=age,realised=metrics['pnl'],reserved=reserve,next_stake=self.db.get('next_stake',1),truth=dict(source='Polymarket API (balance, positions, open orders, account PnL)',venue_positions=venue_positions,
                         reserve_confirmed=rd['confirmed'],reserve_unverified=rd['unverified'],
                         reserve_phantom=rd['phantom'],reserve_total_local=rd['total'],
                         reserve_phantom_ids=rd['phantom_ids'],
@@ -596,7 +596,7 @@ class Dashboard:
         # checks to see what is running was the one thing lying about it. Two
         # places to bump means one of them is eventually wrong; there is now one.
         build=self.db.get('build') or 'unknown'
-        text=(ROOT/name).read_text().replace('__VERSION__','12 Polymarket').replace('__BUILD__',build+' · v10 PnL · '+('LIVE' if self.r.a.live else 'PAPER')).replace('__UPTIME_SEC__',str(time.time()-self.r.started))
+        text=(ROOT/name).read_text().replace('__VERSION__','12 Polymarket').replace('__BUILD__',build+' · v10 PnL · '+self.lane_label()).replace('__UPTIME_SEC__',str(time.time()-self.r.started))
         return text
     def make_server(self):
         ui=self
