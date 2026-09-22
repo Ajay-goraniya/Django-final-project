@@ -63,3 +63,30 @@ in `shadow_pnl`), 42/44/70 (broker + shadow construction, safe-start), 472 (`_ro
 `Executor.route()` and only falls back to the flag on exception), 729/735/783/831/898/990/1033/1149/
 1226/1269/1301 (venue metadata, balances, reconcile, geoblock, close, venue guard), 1242 (banner,
 already prints "LIVE credentials (master OFF = shadow paper)").
+
+---
+
+# 12.22.0 deploy + EF brain on the reversal lane (09-22 19:05 UTC)
+
+| row | result |
+|---|---|
+| stage 3357a90 | 41 files, SHA256SUMS **39/39 OK**, all == `git show` |
+| suites | `test_ef` + `test_master_lane` **30 tests, OK** (0.558 s) |
+| clean point | 19:05:34, sec_into_candle 34, in-flight 0, stale-ungraded 0 |
+| stop | pid 149446 (12.21.4) SIGTERM, gone 19:05:35 |
+| deploy | 39 files, `__pycache__` cleared, re-verified 39/39 == 3357a90 |
+| start | pid 150792, 19:05:54, same live4 db, same argv, 5/5 creds |
+| master | **OFF** (meta master=false), lane SHADOW |
+| ef_engine | audited **19:05:54 `ef_engine` None -> build11**, `poly_dashboard.py:326 apply` |
+
+## /api/state verification (all four of V's points)
+- build **12.22.0**, lane **SHADOW**, halt null
+- `ef_monitor` = "EF engine **build11** (lane) · v10 shadow: Warming up: 10 minutes of spot / 60 seconds of perpetual trades"
+- `lanes.ef.enabled` **true**, `line_open` **86449.27** (a number)
+- first build11 EF read already scoring: dir DOWN, real 0.685, fake 0.126, control_transfer 0.762,
+  old_side_exhaustion 0.39, settlement_feasibility 0.823, persistence 0.966, chop 0.127, reachability 0.923
+
+Note on the clean-point rule: with master OFF every order is a PaperBroker fill that completes
+in-process, so the only losable state is an order mid-submit. The gate is now in-flight 0 plus no
+ungraded fill older than the just-closed candle. The previous "zero ungraded" form never opened at
+this firing rate (EF/MAIN/REVERSAL are placing every 5-15 min in shadow).

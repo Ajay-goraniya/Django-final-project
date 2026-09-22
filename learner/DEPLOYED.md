@@ -927,4 +927,5 @@ Tests: test_ef +4 (58), housekeeping delete count 2 -> 3. All suites green. SHA2
 Rollout: Zurich SHADOW (ef_engine=build11), then read the EF monitor for micro_source=PERP and memory_ready before
 counting any fire; Mumbai paper the same build to grow the tape.
 | 12.21.4 | 5ac70b2 | 2026-09-22 15:50:35 UTC | eu-central-2 (Zurich) | 37/37 == git show, test_master_lane 14 OK | pid 149446, live4 db, master OFF (SHADOW) | combined real 0 / shadow 5, shadow_pnl -7.352842941176469 == sum(results.shadow_pnl); :559 fixed | written by the Zurich session |
+| 12.22.0 | 3357a90 | 2026-09-22 19:05:54 UTC | eu-central-2 (Zurich) | 39/39 == git show, test_ef+test_master_lane 30 OK | pid 150792, live4 db, master OFF (SHADOW) | ef_engine None->build11 audited 19:05:54; ef_monitor 'EF engine build11 (lane)', lanes.ef.enabled true, line_open 86449.27 | written by the Zurich session |
 
