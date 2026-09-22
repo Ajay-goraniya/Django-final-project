@@ -3,7 +3,7 @@ import base64, csv, datetime as dt, hmac, io, json, math, os, pathlib, time, uui
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit,parse_qs
 from zoneinfo import ZoneInfo
-from btc_model_v10 import FEATURES
+from btc_model_v10 import FEATURES, US
 ROOT=pathlib.Path(__file__).parent
 LONDON=ZoneInfo('Europe/London')
 DEFAULT_STAKE=dict(mode='ladder',fixed_stake=1.,percent=10.,current_stake=1.,win_trigger=3,loss_trigger=2,min_stake=1.,max_stake=50.)
@@ -56,6 +56,23 @@ class Dashboard:
         now=dt.datetime.now(LONDON); start=now.replace(hour=12,minute=0,second=0,microsecond=0)
         if now<start: start-=dt.timedelta(days=1)
         return start,start+dt.timedelta(days=1)
+    def settlement(self,f=None):
+        """The line the venue settles on (12.20.0) - Chainlink BTC/USD 60 s TWAP at close vs at the
+        open - as the engine sees it now. Plain numbers, None where a window is not covered."""
+        try:
+            if f is None: ep=int(time.time()//300)*300; f=self.r.st.features(ep*US,int(time.time()*US)) or {}
+        except Exception: f={}
+        def num(k):
+            v=f.get(k); return float(v) if isinstance(v,(int,float)) and math.isfinite(v) else None
+        lo,ln,inst,p,sl=num('ref_open'),num('ref_now'),num('ref_inst'),num('_price'),num('sec_left')
+        ok=bool(f.get('ref_inst_ok'))
+        return dict(rule='Chainlink BTC/USD TWAP60 at close vs TWAP60 at open',line_open=lo,line_now=ln,
+                    move_bps=((ln/lo-1)*1e4 if lo and ln else None),
+                    source=(('chainlink' if f.get('ref_src') else 'binance proxy') if f else None),
+                    chainlink_now=(inst if ok else None),binance_last=p,
+                    basis_bps=((inst/p-1)*1e4 if (ok and inst and p) else None),
+                    bn_line_open=num('bn_line_open'),bn_line_now=num('bn_line_now'),
+                    locked_s=(int(max(0,min(60,60-sl))) if sl is not None else None))
     def daily(self):
         start,end=self.day()
         n,p=self.db.sql('SELECT count(*),coalesce(sum(pnl),0) FROM results WHERE ts>=?',(start.timestamp(),))[0]
@@ -517,6 +534,13 @@ class Dashboard:
         vmetrics=self.db.venue_metrics(); divergence=self.db.pnl_divergence()
         live_venue=bool(r.a.live and vmetrics['n'])
         shown=vmetrics if live_venue else metrics
+        # 12.20.0: per-lane cards from the lane's own fills (Journal.lane_metrics); combined stays the
+        # per-epoch net. Same real/shadow labelling as the combined card.
+        lm=self.db.lane_metrics()
+        def lane_metric(kind):
+            m=lm.get(kind) or dict(n=0,wins=0,losses=0,pnl=0.,accuracy=None)
+            return dict(accuracy=m['accuracy'],wins=m['wins'],losses=m['losses'],real=(m['n'] if r.a.live else 0),shadow=(0 if r.a.live else m['n']),
+                        basis='LOCAL_FROM_FILLS',local_pnl=m['pnl'])
         metric=dict(accuracy=shown['accuracy'],wins=shown['wins'],losses=shown['losses'],
                     real=shown['n'] if r.a.live else 0,shadow=0 if r.a.live else shown['n'],
                     basis=('VENUE_POSITION_PNL' if live_venue else 'LOCAL_FROM_FILLS'),
@@ -540,7 +564,7 @@ class Dashboard:
         venue_positions=list(getattr(r,'account_positions',[]) or [])
         position_value=sum(float(x.get('current_value') or 0) for x in venue_positions if isinstance(x,dict))
         sizing_bankroll=self.equity()
-        self.cache=dict(feature_names=FEATURES,open_positions=positions,economics=self.pnl(),model=dict(version=10),learning=dict(status='Fixed v10 weights'),candle=current,feature=d.get('features',{}),feed=self.feed_state(),metrics=dict(main={},reversal={},ef=metric,combined=metric),main=self.lane_card('MAIN'),reversal=self.lane_card('REVERSAL'),lanes=(self.r.lane_decision or {}),main_block=(self.r.lane_decision or {}).get('main_block',''),ef=ef,ef_monitor=dict(status=d.get('reason') or f"v10 pnl · p {d.get('p','--')} · EV {d.get('ev','--')}"),book=book,last_fill=last,controls=ctr,capital=dict(balance=sizing_bankroll,sizing_bankroll=sizing_bankroll,wallet=cash,pending_payout=pending,open_position_value=position_value,free=cash,wallet_free=cash,funding_headroom=max(0,cash-reserve),reserve_detail=rd,fresh=age<15,balance_age_sec=age,realised=metrics['pnl'],reserved=reserve,next_stake=self.db.get('next_stake',1),truth=dict(source='Polymarket API (balance, positions, open orders, account PnL)',venue_positions=venue_positions,
+        self.cache=dict(feature_names=FEATURES,open_positions=positions,economics=self.pnl(),model=dict(version=10),learning=dict(status='Fixed v10 weights'),candle=current,settlement=self.settlement(),feature=d.get('features',{}),feed=self.feed_state(),metrics=dict(main=lane_metric('MAIN'),reversal=lane_metric('REVERSAL'),ef=lane_metric('EF'),combined=metric),main=self.lane_card('MAIN'),reversal=self.lane_card('REVERSAL'),lanes=(self.r.lane_decision or {}),main_block=(self.r.lane_decision or {}).get('main_block',''),ef=ef,ef_monitor=dict(status=d.get('reason') or f"v10 pnl · p {d.get('p','--')} · EV {d.get('ev','--')}"),book=book,last_fill=last,controls=ctr,capital=dict(balance=sizing_bankroll,sizing_bankroll=sizing_bankroll,wallet=cash,pending_payout=pending,open_position_value=position_value,free=cash,wallet_free=cash,funding_headroom=max(0,cash-reserve),reserve_detail=rd,fresh=age<15,balance_age_sec=age,realised=metrics['pnl'],reserved=reserve,next_stake=self.db.get('next_stake',1),truth=dict(source='Polymarket API (balance, positions, open orders, account PnL)',venue_positions=venue_positions,
                         reserve_confirmed=rd['confirmed'],reserve_unverified=rd['unverified'],
                         reserve_phantom=rd['phantom'],reserve_total_local=rd['total'],
                         reserve_phantom_ids=rd['phantom_ids'],

@@ -576,6 +576,10 @@ class PolyRunner(Runner):
                 for _k,_tok in (('ask_up',_t[0]),('ask_dn',_t[1])):
                     _q=self.books.quote(_tok,self.quote_age_s())
                     _px[_k]=(_q or {}).get('ask')
+            # 12.20.0: the settlement line the lane saw, beside the asks (lanes judge on the Binance candle).
+            _f=self.st.features(ep*US,int(time.time()*US)) or {}
+            for _k in ('ref_open','ref_now','ref_src','ref_inst','bn_line_open','bn_line_now'):
+                _v=_f.get(_k); _px[_k]=(float(_v) if isinstance(_v,(int,float)) and math.isfinite(_v) else None)
         except Exception: pass
         self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',
                     (now,ep,json.dumps(dict(decision,lane=kind,**_px))))

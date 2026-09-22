@@ -772,3 +772,28 @@ Verdict: the deploy is correct and complete; the requested verification is not s
  12.19.1 (09-22 11:5x UTC) - `latency_stats()` reports `sign_mode` / `keepalive_ms` / `keepalive_age_s` before any order exists
 (Zurich, 11:43: the empty-samples early return hid them on the fresh 12.19.0 paper process; paper's broker has neither -> None).
 No order-path change. Tests +1 (421), SHA256SUMS 35. Not deployed to Zurich paper (cosmetic); goes out with the London build.
+
+ 12.20.0 (09-22 12:xx UTC) - the settlement line as the venue settles it; MAIN/REVERSAL cards graded on their own fills
+
+Why: owner, 09-22: "be sure about the settlement price when fire and everything else, simply clean dashboard no bugs in
+accounting"; and 12:53 BST on the Zurich paper dashboard: "Why no shadow grading here??" (MAIN card 0 W / 0 L while MAIN
+had been placing orders since 10:25).
+1. Settlement line. T0 (analysis/v/t_tests/T0_ruler.md) proved the venue's reference feed is the INSTANT Chainlink price
+   (corr 0.974 with Binance raw, residual 1.6 bps vs raw / 4.0 bps vs TWAP), while btc-updown-5m settles on that feed's
+   60 s TWAP at close vs at the open. `btc_model_v10.FeatureState.REF_IS_TWAP` defaulted to 1 ("the feed IS the TWAP") so
+   `ref_open`/`ref_now` were instant values. Default is now 0: the line is the TWAP of the feed over the window
+   (Binance TWAP60 proxy when the feed does not cover it, ref_src=0). The v10 model does not read ref_* (model_v10.json
+   lists FEATURES only), so EF's p is unchanged; the lanes judge on the Binance candle as before. New absolute fields in
+   every features dict: `ref_open`, `ref_now`, `ref_inst` (+`ref_inst_ok`), `bn_line_open`, `bn_line_now` - so every EF
+   fire's diagnostics row and every lane decision row (`ref_*` beside `ask_up/ask_dn`) carries the line it saw.
+   Dashboard: "Settlement line · Chainlink TWAP60" card (`/api/state` `settlement`: line_open = price to beat, line_now,
+   move_bps, source, chainlink_now, binance_last, basis_bps, locked_s = seconds of the closing window already known).
+2. Lane cards. `poly_dashboard` built `metrics=dict(main={},reversal={},ef=metric,combined=metric)`: MAIN and REVERSAL were
+   handed EMPTY dicts, EF was handed the whole-journal per-epoch metric. `Journal.lane_metrics()` grades each lane on its
+   own fills (win = lane side == venue actual); the three cards now read from it, combined stays the per-epoch net.
+Accounting audit (read-only, zurich_2 live journal 83 results vs venues.outcome): grading 61/61 match the venue oracle;
+per-candle pnl arithmetic 83/83 exact; reserve and orphan checks pass. Faults found: fills.fees=0 on every fill in that
+12.12.1-era journal (fixed in 12.15.0, not backfilled - that journal's local +4.49 is the venue's -8.51); 6 results rows
+stuck in claim_status REVIEW with claim_id NULL (collected by auto-redeem; pending_payout excludes them; cosmetic).
+Tests: `test_settlement.py` +6; RefFeed tests re-pinned to the TWAP reading (+ref_inst). Green: 72+10+6+6+36+26 + 270 = 426.
+SHA256SUMS 35 -> 36. Rollout: Zurich PAPER (with 12.19.1), then London.

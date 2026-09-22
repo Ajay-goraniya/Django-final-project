@@ -426,10 +426,10 @@ class Journal:
         self.c.executescript('CREATE INDEX IF NOT EXISTS diagnostics_ts ON diagnostics(ts);')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.19.1')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.20.0')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1','12.12.2','12.13.0','12.13.1','12.14.0','12.14.1','12.15.0','12.15.1','12.15.2','12.15.3','12.15.4','12.15.5','12.16.0','12.16.1','12.17.0','12.18.0','12.19.0','12.19.1'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1','12.12.2','12.13.0','12.13.1','12.14.0','12.14.1','12.15.0','12.15.1','12.15.2','12.15.3','12.15.4','12.15.5','12.16.0','12.16.1','12.17.0','12.18.0','12.19.0','12.19.1','12.20.0'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -672,6 +672,23 @@ class Journal:
         r=self.sql('''SELECT count(*) n,coalesce(max(abs(venue_pnl-pnl)),0) worst,
                       coalesce(sum(venue_pnl-pnl),0) total FROM results WHERE venue_pnl IS NOT NULL''')[0]
         return dict(compared=r['n'] or 0,worst_abs=r['worst'],total_delta=r['total'])
+    def lane_metrics(self):
+        """12.20.0: settled wins / losses / pnl PER LANE, from that lane's own fills. `results` is one
+        row per epoch (the net across lanes), so the dashboard's MAIN and REVERSAL cards, which were
+        handed empty dicts, showed 0 W / 0 L forever while the lane traded (owner, 09-22 12:53 BST:
+        "Why no shadow grading here??"). A lane's candle is a win when its side is the venue's actual."""
+        rows=self.sql('''SELECT s.kind kind,s.epoch epoch,s.side side,r.actual actual,sum(f.shares) sh,sum(f.spent+f.fees) cost
+                         FROM results r JOIN signals s USING(epoch)
+                         JOIN orders o ON o.epoch=s.epoch AND coalesce(o.kind,'EF')=s.kind
+                         JOIN fills f ON f.order_id=o.id
+                         WHERE r.actual IN ('UP','DOWN') GROUP BY s.kind,s.epoch''')
+        out={}
+        for r in rows:
+            m=out.setdefault(r['kind'] or 'EF',dict(n=0,wins=0,losses=0,pnl=0.))
+            pnl=((r['sh'] or 0.) if r['side']==r['actual'] else 0.)-(r['cost'] or 0.)
+            m['n']+=1; m['wins']+=int(pnl>0); m['losses']+=int(pnl<=0); m['pnl']+=pnl
+        for m in out.values(): m['accuracy']=(m['wins']/m['n'] if m['n'] else None)
+        return out
     def metrics(self):
         n,w,l,pnl=self.sql('SELECT count(*),coalesce(sum(pnl>0),0),coalesce(sum(pnl<0),0),coalesce(sum(pnl),0) FROM results')[0]
         return dict(n=n,wins=w,losses=l,pnl=pnl,accuracy=w/n if n else None)

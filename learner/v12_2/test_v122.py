@@ -2156,7 +2156,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.19.1'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.20.0'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0
@@ -2201,8 +2201,12 @@ class RefFeed12110(unittest.TestCase):
         for k in range(-70, 31): st.on_ref_price(op + k * US, 101.0 if k < 0 else 103.0)   # 1/s, covers both windows
         f = st.features(op, op + 30 * US)
         self.assertEqual(f['ref_src'], 1.0)
-        self.assertAlmostEqual(f['ref_open_bps'], (102 / 103 - 1) * 1e4, places=6)        # first trade vs the feed's value AT open (103)
-        self.assertAlmostEqual(f['ref_move_bps'], 0.0, places=6)                          # feed value now 103 vs at open 103: the feed IS the TWAP
+        # 12.20.0: the feed is instant; the line is its 60 s TWAP. At the open: 101 over the whole
+        # pre-open minute. Now: 30 s of 101 and 30 s of 103 = 102.
+        self.assertAlmostEqual(f['ref_open_bps'], (102 / 101 - 1) * 1e4, places=6)        # first trade vs TWAP60 at open (101)
+        self.assertAlmostEqual(f['ref_move_bps'], (102 / 101 - 1) * 1e4, places=6)        # TWAP60 now (102) vs at open (101)
+        self.assertAlmostEqual(f['ref_open'], 101.0, places=6); self.assertAlmostEqual(f['ref_now'], 102.0, places=6)
+        self.assertAlmostEqual(f['ref_inst'], 103.0, places=6); self.assertEqual(f['ref_inst_ok'], 1.0)
         self.assertAlmostEqual(f['move_bps'], (104 / 102 - 1) * 1e4, places=6)            # v10 as trained: untouched
     def test_stale_reference_falls_back(self):
         M, US, st, op = self._state()
@@ -2212,14 +2216,19 @@ class RefFeed12110(unittest.TestCase):
         M, US, st, op = self._state()
         for k in range(-70, 31): st.on_ref_price(op + k * US, 101.0 if k < 0 else 103.0)
         st.open_ref = 'twap60'; f = st.features(op, op + 30 * US)
-        self.assertAlmostEqual(f['move_bps'], (104 / 103 - 1) * 1e4, places=6)            # measured from the settlement line (feed at open)
-        self.assertAlmostEqual(f['ref_open_bps'], (102 / 103 - 1) * 1e4, places=6)        # still reports first trade vs line
-    def test_feed_value_at_open_not_averaged(self):
+        self.assertAlmostEqual(f['move_bps'], (104 / 101 - 1) * 1e4, places=6)            # measured from the settlement line (TWAP60 at open)
+        self.assertAlmostEqual(f['ref_open_bps'], (102 / 101 - 1) * 1e4, places=6)        # still reports first trade vs line
+    def test_feed_is_averaged_over_the_window(self):
+        # 12.20.0 (T0): the feed is the instant price, so the line is its TWAP over the window.
         M, US, st, op = self._state()
-        for k in range(-70, 31): st.on_ref_price(op + k * US, 100.0 + k)                   # ramp: a TWAP-of-feed would differ from the value at open
+        for k in range(-70, 31): st.on_ref_price(op + k * US, 100.0 + k)                   # ramp
         f = st.features(op, op + 30 * US)
-        self.assertAlmostEqual(f['ref_gap_bps'], (104 / 100.0 - 1) * 1e4, places=6)       # line at open = feed value at t=op = 100
-        self.assertAlmostEqual(f['ref_move_bps'], (130 / 100.0 - 1) * 1e4, places=6)      # line now = latest feed value 130
+        line_open = 100.0 + sum(range(-60, 0)) / 60.0                                      # samples -60..-1 in force over [op-60, op)
+        line_now = 100.0 + sum(range(-30, 30)) / 60.0                                      # samples -30..29 over [op-30, op+30)
+        self.assertAlmostEqual(f['ref_gap_bps'], (104 / line_open - 1) * 1e4, places=6)
+        self.assertAlmostEqual(f['ref_move_bps'], (line_now / line_open - 1) * 1e4, places=6)
+        self.assertAlmostEqual(f['ref_inst'], 130.0, places=6)                              # the instant feed value is kept beside the line
+        self.assertFalse(M.FeatureState.REF_IS_TWAP)
     def test_model_json_may_list_extra_features(self):
         import btc_model_v10 as M, json, pathlib, tempfile
         j = json.loads((pathlib.Path(__file__).resolve().parent / 'model_v10.json').read_text())

@@ -145,12 +145,14 @@ class FeatureState:
         while self.r_ts and self.r_ts[0] < cut:
             self.r_ts.popleft(); self.r_px.popleft()
 
-    # The venue's feed already publishes the settlement quantity (Chainlink's 60 s TWAP,
-    # resolutionSource btc-usd-twap-60s; the market's price-to-beat is that value at
-    # eventStartTime). So the line at the open is the feed's value AT the open and the
-    # line now is its latest value - never a TWAP of a TWAP. REF_IS_TWAP=0 (env) switches
-    # to averaging the feed, for the case where a raw-price topic is configured instead.
-    REF_IS_TWAP = os.environ.get("REF_IS_TWAP", "1") != "0"
+    # 12.20.0: the venue's feed is the INSTANT Chainlink BTC/USD price, not the TWAP. T0
+    # (analysis/v/t_tests/T0_ruler.md) checked 5,568 engine-logged points: it changes every
+    # second, corr 0.974 with Binance's raw move (0.818 with a TWAP60), residual 1.6 bps vs raw
+    # against 4.0 bps vs TWAP. The market settles btc-updown-5m on that feed's 60 s TWAP at
+    # close against its 60 s TWAP at the open, so the line is the TWAP OF the feed over the
+    # window. 12.11.x assumed the feed already was the TWAP (REF_IS_TWAP=1) and so logged the
+    # instant value as the line. REF_IS_TWAP=1 (env) restores that reading for comparison.
+    REF_IS_TWAP = os.environ.get("REF_IS_TWAP", "0") != "0"
     REF_STALE_US = 5 * US
 
     def _ref_at(self, t):
@@ -299,6 +301,16 @@ class FeatureState:
                  ref_gap_bps=(p / ref_open - 1) * 1e4, ref_src=ref_src)
         f["_ask_up"], f["_ask_dn"], f["_price"] = ask_up, ask_dn, p
         f["_venue_ok"] = bool(np.isfinite(p_venue))   # both sides quoted -> venue features are real, not zero-filled
+        # 12.20.0: the settlement line in absolute terms, for the dashboard, the diagnostics
+        # row of every fire, and the lanes. ref_open/ref_now are the venue's own quantities when
+        # ref_src=1 (Chainlink TWAP60 ending at the open / now), the Binance TWAP60 proxy when 0.
+        # ref_inst is the feed's latest value (what the instant Chainlink price says now).
+        ri = self._ref_at(now_us)
+        f["ref_open"], f["ref_now"] = float(ref_open), float(ref_now)
+        f["ref_inst_ok"] = 1.0 if np.isfinite(ri) else 0.0; f["ref_inst"] = float(ri) if np.isfinite(ri) else float(p)
+        bo = self._twap(s_ts, s_px, candle_open_us - 60 * US, candle_open_us); bn = self._twap(s_ts, s_px, now_us - 60 * US, now_us)
+        f["bn_line_open"] = float(bo) if np.isfinite(bo) and bo > 0 else float(first_trade_px)
+        f["bn_line_now"] = float(bn) if np.isfinite(bn) and bn > 0 else float(p)
         return f
 
 

@@ -14,6 +14,7 @@
 <header class="top"><div><div class="brand">BTC MODEL v__VERSION__</div><div class="small">build <b id="buildStamp">__BUILD__</b></div><div id="runStamp" class="small">--</div></div><div class="navs" style="display:flex;gap:7px"><a href="/data" class="navlink">Data</a><a href="/controls" class="navlink">Trade Controls</a></div><div id="topStatus" class="status">connecting…</div></header>
 <main class="grid">
   <section class="card span3"><div class="label">BTCUSDT</div><div id="price" class="big">--</div><div id="candleInfo" class="small">waiting for kline</div></section>
+  <section class="card span3"><div class="label">Settlement line &middot; Chainlink TWAP60</div><div id="setLine" class="big">--</div><div id="setInfo" class="small">price to beat</div><div id="setMeta" class="small"></div></section>
   <section class="card span4"><div class="label">MAIN prediction</div><div id="mainDirection" class="big main">WAITING</div><div id="mainMeta" class="small">settlement-aware · waits while final-close evidence is weak</div><div id="mainReason" class="small"></div></section>
   <section class="card span4"><div class="label">REVERSAL prediction</div><div id="revDirection" class="big rev">NOT TRIGGERED</div><div id="revMeta" class="small">one maximum per candle</div><div id="revReason" class="small"></div></section>
   <section class="card span4"><div class="label">EF prediction &middot; independent</div><div id="efDirection" class="big ef">WATCHING</div><div id="efMeta" class="small">v10 expected value &middot; one maximum</div><div id="efReason" class="small"></div><div id="efShadow" class="small"></div></section>
@@ -149,6 +150,11 @@ function updateUI(state){
     text('candleInfo',londonHM(candle.time)+' '+londonZone(candle.time)+' · closes in '+minutes+':'+seconds);
   }else text('candleInfo','waiting for kline');
   text('feedLatency',feed.exchange_latency_ms==null?'--':feed.exchange_latency_ms+' ms');
+  var sl=live.settlement||{};
+  text('setLine',sl.line_now!=null?Number(sl.line_now).toFixed(1):'--');
+  cls('setLine','big '+(sl.line_now!=null&&sl.line_open!=null?(sl.line_now>=sl.line_open?'up':'down'):''));
+  text('setInfo',sl.line_open!=null?'to beat '+Number(sl.line_open).toFixed(1)+' \u00b7 '+(sl.move_bps>=0?'+':'')+Number(sl.move_bps||0).toFixed(1)+' bps':'price to beat');
+  text('setMeta',(sl.source||'--')+(sl.locked_s?' \u00b7 closing window '+sl.locked_s+'/60 s known':'')+(sl.basis_bps!=null?' \u00b7 chainlink vs binance '+Number(sl.basis_bps).toFixed(1)+' bps':''));
   text('procLatency',processing.feature_compute_us==null?'--':processing.feature_compute_us+' µs');
   text('procInfo','feature age '+(processing.feature_age_ms==null?'--':processing.feature_age_ms)+' ms · every WebSocket event');
   var main=live.main;
