@@ -130,3 +130,6 @@ calibrated p (pooled a,b), same rule   n= 375 W= 56.0% per$1=+0.298 total=+335.0
   sec 180-240                          n=  60 W= 48.3% per$1=+0.145 total= +26.15 maxDD= 20.30 run= 6 negdays=3/9 | +0.07 -0.03 +0.34 -0.09 +0.75 +0.64 +0.30 -1.00 +0.06
   sec 240+*                            n=   2 W=  0.0% per$1=-1.000 total=  -6.00 maxDD=  6.00 run= 2 negdays=1/1 | -1.00
 ```
+
+## Independent check (H1, 22:57 UTC, analysis/h1/EF_DRAWDOWN.md on 1108 fires to 09-17)
+Same verdict, same numbers: losses do not cluster (runs z=-0.33 raw / +0.12 cal); 13/13 raw pause cells RAISE maxDD above $53 and burn $27-152 of profit; no cell passes; calibration alone maxDD 53.01 -> 27.18, per$1 +0.151 -> +0.302. Two sessions, two datasets, one answer.
