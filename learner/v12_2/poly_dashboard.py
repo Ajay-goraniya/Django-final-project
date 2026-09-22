@@ -375,7 +375,7 @@ class Dashboard:
                 # 12.24.0: Platt mode p' = sigmoid(a*logit(p)+b); a in (0,1] so it can only flatten a claim,
                 # and the engine clamps the result at p besides.
                 if cfg.get('mode','cut') not in ('cut','platt'): raise ValueError("mode must be 'cut' or 'platt'")
-                if not 0.0<float(cfg.get('a',1.0))<=1.0: raise ValueError('a must be in (0, 1]; a slope above 1 sharpens a claim')
+                if not 0.0<float(cfg.get('a',1.0))<=1.25: raise ValueError('a must be in (0, 1.25]')
                 if not math.isfinite(float(cfg.get('b',0.0))): raise ValueError('b must be finite')
                 self.db.set('calibration',cfg)
                 return dict(ok=True,calibration=cfg)

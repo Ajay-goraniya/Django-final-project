@@ -432,9 +432,10 @@ class PolyRunner(Runner):
             return dict(self.CALIBRATION_DEFAULT)
         # 12.24.0 'platt': p' = sigmoid(a*logit(p)+b) over the whole range, fitted by H1 on venue-graded EF fires
         # (EF_BRAIN.md: v10's p overclaims by ~7 points in EVERY ask bucket; a Platt refit brings the gap to
-        # -0.003 walk-forward). 0<a<=1 only: a slope above 1 would sharpen the claim. _calibrate still clamps
-        # the result at p, so this mode too can only lower.
-        if cfg['mode'] not in ('cut','platt') or not (0.0<cfg['a']<=1.0) or not math.isfinite(cfg['b']):
+        # -0.003 walk-forward; the pooled pair on all 1108 fires is a=1.0677, b=-0.3208: a constant logit shift,
+        # not a slope). 0<a<=1.25: the bound keeps a nonsense slope out, and _calibrate clamps the result at p,
+        # so this mode too can only lower a claim.
+        if cfg['mode'] not in ('cut','platt') or not (0.0<cfg['a']<=1.25) or not math.isfinite(cfg['b']):
             return dict(self.CALIBRATION_DEFAULT)
         return cfg
     def _calibrate(self,d):

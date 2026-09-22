@@ -1496,9 +1496,14 @@ class CalibrationIsOffUntilTurnedOn(unittest.TestCase):
         # a pair that would RAISE a claim is clamped: p stays, no 'calibrated' mark
         self.db.set('calibration',dict(enabled=True,cut=0.80,to=0.784,mode='platt',a=1.0,b=0.5))
         out=self.r._calibrate(dict(p=0.6)); self.assertEqual(out['p'],0.6); self.assertNotIn('calibrated',out)
+        # H1's pooled pair (EF_BRAIN.md D): a=1.0677, b=-0.3208 lowers every claim in the tradable range
+        self.db.set('calibration',dict(enabled=True,cut=0.80,to=0.784,mode='platt',a=1.0677,b=-0.3208))
+        self.assertTrue(self.r.calibration()['enabled'])
+        for p in (0.45,0.55,0.60,0.65,0.75):
+            out=self.r._calibrate(dict(p=p)); self.assertLess(out['p'],p); self.assertGreater(out['p'],p-0.10)
 
     def test_platt_mode_bounds_fall_back_to_off(self):
-        for bad in (dict(enabled=True,mode='platt',a=1.5,b=0.0),      # sharpens
+        for bad in (dict(enabled=True,mode='platt',a=1.5,b=0.0),      # slope out of bounds
                     dict(enabled=True,mode='platt',a=0.0,b=0.0),      # degenerate
                     dict(enabled=True,mode='platt',a=0.8,b=float('nan')),
                     dict(enabled=True,mode='sigmoid',a=0.8,b=0.0)):   # unknown mode
@@ -2178,7 +2183,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.24.0'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.24.1'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0
