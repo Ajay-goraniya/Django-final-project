@@ -36,3 +36,6 @@ works (+0.46 replay, +0.69 real). What the stored data cannot test: the perp lan
 learner (build11's real inputs); those exist live. Next test that costs nothing: Zurich SHADOW with `ef_engine=build11`
 (full live features), graded on the venue, against v10 EF's known +0.22/$1 paper record. H1 is re-running this
 independently (analysis/h1/REQUEST.md) including the harness-fidelity check on 09-15/16.
+
+## RETRACTION 09-22 23:4x (V): REVERSAL +0.461/$1 is one ticket
+H1 r40_late_reversal_depth.md, confirmed on V's own rows (replay_lanes_1s.py, both --open arms): the single biggest REVERSAL fill is +97.3/$1 at ask 0.010, sec 270 - unfillable at any real stake (300 shares at $3). Without it REVERSAL is **+0.249/$1** (n 456); without the top 3 +0.157..+0.185. Every "+0.46 replay" number quoted for REVERSAL is withdrawn; +0.25 is the replay figure. The late 240-285 s bucket is that one fire (other 55 net -0.77), so the executor's 240 s cutoff costs nothing measurable and stays. Mumbai real fills +0.689/$1 on 46 are a separate record and are not re-checked here for concentration.
