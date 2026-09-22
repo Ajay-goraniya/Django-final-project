@@ -880,5 +880,31 @@ column; the combined card uses it (headline = venue fills when any, else shadow)
 route, not the flag. Zurich also verified: route()/fire() never touch self.broker with master OFF, grade() keeps shadow pnl
 out of results.pnl (4 rows: pnl 0.00, shadow_pnl -6.24), live4 has exactly one master write, None -> False at boot.
 Tests +1 (441), SHA256SUMS 37. Nothing in the order path changed.
+
+ 12.22.0 (09-22 16:xx UTC) - EF reversal lane (poly_ef) + ef_engine switch; the last three flag-based money labels
+
+Owner, 16:0x: "You still did not work on ef right? It still follows your old goal?? ... Shame on you, do it" and "test test
+test and improve, use the data that we hold". EF's goal (owner, 09-22): "wait for the reversal to happen ... catch that
+reversal before anyone else does and fire ... buy cheap shares", settled the Polymarket way (TWAP60).
+Change:
+- `poly_ef.py`: build11's legacy EF decision structure (map: old-side exhaustion, control transfer, settlement feasibility,
+  the real/fake reversal classifier, 12 gates at the EF_* anchors, the 250 ms confirm latch, one per candle), side
+  contrarian to the move against the SETTLEMENT LINE (`ref_open`, TWAP60), sigma = build11's 120 s RMS of 1 s returns,
+  flow scaled by the lane's own rolling RMS. Added for Polymarket: the price rule (ask <= EF_MAX_ASK 0.60 and settlement
+  probability >= ask + 0.06 + fee). Not ported: perp lane, aged depth history, EFLearner, frequency controller.
+- `poly_lanes.LaneEngine`: raw tick tape, `set_line()`, `_try_ef()` after MAIN/REVERSAL in `evaluate()`, `still_valid('EF')`,
+  `confirm('EF')`, `ef_monitor()`; off unless `ef_enabled`.
+- runner: `ef_engine` control ('v10' default | 'build11'); with build11 the v10 call is kept as a shadow reason and the
+  lane fires EF through the same executor path (allowed('EF'), lane_cap price rule). Set via /api/controls/apply
+  `system.ef_engine` (audited) - no UI button yet.
+- Zurich audit fixes: claim_status PAPER unless a venue fill; shadow bankroll = capital + shadow pnl (equity());
+  venue headline only when routing LIVE.
+Stored-data test (analysis/v/model/EF_REVERSAL_RESULT.md, replay_lanes_1s.py over 2,460 candles 09-08..09-16 with the
+venue tape): the lane as built -0.142/$1 (n130); the real-score grid is monotone (+0.05 -> +0.20) BUT fails permutation
+(p 0.31-0.33), costs (+0.05 -> negative) and paired-vs-REVERSAL (negative on every candle REVERSAL does not trade). No edge
+of its own on this data. The harness reproduces MAIN (-0.02) and REVERSAL (+0.46) as seen live.
+Tests: test_ef.py +14, test_master_lane +2 = 457 green (187 + 270). SHA256SUMS 37 -> 39.
+Rollout: Zurich SHADOW with ef_engine=build11 for a forward read with the full live features (depth, book) - the inputs the
+stored data lacks. v10 EF stays the default everywhere else; nothing live.
 | 12.21.4 | 5ac70b2 | 2026-09-22 15:50:35 UTC | eu-central-2 (Zurich) | 37/37 == git show, test_master_lane 14 OK | pid 149446, live4 db, master OFF (SHADOW) | combined real 0 / shadow 5, shadow_pnl -7.352842941176469 == sum(results.shadow_pnl); :559 fixed | written by the Zurich session |
 
