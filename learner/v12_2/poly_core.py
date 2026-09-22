@@ -386,7 +386,8 @@ class Journal:
         self.c=sqlite3.connect(path,check_same_thread=False); self.c.row_factory=sqlite3.Row; self.lock=threading.RLock()
         self._kill_reported=set()   # 12.8.8: KILL_CONDITION rules already written this episode
         self._halt_checked_at=None  # 12.9.0: monotonic stamp of the last halt_check that ran (see every_s)
-        self.c.executescript('''PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;
+        self._meta_cache={}         # 12.19.0: k -> (monotonic, value); see get()
+        self.c.executescript('''PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA busy_timeout=5000;
         CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY,v TEXT);
         CREATE TABLE IF NOT EXISTS signals(epoch INTEGER PRIMARY KEY,ts REAL,side TEXT,token TEXT,condition_id TEXT,decision TEXT,status TEXT,kind TEXT DEFAULT 'EF');
         CREATE TABLE IF NOT EXISTS orders(id TEXT PRIMARY KEY,epoch INTEGER,attempt INTEGER,status TEXT,plan TEXT,ts REAL,latency REAL,reason TEXT);
@@ -425,10 +426,10 @@ class Journal:
         self.c.executescript('CREATE INDEX IF NOT EXISTS diagnostics_ts ON diagnostics(ts);')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.18.0')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.19.0')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1','12.12.2','12.13.0','12.13.1','12.14.0','12.14.1','12.15.0','12.15.1','12.15.2','12.15.3','12.15.4','12.15.5','12.16.0','12.16.1','12.17.0','12.18.0'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1','12.12.2','12.13.0','12.13.1','12.14.0','12.14.1','12.15.0','12.15.1','12.15.2','12.15.3','12.15.4','12.15.5','12.16.0','12.16.1','12.17.0','12.18.0','12.19.0'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -461,8 +462,16 @@ class Journal:
                 if name not in existing: self.c.execute(f'ALTER TABLE {table} ADD COLUMN {name} {decl}')
     def sql(self,q,args=()):
         with self.lock,self.c: return self.c.execute(q,args).fetchall()
+    # 12.19.0: every control read on the fire path (ui.allowed() is six of them, twice per
+    # attempt) was a SELECT under the journal lock. Writes go through set()/set_many(), which
+    # refresh the cache, so a read is served from memory for META_TTL_S and re-read after.
+    META_TTL_S=2.0
     def get(self,k,default=None):
-        r=self.sql('SELECT v FROM meta WHERE k=?',(k,)); return json.loads(r[0][0]) if r else default
+        c=self._meta_cache.get(k)
+        if c is not None and time.monotonic()-c[0]<self.META_TTL_S: return c[1] if c[1] is not self._MISSING else default
+        r=self.sql('SELECT v FROM meta WHERE k=?',(k,)); v=json.loads(r[0][0]) if r else self._MISSING
+        self._meta_cache[k]=(time.monotonic(),v); return default if v is self._MISSING else v
+    _MISSING=object()
     # Controls whose value decides whether, and how, real money moves. Every
     # write to one is audited below.
     AUDITED={'master','main_enabled','reversal_enabled','ef_enabled','ev_settings','halt_cleared_at','calibration',
@@ -479,6 +488,7 @@ class Journal:
         """
         self._audit(k,v)
         self.sql('INSERT OR REPLACE INTO meta VALUES(?,?)',(k,json.dumps(v)))
+        self._meta_cache[k]=(time.monotonic(),json.loads(json.dumps(v)))
     def _audit(self,k,v):
         """Record old value, new value and the calling frame for a control.
 
@@ -514,6 +524,7 @@ class Journal:
         with self.lock,self.c:
             for k,v in updates.items():
                 self.c.execute('INSERT OR REPLACE INTO meta VALUES(?,?)',(k,json.dumps(v)))
+        for k,v in updates.items(): self._meta_cache[k]=(time.monotonic(),json.loads(json.dumps(v)))
     def reserve(self,ep,d,token,condition,kind='EF'):
         with self.lock,self.c:
             return self.c.execute('''INSERT OR IGNORE INTO signals(epoch,ts,side,token,condition_id,decision,status,kind)
@@ -900,12 +911,17 @@ class PaperBroker:
     async def reconcile(self,r):
         f=self.pending.pop(r['id'],None)
         return dict(terminal=True,fills=[(r['id'],f)] if f else [],live=False,verified_no_fill=not bool(f))
+    async def keepalive(self): return None   # 12.19.0: no connection to keep warm
 
 
 class Executor:
-    # Paper's retry_delay_ms=75: after a retryable reject, wait this long and
-    # fire at the current book, rather than waiting for the book to tick.
-    RETRY_DELAY_S=0.075
+    # 12.19.0: after a retryable reject, re-price on a book that has CHANGED since
+    # the rejected attempt was priced (the reject says the touch moved) - but wait
+    # at most this long for the tick, then fire at whatever the book is. Replaces
+    # the flat 75 ms sleep (paper's retry_delay_ms): a tick usually arrives well
+    # inside 100 ms, and a quiet book no longer costs 75 ms per attempt. 12.8.7's
+    # objection to waiting for a tick was an UNBOUNDED wait inside a 2 s budget.
+    RETRY_TICK_WAIT_S=0.1
     # 12.9.0, audit_hotpath defect (i): wait_for(post, max(.001, deadline-start))
     # could send a real order with a few-ms timeout - the deadline check runs
     # BEFORE the second reassess (~30 ms) and order_plan - then cancel it in
@@ -927,6 +943,9 @@ class Executor:
         self.budget_s=float(budget_s); self.post_timeout_s=float(post_timeout_s)
         self.max_attempts=max(1,int(attempts))
         self.latency_samples=[]
+        # 12.19.0: the pre-post check calls this (the dashboard's allowed(kind)) instead of a
+        # second full decide. None = no control check before the post (tests, paper harness).
+        self.allowed=None
     def _sample(self,timing,outcome):
         """Record one attempt's stage timings.
 
@@ -946,9 +965,10 @@ class Executor:
         return type(exc).__name__ in {'TransportError','TimeoutError','ConnectionLostError','UnexpectedResponseError'} or isinstance(exc,(asyncio.TimeoutError,TimeoutError,ConnectionError,OSError))
     async def fire(self,ep,d,token,condition,stake,reassess,kind='EF'):
         if self.db.get('halt') or not self.db.reserve(ep,d,token,condition,kind): return
-        fire_start=time.monotonic(); deadline=min(fire_start+self.budget_s,fire_start+ep+240-time.time()); seq=-1
+        fire_start=time.monotonic(); deadline=min(fire_start+self.budget_s,fire_start+ep+240-time.time()); seq=-1; ticked=None
         for n in range(1,self.max_attempts+1):
             timing={'attempt':n,'signal_ts_ms':d.get('features',{}).get('ts_ms')}
+            if ticked is not None: timing['retry_ticked']=ticked   # 12.19.0: did the book change before this re-price
             t=time.monotonic()
             # Take the CURRENT fresh book. Until 12.8.7 attempts >= 2 waited here
             # for q['seq'] to change - for the book to TICK since the last
@@ -1018,8 +1038,15 @@ class Executor:
             latest=self.books.quote(token,self.age)
             if not latest: continue
             plan['pre_submit_quote']=latest['ask']; plan['signal_quote']=timing['signal_quote']
-            t=time.monotonic(); final=reassess(); timing['final_recheck_ms']=1000*(time.monotonic()-t)
-            if not final.get('fire') or final.get('side')!=d['side']: self.db.release(ep,'SIGNAL_CHANGED',kind); return
+            # 12.19.0: ONE decision per attempt. This was a second full reassess() - for EF a
+            # whole decide_now(): model, features, and ui.allowed()'s SELECTs - 1.5-17 ms p50
+            # on the live box, run ~10 ms after the first one said fire. What the moved book
+            # can change is caught by order_plan(latest) below (EV_CHANGED); what a control
+            # can change is caught by allowed(kind). Neither needs the model run again.
+            t=time.monotonic(); final=new
+            if self.allowed is not None and not self.allowed(kind):
+                timing['final_recheck_ms']=1000*(time.monotonic()-t); self.db.release(ep,'SIGNAL_CHANGED',kind); return
+            timing['final_recheck_ms']=1000*(time.monotonic()-t)
             try: order_plan(latest,self.books.terms[token],stake,final,self.pad,band=self.band,require_depth=self.require_depth)
             except (KeyError,ValueError): self.db.release(ep,'EV_CHANGED',kind); return
             timing['pre_submit_book_age_ms']=latest['age_ms']; timing['fire_to_submit_ms']=1000*(time.monotonic()-fire_start)
@@ -1039,7 +1066,10 @@ class Executor:
                 timing['submit_book']=dict(ask=sb.get('ask'),bid=sb.get('bid'),
                     size=(sb['asks'][0][1] if sb.get('asks') else None),
                     age_ms=sb.get('age_ms'),seq=sb.get('seq'),ts_ms=int(time.time()*1000))
-            self.db.order(oid,ep,n,plan,timing,kind); start=time.monotonic()
+            t=time.monotonic(); self.db.order(oid,ep,n,plan,timing,kind); start=time.monotonic()
+            # 12.19.0: the honest pre-wire number. fire_to_submit_ms above stops BEFORE the
+            # submit_book read and this INSERT; fire_to_wire_ms is stamped as the POST leaves.
+            timing['db_order_ms']=1000*(start-t); timing['fire_to_wire_ms']=1000*(start-fire_start)
             try:
                 r=await asyncio.wait_for(self.broker.post(signed),min(self.post_timeout_s,max(.001,deadline-start)))
             except asyncio.CancelledError:
@@ -1084,9 +1114,7 @@ class Executor:
                            'no orders found to match','partially filled or killed')
                 if not any(x in code for x in RETRYABLE):
                     self.db.status(ep,'REJECTED',kind); return
-                # Paper's retry_delay_ms. Gives the book a beat to refill the
-                # level the FAK just found empty, without waiting for a tick.
-                await asyncio.sleep(self.RETRY_DELAY_S)
+                ticked=await self._await_tick(token,seq,deadline)
                 continue
             if r.get('id')!=oid:
                 info={'class':'OrderIdentityMismatch','message':f'signed={oid} response={r.get("id")}', 'request_reached':True}
@@ -1095,6 +1123,15 @@ class Executor:
             self._sample(timing,'ACCEPTED')
             return
         self.db.status(ep,'EXHAUSTED',kind)
+    async def _await_tick(self,token,seq,deadline):
+        """12.19.0: True when the local book changed (seq) since the rejected attempt was
+        priced, False when RETRY_TICK_WAIT_S (or the deadline) passed first. Local reads only."""
+        end=min(deadline,time.monotonic()+self.RETRY_TICK_WAIT_S)
+        while time.monotonic()<end:
+            q=self.books.quote(token,self.age)
+            if q and q.get('seq')!=seq: return True
+            await asyncio.sleep(.002)
+        return False
     async def reconcile(self):
         rows=self.db.sql('''SELECT o.*,s.token FROM orders o
                             JOIN signals s ON s.epoch=o.epoch AND s.kind=coalesce(o.kind,'EF')
@@ -1137,7 +1174,7 @@ class Executor:
         S=self.latency_samples
         if not S: return {}
         out={'total':pcts([float(x['total_attempt_ms']) for x in S if x.get('total_attempt_ms') is not None])}
-        for stage in ('quote_wait_ms','decision_ms','sign_ms','final_recheck_ms','fire_to_submit_ms','network_roundtrip_ms','book_age_ms'):
+        for stage in ('quote_wait_ms','decision_ms','sign_ms','final_recheck_ms','fire_to_submit_ms','db_order_ms','fire_to_wire_ms','network_roundtrip_ms','book_age_ms'):
             v=[float(x[stage]) for x in S if x.get(stage) is not None]
             if v: out[stage]=pcts(v)
         by={}
@@ -1147,4 +1184,7 @@ class Executor:
         out['by_outcome']={k:pcts(v) for k,v in by.items()}
         t=out.get('total') or {}
         out.update({k:t.get(k) for k in ('n','p50_ms','p95_ms','p99_ms','max_ms')})
+        # 12.19.0: the connection the POST rides on, and how the order is signed.
+        b=getattr(self,'broker',None); out['keepalive_ms']=getattr(b,'keepalive_ms',None); out['keepalive_age_s']=(round(time.monotonic()-b.keepalive_at,1) if getattr(b,'keepalive_at',None) else None)
+        out['sign_mode']=getattr(b,'sign_mode',None)
         return out

@@ -2070,7 +2070,10 @@ class HousekeepingCadence(unittest.TestCase):
         r.a = _t.SimpleNamespace(live=True)      # 12.13.1: the rule is live-only, so the pin runs a live stub
         self.db.set('main_enabled', False)
         calls = []; real = self.db.sql; self.db.sql = lambda *a, **k: (calls.append(a[0]), real(*a, **k))[1]
-        r._main_oneshot_check(); self.assertEqual(len(calls), 1); self.assertIn('meta', calls[0])
+        r._main_oneshot_check()
+        # 12.19.0: control reads are served from Journal's write-through cache, so the pin is
+        # 'no diagnostics scan, nothing but meta reads' - zero or one SELECT, never the scan.
+        self.assertLessEqual(len(calls), 1); self.assertTrue(all('meta' in c for c in calls)); self.assertFalse(any('diagnostics' in c for c in calls))
     def test_housekeeping_deletes_hourly_and_wipeout_checks_once_a_minute(self):
         r, E = _paper_runner(); clock = [0.]; r._clock = lambda: clock[0]
         wip = []; r._wipeout_check = lambda: wip.append(clock[0])
@@ -2153,7 +2156,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.18.0'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.19.0'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0

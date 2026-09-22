@@ -68,6 +68,7 @@ class PolyRunner(Runner):
         self.db.set('master',False) if a.live else None # explicit arming through old controls
         from poly_dashboard import Dashboard
         self.ui=Dashboard(self)
+        self.executor.allowed=self.ui.allowed   # 12.19.0: the pre-post control check (replaces the 2nd reassess)
     def _seed_lane_history(self):
         """12.14.1: a restarted lane is BLIND for two hours unless we do this.
 
@@ -684,6 +685,14 @@ class PolyRunner(Runner):
         c=self.__dict__.setdefault('_cadence',{}); now=self._clock(); last=c.get(name)
         if last is not None and now-last<every_s: return False
         c[name]=now; return True
+    KEEPALIVE_S=10
+    async def keepalive_loop(self):
+        """12.19.0: keep the order transport's HTTP/2 connection warm (LiveBroker.keepalive).
+        Paper's broker has nothing to warm and returns None."""
+        while True:
+            try: await asyncio.wait_for(self.broker.keepalive(),3)
+            except Exception as e: self.error='Keepalive: '+type(e).__name__
+            await asyncio.sleep(self.KEEPALIVE_S)
     async def housekeeping(self):
         while True:
             try:
@@ -1234,6 +1243,7 @@ class PolyRunner(Runner):
                 self._supervise('venue',self.venue),
                 self._supervise('decide_loop',self.decide_loop),
                 self._supervise('housekeeping',self.housekeeping),
+                self._supervise('keepalive_loop',self.keepalive_loop),
                 self._supervise('reconcile_loop',self.reconcile_loop),
                 self._supervise('grade_loop',self.grade_loop),
                 self._supervise('claim_loop',self.claim_loop),

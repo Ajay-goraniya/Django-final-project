@@ -47,7 +47,27 @@ class LiveBroker:
     # convert a partial fill into a local skip. Retracted in 12.4.5.
     all_or_nothing=False
     basis='VENUE_CONFIRMED_TRADE_AND_VENUE_FEE'
-    def __init__(self,books): self.books=books; self.client=None; self.wallet=None
+    def __init__(self,books):
+        self.books=books; self.client=None; self.wallet=None
+        self.sign_mode=self.pick_sign_mode(); self.keepalive_ms=None; self.keepalive_at=None
+    @staticmethod
+    def pick_sign_mode():
+        """'inline' when eth_keys is on the coincurve backend (sub-ms sign), else 'thread'."""
+        try:
+            from eth_keys.backends import get_backend_class
+            return 'inline' if 'CoinCurve' in get_backend_class().__name__ else 'thread'
+        except Exception: return 'thread'
+    KEEPALIVE_PATH='/time'
+    async def keepalive(self):
+        """12.19.0: one cheap GET on the SAME transport the order POST uses (secure_clob),
+        so the HTTP/2 connection is never cold when a signal fires. The SDK's pool expires
+        idle connections after 30 s and nothing else in the engine used this transport
+        between orders except venue_truth_loop's 20 s cadence - a coincidence, not a
+        design. Records the round trip; a cold handshake shows up as a spike here, not
+        inside an order's submit_ms."""
+        t=time.monotonic()
+        await self.client._ctx.secure_clob.get_json(self.KEEPALIVE_PATH)
+        self.keepalive_ms=round(1000*(time.monotonic()-t),1); self.keepalive_at=time.monotonic(); return self.keepalive_ms
     async def open(self):
         if importlib.metadata.version('polymarket-client')!='0.10.0': raise RuntimeError('Use polymarket-client==0.10.0')
         from polymarket import AsyncSecureClient
@@ -61,11 +81,19 @@ class LiveBroker:
             version='3' if is_v2_position_id(signed.token_id) else '2'
             msg=encode_typed_data(full_message=_build_standard_typed_data(SimpleNamespace(**fields),protocol_version=version))
             return '0x'+keccak(b'\x19'+msg.version+msg.header+msg.body).hex()
+        broker=self
         class TrackedClient(AsyncSecureClient):
             async def _sign_order(self,draft,*,post_only):
-                # 12.9.0: sign and re-hash on a worker thread (see sign_off_loop).
-                # The order-identity check in Executor.fire is unchanged.
+                # 12.9.0 moved the sign to a worker thread because it was 5.3 ms of CPU on
+                # the loop. 12.19.0: with coincurve as eth_keys' backend the whole encode+
+                # sign is ~0.5 ms (measured 0.46 ms), and the to_thread hop plus the GIL
+                # handoff cost more than that - live sign_ms was 9.8 ms p50. Signed bytes
+                # and journal hash are computed the same way on both paths; only WHERE.
                 parent=super()._sign_order
+                if broker.sign_mode=='inline':
+                    try: signed=run_sync(parent(draft,post_only=post_only))
+                    except CoroutineSuspended: signed=await parent(draft,post_only=post_only)
+                    self.journal_hash=journal_hash(signed,draft); return signed
                 signed,self.journal_hash=await sign_off_loop(lambda: parent(draft,post_only=post_only),lambda s: journal_hash(s,draft))
                 return signed
         names=['POLYMARKET_PRIVATE_KEY','POLYMARKET_WALLET_ADDRESS','RELAYER_API_KEY','RELAYER_API_KEY_ADDRESS']

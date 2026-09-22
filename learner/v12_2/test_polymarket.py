@@ -13,7 +13,7 @@ import sqlite3
 _real_connect=sqlite3.connect
 class TestConnection(sqlite3.Connection):
     def executescript(self,script):
-        return super().executescript(script.replace('PRAGMA synchronous=FULL','PRAGMA synchronous=OFF').replace('PRAGMA journal_mode=DELETE','PRAGMA journal_mode=MEMORY'))
+        return super().executescript(script.replace('PRAGMA synchronous=NORMAL','PRAGMA synchronous=OFF').replace('PRAGMA journal_mode=WAL','PRAGMA journal_mode=MEMORY'))
 def _connect(*a,**kw):
     kw['factory']=TestConnection
     return _real_connect(*a,**kw)
@@ -363,12 +363,12 @@ class Tests(unittest.TestCase):
             self.assertEqual(json.loads(rows[1][0])['quote'],.42)
         asyncio.run(run())
     def test_model_changed_before_post_abandons(self):
+        # 12.19.0: ONE reassess per attempt. The model saying no on that pass abandons.
         calls=[0]
         def changed():
-            calls[0]+=1
-            return decision() if calls[0]==1 else {'fire':False}
+            calls[0]+=1; return {'fire':False}
         asyncio.run(Executor(self.db,self.books,PaperBroker(self.books)).fire(epoch(),decision(),'up','c',10,changed))
-        self.assertEqual(len(self.db.sql('SELECT * FROM orders')),0)
+        self.assertEqual(len(self.db.sql('SELECT * FROM orders')),0); self.assertEqual(calls[0],1)
     def test_explicit_rejection_keeps_full_message_and_releases_reserve(self):
         class FakeResponse:
             status_code=400
@@ -467,7 +467,7 @@ class Tests(unittest.TestCase):
     def test_v120_database_migrates_additively(self):
         self.db.reserve(123,decision(),'up','condition')
         self.db.set('build','12.0'); self.db.c.close(); self.db=Journal(self.path,'PAPER','abc')
-        self.assertEqual(self.db.get('build'),'12.18.0')
+        self.assertEqual(self.db.get('build'),'12.19.0')
         self.assertEqual(self.db.sql('SELECT count(*) FROM signals WHERE epoch=123')[0][0],1)
         cols={r[1] for r in self.db.c.execute('PRAGMA table_info(orders)')}
         self.assertTrue({'error_json','timing_json','request_reached','reconcile_count','venue_live'}<=cols)
@@ -842,7 +842,8 @@ class AttemptLoopIsPaperParity(unittest.TestCase):
             self.assertEqual([r['after'] for r in rel],['EV_CHANGED'],'the moved-book guard is the EV re-check, not the seq gate')
         asyncio.run(run())
 
-    def test_retry_waits_at_least_the_delay(self):
+    def test_retry_on_a_quiet_book_waits_at_most_the_tick_wait(self):
+        # 12.19.0: no flat 75 ms sleep. A book that does not tick is re-fired after RETRY_TICK_WAIT_S.
         ts=[]
         class RejectOnce(PaperBroker):
             async def post(self,s):
@@ -853,7 +854,23 @@ class AttemptLoopIsPaperParity(unittest.TestCase):
             ex=Executor(self.db,self.books,RejectOnce(self.books),budget_s=1.0)
             await ex.fire(epoch(),decision(),'up','c',10,decision)
             self.assertEqual(len(ts),2)
-            self.assertGreaterEqual(ts[1]-ts[0],0.07,'paper waits 75 ms before the second shot')
+            self.assertGreaterEqual(ts[1]-ts[0],Executor.RETRY_TICK_WAIT_S-0.005)
+            self.assertLess(ts[1]-ts[0],Executor.RETRY_TICK_WAIT_S+0.15)
+            t=json.loads(self.db.sql('SELECT timing_json FROM orders ORDER BY attempt')[1][0]); self.assertIs(t.get('retry_ticked'),False)
+        asyncio.run(run())
+    def test_retry_fires_at_once_when_the_book_ticks(self):
+        ts=[]; books=self.books
+        class RejectOnce(PaperBroker):
+            async def post(self,s):
+                ts.append(time.monotonic())
+                if len(ts)==1: books.apply(snapshot(ask=.42)); return {'rejected':'no orders found to match with FAK order'}
+                return await super().post(s)
+        async def run():
+            ex=Executor(self.db,books,RejectOnce(books),budget_s=1.0)
+            await ex.fire(epoch(),decision(),'up','c',10,decision)
+            self.assertEqual(len(ts),2); self.assertLess(ts[1]-ts[0],0.05,'a ticked book is re-priced immediately')
+            rows=self.db.sql('SELECT plan,timing_json FROM orders ORDER BY attempt'); self.assertEqual(json.loads(rows[1][0])['quote'],.42)
+            self.assertIs(json.loads(rows[1][1]).get('retry_ticked'),True)
         asyncio.run(run())
 
 if __name__=='__main__':unittest.main(verbosity=2)

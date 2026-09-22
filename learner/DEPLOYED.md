@@ -728,3 +728,32 @@ Restarted 2026-09-22 10:10:52 UTC, **PID 144073** (was 137569, stopped 10:10:47 
 Verified: `sha256sum -c SHA256SUMS.txt` **34/34**, every file byte-equal to `git show 3eed7c3`. `python3 -m unittest test_lane_cap test_lanes -q` → **Ran 42, OK**. Full suites also green: 71 + 36 + 270 + 26 + 6.
 `/api/state` after restart: build **12.18.0**, lane **PAPER**, `book.environment` paper, `api_key_configured` False, master **true**, MAIN **true**, REVERSAL **true**, EF **true**, halt null. `[LANE SEED] 64 closed candles from the journal; warm` — the same-db restart seeds warm, unlike the 09-21 fresh-db start which read COLD.
 Baseline carried in the db at restart: 130 orders (EF 124, MAIN 2, REVERSAL 4). **The 2 MAIN and 4 REVERSAL orders all predate this deploy** (MAIN 09-22 03:05:24 and 04:01:55; REVERSAL 09-21 19:06 → 09-22 03:42), so any MAIN order after 10:10:52 is the first attributable to the LANE_MAX_ASK change.
+
+ 12.19.0 (09-22 12:xx UTC) - fast path: one decision per attempt, warm order transport, honest wire timing
+
+Why (Zurich live journals, 674 orders, `analysis/v/exec/latency_breakdown.py`; plan `analysis/v/exec/EXEC_PLAN_2026-09-22.md`):
+our side before the wire was 14-38 ms p50 on attempt 1 and the POST round trip 255 ms p50, of which ~180 ms is venue-side
+(curl GET /time from Zurich: connect 1.8 ms, TLS 33 ms, first byte 75 ms). Inside our 14-38 ms: a SECOND full reassess()
+(1.5-17 ms p50), the sign on a worker thread (9.8 ms p50 for ~0.5 ms of signing), ui.allowed()'s 6 SELECTs twice per attempt,
+and two synchronous=FULL commits. Rejects 58% "no orders found to match with FAK" - the ask moved during the round trip; the
+retry then slept a flat 75 ms before re-pricing. Owner, 09-22: "your first goal is to get the order accepted asap ... less
+than 100ms ... try getting it filled in first try so we don't have to retry and even if we retry try getting it filled asap."
+
+Change (all in `learner/v12_2`, EF/MAIN/REVERSAL alike; no pricing or EV rule touched):
+- `Executor.fire`: the pre-post reassess() is replaced by `Executor.allowed(kind)` (the dashboard's control check, wired in
+  the runner) + the existing `order_plan(latest)` EV re-check. One decision per attempt.
+- `LiveBroker.sign_mode`: 'inline' when eth_keys runs on coincurve (sub-ms sign, no thread hop), else the 12.9.0 thread path.
+  Same bytes, same journal hash.
+- `Journal`: `journal_mode=WAL, synchronous=NORMAL` (order INSERT before the POST stays - it is the crash record; NORMAL
+  loses only power-loss durability). `Journal.get` is a 2 s write-through cache; `set`/`set_many` refresh it.
+- `Executor.RETRY_TICK_WAIT_S=0.1` replaces `RETRY_DELAY_S=0.075`: after a retryable reject, re-price as soon as the local
+  book changes (seq), at most 100 ms later. `timing.retry_ticked` records which.
+- `LiveBroker.keepalive()` = GET /time on the `secure_clob` transport (the one the POST uses) every 10 s from
+  `keepalive_loop`; `keepalive_ms`/`keepalive_age_s`/`sign_mode` in `latency_stats()` -> dashboard `latency`.
+- timing: `fire_to_wire_ms` (stamped as the POST leaves, after the order INSERT) and `db_order_ms`.
+Not changed: POST_FLOOR_S 0.4, budget 2 s, pad 1 tick, max attempts 4, cap/EV rules - the pad grid runs on London LIVE later.
+Tests: `test_fastpath.py` +10; `test_polymarket` retry tests rewritten for the tick wait (+1); `test_v122` oneshot pin
+relaxed to "no diagnostics scan". Green: 72 + 270 + 36 + 6 + 26 + 10 = 420. SHA256SUMS 34 -> 35.
+Rollout: Zurich PAPER first (same db; opening it switches the file to WAL - readers use `?mode=ro` with the -shm present, or
+a byte copy), verify build 12.19.0 and `latency` in /api/state, then `latency_breakdown.py` after 1 h against the 12.18.0 hour.
+London LIVE only after the owner's E-0 decisions.
