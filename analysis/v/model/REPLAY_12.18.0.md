@@ -25,10 +25,10 @@ REVERSAL 153 candles, ask med 0.63, sec med 184
 sec bands cap 0.90: 0-90s n19* +0.416 | 90-180s n52* +0.106 | 180-300s n69 +1.706
 
 ## Mumbai REAL paper fills, arm 8796, kind=REVERSAL (analysis/aws/task118_drawdown_fills.csv)
-n=43*, hit 55.8%, pnl +120.99 on 124.05 spent = +0.975/$1. H1 21: +0.792, H2 22: +1.164. Fill med 0.42, sec med 158.
+n=43*, hit 55.8%. CORRECTED 10:5x: the CSV pnl column is CANDLE-level (EF traded the same candles), so +120.99 overstated it. Per-order from Mumbai's orders table: 46 fills, spent 126.20, pnl +86.89 = +0.689/$1. H1 21: +0.792, H2 22: +1.164. Fill med 0.42, sec med 158.
 Without top-3 winners: +67.94. Days: 09-17 10 fills +18.28 | 09-18 8 +29.14 | 09-19 9 +42.56 | 09-20 9 +43.24 | 09-21 6 -18.16.
 Null (buy same side at same price, market-implied hit 37.0%): -0.027/$1. Actual hit 55.8%.
-Same window, EF: 8795 742 fills +0.222/$1, 8796 752 fills +0.220/$1.
+Same window, EF: 8795 742 fills +0.222/$1, 8796 752 fills +0.220/$1 (same candle-level pnl column; 8796's EF includes REVERSAL's pnl on 43 candles, so EF 8796 is >= ~+0.18/$1, not +0.22).
 
 ## Zurich 09-15 02:05 -> 09-17 12:15 (271 candles: 58 exact, 213 proxy)
 MAIN 252: cap 0.90 n171 hit 78.9% +0.011 (H1 -0.042 | H2 +0.066), exact-only +0.003 (40*); cap 1.00 -0.007.
@@ -43,3 +43,18 @@ MAIN 32*: cap 0.90 n26 hit 76.9% +0.032. REVERSAL 8*: hit 29% -0.58. All insuffi
   (n140, both halves, exact-only +0.39) AND in Mumbai's real paper fills (n43*, +0.975/$1, 5 of 6 days). Null -0.03.
   Open before it is called a finding: permutation on the row dump (requested from Mumbai), depth at cheap asks, Zurich's
   small negative samples. Verified only on Mumbai's own journal + fills, not a reconstruction.
+
+## Verification on Mumbai's REVERSAL decision rows (1,144 diagnostics rows, 171 candles, both arms; 10:5x)
+- grading: results.actual = Polymarket resolution. PASS.
+- ask by side: ask_up+ask_dn median 1.01 (min 1.00). Quote is a real two-sided book, not stale one leg.
+- exact-labelled first decisions, cap 0.90, unique candles: n=99, hit 62.6%, +0.463/$1. H1 +0.294 (49) | H2 +0.629 (50). PASS.
+- costs: ask+0.02 -> +0.366; ask+0.05 -> +0.249. PASS.
+- permutation (shuffle SIDES, ask follows the side): null mean +0.143, p95 +0.339, real +0.374 (n170 incl. both arms), p=0.024. PASS, marginal.
+  The null itself is positive: at the moments REVERSAL fires the Polymarket book is slow - a random side bought there wins more than its price says.
+  Opposite side: -0.096. Side-pick adds ~+0.23/$1 over random.
+- by ask of the side bought (first decisions with label, all cells <60*):
+  <0.30 n30 hit 43% +1.53 | 0.30-0.50 n36 hit 58% +0.45 | 0.50-0.70 n53 hit 62% +0.05 | >=0.70 n72 hit 82% -0.04. Monotone: the edge is the cheap shares.
+- days (unique exact, cap 0.90): 09-17 n17 +0.18 | 09-18 n18 +0.54 | 09-19 n25 +0.71 | 09-20 n18 +0.93 | 09-21 n15 -0.09 | 09-22 n4 -0.24. Not rain-or-sun yet: 2 of 6 days negative, both small.
+- 8795 logged 649 REVERSAL decisions and placed 0 orders; only 8796 traded it. Not explained yet.
+- open: depth at asks <0.30 (paper filled 15-25 shares there; live depth unknown), Zurich's two small negative samples.
+Verdict: REVERSAL on Polymarket is a real positive at n=99 exact / 46 real fills, dominated by entries below 0.50. Not yet a rain-or-sun finding.
