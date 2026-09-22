@@ -721,3 +721,10 @@ covered above it at the hit rates seen), to be gridded on paper, not tuned. Test
 `order_plan` on Zurich's exact refused case ask 0.85 / p 0.75 / $3) = 409 green (6+36+71+270+26); SHA256SUMS 33 -> 34.
 Not shipped by V: the sandbox refuses V engine-changing instructions to Zurich. Deploy = Zurich pulls, restarts the PAPER process
 on the same db with 12.18.0, verifies `/api/state` build 12.18.0 and the first MAIN order row. Owner arms nothing; paper only.
+
+### 12.18.0 PAPER deploy line (Zurich box) — written by the Zurich session
+
+Restarted 2026-09-22 10:10:52 UTC, **PID 144073** (was 137569, stopped 10:10:47 at a clean point: 0 in-flight/PENDING/UNKNOWN, 3 s into the candle). Same argv, **same db** `polymarket_v12_zurich_paper1.sqlite3`, no `--live`, the four Polymarket/Relayer credentials again stripped from the child environment (only `DASHBOARD_PASSWORD` passed).
+Verified: `sha256sum -c SHA256SUMS.txt` **34/34**, every file byte-equal to `git show 3eed7c3`. `python3 -m unittest test_lane_cap test_lanes -q` → **Ran 42, OK**. Full suites also green: 71 + 36 + 270 + 26 + 6.
+`/api/state` after restart: build **12.18.0**, lane **PAPER**, `book.environment` paper, `api_key_configured` False, master **true**, MAIN **true**, REVERSAL **true**, EF **true**, halt null. `[LANE SEED] 64 closed candles from the journal; warm` — the same-db restart seeds warm, unlike the 09-21 fresh-db start which read COLD.
+Baseline carried in the db at restart: 130 orders (EF 124, MAIN 2, REVERSAL 4). **The 2 MAIN and 4 REVERSAL orders all predate this deploy** (MAIN 09-22 03:05:24 and 04:01:55; REVERSAL 09-21 19:06 → 09-22 03:42), so any MAIN order after 10:10:52 is the first attributable to the LANE_MAX_ASK change.
