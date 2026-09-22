@@ -122,3 +122,103 @@ out. Cutting it further means fewer fires, which is the profit the owner said no
 
 **And none of this is live.** All paper at the quoted ask; live has only ever taken 41% of these
 candles and is running at −10.66% of stake (EF_BRAIN.md §A).
+
+---
+
+# RERUN UNDER THE LIVE RULE — `ev ≥ threshold`, not `p ≥ ask + 0.06 + fee`
+
+V is right that the engine fires on `ev ≥ threshold` with `ev = p/cost − 1`. **§C and §D of
+EF_BRAIN.md used the wrong rule and are superseded by this section.** `r39_live_rule.py`, run on
+`ef_fires_1108.csv`.
+
+**One correction to the spec, checked against the artifact.** V wrote `cost = ask + fee`. The stored
+`ev` in `poly_pnl.trades` does **not** match that — median |diff| 0.0030, max 28.4. It matches
+`task_r8_taker_feature.ev_of` to median **3.7e-5**, max 4.1e-4:
+`cost(q) = q/(1 − 0.07·(1−q))`, which expands to exactly V's form `p/cost − 1`; only the cost
+function differs. Stored `ev` bottoms at 0.1512, consistent with 0.15 as the lowest regime
+threshold, so the rule reproduces.
+
+## The row's own regime threshold (R8: 0.15 low / 0.25 mid+high, edges 0.1668 / 0.3653)
+
+| arm | n | W% | per $1 | total$ | maxDD$ | **neg days** | longest run |
+|---|---|---|---|---|---|---|---|
+| raw p | 1106 | 52.5% | +0.1499 | **+497.38** | 53.01 | 1 | 8 |
+| calibrated (pooled a,b) | 89 | 56.2% | +0.5569 | +148.68 | **15.83** | **0** | 4 |
+| **calibrated (leave-1-day-out)** | **94** | **56.4%** | **+0.5503** | **+155.19** | **21.83** | **0** | 5 |
+
+**Day by day, own regime threshold** — and note 09-16, the owner's bad day:
+
+| day | raw $ | pooled $ | LOO $ |
+|---|---|---|---|
+| 09-08 | +40.41 | +0.22 | +0.22 |
+| 09-09 | +41.61 | +9.30 | +14.06 |
+| 09-10 | +73.43 | +16.98 | +16.92 |
+| 09-11 | +8.46 | +13.16 | +7.42 |
+| 09-12 | +65.97 | +28.98 | +31.55 |
+| 09-13 | +54.81 | +9.85 | +9.85 |
+| 09-14 | +141.59 | +43.88 | +47.45 |
+| 09-15 | +91.88 | +9.72 | +11.13 |
+| **09-16** | **−20.78** | **+16.59** | **+16.59** |
+
+**The one losing day flips positive, and both calibrated arms are 9/9 positive days.**
+
+## Fixed-threshold grid — reported whole, not picked
+
+| thr | arm | n | W% | per $1 | total$ | maxDD$ | neg |
+|---|---|---|---|---|---|---|---|
+| 0.15 | raw / pooled / LOO | 1108 / 304 / 318 | 52.6 / 57.9 / 54.4 | +0.151 / +0.363 / +0.275 | +502 / +331 / +262 | 53.0 / 17.6 / 23.6 | 1 / 0 / 2 |
+| 0.20 | raw / pooled / LOO | 755 / 163 / 165 | 52.1 / 53.4 / 53.3 | +0.207 / +0.357 / +0.357 | +468 / +175 / +177 | 49.1 / 14.2 / 15.3 | 1 / 1 / 1 |
+| 0.25 | raw / pooled / LOO | 682 / 81 / 88 | 51.9 / 55.6 / 56.8 | +0.215 / +0.554 / +0.559 | +441 / +135 / +148 | 50.6 / 13.0 / 15.8 | 1 / 0 / 0 |
+| 0.30 | raw / pooled / LOO | 332 / 60 / 57* | 52.7 / 55.0 / 50.9 | +0.342 / +0.594 / +0.528 | +340 / +107 / +90 | 31.6 / 13.0 / 15.0 | 1 / 1 / 2 |
+| 0.35 | raw / pooled / LOO | 195 / 46* / 47* | 51.8 / 50.0 / 48.9 | +0.409 / +0.582 / +0.528 | +18.5 / +80 / +75 | 18.5 / 12.0 / 15.0 | 1 / 2 / 3 |
+
+\* under the 60 bar, not read.
+
+## **The calibration removes 92% of fires, not 4%**
+
+| threshold | raw fires | pooled | removed | LOO | removed |
+|---|---|---|---|---|---|
+| own regime | 1106 | 89 | **1017 (92.0%)** | 94 | 1012 (91.5%) |
+| 0.15 | 1108 | 304 | 804 (72.6%) | 318 | 790 (71.3%) |
+| 0.25 | 682 | 81 | 601 (88.1%) | 88 | 594 (87.1%) |
+
+Mechanism: mean p 0.5967 → 0.5261, a **11.8% relative** cut. Since `ev = p/cost − 1`, that moves
+mean ev **0.3227 → 0.1594** — a shift of 0.163, **larger than the whole 0.15–0.25 threshold band**.
+So near-total removal is what this pair must do under an ev rule. **If the engine's hook shows ~4%
+removal, it is not applying this pair to the ev input** — worth checking on V's side before shipping.
+
+## It passes its null — the first arm in this whole EF series that does
+
+| arm | n | W% | per $1 | total$ | maxDD$ | neg |
+|---|---|---|---|---|---|---|
+| **calibrated LOO** | 94 | **56.4%** | **+0.5503** | **+155.19** | 21.83 | **0** |
+| null: top-94 by raw ev | 94 | 47.9% | +0.4425 | +124.78 | 19.56 | 2 |
+| null: 94 cheapest asks | 94 | 43.6% | +0.3762 | +106.08 | 25.30 | 2 |
+
+`verify.py`: sample **PASS** (n=94), halves **PASS** (+0.274 / +0.827), costs **PASS**
+(+0c +0.550, +2c +0.463, +5c +0.349), beats-the-null **PASS** against both nulls. It is not
+cheapness — the cheap-ask null wins only 43.6% while this wins 56.4%.
+
+## The limit that matters, stated plainly
+
+**76 of the 94 fires are shared with the null. The entire margin rests on 18 fires vs 18 fires:**
+
+| | n | W% | per $1 | mean ask |
+|---|---|---|---|---|
+| arm-only | **18** | 83.3% | +0.6932 | 0.497 |
+| null-only | **18** | 38.9% | +0.1301 | 0.341 |
+| shared | 76 | 50.0% | +0.5165 | — |
+
+18 per side is far under the 60 bar. **The arm's own n=94 performance passes every gate; its
+advantage over the trivial null does not yet.** Halves also run +0.274 → +0.827, a 3× spread — both
+positive, but not stable.
+
+And it is still paper at the quoted ask. Live has only ever taken 41% of these candles (EF_BRAIN §A).
+
+## What this changes for the owner's ask
+
+Under the **live** rule the calibrated arm gives **0 negative days out of 9, maxDD $21.83 (from
+$53.01), +0.55 per $1 (from +0.15)** — at 94 fires instead of 1,106 and $155 instead of $497.
+That is the closest thing to "profitable EF without drawdowns" in this data, and unlike every pause
+rule it beats its null. It buys that by trading **one twelfth as often**, which is the profit the
+owner said not to waste — so the trade-off is real and it is his to make, not mine.
