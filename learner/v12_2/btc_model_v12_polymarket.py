@@ -417,17 +417,24 @@ class PolyRunner(Runner):
         d=self._calibrate(d)
         if d.get('fire'): d=self._gate_on_padded_ev(ep,d)
         return d
-    CALIBRATION_DEFAULT=dict(enabled=False,cut=0.80,to=0.784)
+    CALIBRATION_DEFAULT=dict(enabled=False,cut=0.80,to=0.784,mode='cut',a=1.0,b=0.0)
     def calibration(self):
         cfg=dict(self.CALIBRATION_DEFAULT); cfg.update(self.db.get('calibration') or {})
         try:
             cfg['cut']=float(cfg['cut']); cfg['to']=float(cfg['to'])
             cfg['enabled']=bool(cfg['enabled'])
+            cfg['mode']=str(cfg.get('mode') or 'cut'); cfg['a']=float(cfg.get('a',1.0)); cfg['b']=float(cfg.get('b',0.0))
         except (TypeError,ValueError): return dict(self.CALIBRATION_DEFAULT)
         # `to` must be at or below `cut`: this may only ever LOWER a claim.
         # A setting that raises one is a way to make the model more confident by
         # configuration, which is the opposite of the point.
         if not (0.5<cfg['cut']<1.0 and 0.5<cfg['to']<=cfg['cut']):
+            return dict(self.CALIBRATION_DEFAULT)
+        # 12.24.0 'platt': p' = sigmoid(a*logit(p)+b) over the whole range, fitted by H1 on venue-graded EF fires
+        # (EF_BRAIN.md: v10's p overclaims by ~7 points in EVERY ask bucket; a Platt refit brings the gap to
+        # -0.003 walk-forward). 0<a<=1 only: a slope above 1 would sharpen the claim. _calibrate still clamps
+        # the result at p, so this mode too can only lower.
+        if cfg['mode'] not in ('cut','platt') or not (0.0<cfg['a']<=1.0) or not math.isfinite(cfg['b']):
             return dict(self.CALIBRATION_DEFAULT)
         return cfg
     def _calibrate(self,d):
@@ -457,6 +464,11 @@ class PolyRunner(Runner):
         if not cfg['enabled'] or d.get('p') is None: return d
         try: p=float(d['p'])
         except (TypeError,ValueError): return d
+        if cfg.get('mode')=='platt':
+            if not (0.0<p<1.0): return d
+            z=math.log(p/(1.0-p)); q=1.0/(1.0+math.exp(-(cfg['a']*z+cfg['b'])))
+            q=min(p,max(0.01,q))                       # never raises a claim
+            return dict(d,p=q,p_raw=p,calibrated=True) if q<p else d
         if p<cfg['cut']: return d
         return dict(d,p=cfg['to'],p_raw=p,calibrated=True)
     def _gate_on_padded_ev(self,ep,d):

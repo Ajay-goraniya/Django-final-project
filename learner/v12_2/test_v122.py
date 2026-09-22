@@ -1483,6 +1483,28 @@ class CalibrationIsOffUntilTurnedOn(unittest.TestCase):
         self.assertEqual(self.r._calibrate(dict(fire=True)),dict(fire=True))
         self.assertEqual(self.r._calibrate(dict(p=None))['p'],None)
 
+    def test_platt_mode_flattens_every_claim_and_never_raises_one(self):
+        """12.24.0: H1 measured v10 EF's p ~7 points overconfident in every ask bucket (EF_BRAIN.md), so a
+        single cut cannot fix it. Platt: p' = sigmoid(a*logit(p)+b), a in (0,1], clamped at p."""
+        import math
+        self.db.set('calibration',dict(enabled=True,cut=0.80,to=0.784,mode='platt',a=0.8,b=-0.25))
+        self.assertEqual(self.r.calibration()['mode'],'platt')
+        for p in (0.35,0.5,0.6,0.7,0.9):
+            out=self.r._calibrate(dict(p=p)); z=math.log(p/(1-p)); q=1/(1+math.exp(-(0.8*z-0.25)))
+            self.assertLessEqual(out['p'],p)
+            self.assertAlmostEqual(out['p'],min(p,q),places=9); self.assertEqual(out['p_raw'],p); self.assertTrue(out['calibrated'])
+        # a pair that would RAISE a claim is clamped: p stays, no 'calibrated' mark
+        self.db.set('calibration',dict(enabled=True,cut=0.80,to=0.784,mode='platt',a=1.0,b=0.5))
+        out=self.r._calibrate(dict(p=0.6)); self.assertEqual(out['p'],0.6); self.assertNotIn('calibrated',out)
+
+    def test_platt_mode_bounds_fall_back_to_off(self):
+        for bad in (dict(enabled=True,mode='platt',a=1.5,b=0.0),      # sharpens
+                    dict(enabled=True,mode='platt',a=0.0,b=0.0),      # degenerate
+                    dict(enabled=True,mode='platt',a=0.8,b=float('nan')),
+                    dict(enabled=True,mode='sigmoid',a=0.8,b=0.0)):   # unknown mode
+            self.db.set('calibration',bad)
+            self.assertFalse(self.r.calibration()['enabled'],f'{bad} must not apply')
+
 
 class LaneDecisionsRecordThePriceTheySaw(unittest.TestCase):
     """Without the ask on every lane decision, MAIN's question is unanswerable.
@@ -2156,7 +2178,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.23.2'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.24.0'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0

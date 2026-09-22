@@ -361,16 +361,22 @@ class Dashboard:
                 # that raised one would make the model more confident by
                 # configuration, which is the opposite of the point.
                 cfg=dict(getattr(self.r,'CALIBRATION_DEFAULT',
-                                 dict(enabled=False,cut=0.80,to=0.784)))
+                                 dict(enabled=False,cut=0.80,to=0.784,mode='cut',a=1.0,b=0.0)))
                 cfg.update(self.db.get('calibration') or {})
                 if 'enabled' in p: cfg['enabled']=bool(p['enabled'])
-                for k in ('cut','to'):
+                for k in ('cut','to','a','b'):
                     if k in p:
                         try: cfg[k]=float(p[k])
                         except (TypeError,ValueError): raise ValueError(f'{k} must be a number')
+                if 'mode' in p: cfg['mode']=str(p['mode'])
                 if not 0.5<cfg['cut']<1.0: raise ValueError('cut must be between 0.5 and 1.0')
                 if not 0.5<cfg['to']<=cfg['cut']:
                     raise ValueError('to must be above 0.5 and at or below cut; it may only lower a claim')
+                # 12.24.0: Platt mode p' = sigmoid(a*logit(p)+b); a in (0,1] so it can only flatten a claim,
+                # and the engine clamps the result at p besides.
+                if cfg.get('mode','cut') not in ('cut','platt'): raise ValueError("mode must be 'cut' or 'platt'")
+                if not 0.0<float(cfg.get('a',1.0))<=1.0: raise ValueError('a must be in (0, 1]; a slope above 1 sharpens a claim')
+                if not math.isfinite(float(cfg.get('b',0.0))): raise ValueError('b must be finite')
                 self.db.set('calibration',cfg)
                 return dict(ok=True,calibration=cfg)
             elif path=='/api/controls/ev':
