@@ -65,7 +65,7 @@ class Dashboard:
         """Was this row's money real? By the order's lane when the row carries one (12.21.0)."""
         try: l=r['lane']
         except Exception: l=None
-        return (l!='LIVE') if l else (not self.r.a.live)
+        return (l!='LIVE') if l else (self.lane_label()!='LIVE')   # 12.21.4: fallback is the route, not the flag
     def settlement(self,f=None):
         """The line the venue settles on (12.20.0) - Chainlink BTC/USD 60 s TWAP at close vs at the
         open - as the engine sees it now. Plain numbers, None where a window is not covered."""
@@ -555,8 +555,12 @@ class Dashboard:
             real,shadow=m['real'],m['shadow']; h=real if real['n'] else shadow      # headline: venue fills when there are any
             return dict(accuracy=h['accuracy'],wins=h['wins'],losses=h['losses'],real=real['n'],shadow=shadow['n'],
                         basis='LOCAL_FROM_FILLS',local_pnl=h['pnl'],real_pnl=real['pnl'],shadow_pnl=shadow['pnl'])
+        # 12.21.4: real/shadow on the combined card come from the orders' lanes (Journal.metrics_for),
+        # not the --live flag - Zurich live4 read "real 4 · shadow 0 · 0.00" for 4 shadow trades at -6.24.
+        real_m,shadow_m=self.db.metrics_for('LIVE'),self.db.metrics_for('PAPER')
+        if not live_venue and not real_m['n'] and shadow_m['n']: shown=shadow_m      # headline: venue fills when any, else shadow
         metric=dict(accuracy=shown['accuracy'],wins=shown['wins'],losses=shown['losses'],
-                    real=shown['n'] if r.a.live else 0,shadow=0 if r.a.live else shown['n'],
+                    real=real_m['n'],shadow=shadow_m['n'],real_pnl=real_m['pnl'],shadow_pnl=shadow_m['pnl'],
                     basis=('VENUE_POSITION_PNL' if live_venue else 'LOCAL_FROM_FILLS'),
                     local_pnl=metrics['pnl'],venue_pnl=vmetrics['pnl'],
                     venue_priced=vmetrics['n'],awaiting_venue=max(0,metrics['n']-vmetrics['n']),

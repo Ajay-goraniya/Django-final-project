@@ -70,6 +70,14 @@ class MasterRoutes(unittest.TestCase):
         m=self.db.lane_metrics(); self.assertEqual((m['MAIN']['real']['n'],m['MAIN']['shadow']['n'],m['EF']['real']['n'],m['EF']['shadow']['n']),(1,0,0,1))
         self.assertAlmostEqual(self.db.metrics()['pnl'],5.-2.05,'realised pnl is the venue lane only')
 
+    def test_combined_metrics_split_by_lane_not_flag(self):
+        # 12.21.4: on a live journal with only shadow fills, real=0 / shadow=n and the shadow pnl is shown.
+        ep=int(time.time())-60; self.db.set('master',False); self.fire(ep); asyncio.run(self.ex.reconcile()); self.db.grade(ep,'DOWN')
+        real,shadow=self.db.metrics_for('LIVE'),self.db.metrics_for('PAPER')
+        self.assertEqual((real['n'],shadow['n'],shadow['losses']),(0,1,1)); self.assertLess(shadow['pnl'],0); self.assertEqual(self.db.metrics()['pnl'],0.)
+        ui=Dashboard.__new__(Dashboard); ui.db=self.db; ui.r=SimpleNamespace(a=SimpleNamespace(live=True))
+        self.assertTrue(ui._shadow({}),'no lane on the row: the ROUTE decides, and master is off')
+        self.assertIn("real=real_m['n'],shadow=shadow_m['n']",__import__('pathlib').Path(__file__).with_name('poly_dashboard.py').read_text())
     def test_reserve_counts_only_the_journal_lane(self):
         self.db.order('p1',1_000_000,1,{'budget':3.0},{},'EF','PAPER'); self.db.order('l1',1_000_000,1,{'budget':4.0},{},'EF','LIVE')
         self.assertAlmostEqual(self.db.reserve_detail()['total'],4.0)

@@ -869,3 +869,14 @@ properly??". Master was OFF and every order routes to shadow; the header string 
 `self.r.a.live` (poly_dashboard.py:599), the one place 12.21.0 missed. It now renders `lane_label()` (LIVE / SHADOW / PAPER)
 and the dashboard JS updates `#buildStamp` from `/api/state` `lane` on every refresh, so arming or disarming master changes
 the header without a reload. Tests +1 (440), SHA256SUMS 37. Nothing in the order path changed.
+
+ 12.21.4 (09-22 15:5x UTC) - the combined card's real/shadow split comes from the orders' lanes
+
+Owner, 15:4x: "still not proper, recheck the code". Zurich's read-only audit of the deployed 12.21.3 on live4: the per-lane
+cards were right (ef real 0 / shadow 3 / -6.95, main real 0 / shadow 1 / +0.71) but the COMBINED card read
+"real 4 · shadow 0 · 0.00" - `poly_dashboard.py:559` classified real-vs-shadow by the --live flag, the same class of
+defect as the header. `Journal.metrics_for(lane)` counts settled candles by the lane of their fills with that lane's pnl
+column; the combined card uses it (headline = venue fills when any, else shadow). `_shadow()`'s no-lane fallback is the
+route, not the flag. Zurich also verified: route()/fire() never touch self.broker with master OFF, grade() keeps shadow pnl
+out of results.pnl (4 rows: pnl 0.00, shadow_pnl -6.24), live4 has exactly one master write, None -> False at boot.
+Tests +1 (441), SHA256SUMS 37. Nothing in the order path changed.
