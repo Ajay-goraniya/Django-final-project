@@ -105,3 +105,52 @@ epoch 1790104200 · **lane PAPER** · status FILLED · id `paper-f19b44bbe7e84b4
 Ledger format from here: **EF (build11)** is its own line — n / hit / per $1 on venue-graded shadow
 fills with `engine='build11'` (cut 19:05:54) — printed beside **EF (v10)**'s paper record, never
 merged into it.
+
+---
+
+# 12.23.0 deploy — perp feed, depth history, 120 s memory, tape1s (09-22 19:30 UTC)
+
+| row | result |
+|---|---|
+| stage e34549d | 41 files, SHA256SUMS **39/39 OK**, all == `git show` |
+| suites | `test_ef` + `test_master_lane` **34 tests, OK** (0.575 s) |
+| clean point | 19:30:02, sec_into_candle 2, in-flight 0, stale-ungraded 0 |
+| stop | pid 150792 (12.22.0) SIGTERM, gone 19:30:03 |
+| deploy | 39 files, `__pycache__` cleared, re-verified 39/39 == e34549d |
+| start | pid 151129, 19:30:23, same live4 db, same argv, 5/5 creds |
+| master | **OFF** (meta master=false), lane SHADOW |
+| ef_engine | already `"build11"` in meta, carried across the restart — **no control write needed** |
+
+## /api/state verification (every point V listed)
+| field | t+40 s | t+135 s |
+|---|---|---|
+| `micro_source` | **PERP** | **PERP** |
+| `memory_ready` | **true** | true |
+| `perp_ticks_32s` | **629** | **2021** |
+| `depth_rows` | **83** | **89** |
+| `lanes.ef.enabled` / `line_open` | true / — | true / **86529.25** |
+
+build **12.23.0**, lane **SHADOW**, halt null.
+`tape1s` 55 -> 188 rows over 135 s = **0.98 rows/s**, and 1,885 rows over a 1,888 s span at 20:01 —
+one row per second, as designed.
+
+`memory_ready` was already true at t+40 s rather than the ~2 min V expected: the 120 s memory fills
+from the perp tape, which reached 629 ticks in the first 40 s.
+
+## First EF (build11) shadow order under 12.23.0 — 19:45:22
+epoch 1790106300 · **lane PAPER** · FILLED · id `paper-e0d916c11cc6422ab9a24513f845b41b`
+- `engine='build11'`, `how='STRUCTURE_CONFIRMED'`, side DOWN, p 0.5909, sec 22, price_rule `lane_cap`
+- `ef`: real 0.627 · fake 0.088 · control 0.776 · exhaustion 0.439 · settle 0.756 · ext 0.15 · body 5.26 · ask 0.44
+- fill 6.5455 shares, spent 2.88, fees 0.1129, basis `PAPER_DEPTH_FEE_ESTIMATE`
+
+## Ledger (`analysis/zurich/ledger_ef.py`, read-only, graded on results.actual) — 20:01 UTC
+```
+line              n     hit     spent       pnl    per$1  lane
+EF (build11)      2   50.0%      6.99    -0.446   -0.064  PAPER  * insufficient (n<60)
+EF (v10)         28   46.4%     56.78    +9.817   +0.173  PAPER  * insufficient (n<60)
+MAIN             18   77.8%     68.90    +2.031   +0.029  PAPER  * insufficient (n<60)
+REVERSAL          6   33.3%     20.34  -10.163    -0.500  PAPER  * insufficient (n<60)
+```
+**Every line is under 60 graded fires, so no line here is a reading.** EF (build11) is n=2. The script
+prints the marker itself so the number cannot be quoted as a result by accident. EF (v10)'s +0.173
+on this journal is the nearest same-venue comparison to its known +0.22/$1 paper record, on n=28.

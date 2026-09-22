@@ -1,0 +1,43 @@
+"""Zurich ledger: EF (build11) as its own line beside EF (v10)'s paper record, plus MAIN and REVERSAL.
+
+Every line is read-only from the live4 journal and graded on results.actual (Polymarket's own oracle,
+which this lane's `actual` column matches). An order belongs to build11 when its EF signal's decision
+JSON carries engine='build11'; everything else EF is v10. per$1 = shadow pnl / spent-including-fees.
+"""
+import sqlite3, json, sys, datetime as dt
+DB = sys.argv[1] if len(sys.argv) > 1 else '/home/ubuntu/pm_paper_zurich/polymarket_v12_zurich_live4.sqlite3'
+c = sqlite3.connect(f'file:{DB}?mode=ro', uri=True); c.row_factory = sqlite3.Row
+res = {r['epoch']: r['actual'] for r in c.execute('SELECT epoch,actual FROM results')}
+eng = {}
+for s in c.execute("SELECT epoch,decision FROM signals WHERE kind='EF' AND decision IS NOT NULL"):
+    try: eng[s['epoch']] = (json.loads(s['decision']) or {}).get('engine') or 'v10'
+    except Exception: eng[s['epoch']] = 'v10'
+rows = c.execute("""SELECT o.epoch,o.kind,o.lane,o.plan,sum(f.shares) sh,sum(f.spent) sp,sum(f.fees) fe
+                    FROM orders o JOIN fills f ON f.order_id=o.id
+                    WHERE o.status='FILLED' GROUP BY o.id""").fetchall()
+lines = {}
+for r in rows:
+    a = res.get(r['epoch'])
+    if a is None: continue                                   # not graded yet
+    side = (json.loads(r['plan']) or {}).get('side') or (c.execute(
+        "SELECT side FROM signals WHERE epoch=? AND kind=? LIMIT 1", (r['epoch'], r['kind'])).fetchone() or [None])[0]
+    if side is None: continue
+    name = r['kind'] if r['kind'] != 'EF' else ('EF (build11)' if eng.get(r['epoch']) == 'build11' else 'EF (v10)')
+    L = lines.setdefault(name, dict(n=0, w=0, cost=0., payout=0., lanes=set()))
+    cost = (r['sp'] or 0.) + (r['fe'] or 0.); win = (side == a)
+    L['n'] += 1; L['w'] += win; L['cost'] += cost; L['payout'] += (r['sh'] or 0.) if win else 0.
+    L['lanes'].add(r['lane'])
+print(f"# Zurich live4 ledger  {dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC   graded on results.actual")
+print(f"{'line':<14} {'n':>4} {'hit':>7} {'spent':>9} {'pnl':>9} {'per$1':>8}  lane")
+for k in ('EF (build11)', 'EF (v10)', 'MAIN', 'REVERSAL'):
+    L = lines.get(k)
+    if not L: print(f"{k:<14} {0:>4} {'-':>7} {'-':>9} {'-':>9} {'-':>8}  -"); continue
+    pnl = L['payout'] - L['cost']
+    print(f"{k:<14} {L['n']:>4} {L['w']/L['n']*100:>6.1f}% {L['cost']:>9.2f} {pnl:>+9.3f} "
+          f"{pnl/L['cost'] if L['cost'] else 0:>+8.3f}  {'/'.join(sorted(L['lanes']))}"
+          f"{'  * insufficient (n<60)' if L['n'] < 60 else ''}")
+tot = c.execute('SELECT count(*),coalesce(sum(shadow_pnl),0),coalesce(sum(pnl),0) FROM results').fetchone()
+try: tape = c.execute('SELECT count(*),max(ts)-min(ts) FROM tape1s').fetchone()
+except Exception: tape = (0, 0)
+print('* a line under 60 graded fires is not a reading. Do not quote its per$1 as a result.')
+print(f"results n={tot[0]} sum(shadow_pnl)={tot[1]:+.4f} sum(pnl)={tot[2]:+.4f} | tape1s rows={tape[0]} span={tape[1] or 0:.0f}s")
