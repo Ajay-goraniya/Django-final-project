@@ -564,6 +564,11 @@ class LaneEngine:
         MAIN_HOLD_READS counts these rebuilds, so the caller's cadence matters."""
         if not self.candle: return None
         price = float(self.candle["close"]); open_price = float(self.candle["open"])
+        # 12.24.4: Polymarket settles Chainlink TWAP60 at close vs TWAP60 at open, so every lane measures from the
+        # settlement line when the runner has handed one over (set_line), not from the Binance first trade. 14-day
+        # replay on venues.outcome (analysis/v/model/replay_lanes_1s.py --open twap60): MAIN 70.1% -> 73.6% right,
+        # per$1 -0.021 -> +0.066; REVERSAL 62.6% -> 65.1%, per$1 +0.461 -> +0.461. EF already used line_open.
+        if self.line_open: open_price = float(self.line_open)
         now_s = ts_ms / 1000.0
         phase = (ts_ms - int(self.candle["time"])) / 1000.0
         f = {}

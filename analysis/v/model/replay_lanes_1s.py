@@ -52,7 +52,9 @@ for ts in T:
         if cur is not None: eng.on_closed_candle(cur); closed_n += 1
         line = twap60(ep)                                       # the settlement line: TWAP60 ending at the open
         cur = dict(time=ep * 1000, open=(line if (a.open == 'twap60' and line) else o), high=h, low=l, close=cl, volume=0.0)
-        if a.ef: eng.set_line(line)
+        # 12.24.4 engine: compute() takes line_open as the open when set_line was called. Under --open first the
+        # line is withheld so the lanes measure from the first trade as 12.23.x did; --ef needs it either way.
+        if a.ef or a.open == 'twap60': eng.set_line(line)
     cur['high'] = max(cur['high'], h); cur['low'] = min(cur['low'], l); cur['close'] = cl; cur['volume'] += v
     eng.on_candle(cur)
     if tb > 0: eng.on_spot_trade(ms, cl, tb, False)

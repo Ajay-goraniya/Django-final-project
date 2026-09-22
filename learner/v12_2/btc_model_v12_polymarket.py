@@ -625,9 +625,15 @@ class PolyRunner(Runner):
         # 12.22.0: hand the lane engine the settlement line and the venue ask for the EF reversal lane
         try:
             self.lanes.ef_enabled=(self.ef_engine()=='build11')
-            if self.lanes.ef_enabled:
+            # 12.24.4: the settlement line goes to the lane engine on every read, for every lane (MAIN and REVERSAL
+            # measure from it now, poly_lanes.compute), not only when the build11 EF lane is on.
+            # ref_open is fixed for the candle, so the feature build runs once per candle for MAIN/REVERSAL and on
+            # every read only when build11 EF (which needs ref_now) is on.
+            if self.lanes.ef_enabled or getattr(self,'_line_ep',None)!=ep:
                 _f=self.st.features(ep*US,int(now*US)) or {}
+                if _f.get('ref_open'): self._line_ep=ep
                 self.lanes.set_line(_f.get('ref_open'),_f.get('ref_now'))
+            if self.lanes.ef_enabled:
                 _t=self.market.get(ep)
                 self.lanes.ef_quote=(lambda side,_t=_t: ((self.books.quote(_t[0 if side=='UP' else 1],self.quote_age_s()) or {}).get('ask') if _t else None))
         except Exception as e: self.error=f'EF lane inputs: {type(e).__name__}'

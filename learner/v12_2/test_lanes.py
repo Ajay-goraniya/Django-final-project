@@ -400,3 +400,19 @@ class AdaptRatioJournaled12161(unittest.TestCase):
         import inspect
         src = inspect.getsource(L.LaneEngine)
         self.assertGreaterEqual(src.count("adapt_ratio=self.adapt.value()"), 3)
+
+
+class SettlementOpen12244(unittest.TestCase):
+    """12.24.4: Polymarket settles TWAP60 close vs TWAP60 open. Once the runner hands the lane engine the
+    settlement line (set_line), every lane measures from it; without one the Binance first trade stands."""
+    def test_line_open_replaces_the_candle_open_in_the_features(self):
+        e = engine_with()
+        e.on_candle(dict(time=0, open=100000.0, high=100060.0, low=99990.0, close=100050.0, volume=100.0))
+        f = e.compute(30000)
+        self.assertEqual(f['open_price'], 100000.0)
+        e.set_line(100040.0)
+        f = e.compute(31000)
+        self.assertEqual(f['open_price'], 100040.0, 'the settlement line is the open')
+        self.assertAlmostEqual(f['price'], 100050.0)
+        e.set_line(None)
+        self.assertEqual(e.compute(32000)['open_price'], 100000.0, 'no line -> first trade, as 12.23.x')
