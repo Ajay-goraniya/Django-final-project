@@ -14,7 +14,11 @@ import poly_lanes as L
 ap = argparse.ArgumentParser(); ap.add_argument('--klines', nargs='+', required=True); ap.add_argument('--venues', required=True)
 ap.add_argument('--reads', type=int, default=5); ap.add_argument('--start', type=int, default=0); ap.add_argument('--end', type=int, default=2**40)
 ap.add_argument('--out', default=''); ap.add_argument('--cap', type=float, default=L.LANE_MAX_ASK)
-ap.add_argument('--ef', action='store_true', help='enable the 12.22.0 EF reversal lane (poly_ef) with the Binance TWAP60 line'); a = ap.parse_args()
+ap.add_argument('--ef', action='store_true', help='enable the 12.22.0 EF reversal lane (poly_ef) with the Binance TWAP60 line')
+ap.add_argument('--open', choices=('first', 'twap60'), default='first',
+                help="the candle open the MAIN/REVERSAL lanes measure from: 'first' = Binance first trade (as shipped through 12.23.x); "
+                     "'twap60' = the settlement line, TWAP60 ending at the open (Polymarket settles TWAP60 close vs TWAP60 open)")
+a = ap.parse_args()
 FEE = 0.0167
 
 rows = {}
@@ -46,8 +50,9 @@ for ts in T:
     o, h, l, cl, v, tb = rows[ts]; ep = ts // 300 * 300; ms = ts * 1000; now_ts[0] = ts
     if cur is None or cur['time'] != ep * 1000:
         if cur is not None: eng.on_closed_candle(cur); closed_n += 1
-        cur = dict(time=ep * 1000, open=o, high=h, low=l, close=cl, volume=0.0)
-        if a.ef: eng.set_line(twap60(ep))                       # the settlement line: TWAP60 ending at the open
+        line = twap60(ep)                                       # the settlement line: TWAP60 ending at the open
+        cur = dict(time=ep * 1000, open=(line if (a.open == 'twap60' and line) else o), high=h, low=l, close=cl, volume=0.0)
+        if a.ef: eng.set_line(line)
     cur['high'] = max(cur['high'], h); cur['low'] = min(cur['low'], l); cur['close'] = cl; cur['volume'] += v
     eng.on_candle(cur)
     if tb > 0: eng.on_spot_trade(ms, cl, tb, False)
