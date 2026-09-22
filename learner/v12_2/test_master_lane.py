@@ -147,3 +147,21 @@ class Controls(unittest.TestCase):
         self.assertTrue(self.ui._shadow({'lane':'PAPER'})); self.assertFalse(self.ui._shadow({'lane':'LIVE'})); self.assertTrue(self.ui._shadow({}))
 
 if __name__=='__main__': unittest.main()
+
+
+class CallsAreGraded12245(unittest.TestCase):
+    """12.24.5: every lane prediction, traded or blocked, is one graded row per candle and lane."""
+    def test_blocked_and_called_predictions_are_graded(self):
+        import tempfile, pathlib
+        from poly_core import Journal
+        with tempfile.TemporaryDirectory() as d:
+            db = Journal(str(pathlib.Path(d) / 'c.db'), 'LIVE', 'h')
+            db.call(300, 'MAIN', 'UP', 0.7, 'BLOCKED', 0.67, 'blend 0.20'); db.call(300, 'MAIN', 'DOWN', 0.6, 'CALLED')   # second ignored
+            db.call(600, 'MAIN', 'DOWN', 0.8, 'CALLED')
+            db.grade(300, 'UP'); db.grade(600, 'UP')
+            m = db.call_metrics('MAIN')
+            self.assertEqual((m['n'], m['wins'], m['losses'], m['blocked']), (2, 1, 1, 1))
+            self.assertAlmostEqual(m['accuracy'], 0.5)
+            q, st, why = db.sql("SELECT quote,status,reason FROM calls WHERE epoch=300 AND kind='MAIN'")[0]
+            self.assertEqual((q, st, why), (0.67, 'BLOCKED', 'blend 0.20'), 'the forbidden call keeps its quote and reason')
+            db.c.close()

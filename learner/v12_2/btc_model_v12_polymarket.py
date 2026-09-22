@@ -679,7 +679,15 @@ class PolyRunner(Runner):
         # retry budget, and wrote nothing that said why. A 15-second gap in
         # account_snapshot was enough to kill MAIN and REVERSAL silently.
         # _lane_drop clears pending, records the reason, and lets the lane retry.
-        if not self.ui.allowed(kind): return self._lane_drop(ep,kind,'lane not permitted')
+        # 12.24.5: a switched-off lane still predicts; the call is recorded and graded as BLOCKED and does not
+        # count as an order attempt (was: _lane_drop -> confirm(False) -> MAIN_MAX_ATTEMPTS spent in 4 reads).
+        _cq=_px.get('ask_up' if decision.get('side')=='UP' else 'ask_dn')
+        if not self.ui.allowed(kind):
+            try: self.db.call(ep,kind,decision.get('side'),decision.get('p'),'BLOCKED',_cq,decision.get('reason'))
+            except Exception: pass
+            self.lanes.block(kind,'switched off'); return
+        try: self.db.call(ep,kind,decision.get('side'),decision.get('p'),'CALLED',_cq,decision.get('reason'))
+        except Exception: pass
         if self._routing_live() and (self.cash is None or time.monotonic()-self.cash_at>=15):
             return self._lane_drop(ep,kind,'cash unknown or stale')
         if ep not in self.market or ep not in self.info:

@@ -416,3 +416,28 @@ class SettlementOpen12244(unittest.TestCase):
         self.assertAlmostEqual(f['price'], 100050.0)
         e.set_line(None)
         self.assertEqual(e.compute(32000)['open_price'], 100000.0, 'no line -> first trade, as 12.23.x')
+
+
+class BlockedLaneKeepsPredicting12245(unittest.TestCase):
+    """12.24.5, owner: MAIN switched off must still make its prediction and show it as BLOCKED, as the
+    Predict.fun builds do. The switch is not an order attempt, and REVERSAL keeps watching MAIN's call."""
+    def test_blocked_main_keeps_its_call_spends_no_attempt_and_reversal_still_fires(self):
+        e = engine_with()
+        fired = drive(e, 0, 100060.0, seconds=20, step_ms=100)
+        self.assertTrue(fired and fired[0][1]['kind'] == 'MAIN')
+        e.block('MAIN', 'switched off')
+        self.assertEqual(e.main_attempts, 0, 'the switch is not an order attempt')
+        self.assertIsNotNone(e.main_signal, 'the prediction is kept')
+        self.assertIn('BLOCKED', e.main_block)
+        self.assertIn('MAIN', e.monitor()['blocked'])
+        more = drive(e, 20000, 100080.0, seconds=10, step_ms=100, candle_id=0)
+        self.assertFalse([d for _, d in more if d['kind'] == 'MAIN'], 'MAIN calls once per candle, then stays blocked')
+        flipped = drive(e, 40000, 99930.0, seconds=30, step_ms=100, imbalance=-0.9, buy=False, candle_id=0)
+        self.assertTrue([d for _, d in flipped if d['kind'] == 'REVERSAL'], 'REVERSAL watches the blocked MAIN call')
+
+    def test_block_resets_at_the_next_candle(self):
+        e = engine_with()
+        drive(e, 0, 100060.0, seconds=20, step_ms=100)
+        e.block('MAIN')
+        e.on_candle(dict(time=300000, open=100060.0, high=100060.0, low=100060.0, close=100060.0, volume=100.0))
+        self.assertEqual(e.monitor()['blocked'], [])

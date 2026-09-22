@@ -232,7 +232,9 @@ class Dashboard:
             sig=L.get('reversal_signal'); placed=L.get('reversal_placed')
             attempts=L.get('reversal_attempts') or 0; why=''
         if not sig or not sig.get('direction'): return None
-        if placed:
+        if kind in (L.get('blocked') or ()):
+            reason=f'BLOCKED - {kind} switched off (prediction kept, graded as a call)'
+        elif placed:
             reason='order placed'
         elif attempts:
             reason=f'called, not executed ({attempts} attempt{"s" if attempts>1 else ""})'+(f' · {why}' if why else '')
@@ -566,8 +568,10 @@ class Dashboard:
         def lane_metric(kind):
             m=lm.get(kind) or dict(real=dict(n=0,wins=0,losses=0,pnl=0.,accuracy=None),shadow=dict(n=0,wins=0,losses=0,pnl=0.,accuracy=None))
             real,shadow=m['real'],m['shadow']; h=real if real['n'] else shadow      # headline: venue fills when there are any
+            c=self.db.call_metrics(kind)      # 12.24.5: every prediction, traded or blocked
             return dict(accuracy=h['accuracy'],wins=h['wins'],losses=h['losses'],real=real['n'],shadow=shadow['n'],
-                        basis='LOCAL_FROM_FILLS',local_pnl=h['pnl'],real_pnl=real['pnl'],shadow_pnl=shadow['pnl'])
+                        basis='LOCAL_FROM_FILLS',local_pnl=h['pnl'],real_pnl=real['pnl'],shadow_pnl=shadow['pnl'],
+                        calls=c['n'],call_wins=c['wins'],call_accuracy=c['accuracy'],calls_blocked=c['blocked'])
         # 12.21.4: real/shadow on the combined card come from the orders' lanes (Journal.metrics_for),
         # not the --live flag - Zurich live4 read "real 4 · shadow 0 · 0.00" for 4 shadow trades at -6.24.
         real_m,shadow_m=self.db.metrics_for('LIVE'),self.db.metrics_for('PAPER')

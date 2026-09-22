@@ -505,6 +505,7 @@ class LaneEngine:
             self.candle_buy_quote = 0.0; self.candle_sell_quote = 0.0
             self.reversal_state = {"status": "idle", "detail": ""}
             self.ef.reset(); self.ef_signal = None                  # 12.22.0: one EF fire per candle
+            self.blocked = set()                                    # 12.24.5: switched-off lanes, this candle
         self._candle_id = cid
         self.candle = candle
 
@@ -676,6 +677,19 @@ class LaneEngine:
     # caller read back the stale prior status, and the lane counted a silent no-op
     # against its own retry budget. Two caps for one thing is one cap too many.
     MAIN_MAX_ATTEMPTS = 4
+    def block(self, kind, reason='switched off'):
+        """12.24.5: the lane's Trade Controls switch is OFF. As in build11 (and the Predict.fun builds), the
+        prediction is still MADE and kept - MAIN's call is what REVERSAL watches - and it is shown and graded as
+        BLOCKED. It is not an order attempt, so it never counts against MAIN_MAX_ATTEMPTS, and the lane stops
+        re-calling for the rest of the candle (build11 sets current_main at the prediction: once per candle)."""
+        self.pending[kind] = False
+        if not hasattr(self, 'blocked'): self.blocked = set()
+        self.blocked.add(kind)
+        if kind == 'MAIN':
+            self.main_last_reason = f'BLOCKED - {reason}'; self.main_block = f'BLOCKED - MAIN {reason} (prediction kept)'
+        elif kind == 'REVERSAL':
+            self.reversal_state = {"status": "blocked", "detail": f"BLOCKED - REVERSAL {reason} (prediction kept)"}
+
     def confirm(self, kind, placed, reason=''):
         """Told by the engine what actually happened to the order.
 
@@ -713,6 +727,7 @@ class LaneEngine:
         # A placed position ends the candle for this lane. A refused one does not,
         # until the attempt cap is reached.
         if self.current_main is not None or self.pending.get('MAIN'): return None
+        if 'MAIN' in getattr(self, 'blocked', ()): return None          # 12.24.5: called once, blocked, kept
         if self.main_attempts >= self.MAIN_MAX_ATTEMPTS:
             self.main_block = f'not payable after {self.main_attempts} attempts'
             return None
@@ -768,7 +783,7 @@ class LaneEngine:
         # five days; naming it honestly is the fix, refusing to port it was not.
         main = self.current_main or self.main_signal
         if not main or self.current_reversal is not None: return None
-        if self.pending.get('REVERSAL'): return None
+        if self.pending.get('REVERSAL') or 'REVERSAL' in getattr(self, 'blocked', ()): return None
         if self.reversal_attempts >= self.MAIN_MAX_ATTEMPTS:
             self.reversal_state = {"status": "watching", "detail": "hedge not payable"}
             return None
@@ -917,6 +932,7 @@ class LaneEngine:
             main_signal=(dict(self.main_signal) if self.main_signal else None),
             main_placed=bool(self.current_main),
             main_attempts=self.main_attempts, main_last_reason=self.main_last_reason,
+            blocked=sorted(getattr(self, 'blocked', ())),
             main_block=self.main_block, main_streak=dict(direction=self.main_streak_dir, reads=self.main_streak_reads),
             reversal=dict(self.reversal_state,
                           direction=(self.current_reversal or {}).get('direction')),
