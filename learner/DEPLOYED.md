@@ -829,3 +829,15 @@ Change:
 Startup is unchanged: a live process still boots with master OFF, i.e. SHADOW, and the owner arms it from Trade Controls.
 Tests: `test_master_lane.py` +10; two master-gate pins in `test_polymarket` re-pinned to routing. Green: 167 + 270 = 437.
 SHA256SUMS 36 -> 37. Rollout: Zurich PAPER (no creds: behaviour identical, master ignored), then London with credentials.
+
+### 12.21.0 PAPER deploy line (Zurich box) — written by the Zurich session
+
+Restarted 2026-09-22 12:10:35 UTC, **PID 146085** (was 145746, stopped 12:10:20 at a clean point: 0 in-flight/PENDING/UNKNOWN, 2 s into the candle). Same argv, **same db** `polymarket_v12_zurich_paper1.sqlite3`, no `--live`, credentials stripped. Restart epoch **1790079035**.
+Verified: `sha256sum -c SHA256SUMS.txt` **37/37**, every file byte-equal to `git show 0157856`. `python3 -m unittest test_master_lane test_polymarket -q` → **Ran 82, OK**.
+`/api/state`: build **12.21.0**, lane label **PAPER**, MAIN/REVERSAL/EF all true. `metrics.ef` = accuracy 0.5164, wins 63, losses 59, **real 0**, **shadow 122**, basis LOCAL_FROM_FILLS, local_pnl +57.4738, real_pnl 0.0, shadow_pnl +57.4738 — real/shadow split behaving as specified on a no-credentials process.
+`orders.lane`: column present. The 143 rows that predate this build read NULL (added by migration, not backfilled — correct, nothing was rewritten). **First new order after the restart carries it: 12:12:48, kind MAIN, FILLED, `lane='PAPER'`.**
+
+**12.19.0 / 12.20.0 latency_breakdown, for the record — the window is unusable and will stay that way in paper.** Captured from a `backup()` snapshot at 12:0x before this restart.
+`--since 1790077238` (12.19.0 restart, spans 12.19.0 + 12.20.0, 11:40:38 → 12:10:20, ~30 min): orders with timing **4**, all FILLED. decision_ms p50 0.4 / max 0.4; quote_wait_ms p50 0.0; sign_ms p50 0.1 / max 0.2; final_recheck_ms p50 0.1 / max 0.2; fire_to_submit_ms p50 0.7 / max 1.0; submit_ms p50 0.2 / max 0.2; total_attempt_ms p50 1.0 / max 1.2; book_age_ms p50 14.0 / max 51.1; pre_submit_book_age_ms p50 14.7 / max 51.7; signal.ts→order.ts p50 1 ms; by attempt {1: (4,4)}.
+`--since 1790078469` (12.20.0 only, 12:01:09 → 12:10:20): **orders with timing 0** — no order fired in that 9-minute window, every stage reports `none`.
+Why this cannot be fixed by waiting: `PaperBroker.post()` fills in-process against the local book, so `submit_ms` measures a function call, not a venue round trip — p50 **0.2 ms** here against **255 ms** on the live journals (`live_zurich_3`, n=402). Paper latency numbers are not comparable to live and should not be used to judge the 12.19.0 fast-path work. That needs a live run, or a separate harness that times the SDK call directly.
