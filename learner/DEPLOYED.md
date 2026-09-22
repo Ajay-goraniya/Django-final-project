@@ -757,3 +757,15 @@ relaxed to "no diagnostics scan". Green: 72 + 270 + 36 + 6 + 26 + 10 = 420. SHA2
 Rollout: Zurich PAPER first (same db; opening it switches the file to WAL - readers use `?mode=ro` with the -shm present, or
 a byte copy), verify build 12.19.0 and `latency` in /api/state, then `latency_breakdown.py` after 1 h against the 12.18.0 hour.
 London LIVE only after the owner's E-0 decisions.
+
+### 12.19.0 PAPER deploy line (Zurich box) — written by the Zurich session
+
+Restarted 2026-09-22 11:40:38 UTC, **PID 145293** (was 144073, stopped 11:40:26 at a clean point: 0 in-flight/PENDING/UNKNOWN, 9 s into the candle). Same argv, **same db** `polymarket_v12_zurich_paper1.sqlite3`, no `--live`, the four Polymarket/Relayer credentials again stripped from the child environment. Restart epoch **1790077238**.
+Verified: `sha256sum -c SHA256SUMS.txt` **35/35**, every file byte-equal to `git show a2b3ace`. `python3 -m unittest test_fastpath test_polymarket -q` → **Ran 82, OK**.
+`/api/state` after restart: build **12.19.0**, lane **PAPER**, master true, MAIN/REVERSAL/EF all true. `[LANE SEED] 64 closed candles from the journal; warm`. Banner `Polymarket v12.19.0 PAPER`.
+WAL confirmed as the brief warned: `-wal` (387,312 B) and `-shm` (32,768 B) present alongside the db; all reads here used `?mode=ro`.
+
+**`latency.sign_mode` / `latency.keepalive_ms` could NOT be verified on this run, and cannot be on a paper run.** Two independent reasons, both read from the deployed source:
+1. `poly_core.latency_stats()` returns `{}` on its first line when `latency_samples` is empty (`if not S: return {}`). The `keepalive_ms` / `sign_mode` assignments are at poly_core.py:1188-1189, *after* that early return — so both keys are absent until at least one order attempt has been sampled. At the time of writing there are 0 orders since restart, and `/api/state.latency` is `{}`.
+2. Both are read off the broker (`getattr(b,'sign_mode',None)`), and they are set in **`poly_live.LiveBroker.__init__`** (poly_live.py:52). `poly_core.PaperBroker` defines no `sign_mode` attribute at all, so even once orders exist this key will read `None` under `--mode pnl` without `--live`. `sign_mode` is chosen by `LiveBroker.pick_sign_mode()` — 'inline' when eth_keys runs the CoinCurve backend, else 'thread' — which is live-path-only logic.
+Verdict: the deploy is correct and complete; the requested verification is not satisfiable in PAPER. It needs a live run, or the keys need to be surfaced independently of `latency_samples` and of the broker class.
