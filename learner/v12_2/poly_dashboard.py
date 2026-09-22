@@ -152,6 +152,10 @@ class Dashboard:
         # collateral balance plus the venue's own valuation of open positions.
         # The local journal is never the bankroll source in live mode.
         if not self.r.a.live: return self.r.a.capital+self.db.metrics()['pnl']
+        # 12.22.0: with credentials but master OFF the orders are shadow, so the sizing bankroll is the
+        # shadow ledger (capital + shadow pnl), not the $1.65 the shadow lane never spends (Zurich audit :154).
+        # The owner's cash floor reads the venue directly and is untouched.
+        if self.lane_label()!='LIVE': return self.r.a.capital+self.db.metrics_for('PAPER')['pnl']
         vt=getattr(self.r,'venue_state',None) or {}
         if vt.get('cash') is not None:
             return float(vt['cash'])+float(vt.get('open_value') or 0.)
@@ -548,7 +552,7 @@ class Dashboard:
         if s: ef=dict(direction=s[0]['side'],ts_ms=int(s[0]['ts']*1000),reason='v10 pnl · '+s[0]['status'])
         vt=getattr(r,'venue_state',None) or {}
         vmetrics=self.db.venue_metrics(); divergence=self.db.pnl_divergence()
-        live_venue=bool(r.a.live and vmetrics['n'])
+        live_venue=bool(self.lane_label()=='LIVE' and vmetrics['n'])   # 12.22.0: the route, not the flag (Zurich audit :548)
         shown=vmetrics if live_venue else metrics
         # 12.20.0: per-lane cards from the lane's own fills (Journal.lane_metrics); combined stays the
         # per-epoch net. Same real/shadow labelling as the combined card.

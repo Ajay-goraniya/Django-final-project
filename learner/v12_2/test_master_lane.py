@@ -133,6 +133,16 @@ class Controls(unittest.TestCase):
         self.assertNotIn("('LIVE' if self.r.a.live else 'PAPER')",py); self.assertIn("' · v10 PnL · '+self.lane_label()",py)
         self.assertIn("text('buildStamp',live.build+",html)
         self.ui.r.a.live=True; self.db.set('master',False); self.assertEqual(self.ui.lane_label(),'SHADOW')
+    def test_shadow_bankroll_is_the_shadow_ledger(self):
+        # 12.22.0 (Zurich audit :154): with credentials and master OFF, sizing reads capital + shadow pnl.
+        ui=Dashboard.__new__(Dashboard); ui.db=self.db; ui.r=SimpleNamespace(a=SimpleNamespace(live=True,capital=50.0),venue_state=dict(cash=1.65,open_value=0.0),cash=1.65)
+        self.db.set('master',False); self.assertAlmostEqual(ui.equity(),50.0+self.db.metrics_for('PAPER')['pnl'])
+        self.db.set('master',True); self.assertAlmostEqual(ui.equity(),1.65)
+    def test_claim_status_and_live_venue_follow_the_lane(self):
+        import pathlib
+        src=pathlib.Path(__file__).with_name('btc_model_v12_polymarket.py').read_text(); dsh=pathlib.Path(__file__).with_name('poly_dashboard.py').read_text()
+        self.assertNotIn("'PAPER' if not self.a.live else 'NO_PAYOUT'",src); self.assertIn("'NO_PAYOUT' if _live_fill else 'PAPER'",src)
+        self.assertIn("live_venue=bool(self.lane_label()=='LIVE' and vmetrics['n'])",dsh); self.assertNotIn("live_venue=bool(r.a.live",dsh)
     def test_shadow_flag_follows_the_order_lane(self):
         self.assertTrue(self.ui._shadow({'lane':'PAPER'})); self.assertFalse(self.ui._shadow({'lane':'LIVE'})); self.assertTrue(self.ui._shadow({}))
 

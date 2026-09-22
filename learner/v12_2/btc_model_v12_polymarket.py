@@ -1081,7 +1081,9 @@ class PolyRunner(Runner):
                 cur=self.db.sql('SELECT claim_status FROM results WHERE epoch=?',(row['epoch'],))
                 if not cur or cur[0][0]!='PENDING': continue
                 if not self.a.live or row['payout']==0:
-                    self.db.sql('UPDATE results SET claim_status=? WHERE epoch=?',('PAPER' if not self.a.live else 'NO_PAYOUT',row['epoch'])); continue
+                    # 12.22.0: a candle with no venue fill is PAPER whatever the process flag (Zurich audit :1066)
+                    _live_fill=self.db.sql("SELECT 1 FROM orders o JOIN fills f ON f.order_id=o.id WHERE o.epoch=? AND coalesce(o.lane,?)='LIVE' LIMIT 1",(row['epoch'],self.db.lane))
+                    self.db.sql('UPDATE results SET claim_status=? WHERE epoch=?',('NO_PAYOUT' if _live_fill else 'PAPER',row['epoch'])); continue
                 self.db.sql("UPDATE results SET claim_status='SUBMITTING' WHERE epoch=?",(row['epoch'],))
                 try:
                     h=await asyncio.wait_for(self.broker.redeem(row['condition_id']),20)
