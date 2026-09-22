@@ -18,6 +18,8 @@ KT=[];KC=[]
 for kp in a.klines:
     for t,c in sqlite3.connect(kp).execute("select ts,cl from k1s order by ts"): KT.append(t/1000); KC.append(c)
 KT=np.array(KT); KC=np.array(KC)
+if len(KT):
+    o=np.argsort(KT,kind='stable'); KT=KT[o]; KC=KC[o]; keep=np.concatenate([[True],np.diff(KT)>0]); KT=KT[keep]; KC=KC[keep]  # day files overlap by 600 s; searchsorted needs sorted unique
 def _seg(t0,t1):
     i=int(np.searchsorted(KT,t0)); j=int(np.searchsorted(KT,t1)); return KC[i:j]
 def rule_feats(ep,sec):
