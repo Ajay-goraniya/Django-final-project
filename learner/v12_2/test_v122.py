@@ -2081,7 +2081,7 @@ class HousekeepingCadence(unittest.TestCase):
         r.db.sql = lambda *a, **k: (deletes.append(a[0]) if a[0].startswith('DELETE') else None, real(*a, **k))[1]
         self._run_loop(E, r.housekeeping(), 5.0, 13, clock)          # 13 passes = 60 s of housekeeping
         self.assertEqual(r.error, '', 'the body ran to the end on every pass')
-        self.assertEqual(len(deletes), 2, 'one retention pass (diagnostics + candles), not one per 5 s')
+        self.assertEqual(len(deletes), 3, 'one retention pass (diagnostics + candles + tape1s since 12.23.0), not one per 5 s')
         self.assertEqual(wip, [0., 60.])
         r.db.c.close()
 
@@ -2156,7 +2156,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '12.22.0'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '12.23.0'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0

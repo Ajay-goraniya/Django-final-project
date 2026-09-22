@@ -442,6 +442,9 @@ class LaneEngine:
         self.ticks = deque(); self.ef = poly_ef.EFReversal(); self.ef_signal = None
         self.ef_enabled = False; self.ef_quote = None; self.ef_fee = 0.02; self.line_open = None; self.line_now = None
         self._ef_flow_hist = deque(maxlen=120)          # one delta_5s sample per second: the lane's own flow scale
+        # 12.23.0: the perp lane (trade tape, price tape, 120 s memory) and the aged depth history
+        self.perp_ticks = deque(); self.perp_prices = deque(maxlen=6000); self.perp_memory = poly_ef.PerpMemory()
+        self._perp_flow_hist = deque(maxlen=120); self._perp_sec = None; self.depth_hist = poly_ef.DepthHistory()
 
     # ---- inputs ---------------------------------------------------------
     def on_spot_trade(self, ts_ms, price, qty, is_buyer_maker):
@@ -461,6 +464,10 @@ class LaneEngine:
         self.depth = {"bids": bids, "asks": asks}
         if not bids or not asks: return
         ts = int(ts_ms if ts_ms is not None else time.time() * 1000)
+        try:                                                   # 12.23.0: aged history + per-second book memory
+            self.depth_hist.push(bids, asks, ts); bk = self.depth_hist.read(ts)
+            if bk: self.perp_memory.on_book(ts, bk)
+        except Exception: pass
         current_top = (float(bids[0][0]), float(bids[0][1]), float(asks[0][0]), float(asks[0][1]))
         if self.previous_top is not None:
             v = quote_ofi(self.previous_top, current_top)
@@ -471,6 +478,17 @@ class LaneEngine:
         self.aggressive_bid_cluster = cluster_z(self.bid_volume_history, bid_quote)
         self.aggressive_ask_cluster = cluster_z(self.ask_volume_history, ask_quote)
         self.bid_volume_history.append(bid_quote); self.ask_volume_history.append(ask_quote)
+
+    def on_perp_trade(self, ts_ms, price, qty, is_buyer_maker):
+        """12.23.0: the perp trade tape the EF lane prefers (build11: PERP is the primary microstructure)."""
+        ts = int(ts_ms); signed = price * qty * (-1.0 if is_buyer_maker else 1.0)
+        self.perp_ticks.append((ts, signed)); self.perp_prices.append((ts / 1000.0, price))
+        cut = ts - 32_000
+        while self.perp_ticks and self.perp_ticks[0][0] < cut: self.perp_ticks.popleft()
+        self.perp_memory.on_trade(ts, price, abs(signed), signed >= 0.0)
+        sec = ts // 1000
+        if self._perp_sec != sec:
+            self._perp_sec = sec; self._perp_flow_hist.append(poly_ef.window_delta(self.perp_ticks, ts, 5000))
 
     def on_candle(self, candle):
         cid = int(candle["time"])
@@ -844,7 +862,20 @@ class LaneEngine:
             self._ef_flow_hist.append(float(f.get('delta_5s', 0.0)))
         fr = self._ef_flow_hist
         flow_rms = math.sqrt(sum(x * x for x in fr) / len(fr)) if len(fr) >= 30 else None
-        return poly_ef.ef_metrics(f, self.ticks, self.price_history, int(ts_ms), self.line_open, self._ef_sig[1], flow_rms)
+        return poly_ef.ef_metrics(f, self.ticks, self.price_history, int(ts_ms), self.line_open, self._ef_sig[1], flow_rms, self._ef_micro(int(ts_ms)))
+
+    def _ef_micro(self, ts_ms):
+        """12.23.0: the perp lane's snapshot for the EF ladder: ready when >= EF_MIN_TRADE_EVENTS perp trades in 5 s and
+        the newest is fresh; the book read from the aged depth history; the 120 s memory for the contrarian side."""
+        n5 = sum(1 for t, _ in self.perp_ticks if ts_ms - 5000 <= t <= ts_ms)
+        ready = bool(self.perp_ticks) and n5 >= poly_ef.EF_MIN_TRADE_EVENTS and (ts_ms - self.perp_ticks[-1][0]) <= poly_ef.EF_MAX_TRADE_AGE_MS
+        fr = self._perp_flow_hist
+        flow_rms = math.sqrt(sum(x * x for x in fr) / len(fr)) if len(fr) >= 30 else None
+        book = self.depth_hist.read(ts_ms)
+        side = None
+        if self.line_open and self.feature: side = 'DOWN' if float(self.feature.get('price', 0)) > self.line_open else 'UP'
+        memory = self.perp_memory.memory_for(side) if side else poly_ef.PerpMemory.neutral()
+        return dict(ready=ready, ticks=self.perp_ticks, prices=self.perp_prices, flow_rms=flow_rms, book=book, memory=memory, n5=n5)
 
     def _try_ef(self, ts_ms, f):
         if self.pending.get('EF') or self.ef.fired is not None: return None
@@ -865,6 +896,8 @@ class LaneEngine:
         m = self.ef.last or {}
         return dict(enabled=self.ef_enabled, block=self.ef.block, fired=bool(self.ef.fired), attempts=self.ef.attempts,
                     line_open=self.line_open, signal=(dict(self.ef_signal) if self.ef_signal else None),
+                    micro_source=m.get('micro_source'), memory_ready=m.get('memory_ready'), book_age_ms=m.get('book_age_ms'),
+                    perp_ticks_32s=len(self.perp_ticks), depth_rows=len(self.depth_hist.rows), memory_seconds=len(self.perp_memory.history),
                     **{k: (round(m[k], 3) if isinstance(m.get(k), float) else m.get(k)) for k in
                        ('ef_dir', 'body', 'extension_sigma', 'real', 'fake', 'control_transfer', 'old_side_exhaustion',
                         'settlement_feasibility', 'settlement_probability', 'persistence', 'chop', 'reachability') if k in m})

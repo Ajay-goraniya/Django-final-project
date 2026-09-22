@@ -906,5 +906,25 @@ of its own on this data. The harness reproduces MAIN (-0.02) and REVERSAL (+0.46
 Tests: test_ef.py +14, test_master_lane +2 = 457 green (187 + 270). SHA256SUMS 37 -> 39.
 Rollout: Zurich SHADOW with ef_engine=build11 for a forward read with the full live features (depth, book) - the inputs the
 stored data lacks. v10 EF stays the default everywhere else; nothing live.
+
+ 12.23.0 (09-22 19:xx UTC) - EF lane: the perp feed, the depth history and the 120 s memory; tape1s recorder
+
+Owner, 19:0x: "Then port the perp feed and depth history too, test that."
+- `poly_ef.DepthHistory`: aged top-20 snapshots (9 s), zone imbalances 1-5 / 6-10 / 11-20, replenishment against the
+  0.8-1.8 s old snapshot (build11 side_change, matched levels + meaningful best shifts), event OFI against the 0.12-0.8 s
+  old one, microprice. The runner's "depth" stream IS the perp depth20@100ms, so this is build11's perp book.
+- `poly_ef.PerpMemory`: build11's one-second history (delta, price_eff, book zones, replenishment) over 120 s and
+  `_memory_for_direction` verbatim (old aggression, futility, aggression/effectiveness decay, control/book handoff,
+  exhaustion score, deep persistence; constants 1021-1039). Applied as build11 does: bounded shifts on exhaustion
+  (+-0.06), persistence/transition/book (+-0.05), fake (-), real (+).
+- `ef_metrics(..., micro)`: PERP is the microstructure source when >= 3 perp trades in 5 s and the newest <= 1.5 s old
+  (flows, flow profile, paths from the perp tape; book_signed = 0.48 near + 0.24 deep + 0.12 replenishment + 0.10 OFI +
+  0.06 microprice); spot stands in otherwise. Reports micro_source / memory_ready / book_age_ms in the EF monitor.
+- runner: `on_perp` now forwards perp trades to the lane engine; `tape1s` table (one row per second: spot px/buy/sell,
+  perp px/buy/sell, bid/ask depth 5 and 20, Chainlink ref, venue asks) written from decide_loop, 7-day retention - so the
+  next replay has the inputs the stored klines lack. ~86k rows/day.
+Tests: test_ef +4 (58), housekeeping delete count 2 -> 3. All suites green. SHA256SUMS 39.
+Rollout: Zurich SHADOW (ef_engine=build11), then read the EF monitor for micro_source=PERP and memory_ready before
+counting any fire; Mumbai paper the same build to grow the tape.
 | 12.21.4 | 5ac70b2 | 2026-09-22 15:50:35 UTC | eu-central-2 (Zurich) | 37/37 == git show, test_master_lane 14 OK | pid 149446, live4 db, master OFF (SHADOW) | combined real 0 / shadow 5, shadow_pnl -7.352842941176469 == sum(results.shadow_pnl); :559 fixed | written by the Zurich session |
 

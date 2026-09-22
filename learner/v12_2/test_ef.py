@@ -89,4 +89,47 @@ class Lane(unittest.TestCase):
         for s in range(0, 60): eng.on_spot_trade(s * 1000, 100.0, 1.0, False)
         self.assertLessEqual(eng.ticks[0][0], 59_000 - 27_000 + 1000); self.assertGreaterEqual(eng.ticks[0][0], 59_000 - 32_000)
 
+class PerpAndDepth(unittest.TestCase):
+    """12.23.0: the perp lane and the depth history feed the ladder; spot stands in when they are not ready."""
+    def _book(self, bid_heavy=True, n=20, t=1_000_000):
+        bids = [(100.0 - i * 0.1, (3.0 if bid_heavy else 1.0)) for i in range(n)]; asks = [(100.1 + i * 0.1, (1.0 if bid_heavy else 3.0)) for i in range(n)]
+        return bids, asks
+    def test_depth_history_reads_zones_and_replenishment(self):
+        h = E.DepthHistory(); b, a = self._book(True)
+        for k in range(0, 3000, 100): h.push(b, a, 1_000_000 + k)
+        r = h.read(1_003_000); self.assertGreater(r['book_1_5'], 0.4); self.assertGreater(r['book_11_20'], 0.4); self.assertAlmostEqual(r['repl_1_5'], 0.0)
+        b2 = [(p, q * 2) for p, q in b]; h.push(b2, a, 1_003_100); r2 = h.read(1_003_100)
+        self.assertGreater(r2['repl_1_5'], 0.0, 'bids doubled against a 1-1.8 s old snapshot = bid replenishment'); self.assertGreater(r2['event_ofi'], 0.0)
+        self.assertIsNone(h.read(1_003_100 + E.EF_DEPTH_STALE_MS + 1), 'a stale book reads None')
+        for k in range(0, 12_000, 100): h.push(b2, a, 1_003_200 + k)
+        self.assertGreaterEqual(h.rows[0]['ts'], 1_015_100 - E.EF_DEPTH_RETENTION_MS, 'snapshots older than the retention are pruned')
+    def test_perp_memory_needs_history_then_reads_a_handoff(self):
+        pm = E.PerpMemory(); self.assertEqual(pm.memory_for('UP')['ready'], 0.0)
+        t0 = 2_000_000_000; px = 100.0
+        for s in range(0, 100):                                   # 100 s of sellers pushing price down (old side = DOWN)
+            px -= 0.1; pm.on_trade(t0 + s * 1000, px, 800.0, False); pm.on_trade(t0 + s * 1000 + 500, px, 100.0, True)
+        for s in range(100, 112):                                 # 12 s: buyers take over, sellers' pushes stop moving price
+            pm.on_trade(t0 + s * 1000, px, 900.0, True); pm.on_trade(t0 + s * 1000 + 500, px, 600.0, False); px += 0.02
+        pm.on_trade(t0 + 112 * 1000, px, 1.0, True)               # closes the last second
+        m = pm.memory_for('UP'); self.assertEqual(m['ready'], 1.0)
+        self.assertGreater(m['control_handoff'], 0.5); self.assertGreater(m['old_aggression'], 0.3)
+        for k in ('exhaustion_score', 'aggression_decay', 'effectiveness_decay', 'book_handoff', 'deep_persistence'): self.assertTrue(0.0 <= m[k] <= 1.0)
+    def test_micro_swaps_in_the_perp_tape(self):
+        f, ticks, prices, now_ms, line, sig = Metrics()._tape()
+        base = E.ef_metrics(f, ticks, prices, now_ms, line, sig); self.assertEqual(base['micro_source'], 'SPOT')
+        perp_ticks = deque((ts, q * 3.0) for ts, q in ticks); perp_prices = deque(prices)
+        micro = dict(ready=True, ticks=perp_ticks, prices=perp_prices, flow_rms=None, book=None, memory=E.PerpMemory.neutral())
+        m = E.ef_metrics(f, ticks, prices, now_ms, line, sig, None, micro); self.assertEqual(m['micro_source'], 'PERP')
+        self.assertEqual(m['ef_dir'], base['ef_dir']); self.assertFalse(m['memory_ready'])
+        book = dict(book_1_5=-0.6, book_6_10=-0.3, book_11_20=-0.2, repl_1_5=0.5, repl_6_10=0.1, repl_11_20=0.0, event_ofi=-0.3, microprice=-0.2, age_ms=50)
+        mb = E.ef_metrics(f, ticks, prices, now_ms, line, sig, None, dict(micro, book=book))
+        self.assertGreater(mb['book_support'], base['book_support'], 'an ask-heavy book supports the DOWN side')
+        self.assertGreater(mb['old_side_book_replenishment'], 0.0, 'bids (the old UP side) replenishing raises the fake penalty term')
+    def test_lane_engine_carries_the_perp_tape(self):
+        eng = L.LaneEngine()
+        for s in range(0, 40): eng.on_perp_trade(s * 1000, 100.0 + s * 0.01, 1.0, s % 3 == 0)
+        self.assertGreaterEqual(eng.perp_ticks[0][0], 39_000 - 32_000); self.assertGreater(len(eng.perp_memory.history), 30)
+        b, a = self._book(); eng.on_depth(b, a, 39_000); mic = eng._ef_micro(39_500)
+        self.assertTrue(mic['ready']); self.assertIsNotNone(mic['book']); self.assertEqual(mic['memory']['ready'], 0.0, 'no line yet -> neutral memory')
+
 if __name__ == '__main__': unittest.main()

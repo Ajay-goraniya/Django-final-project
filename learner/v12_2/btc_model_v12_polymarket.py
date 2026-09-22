@@ -255,6 +255,43 @@ class PolyRunner(Runner):
         super().on_spot(j)
         try: self.lanes.on_spot_trade(int(j['T']),float(j['p']),float(j['q']),bool(j['m']))
         except Exception: pass
+        try: self._tape_add('spot',int(j['T']),float(j['p']),float(j['q']),bool(j['m']))
+        except Exception: pass
+    def on_perp(self,j):
+        super().on_perp(j)
+        # 12.23.0: the perp trade tape reaches the lane engine (build11's primary EF microstructure)
+        try: self.lanes.on_perp_trade(int(j['T']),float(j['p']),float(j['q']),bool(j['m']))
+        except Exception: pass
+        try: self._tape_add('perp',int(j['T']),float(j['p']),float(j['q']),bool(j['m']))
+        except Exception: pass
+    # ---- 12.23.0: tape1s - one row per second of what the EF lane consumes, so a later replay has the real inputs
+    # (stored 1 s klines carry no perp flow and no book). ~86k rows/day; retention 7 days in housekeeping.
+    TAPE_KEEP_S=7*86400
+    def _tape_add(self,src,ts_ms,price,qty,is_buyer_maker):
+        sec=ts_ms//1000; t=self.__dict__.setdefault('_tape',{})
+        r=t.setdefault(sec,dict(ts=sec,spot_px=None,spot_buy=0.,spot_sell=0.,perp_px=None,perp_buy=0.,perp_sell=0.))
+        r[src+'_px']=price
+        if is_buyer_maker: r[src+'_sell']+=price*qty
+        else: r[src+'_buy']+=price*qty
+    def _tape_flush(self):
+        """Write every completed second (all but the newest) with the book and venue asks read now."""
+        t=self.__dict__.get('_tape')
+        if not t or len(t)<2: return
+        cur=max(t); ep=int(time.time()//300)*300; toks=self.market.get(ep)
+        d=self.lanes.depth; bids=d.get('bids') or []; asks=d.get('asks') or []
+        b5=sum(q for _,q in bids[:5]); a5=sum(q for _,q in asks[:5]); b20=sum(q for _,q in bids[:20]); a20=sum(q for _,q in asks[:20])
+        up=dn=None
+        if toks:
+            qu=self.books.quote(toks[0],self.quote_age_s()); qd=self.books.quote(toks[1],self.quote_age_s())
+            up=(qu or {}).get('ask'); dn=(qd or {}).get('ask')
+        ref=None
+        try: ref=float(self.st.r_px[-1]) if self.st.r_px else None
+        except Exception: pass
+        for sec in sorted(t):
+            if sec>=cur: break
+            r=t.pop(sec)
+            self.db.sql('INSERT OR IGNORE INTO tape1s VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                        (sec,r['spot_px'],r['spot_buy'],r['spot_sell'],r['perp_px'],r['perp_buy'],r['perp_sell'],b5,a5,b20,a20,ref,up,dn))
     @staticmethod
     def ref_samples(j):
         """(ts_us, price) pairs for BTC/USD out of one RTDS frame, whatever its envelope.
@@ -475,6 +512,8 @@ class PolyRunner(Runner):
         except Exception: return bool(self.a.live)
     async def _decide_once(self):
         if True:
+            try: self._tape_flush()
+            except Exception as e: self.error='tape1s: '+type(e).__name__
             d=self.decide_now(); ep=int(time.time()//300)*300
             # 12.22.0: ef_engine control. 'v10' = the packaged classifier fires EF here; 'build11' = the
             # EF reversal lane (poly_ef via lane_loop) fires EF and v10's call is kept as a shadow reason.
@@ -782,6 +821,7 @@ class PolyRunner(Runner):
                 if self._due('retention',self.RETENTION_EVERY_S):
                     self.db.sql('DELETE FROM diagnostics WHERE ts<?',(time.time()-7*86400,))
                     self.db.sql('DELETE FROM candles WHERE epoch<?',(time.time()-30*86400,))
+                    self.db.sql('DELETE FROM tape1s WHERE ts<?',(int(time.time())-self.TAPE_KEEP_S,))   # 12.23.0
             except Exception as e: self.error='Housekeeping: '+type(e).__name__
             await asyncio.sleep(5)
     MASTER_OFF_WARN_S=300.0
