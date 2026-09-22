@@ -441,3 +441,21 @@ class BlockedLaneKeepsPredicting12245(unittest.TestCase):
         e.block('MAIN')
         e.on_candle(dict(time=300000, open=100060.0, high=100060.0, low=100060.0, close=100060.0, volume=100.0))
         self.assertEqual(e.monitor()['blocked'], [])
+
+
+class RestoreAfterRestart12246(unittest.TestCase):
+    """12.24.6: an order placed on this candle before a restart must show as placed after it."""
+    def test_restored_reversal_is_placed_and_does_not_fire_again(self):
+        e = engine_with()
+        e.on_candle(dict(time=0, open=100000.0, high=100000.0, low=100000.0, close=100000.0, volume=100.0))
+        e.restore('REVERSAL', 'UP', 54000)
+        m = e.monitor()
+        self.assertTrue(m['reversal_placed']); self.assertEqual(m['reversal_signal']['direction'], 'UP')
+        self.assertIsNone(e._watch_reversal(60000, {'phase_second': 60.0}), 'once per candle survives the restart')
+
+    def test_restored_main_is_the_reversal_reference(self):
+        e = engine_with()
+        e.on_candle(dict(time=0, open=100000.0, high=100000.0, low=100000.0, close=100000.0, volume=100.0))
+        e.restore('MAIN', 'DOWN', 62000)
+        self.assertTrue(e.monitor()['main_placed'])
+        self.assertIsNone(e._try_main(70000, {}), 'MAIN does not fire twice in the candle')

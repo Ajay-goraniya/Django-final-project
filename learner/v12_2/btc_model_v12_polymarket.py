@@ -622,6 +622,15 @@ class PolyRunner(Runner):
         now=time.time()
         bad=self.health.stale(('spot','depth'))
         if bad or not self.current_candle: return
+        # 12.24.6: once per candle (and so once after every restart), rebuild the lanes' placed-order state for this
+        # candle from the journal. Memory-only lane state made the card show NOT TRIGGERED on a candle already traded.
+        if getattr(self,'_restored_ep',None)!=ep:
+            self._restored_ep=ep
+            try:
+                for _k,_side,_st,_ts in self.db.sql('SELECT kind,side,status,ts FROM signals WHERE epoch=?',(ep,)):
+                    if _st in ('FILLED','PENDING','UNKNOWN','SUBMITTING') and _k in ('MAIN','REVERSAL','EF') and _side in ('UP','DOWN'):
+                        self.lanes.restore(_k,_side,int((_ts or now)*1000))
+            except Exception as e: self.error=f'lane restore: {type(e).__name__}'
         # 12.22.0: hand the lane engine the settlement line and the venue ask for the EF reversal lane
         try:
             self.lanes.ef_enabled=(self.ef_engine()=='build11')

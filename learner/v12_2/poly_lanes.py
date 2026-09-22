@@ -677,6 +677,20 @@ class LaneEngine:
     # caller read back the stale prior status, and the lane counted a silent no-op
     # against its own retry budget. Two caps for one thing is one cap too many.
     MAIN_MAX_ATTEMPTS = 4
+    def restore(self, kind, side, ts_ms=None):
+        """12.24.6: the journal says this lane already has an order on the current candle (placed before a restart).
+        Lane state is memory only, so after a restart the card read NOT TRIGGERED on a candle REVERSAL had already
+        traded (London 00:40:54 UP, card at 00:44 after a 00:42 restart). Rebuild the once-per-candle state from the
+        journal so the card, REVERSAL's reference to MAIN and the once-per-candle guards all see the placed order."""
+        sig = dict(direction=side, ts_ms=int(ts_ms or 0), probability_up=(1.0 if side == 'UP' else 0.0), restored=True)
+        if kind == 'MAIN':
+            self.main_signal = self.main_signal or dict(sig); self.current_main = dict(sig)
+        elif kind == 'REVERSAL':
+            self.reversal_signal = self.reversal_signal or dict(sig); self.current_reversal = dict(sig)
+            self.reversal_state = {"status": "fired", "detail": f"REVERSAL {side} placed this candle (restored from the journal)"}
+        elif kind == 'EF':
+            self.ef_signal = self.ef_signal or dict(sig, kind='EF', side=side); self.ef.fired = dict(sig, kind='EF', side=side)
+
     def block(self, kind, reason='switched off'):
         """12.24.5: the lane's Trade Controls switch is OFF. As in build11 (and the Predict.fun builds), the
         prediction is still MADE and kept - MAIN's call is what REVERSAL watches - and it is shown and graded as
