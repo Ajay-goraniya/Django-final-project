@@ -6,12 +6,36 @@ Read-only. Prints one compact table. No files written unless --out is given."""
 import argparse,sqlite3,json,datetime as dt,math,sys,numpy as np
 from collections import defaultdict
 ap=argparse.ArgumentParser(); ap.add_argument('--journals',nargs='+',required=True); ap.add_argument('--venues',required=True)
-ap.add_argument('--min-train-days',type=int,default=2); ap.add_argument('--out',default=None); a=ap.parse_args()
+ap.add_argument('--min-train-days',type=int,default=2); ap.add_argument('--out',default=None)
+ap.add_argument('--klines',nargs='*',default=[],help='sqlite files with k1s(ts ms, cl) 1-second Binance closes; enables settlement-line features'); a=ap.parse_args()
 oc={}
 vc=sqlite3.connect(a.venues)
 for ep,act in vc.execute("select epoch,actual from outcome where actual in ('UP','DOWN')"): oc[int(ep)]=1 if act=='UP' else 0
 FEATS=['move_bps','ret5','ret15','ret30','ret60','rv60','range_bps','pos_in_range','dist_hi_bps','dist_lo_bps','spot_imb15','spot_imb60',
        'ofi5','ofi15','ofi60','perp_n15','basis_bps','spread_bps','imb5','imb20','micro_bps','prev1_bps','prev2_bps','sec_left','hod_sin','hod_cos','p_venue','lv','mv_x_sec','lv_x_sec']
+import bisect
+KT=[];KC=[]
+for kp in a.klines:
+    for t,c in sqlite3.connect(kp).execute("select ts,cl from k1s order by ts"): KT.append(t/1000); KC.append(c)
+KT=np.array(KT); KC=np.array(KC)
+def _seg(t0,t1):
+    i=int(np.searchsorted(KT,t0)); j=int(np.searchsorted(KT,t1)); return KC[i:j]
+def rule_feats(ep,sec):
+    if len(KT)==0: return None
+    lo=_seg(ep-60,ep); t=ep+sec
+    if len(lo)<45: return None
+    line_open=float(lo.mean()); cur=_seg(t-3,t)
+    if len(cur)==0: return None
+    p=float(cur[-1]); ln_seg=_seg(t-60,t) if sec>=60 else _seg(ep,t)
+    if len(ln_seg)<5: return None
+    line_now=float(ln_seg.mean()); body=_seg(ep-120,t)
+    sig1=float(np.std(np.diff(np.log(body)))) if len(body)>10 else 1e-4
+    known=_seg(ep+240,t) if sec>240 else np.array([]); T=300-max(sec,240); proj=(known.sum()+T*p)/60.0
+    tau=max(0,240-sec); sd=sig1*math.sqrt(tau+T/3.0)*(T/60.0)+1e-9
+    pup=0.5*(1+math.erf(((proj/line_open-1)/sd)/math.sqrt(2)))
+    return [(p/line_open-1)*1e4,(line_now/line_open-1)*1e4,pup]
+RULE=['move_line_bps','line_move_bps','mech_pup']
+if a.klines: FEATS=FEATS+RULE
 rows=[]; seen=set()
 for jp in a.journals:
     c=sqlite3.connect(jp)
@@ -21,8 +45,12 @@ for jp in a.journals:
         if not (isinstance(j,dict) and 'fire' in j and j.get('features')): continue
         f=j['features']; ep=int(ep)
         if ep not in oc: continue
-        try: x=[float(f[k]) for k in FEATS]
+        try: x=[float(f[k]) for k in FEATS if k not in RULE]
         except Exception: continue
+        if a.klines:
+            rf=rule_feats(ep,float(j.get('sec',0)))
+            if rf is None: continue
+            x=x+rf
         au,ad=f.get('_ask_up'),f.get('_ask_dn')
         if au is None or ad is None or not (0<au<1 and 0<ad<1): continue
         key=(ep,int(j.get('sec',0)))
