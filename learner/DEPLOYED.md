@@ -880,3 +880,5 @@ column; the combined card uses it (headline = venue fills when any, else shadow)
 route, not the flag. Zurich also verified: route()/fire() never touch self.broker with master OFF, grade() keeps shadow pnl
 out of results.pnl (4 rows: pnl 0.00, shadow_pnl -6.24), live4 has exactly one master write, None -> False at boot.
 Tests +1 (441), SHA256SUMS 37. Nothing in the order path changed.
+| 12.21.4 | 5ac70b2 | 2026-09-22 15:50:35 UTC | eu-central-2 (Zurich) | 37/37 == git show, test_master_lane 14 OK | pid 149446, live4 db, master OFF (SHADOW) | combined real 0 / shadow 5, shadow_pnl -7.352842941176469 == sum(results.shadow_pnl); :559 fixed | written by the Zurich session |
+
