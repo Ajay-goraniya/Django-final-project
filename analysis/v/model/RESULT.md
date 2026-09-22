@@ -26,3 +26,12 @@ Gates not run: costs/slippage on the ask<0.45 bucket (the whole edge); settlemen
 on Mumbai — a concatenation bug (day files overlap 600 s → unsorted array into searchsorted) is fixed in this commit.
 What would be needed to try again: labels for ALL candles (the venues outcome logger must run on the box that trains),
 features the market does not already price (order-book depth beyond top, Chainlink lag), and the fill model in the objective.
+
+## Settlement-line features (--klines) — Mumbai run, same journals, 20,832 snapshots (630 rows drop where the pre-open minute is incomplete)
+| | without | with klines |
+|---|---|---|
+| Brier venue / v10 / logit | 0.2243 / 0.2269 / 0.2188 | 0.2232 / 0.2258 / 0.2180 |
+| logit vs venue, 60–150 s discordant | 662/550 p<.001 | 662/599 p=0.08 |
+Logit's gain (−0.0008) is smaller than the venue's and v10's gain (−0.0011) on the same reduced rows → the row set, not the
+features. The only significant band weakens. gbm fails its permutation null in all runs. **Settlement-line inputs do not help
+the forecaster.** The kline overlap bug (600 s) changed nothing material (3rd decimal). Recommendation adopted: not added.
