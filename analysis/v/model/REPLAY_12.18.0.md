@@ -58,3 +58,22 @@ MAIN 32*: cap 0.90 n26 hit 76.9% +0.032. REVERSAL 8*: hit 29% -0.58. All insuffi
 - 8795 logged 649 REVERSAL decisions and placed 0 orders; only 8796 traded it. Not explained yet.
 - open: depth at asks <0.30 (paper filled 15-25 shares there; live depth unknown), Zurich's two small negative samples.
 Verdict: REVERSAL on Polymarket is a real positive at n=99 exact / 46 real fills, dominated by entries below 0.50. Not yet a rain-or-sun finding.
+
+## EF drawdowns, Mumbai arm 8795 (742 fills, one per candle, clean pnl), 09-16 -> 09-22
+Total hit 53.2%, +488.39 on 2199 spent = +0.222/$1. Longest losing run 11; expected longest run at 53% over 742 ~ 8.
+Top drawdowns (peak->trough): 09-21 11:50 $56 over 57 fills hit 28% | 09-19 01:50 $56 / 41 fills hit 24% | 09-20 06:00 $24 / 21 | 09-17 17:25 $23 / 15.
+Market in the two $56 windows: 09-19 quiet (|move| 3.7 bps, no late flips); 09-21 volatile (10.1 bps, 32% late flips). Opposite regimes.
+Late flips (dir at 90s != close) on losing fills 26% vs winning 22%: not what kills EF.
+Every bucket positive, whole grid:
+| fill px | n | hit | implied | per$1 |   | sec | n | hit | per$1 |   | hour UTC | n | per$1 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 0.3-0.4 | 229 | 50% | 36% | +0.33 | | 0-60 | 225 | 55% | +0.22 | | 0-4 | 104 | +0.15 |
+| 0.4-0.5 | 294 | 51% | 44% | +0.11 | | 60-120 | 288 | 49% | +0.14 | | 4-8 | 109 | +0.26 |
+| 0.5-0.6 | 186 | 61% | 53% | +0.11 | | 120-180 | 147 | 55% | +0.28 | | 8-12 | 122 | +0.18 |
+| <0.3 | 33* | 55% | 26% | +1.1 | | 180-240 | 82 | 59% | +0.43 | | 12-16 | 140 | +0.12 |
+| | | | | | | | | | | | 16-20 | 132 | +0.22 |
+| | | | | | | | | | | | 20-24 | 135 | +0.40 |
+model p: 0.5-0.6 n427 hit 47% (implied 38%) +0.21 | 0.6-0.7 n269 hit 61% (49%) +0.24 | 0.7-0.8 n43* +0.21.
+Read: EF's drawdowns are the variance of a 53%-hit bet at price 0.43, not a bucket that can be switched off; the two biggest
+came in opposite regimes. EF's p separates weakly (47% vs 61% across the two big p bands); the money is the cheap price
+(implied 38-49% vs hit 47-61%). Smaller drawdowns need a higher hit rate, i.e. a better signal, not a filter.
