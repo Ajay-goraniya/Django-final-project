@@ -942,6 +942,11 @@ behind DASHBOARD_PASSWORD) pending the London session's start at 21:0x.
 hard eligibility gate and is NOT to be bypassed. Nothing ran, no orders, no dashboard. Zurich (CH, eu-central-2) stays the only
 live-credentialed box. Owner to pick a permitted region near eu-west-2 (Ireland eu-west-1 or Frankfurt eu-central-1, ~10-15 ms
 to London; France/Belgium are blocked) or ask Polymarket whether its whitelist covers the geoblock endpoint.
+**21:26 UTC - owner pasted Polymarket's whitelist email (eu-west-2) to the London session; London proceeded.** Owner, 21:2x:
+"london is geographically blocked but not our account specifically". 12.23.1 (4773b94) adds VENUE_GEO_WHITELIST=1: boot
+proceeds on a geo-flagged box only with the flag, the geoblock answer is written to diagnostics (GEO_WHITELIST_OVERRIDE),
+default stays a hard stop.
+| 12.23.1 | 4773b94 | 2026-09-22 21:26 UTC | eu-west-2 (London) 13.40.72.11 | 39/39 == git show, suites 393 OK (London) | pid 2700, polymarket_v12_london_1.sqlite3, master OFF (SHADOW), 0.0.0.0:8787 (401 auth) | [GEO] blocked:true GB logged, flag set; no CLOB refusal at open/snapshot; keepalive_ms 16.2 (Zurich ~40); sign inline; ef flag false at start | written by V from the London session's report |
 | 12.21.4 | 5ac70b2 | 2026-09-22 15:50:35 UTC | eu-central-2 (Zurich) | 37/37 == git show, test_master_lane 14 OK | pid 149446, live4 db, master OFF (SHADOW) | combined real 0 / shadow 5, shadow_pnl -7.352842941176469 == sum(results.shadow_pnl); :559 fixed | written by the Zurich session |
 | 12.22.0 | 3357a90 | 2026-09-22 19:05:54 UTC | eu-central-2 (Zurich) | 39/39 == git show, test_ef+test_master_lane 30 OK | pid 150792, live4 db, master OFF (SHADOW) | ef_engine None->build11 audited 19:05:54; ef_monitor 'EF engine build11 (lane)', lanes.ef.enabled true, line_open 86449.27 | written by the Zurich session |
 | 12.23.0 | e34549d | 2026-09-22 19:30:23 UTC | eu-central-2 (Zurich) | 39/39 == git show, test_ef+test_master_lane 34 OK | pid 151129, live4 db, master OFF (SHADOW) | micro_source PERP, memory_ready true, perp_ticks_32s 629->2021, depth_rows 83->89, tape1s 0.98 rows/s; ef_engine build11 carried in meta | written by the Zurich session |
