@@ -466,13 +466,21 @@ class PolyRunner(Runner):
                     reason='decide_loop_error',error=type(e).__name__,detail=str(e)[:400]))))
                 except Exception: pass
             await asyncio.sleep(.25)
+    def ef_engine(self):
+        """12.22.0: which brain fires EF - 'v10' (packaged classifier) or 'build11' (EF reversal lane)."""
+        v=self.db.get('ef_engine','v10'); return v if v in ('v10','build11') else 'v10'
     def _routing_live(self):
         """12.21.1: will the next order go to the venue? (Executor.route: credentials AND master ON)"""
         try: return self.executor.route()[1]=='LIVE'
         except Exception: return bool(self.a.live)
     async def _decide_once(self):
         if True:
-            d=self.decide_now(); ep=int(time.time()//300)*300; self.last_decision=d
+            d=self.decide_now(); ep=int(time.time()//300)*300
+            # 12.22.0: ef_engine control. 'v10' = the packaged classifier fires EF here; 'build11' = the
+            # EF reversal lane (poly_ef via lane_loop) fires EF and v10's call is kept as a shadow reason.
+            if self.ef_engine()=='build11':
+                d=dict(d,fire=False,reason='EF engine build11 (lane) · v10 shadow: '+('fire '+str(d.get('side')) if d.get('fire') else str(d.get('reason') or '')))
+            self.last_decision=d
             self._sync_executor_dials()
             # 12.21.1: the venue's cash gates only an order that goes to the venue. With master OFF on a
             # live process the order is shadow paper - a near-empty live wallet must not silence it.
@@ -559,6 +567,15 @@ class PolyRunner(Runner):
         now=time.time()
         bad=self.health.stale(('spot','depth'))
         if bad or not self.current_candle: return
+        # 12.22.0: hand the lane engine the settlement line and the venue ask for the EF reversal lane
+        try:
+            self.lanes.ef_enabled=(self.ef_engine()=='build11')
+            if self.lanes.ef_enabled:
+                _f=self.st.features(ep*US,int(now*US)) or {}
+                self.lanes.set_line(_f.get('ref_open'),_f.get('ref_now'))
+                _t=self.market.get(ep)
+                self.lanes.ef_quote=(lambda side,_t=_t: ((self.books.quote(_t[0 if side=='UP' else 1],self.quote_age_s()) or {}).get('ask') if _t else None))
+        except Exception as e: self.error=f'EF lane inputs: {type(e).__name__}'
         try: decision=self.lanes.evaluate(int(now*1000))
         except Exception as e:
             self.error=f'lane engine: {type(e).__name__}'; return

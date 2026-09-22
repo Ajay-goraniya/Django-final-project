@@ -38,6 +38,7 @@ trains on Polymarket settlement is a separate decision, not a porting detail.
 """
 import json, math, time
 from collections import deque
+import poly_ef                                   # 12.22.0: the EF reversal lane
 
 # ---- constants, verbatim from btc_model_build11.py lines 522-543, 776-829 ----
 PRESSURE_FIRE = 0.15
@@ -433,10 +434,14 @@ class LaneEngine:
         # A decision is outstanding between being returned and the engine saying
         # what happened to it. Without this the lane would call the same candle
         # again on the very next evaluation.
-        self.pending = {'MAIN': False, 'REVERSAL': False}
+        self.pending = {'MAIN': False, 'REVERSAL': False, 'EF': False}
         self.main_streak_dir = ""; self.main_streak_start_ms = 0; self.main_streak_reads = 0
         self.main_block = ""; self.reversal_state = {"status": "idle", "detail": ""}
         self._candle_id = None
+        # 12.22.0: EF reversal lane (poly_ef). Off until the runner switches it on (ef_engine='build11').
+        self.ticks = deque(); self.ef = poly_ef.EFReversal(); self.ef_signal = None
+        self.ef_enabled = False; self.ef_quote = None; self.ef_fee = 0.02; self.line_open = None; self.line_now = None
+        self._ef_flow_hist = deque(maxlen=120)          # one delta_5s sample per second: the lane's own flow scale
 
     # ---- inputs ---------------------------------------------------------
     def on_spot_trade(self, ts_ms, price, qty, is_buyer_maker):
@@ -447,6 +452,10 @@ class LaneEngine:
         else: self.candle_sell_quote += price * qty
         self.price_history.append((ts_ms / 1000.0, price))
         self.adapt.add(ts_ms, price)
+        # 12.22.0: the raw signed-quote tape the EF lane's flow profile / chop / path features read
+        self.ticks.append((int(ts_ms), signed))
+        cut = int(ts_ms) - 32_000
+        while self.ticks and self.ticks[0][0] < cut: self.ticks.popleft()
 
     def on_depth(self, bids, asks, ts_ms=None):
         self.depth = {"bids": bids, "asks": asks}
@@ -471,12 +480,13 @@ class LaneEngine:
             self.current_main = None; self.current_reversal = None
             self.main_signal = None; self.main_attempts = 0; self.main_last_reason = ''
             self.reversal_signal = None; self.reversal_attempts = 0
-            self.pending = {'MAIN': False, 'REVERSAL': False}
+            self.pending = {'MAIN': False, 'REVERSAL': False, 'EF': False}
             self.main_streak_dir = ""; self.main_streak_start_ms = 0; self.main_streak_reads = 0
             self.reject_up = self.reject_down = 0.0
             self.candle_high_seen = self.candle_low_seen = 0.0
             self.candle_buy_quote = 0.0; self.candle_sell_quote = 0.0
             self.reversal_state = {"status": "idle", "detail": ""}
+            self.ef.reset(); self.ef_signal = None                  # 12.22.0: one EF fire per candle
         self._candle_id = cid
         self.candle = candle
 
@@ -583,6 +593,7 @@ class LaneEngine:
         if near_low and not made_low and tick_delta < 0:
             self.reject_down += (REJECTION_CAP - self.reject_down) * min(abs(tick_delta) / REJECTION_CAP, 0.5)
         f["reject_up"] = self.reject_up; f["reject_down"] = self.reject_down
+        f["candle_high_seen"] = self.candle_high_seen; f["candle_low_seen"] = self.candle_low_seen   # 12.22.0: EF wick/recovery
 
         # --- pressure gauge (16245) ---
         self.pressure_history.append((now_s, price))
@@ -671,6 +682,9 @@ class LaneEngine:
                 # A refused REVERSAL is simply not a hedge. The call stands and
                 # may be retried while the flip holds and the window is open.
                 self.reversal_attempts += 1
+        elif kind == 'EF':                                            # 12.22.0
+            if placed and self.ef_signal: self.ef.fired = dict(self.ef_signal)
+            elif not placed: self.ef.attempts += 1
 
     def _try_main(self, ts_ms, f):
         # A placed position ends the candle for this lane. A refused one does not,
@@ -798,6 +812,9 @@ class LaneEngine:
         if kind == 'REVERSAL':
             main = self.current_main or self.main_signal
             return bool(main) and live == side and live != main.get('direction')
+        if kind == 'EF':                                              # 12.22.0: same side, hard gates still pass
+            m = self._ef_metrics(f, ts_ms)
+            return bool(m) and m['ef_dir'] == side and all(ok for _, ok in poly_ef.gates(m))
         return True
 
     def evaluate(self, ts_ms):
@@ -810,7 +827,47 @@ class LaneEngine:
         if f is None: return None
         out = self._try_main(ts_ms, f)
         if out is not None: return out
-        return self._watch_reversal(ts_ms, f)
+        out = self._watch_reversal(ts_ms, f)
+        if out is not None: return out
+        return self._try_ef(ts_ms, f) if self.ef_enabled else None
+
+    # ---- EF reversal (12.22.0, poly_ef: build11 legacy EF structure on the settlement line) ----
+    def set_line(self, line_open, line_now=None):
+        """The settlement line (TWAP60 at the open, from the runner's FeatureState) the EF side is judged against."""
+        self.line_open = float(line_open) if line_open else None; self.line_now = line_now
+
+    def _ef_metrics(self, f, ts_ms):
+        if not self.line_open or not f: return None
+        sec = int(ts_ms) // 1000
+        if getattr(self, '_ef_sig', (None, 0.0))[0] != sec:       # once a second: the 120 s sigma and the flow scale
+            self._ef_sig = (sec, poly_ef.sigma_per_root_second(self.price_history, sec) or self.sigma_per_root_second())
+            self._ef_flow_hist.append(float(f.get('delta_5s', 0.0)))
+        fr = self._ef_flow_hist
+        flow_rms = math.sqrt(sum(x * x for x in fr) / len(fr)) if len(fr) >= 30 else None
+        return poly_ef.ef_metrics(f, self.ticks, self.price_history, int(ts_ms), self.line_open, self._ef_sig[1], flow_rms)
+
+    def _try_ef(self, ts_ms, f):
+        if self.pending.get('EF') or self.ef.fired is not None: return None
+        if self.ef.attempts >= self.MAIN_MAX_ATTEMPTS: self.ef.block = 'not payable after attempts'; return None
+        m = self._ef_metrics(f, ts_ms)
+        ask = None
+        if m is not None and self.ef_quote is not None:
+            try: ask = self.ef_quote(m['ef_dir'])
+            except Exception: ask = None
+        d = self.ef.watch(m, int(ts_ms), (float(ask) if ask is not None else None), self.ef_fee)
+        if d is None: return None
+        d['adapt_ratio'] = self.adapt.value(); d['rv60'] = None
+        self.ef_signal = dict(direction=d['side'], ts_ms=int(ts_ms), probability_up=d['probability_up'])
+        self.pending['EF'] = True
+        return d
+
+    def ef_monitor(self):
+        m = self.ef.last or {}
+        return dict(enabled=self.ef_enabled, block=self.ef.block, fired=bool(self.ef.fired), attempts=self.ef.attempts,
+                    line_open=self.line_open, signal=(dict(self.ef_signal) if self.ef_signal else None),
+                    **{k: (round(m[k], 3) if isinstance(m.get(k), float) else m.get(k)) for k in
+                       ('ef_dir', 'body', 'extension_sigma', 'real', 'fake', 'control_transfer', 'old_side_exhaustion',
+                        'settlement_feasibility', 'settlement_probability', 'persistence', 'chop', 'reachability') if k in m})
 
     def monitor(self):
         f = self.feature or {}
@@ -829,6 +886,7 @@ class LaneEngine:
             reversal_signal=(dict(self.reversal_signal) if self.reversal_signal else None),
             reversal_placed=bool(self.current_reversal), reversal_attempts=self.reversal_attempts,
             pending=dict(self.pending),
+            ef=self.ef_monitor(),
             aligned=self._aligned_direction(f) if f else None,
             thresholds=dict(odds_up=GATED_ODDS_UP, odds_down=GATED_ODDS_DOWN, vol_min=GATED_VOL_MIN,
                             hold_ms=MAIN_HOLD_MS, hold_reads=MAIN_HOLD_READS,

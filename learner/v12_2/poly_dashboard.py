@@ -301,6 +301,9 @@ class Dashboard:
                     if not isinstance(system['manual_enabled'],bool): raise ValueError('Invalid master toggle')
                     if system['manual_enabled'] and self.db.get('halt'): raise ValueError('Execution kill active: '+self.db.get('halt'))
                     updates['master']=system['manual_enabled']
+                if 'ef_engine' in system:                                   # 12.22.0: which brain fires EF
+                    if system['ef_engine'] not in ('v10','build11'): raise ValueError('ef_engine must be v10 or build11')
+                    updates['ef_engine']=system['ef_engine']
                 if 'stake' in system:
                     s={**DEFAULT_STAKE,**system['stake']}
                     if s['mode'] not in ('fixed','percent','streak','ladder'): raise ValueError('Unsupported stake mode')
