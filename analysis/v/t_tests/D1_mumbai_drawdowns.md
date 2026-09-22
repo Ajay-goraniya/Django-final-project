@@ -1,56 +1,66 @@
-# D1 — where the Polymarket paper lane loses (Mumbai 8795 EF, fill level). 2026-09-22 (V). INTERIM: chunks 1–2 of 3.
-Data: 505 EF fills of arm 8795 (EF-only, 12.15.5), 09-16 18:35 → 09-20 11:10 UTC, relayed by Mumbai in md5-verified
-chunks (scratchpad mumbai_chunk{1,2}.csv). Graded on results.actual. 8796 rows carry EF+REV combined pnl and are not
-used for per-fill economics. Chunk 3 (09-20 11:10 → 09-21) pending; every number below is re-run when it lands.
+# D1 — where the Polymarket paper lane loses, and two owner-requested changes tested on it. 2026-09-22 (V). FINAL.
+Data: `analysis/aws/task118_drawdown_fills.csv` (Mumbai relay, md5 a1e65e54 verified): 1,537 fills, 8795 + 8796, 09-16 18:35 →
+09-22 00:05 UTC. Per-fill economics use **8795 EF only (742 fills)**; 8796 rows carry EF+REV combined pnl. Graded on
+results.actual (Polymarket's own resolution). Plus Zurich paper 09-21 (68 fills, owner's export) and Zurich live 09-15..17 (158).
 
 ## The lane
-n=505 · hit 54.9% · +$387.69 · +0.260/$1 · every day positive (09-16 +67, 09-17 +89, 09-18 +185, 09-19 +20, 09-20 +27).
-Max drawdown −$55.71, 09-19 01:30 → 10:30 (42 fills, hit 26%). Longest loss streak 11, 09-19 07:55.
+742 fills · hit 53.2% · +$488 · +0.222/$1 · every day positive (09-19 +20 and 09-21 +31 are the weak days).
+Max drawdown −$56 on **09-21 11:45 → 18:40** (58 fills, 29% hit). Longest loss streak 11 (09-19 07:55).
+**Zurich vs Mumbai, same candles 09-21:** 67 shared, same side on 64, Zurich 30/67 right, Mumbai 33/67. Same call, same
+result. Zurich paper's bad first day was the day, not the box. The open question from the interim is closed.
 
-## Where it fails — full grids, H1|H2, * = under 60
-| model p at fire | n | claimed→realised | per $1 | H1 \| H2 |
-|---|---|---|---|---|
-| 0.50–0.55 | 185 | 0.52→0.48 | +0.29 | +0.21 \| +0.36 |
-| 0.55–0.60 | 109 | 0.58→0.50 | +0.17 | +0.46 \| −0.14 |
-| 0.60–0.65 | 95 | 0.62→0.64 | +0.41 | +0.47 \| +0.34 |
-| 0.65–0.70 | 85 | 0.68→0.61 | +0.13 | +0.35 \| −0.06 |
-| 0.70+ | 31* | 0.74→0.68 | +0.27 | |
-On Mumbai the low band is NOT the problem: p 0.50–0.55 realises 0.48 and earns +0.29 both halves because the ask is ~0.40.
-On Zurich (paper 09-21 and live 09-15/17) the same band realised 0.31–0.32. Same model, different days. Chunk 3 covers the
-09-21 candles both boxes traded; the paired read on those decides whether it is the day or the box.
-
-| rv60 at fire | n | hit | per $1 | H1 \| H2 |
-|---|---|---|---|---|
-| <0.15 | 140 | 53% | +0.05 | +0.31 \| −0.09 |
-| 0.15–0.30 | 84 | 49% | +0.06 | +0.09 \| +0.03 |
-| 0.30–0.60 | 160 | 59% | +0.42 | +0.36 \| +0.51 |
-| 0.60–1.0 | 82 | 50% | +0.26 | +0.18 \| +0.38 |
-| ≥1.0 | 39* | 67% | +0.81 | |
-The 09-19 drawdown sat in a dead market (rv60 median 0.16 vs 0.35 overall). But rv<0.3 flips sign between halves and the
-sweep is not monotone → verify.py: NOT a finding. Low vol is where the drawdown happened, not a rule.
-
+## Where it fails / where it earns — full grids, H1 | H2 (verify.py run on the two that pass)
 | model p − market p (our side) | n | hit | per $1 | H1 \| H2 |
 |---|---|---|---|---|
-| 0.10–0.15 | 194 | 49% | +0.03 | +0.18 \| −0.07 |
-| 0.15–0.20 | 221 | 57% | +0.26 | +0.24 \| +0.28 |
-| 0.20–0.30 | 77 | 64% | +0.67 | +0.62 \| +0.73 |
-| ≥0.30 | 13* | 62% | +1.25 | |
-gap ≥0.15: n=311, +0.40/$1, H1 +0.42 | H2 +0.38. gap <0.15: n=194, +0.03, H2 negative. Monotone across the three readable
-cells (verify's sweep check only fails on the empty first cell). Holds INSIDE every ask band (ask<0.40: +0.61 vs +0.32;
-0.40–0.50: +0.27 vs −0.07; ≥0.50: +0.25 vs −0.01) — it is disagreement with the market, not cheapness. corr(gap, EV)=0.84.
+| 0.10–0.15 | 266 | 48% | +0.023 | +0.10 \| −0.04 |
+| 0.15–0.20 | 341 | 55% | +0.233 | +0.24 \| +0.23 |
+| 0.20–0.30 | 116 | 57% | +0.501 | +0.61 \| +0.37 |
+| ≥0.30 | 19* | 58% | +1.115 | |
+**gap ≥0.15: n=476, +0.334/$1, H1 +0.383 | H2 +0.279, sweep monotone, null (gap<0.15) +0.023 → verify.py PASSES all checks.**
+Holds inside every ask band (interim table). corr(gap, EV)=0.84 — it is the EV idea done on the market's price, not on cheapness.
 
-| engine's own EV threshold in force | n | hit | per $1 | H1 \| H2 |
+| engine EV threshold in force | n | per $1 | H1 \| H2 |
+|---|---|---|---|
+| 0.25 | 530 | +0.265 | +0.33 \| +0.19 |
+| 0.15 | 212 | +0.116 | +0.16 \| +0.08 |
+| fires that exist only because thr dropped to 0.15 | 182 | +0.059 (+$32 total) | +0.13 \| +0.01 |
+The frequency knob adds trades and almost no money; it carried the 09-19 drawdown (interim) and is flat since.
+
+Model confidence: p 0.50–0.55 realises 0.45 and still earns +0.23 both halves (cheap ask). Not the failure point on Mumbai.
+rv60: <0.3 earns +0.08/+0.11, 0.3–0.6 earns +0.39; halves mixed, non-monotone → not a finding. Drawdowns sit in low-vol
+(09-19) AND high-vol (09-21, rv60 0.76) windows: volatility is not the switch.
+
+## Owner change 1 — "fine if the model stops trading when it has drawdowns"
+Rule tested: equity − running peak ≤ −X → skip the next N candles (or rest of UTC day), peak resets on resume. Whole grid.
+| lane | baseline pnl / per$1 / maxDD | X=15,N=24 | X=21,N=24 | X=30,N=24 |
 |---|---|---|---|---|
-| thr 0.25 | 339 | 56% | +0.355 | +0.36 \| +0.34 |
-| thr 0.15 | 166 | 53% | +0.067 | +0.31 \| −0.07 |
-| fires that exist only because thr dropped to 0.15 (EV<0.25) | 140 | 52% | +0.016 | +0.27 \| −0.13 |
-Per day, the 0.15-only fires: 09-16 +6, 09-17 +17, 09-18 +27, **09-19 −17, 09-20 −27**. In the 09-19 drawdown window they
-are 19 of 42 fills and −28 of the −53. The lane's own frequency lever (dropping to 0.15) buys the fires that carry the
-drawdowns and earn nothing over the sample. This is the engine's existing rule measured, not a new gate.
+| Mumbai 8795 (742) | +488 / +0.222 / −56 | +515 / +0.263 / −18 (7 halts, H1 +.31 H2 +.21) | +480 / +0.237 / −24 | +476 / +0.230 / −31 |
+| Zurich paper 09-21 (68) | −1 / −0.005 / −44 | +2 / +0.015 / −18 | +20 / +0.122 / −22 | +8 / +0.054 / −30 |
+| Zurich LIVE (155) | −45 / −0.084 / −109 | −21 / −0.048 / −18 | −24 / −0.062 / −24 | −23 / −0.051 / −32 |
+Every X caps the hole at ≈X by construction. PnL is roughly unchanged on paper (−3% to +5%) and less negative live. Short halts
+(N=6/12) and day-halts lose money on some lanes; N=24 (2 h) is the only column positive-or-neutral everywhere. **It bounds
+drawdowns; it does not create profit.** Note: this is the coded PnL stop CLAUDE.md said we would never add; the owner has now
+asked for it (09-22). Still paper-first, and it is one confirmation, not two.
 
-## Reading
-1. The lane makes its money when the model disagrees with the market by ≥15c (EV ≥ ~0.3). Below that it is flat on paper
-   and negative live (fills). Drawdowns are runs of those flat fires in dead markets.
-2. The 0.15 threshold mode is the frequency knob the owner asked for; on this sample it adds trades and no money.
-3. Not yet answered: why Zurich's low band realises 0.31 where Mumbai's realises 0.48. Chunk 3 → paired same-candle read.
-Scripts: scratchpad mumbai_analyze.py. Token budget D1 so far: ~60k (two chunks written verbatim).
+## Owner change 2 — "based on Polymarket rules when it fires"
+At fire time compute the settlement quantity (T0 ruler): line_open = TWAP60 before open, projected closing TWAP60 with remaining
+seconds at the current price, Brownian sd → mechanical P(our side settles). Buckets fixed first.
+| mechanical P(side) at fire | n | hit | per $1 | H1 \| H2 |
+|---|---|---|---|---|
+| <0.4 | 220 | 42% | +0.028 | −0.00 \| +0.06 |
+| 0.4–0.6 | 332 | 52% | +0.240 | +0.36 \| +0.12 |
+| ≥0.6 | 190 | 68% | +0.415 | +0.53 \| +0.30 |
+**P(side) ≥0.4: n=522, +0.304/$1, H1 +0.422 | H2 +0.190, sweep monotone (−0.11, +0.16, +0.18, +0.29, +0.42), beats the lane
+(+0.222) → verify.py PASSES.** The lane buys against the current line 82% of the time; the fires where the rule already says
+our side is <40% are the ones that earn nothing. Per day the dropped set: +4, −14, +29, −26, +20, −1.
+Combined with the stop: rule + X=21,N=24 → n=488, +$457, +0.317/$1, maxDD −23, both halves positive.
+**Live caveat:** on the 158 live fills the rule keeps 55 at −0.259/$1. Live's loss is fills and retries (E1), not selection;
+neither change fixes live by itself.
+
+## Verdict
+1. Two selection facts pass every gate on 742 paper fills: model−market gap ≥0.15 (+0.33/$1) and Polymarket-rule P(side) ≥0.4
+   (+0.30/$1). Both are the signal knowing when NOT to fire. Both are paper-at-the-quote numbers.
+2. A drawdown stop at $15–30 with a 2 h halt caps the hole at that size and leaves pnl within ±5%. It is a brake, not an engine.
+3. The 0.15 EV threshold is the source of the flat fires. That is the engine's own frequency lever measured, not a new gate.
+Nothing ships from this file. Next: paper on Zurich with (rule ≥0.4) + (stop 21/24) as arm B against the current lane, ≥60
+fills, then the owner decides. Scripts: scratchpad mumbai_analyze.py, dd_stop.py, rule_confirm.py. Token budget D1: ~120k.
