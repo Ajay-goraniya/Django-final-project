@@ -105,3 +105,89 @@ It did **not** make more money here — but it is the only change that makes the
 2. The Mumbai 8795 set (742 fills, 09-16→22) is not on the branch — its +0.22 is unverified here.
 3. Live n=151 settled EF fires; the shared-candle comparison rests on 74, with 3 discordant pairs.
 4. `venues.q` ends 09-16 17:25, which caps every venue-graded number above.
+
+---
+
+# (D) The pooled Platt pair for the engine's `_calibrate` hook (V, 09-22 22:3x)
+
+`r37_pooled_platt.py`. `p' = sigmoid(a·logit(p) + b)`, clamped to never exceed `p`. Rule unchanged
+and still fixed before the test: `ask ≤ 0.60 and p' ≥ ask + 0.06 + 0.0167`.
+
+## (1) The pair
+
+**Pooled fit on all 1,108 venue-graded fires: `a = 1.0677`, `b = −0.3208`.**
+In-sample it closes the bias exactly: mean p 0.5968 → p' 0.5262, realised 0.5262, gap −0.0706 → **0.0000**.
+
+Note `a ≈ 1.07`, not < 1 — **the defect is a near-constant logit SHIFT (b), not a slope problem.**
+That is consistent with (B), where the gap was ~7pp in all three ask buckets.
+
+Fitting on all 1,108 and then reading those same days is in-sample, so the honest number is
+**leave-one-day-out**: refit without day *d*, read on *d*.
+
+| day | n | a | b | gap raw p | **gap p′** | per$1 p′ |
+|---|---|---|---|---|---|---|
+| 09-08 | 46 | 1.0101 | −0.3159 | +0.0285 | +0.1030 | +0.1451 |
+| 09-09 | 136 | 0.9823 | −0.2791 | −0.0853 | −0.0166 | +0.2774 |
+| 09-10 | 159 | 1.0389 | −0.3055 | −0.0771 | −0.0069 | +0.3083 |
+| 09-11 | 170 | 1.0102 | −0.2569 | −0.1254 | −0.0658 | +0.1110 |
+| 09-12 | 148 | 1.1186 | −0.3469 | −0.0612 | +0.0115 | +0.3559 |
+| 09-13 | 117 | 1.1254 | −0.3520 | −0.0537 | +0.0202 | +0.4272 |
+| 09-14 | 146 | 1.1177 | −0.3716 | −0.0207 | +0.0575 | +0.4920 |
+| 09-15 | 93 | 1.1360 | −0.3737 | +0.0004 | +0.0760 | +0.0872 |
+| 09-16 | 93 | 1.0280 | −0.2670 | −0.1721 | **−0.1107** | −0.0235 |
+
+Raw gap spans −0.172 … +0.029; calibrated spans −0.111 … +0.103. **Better centred, not cured** —
+09-16 is still 11pp overconfident even after calibration.
+
+Per ask bucket (pooled vs leave-one-day-out — they agree to 3 decimals, so the pair is not
+bucket-specific overfitting):
+
+| ask | n | gap raw p | gap p′ pooled | gap p′ LOO |
+|---|---|---|---|---|
+| 0.30–0.40 | 257 | −0.0636 | +0.0146 | +0.0133 |
+| 0.40–0.50 | 494 | −0.0755 | −0.0021 | −0.0024 |
+| 0.50–0.60 | 300 | −0.0685 | −0.0063 | −0.0066 |
+
+## (2) The rule with the pooled pair
+
+| arm | n | W% | per $1 | total | **maxDD** |
+|---|---|---|---|---|---|
+| v10 EF, raw p | 1084 | 52.2% | +0.1529 | **+165.72** | 17.54 |
+| pooled a,b (**in-sample**) | 390 | 56.4% | +0.3024 | +117.93 | **9.06** |
+| **pooled a,b (leave-one-day-out)** | 406 | 53.7% | **+0.2313** | **+93.92** | **11.08** |
+| null: top-n by raw `p − ask` | 390 | 54.1% | **+0.2739** | **+106.82** | 14.06 |
+
+**The honest (LOO) pair still loses to the null on money** — +0.2313 vs +0.2739 per $1, +93.92 vs
++106.82 total. Only the in-sample row beats it, and that row is the flattery. Same verdict as the
+daily refit in (C).
+
+**But it wins on what the owner asked for.** Drawdown: **17.54 → 11.08**, lower than the null's
+14.06 and lower than every other arm except the in-sample one. If the objective is "cut the
+drawdown", the calibrated pair does that better per dollar of profit surrendered than the null does.
+
+Day by day with the pooled pair (rain or sun) — **positive every day, 9/9**:
++0.190, +0.281, +0.327, +0.205, +0.464, +0.426, +0.461, +0.212, +0.141. Five of nine days are under
+60 fires and marked insufficient; the four readable days are +0.327, +0.205, +0.461, +0.281.
+
+## (3) Refit cadence — **do not refit daily; the day-to-day wobble is noise, not drift**
+
+| fit on | a range | a sd | b sd |
+|---|---|---|---|
+| single day (n=93–170) | 0.258 … 1.310 | **0.3785** | 0.3224 |
+| ~960 rows (leave-one-day-out) | 0.982 … 1.136 | **0.0570** | 0.0421 |
+
+Single-day estimates scatter **6.6× (a) and 7.7× (b)** wider than estimates from ~960 rows. If the
+pair genuinely drifted day to day, the large-sample estimates would move too; they do not. So the
+per-day spread is sampling noise, and **a daily refit would inject that noise straight into the
+trade rule.**
+
+**Recommendation: refit on a rolling window of ≥1,000 graded fires (~1 week at the current rate),
+not daily.** On this data a fixed pair costs little — LOO (a pair that never saw the day it reads)
+gives +0.2313 against +0.3024 in-sample, and the LOO pairs sit in a 0.98–1.14 / −0.37…−0.26 band.
+
+## Two things I will not let this section imply
+
+1. **It is still paper.** Quoted ask, zero slippage, upper bound. Live has only ever taken 41% of
+   these candles (section A), and live is −10.66% of stake.
+2. **It does not beat the trivial null on money.** It beats it on drawdown. Those are different
+   objectives and the choice between them is the owner's, not mine.
