@@ -67,7 +67,10 @@ class PolyRunner(Runner):
         self.market={}; self.info={}; self.terms_age={}; self.last_decision={}; self.started=time.time()
         self._wait_census={}; self._wait_flushed=time.monotonic(); self._shadow_at=0.
         self.cash=None; self.cash_at=0.; self.account_snapshot={}; self.account_positions=[]; self.current_candle={}; self.revision=0; self.error=''
-        self.db.set('master',False) if a.live else None # explicit arming through old controls
+        # 12.24.3: master is no longer forced OFF at every live boot. Owner: "if master off it's paper and if master
+        # on it's live, it's that simple", and London runs under systemd Restart=always, so a crash-restart must come
+        # back in the state the owner left it. master persists in meta like every other control; the dashboard
+        # seeds it False on a fresh live database (poly_dashboard.Dashboard.__init__).
         from poly_dashboard import Dashboard
         self.ui=Dashboard(self)
         self.executor.allowed=self.ui.allowed   # 12.19.0: the pre-post control check (replaces the 2nd reassess)
