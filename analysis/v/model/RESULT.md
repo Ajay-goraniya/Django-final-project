@@ -35,3 +35,18 @@ features the market does not already price (order-book depth beyond top, Chainli
 Logit's gain (−0.0008) is smaller than the venue's and v10's gain (−0.0011) on the same reduced rows → the row set, not the
 features. The only significant band weakens. gbm fails its permutation null in all runs. **Settlement-line inputs do not help
 the forecaster.** The kline overlap bug (600 s) changed nothing material (3rd decimal). Recommendation adopted: not added.
+
+## v11 (Predict.fun build11) calls priced on Polymarket's book — Mumbai run, 09-21 12:50 → 09-22 01:55
+Source: owner's export (236 graded calls); ask = 8795 snapshot ≤25 s before the call for the called side; label = Polymarket
+results.actual where the epoch was traded (149) else TWAP60 proxy (70). 219 matched. Polymarket fee 1.67% of shares both ways.
+| kind | n | PM ask median | hit vs PM settlement | PM per $1 | exact-label | proxy-label | Predict per $1 (own quote) |
+|---|---|---|---|---|---|---|---|
+| **MAIN** | **65** | 0.72 | **86.2%** | **+0.266** | +0.286 (n39) | +0.238 (n26) | +0.088 (q 0.75) |
+| REVERSAL | 12* | 0.545 | 75% | outlier-driven (one 0.02 ask) | +0.907 (n11) | – | +0.097 |
+| EF | 142 | 0.58 | 57.7% | −0.072 | −0.152 (n99) | +0.112 (n43) | +0.125 (q 0.51) |
+MAIN by second: <90 s n25 +0.099 (exact −0.10 / proxy +0.32, unread) · 90–180 s n23 hit 95.7% +0.365 · ≥180 s n17 hit 100% +0.381 — all under 60.
+MAIN mean +0.266, median +0.277, not outlier-driven; both label sources positive. EF inverts sign between venues: Polymarket
+prices EF's edge away, Predict does not. Proxy and exact labels disagree in sign on EF and MAIN<90 s → proxy-only cells unread.
+Verdict: **v11's MAIN leg survives Polymarket prices on 65 calls (the one cell at the bar), 13 hours, paper quotes.** The
+Polymarket engine already carries build11's MAIN port (12.14/12.15.5) with `main_enabled=false` on every lane. Owner decides
+whether to enable MAIN on the Zurich paper lane; V's instruction to Zurich was blocked by the sandbox (engine change).
