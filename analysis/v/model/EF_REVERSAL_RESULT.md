@@ -39,3 +39,6 @@ independently (analysis/h1/REQUEST.md) including the harness-fidelity check on 0
 
 ## RETRACTION 09-22 23:4x (V): REVERSAL +0.461/$1 is one ticket
 H1 r40_late_reversal_depth.md, confirmed on V's own rows (replay_lanes_1s.py, both --open arms): the single biggest REVERSAL fill is +97.3/$1 at ask 0.010, sec 270 - unfillable at any real stake (300 shares at $3). Without it REVERSAL is **+0.249/$1** (n 456); without the top 3 +0.157..+0.185. Every "+0.46 replay" number quoted for REVERSAL is withdrawn; +0.25 is the replay figure. The late 240-285 s bucket is that one fire (other 55 net -0.77), so the executor's 240 s cutoff costs nothing measurable and stays. Mumbai real fills +0.689/$1 on 46 are a separate record and are not re-checked here for concentration.
+
+## RETRACTION 09-23 00:1x (V): MAIN "+0.066/$1 on the settlement open" (12.24.4 commit message) is the same 0.010 ticket
+replay_lanes_1s.py --open twap60: MAIN n 1336, 73.6% right, ask med 0.73, per$1 +0.066; without its top fill (+97.3/$1 at ask 0.010) **-0.007**, without the top 3 -0.008. The first-trade open: 70.1%, -0.021 (-0.025 without its top fill). The accuracy gain 70.1 -> 73.6% stands; the money claim does not: MAIN is breakeven either way, because at 73% right it buys at 0.73.
