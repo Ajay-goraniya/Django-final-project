@@ -328,3 +328,29 @@ Build 13.0.0 pid 153702, master **false**, EF on, stake fixed 5, `ef_engine` v10
 **fixed15 window 01:19:09 -> 01:36:04 (16 min 55 s): 2 EF orders, 1 graded, 1 right, pnl +2.163 on
 2.84 spent.** One settled trade. The two arms now have 1 and 0 graded trades respectively, so there
 is still nothing to compare. Raw ledger clock starts 01:36:04.
+
+## Arms swapped: Zurich back to `fixed15` (09-23 13:33:37 UTC)
+
+Owner, verbatim via V: "Do raw in london live and fixed in Zurich". Three audited writes, no deploy,
+no restart, master **false** throughout.
+
+| key | old -> new |
+|---|---|
+| `ef_profile` | raw_v10_live25 -> **fixed15** |
+| `ev_settings` | `{fixed, 0.25}` -> **`{fixed, 0.15}`** |
+| `calibration` | `enabled False` -> **`enabled True`** (platt 1.0677 / -0.3208) |
+
+`ef_engine` v10 and stake fixed 5 unchanged, EF on, build 13.0.0 pid 153702.
+
+### Raw arm closed — `raw_v10_live25`, 01:36:04 -> 13:33:37 (11 h 57 m)
+| n | right | per$1 | pnl at $5 | maxDD | longest losing run | spent |
+|---|---|---|---|---|---|---|
+| **50** | 29 (58.0%) | **+0.328** | **+79.21** | 27.05 | 6 | 241.26 |
+
+**It closed at n=50, ten short of the 60-fire bar, so it is not a reading.** It was the longest
+single-configuration window this box has had and it stopped roughly half an hour before it would
+have qualified. The +0.328 should not be quoted as a raw-v10 result, and if the owner wants that
+number it has to be re-run and left alone for about 12 hours. London now carries the raw arm live,
+which is where the sample will accumulate instead.
+
+fixed15 ledger clock starts 13:33:37.
