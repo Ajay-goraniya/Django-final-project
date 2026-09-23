@@ -222,3 +222,43 @@ $53.01), +0.55 per $1 (from +0.15)** — at 94 fires instead of 1,106 and $155 i
 That is the closest thing to "profitable EF without drawdowns" in this data, and unlike every pause
 rule it beats its null. It buys that by trading **one twelfth as often**, which is the profit the
 owner said not to waste — so the trade-off is real and it is his to make, not mine.
+
+---
+
+# CONCENTRATION CHECK on my own calibrated arm — **it is not a lottery ticket**
+
+V found two replay edges (REVERSAL +0.46, MAIN +0.066) were each a single 0.010-ask fill. Same test
+turned on my own r39 result. `r41_concentration.py`, stake $3.
+
+| arm | n | per $1 | total | drop top 1 | drop top 3 | drop top 5 | **top 1 share** |
+|---|---|---|---|---|---|---|---|
+| raw p | 1106 | +0.1499 | +497.38 | +0.1454 | +0.1403 | +0.1359 | **3.1%** |
+| calibrated pooled | 89 | +0.5569 | +148.68 | +0.5047 | +0.4481 | +0.3974 | **10.4%** |
+| calibrated LOO | 94 | +0.5503 | +155.19 | +0.5009 | +0.4473 | +0.3995 | **9.9%** |
+
+**Compare the late-REVERSAL bucket, where the top 1 carried 100.8%.** Here it carries 9.9%.
+
+**The top 5 fills are not dust:** ask 0.160 (sec 178), 0.240 (142), 0.260 (137), 0.270 (85),
+0.280 (105) — all wins, all mid-priced, none near 0.010. **The whole arm contains exactly one fire
+under ask 0.10, and it LOST.** Excluding sub-0.10 asks *improves* the arm to +0.5670.
+
+## The like-for-like version — drop the top k from the null too
+
+| k dropped | calibrated LOO | null (top-n by ev) | **arm − null** |
+|---|---|---|---|
+| 0 | +0.5503 ($155.19) | +0.4425 ($124.78) | **+0.1078** |
+| 1 | +0.5009 ($139.75) | +0.3919 ($109.35) | **+0.1090** |
+| 3 | +0.4473 ($122.12) | +0.3359 ($91.71) | **+0.1114** |
+| 5 | +0.3995 ($106.66) | +0.2856 ($76.25) | **+0.1139** |
+| 10 | +0.2823 ($71.13) | +0.1616 ($40.73) | **+0.1207** |
+
+**The margin over the null is flat-to-rising as the best fills are stripped from both** (+0.108 →
++0.121). A lottery-ticket edge collapses under this; this one does not. Same with the price cut:
+ask ≥ 0.10 gives arm +0.5670 vs null +0.4580, margin +0.109 — unchanged.
+
+## What still limits it
+
+The r39 caveat stands and is not weakened by this: **76 of the 94 fires are shared with the null,
+so the margin rests on 18 arm-only fires vs 18 null-only fires**, both under the 60 bar. This check
+rules out *one fill* explaining the edge; it does not turn 18-vs-18 into a large sample. And it is
+still paper at the quoted ask, on a lane whose live counterpart took only 41% of these candles.
