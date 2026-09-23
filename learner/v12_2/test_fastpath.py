@@ -113,6 +113,9 @@ class FastPath(unittest.TestCase):
         except ImportError: return
         self.assertEqual(uvloop.run(self._k()),'uvloop')
     async def _k(self): return C.loop_kind()
+    def test_fast_report_names_every_fast_package(self):
+        import btc_model_v12_polymarket as E; r=E.fast_report()
+        for k in ('uvloop=','sign=','coincurve=','http2='): self.assertIn(k,r)
 
     def test_retry_tick_wait_is_bounded(self):
         self.assertEqual(C.Executor.RETRY_TICK_WAIT_S,0.1); self.assertFalse(hasattr(C.Executor,'RETRY_DELAY_S'))

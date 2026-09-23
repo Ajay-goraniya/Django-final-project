@@ -58,3 +58,18 @@ A reboot kills tmux too; the engine comes back by itself (systemd), the bridge d
 - `systemctl is-active pm-london` -> active
 - `curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8787/` -> 401 (auth wall up)
 - dashboard header shows build 12.23.1 and the lane label (SHADOW while master is OFF, LIVE when ON)
+
+## 3. Fast-path packages (13.0.2, owner 09-23: "all the fast requirements installed including coincurve")
+
+Into the engine's own venv, before restarting on 13.0.2 (all three ship prebuilt manylinux wheels; if pip ever
+falls back to a source build: `sudo apt-get install -y build-essential autoconf automake libtool pkg-config`):
+
+    cd /home/ubuntu/pm_london && .venv/bin/pip install -r requirements-live.txt
+    .venv/bin/python -c "import btc_model_v12_polymarket as m; print(m.fast_report())"
+
+Expected, and printed again as the `[fast]` line at every boot, followed by `[loop] uvloop ...`:
+
+    uvloop=0.2x.x sign=inline(coincurve=2x.x.x) http2=h2 4.x.x
+
+Any `MISSING` or `sign=thread` = not deployed; fix it before the restart. `latency_stats` then reports
+`loop`, `sign_mode`, `keepalive_ms` (order transport), `keepalive_book_ms` (book transport) and `fire_to_wire_attempt1`.

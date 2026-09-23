@@ -1,3 +1,6 @@
 -r requirements-paper.txt
 polymarket-client==0.10.0
-uvloop>=0.19,<1; sys_platform != "win32"
+# 13.0.2 fast path (owner, 09-23). The engine prints one "[fast]" line at boot showing which of these are active.
+uvloop>=0.19,<1; sys_platform != "win32"   # libuv event loop
+coincurve>=20,<22                          # eth_keys signs with it: sign_mode 'inline' (~0.5 ms) instead of 'thread'
+h2>=4,<5                                   # the SDK's httpx transports run HTTP/2 (http2=True needs h2)

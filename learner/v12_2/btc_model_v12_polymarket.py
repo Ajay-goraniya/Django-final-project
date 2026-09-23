@@ -1405,11 +1405,22 @@ def run(coro):
     """13.0.2 (owner, 09-23: "use the specific container loop that helps it stay as fast as possible"): run on uvloop
     when it is installed (libuv event loop, lower per-callback and socket overhead than the stdlib loop); the stdlib
     loop otherwise. Same coroutines either way; the kind is printed here and reported as latency_stats['loop']."""
+    print('[fast] '+fast_report(),flush=True)
     try:
         import uvloop
         print('[loop] uvloop '+getattr(uvloop,'__version__','?'),flush=True); return uvloop.run(coro)
     except ImportError:
         print('[loop] asyncio (uvloop not installed)',flush=True); return asyncio.run(coro)
+def fast_report():
+    """13.0.2: one line naming which fast-path packages are active, so a deploy is checked by reading, not assuming."""
+    import importlib.metadata as md, importlib.util as iu
+    def ver(n):
+        try: return md.version(n)
+        except md.PackageNotFoundError: return None
+    from poly_live import LiveBroker
+    parts=[f"uvloop={ver('uvloop') or 'MISSING'}",f"sign={LiveBroker.pick_sign_mode()}(coincurve={ver('coincurve') or 'MISSING'})",
+           f"http2={'h2 '+ver('h2') if iu.find_spec('h2') else 'MISSING'}"]
+    return ' '.join(parts)
 if __name__=='__main__':
     try: run(PolyRunner(args()).main())
     except KeyboardInterrupt: print('Stopped; saved database retained')
