@@ -61,9 +61,41 @@ for (d,) in c.execute('SELECT detail FROM diagnostics WHERE ts>=? ', (CAL_ON,)):
     tot += 1
     if j.get('p_raw') is None: continue
     seen += 1; shrink.append(j['p_raw'] - j['p'])
+    # The fire rule is ev >= the row's OWN threshold (0.25 in these rows), not ev > 0. Scoring it on
+    # ev>0 overstated the removal count 23-vs-4 on 09-22 23:2x; the row carries the threshold, use it.
+    th = j.get('threshold', 0.0)
     ev_raw = j['ev'] + (j['p_raw'] - j['p'])
-    if ev_raw > 0 and j['ev'] <= 0: removed += 1
-    if ev_raw <= 0 and j['ev'] > 0: added += 1
+    if ev_raw >= th and j['ev'] < th: removed += 1
+    if ev_raw < th and j['ev'] >= th: added += 1
 print(f"calibration since 22:40:40: EF decide rows {tot}, carrying p_raw {seen}, "
       f"fires REMOVED {removed}, fires added {added}"
       + (f", median shrink p_raw-p {sorted(shrink)[len(shrink)//2]:+.4f}" if shrink else ""))
+
+# ---- London-mirror EF block (V, 09-23 00:37): the 4-hourly line the owner asked for ----------
+# EF only, since the settings switch, graded on results.actual. Stake is fixed $5 from this point,
+# so sum pnl IS the $5 figure; per$1 stays the size-free number. Drawdown and losing run are on the
+# chronological sequence of settled EF trades, not on calendar days.
+EF_SWITCH = 1790123846.0     # 00:37:26 UTC 09-23: ev_settings fixed 0.15 + stake fixed 5
+seq = []
+for r in c.execute("""SELECT o.epoch,o.ts,o.plan,sum(f.shares) sh,sum(f.spent) sp,sum(f.fees) fe FROM orders o
+                      JOIN fills f ON f.order_id=o.id
+                      WHERE o.kind='EF' AND o.status='FILLED' AND o.ts>=? GROUP BY o.id ORDER BY o.ts""", (EF_SWITCH,)):
+    a = res.get(r['epoch'])
+    if a is None: continue
+    side = (json.loads(r['plan']) or {}).get('side') or (c.execute(
+        "SELECT side FROM signals WHERE epoch=? AND kind='EF' LIMIT 1", (r['epoch'],)).fetchone() or [None])[0]
+    if side is None: continue
+    cost = (r['sp'] or 0.) + (r['fe'] or 0.); win = (side == a)
+    seq.append((win, ((r['sh'] or 0.) if win else 0.) - cost, cost))
+if not seq:
+    print(f"EF since 00:37:26 (London mirror): no settled trades yet")
+else:
+    n = len(seq); right = sum(1 for w, _, _ in seq if w)
+    pnl = sum(p for _, p, _ in seq); spent = sum(c_ for _, _, c_ in seq)
+    cum = peak = dd = 0.; run = worst = 0
+    for w, p, _ in seq:
+        cum += p; peak = max(peak, cum); dd = max(dd, peak - cum)
+        run = 0 if w else run + 1; worst = max(worst, run)
+    print(f"EF since 00:37:26 (London mirror): n {n} | right {right/n*100:.1f}% | per$1 {pnl/spent:+.3f} | "
+          f"sum pnl {pnl:+.2f} at $5 | maxDD {dd:.2f} | longest losing run {worst}"
+          + ("  * insufficient (n<60)" if n < 60 else ""))

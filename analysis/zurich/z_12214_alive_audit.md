@@ -199,3 +199,34 @@ the restart's warm-up, not a fault. EF decide rows since 22:40:40: 0 at 22:47, a
 
 Ledger extended: it now also prints, from `CAL_ON = 22:40:40`, the EF decide rows carrying `p_raw`,
 the fires **removed** by calibration (clears EV>0 on raw, fails on calibrated) and the median shrink.
+
+---
+
+# London-mirror EF settings (09-23 00:37:26 UTC) — V's written order, master still OFF
+
+Three audited applies, all on the running 12.24.1 engine (pid 152214), no restart:
+
+| time | key | old -> new | path |
+|---|---|---|---|
+| 00:37:26 | `ev_settings` | None -> `{mode: fixed, value: 0.15}` | `poly_dashboard.py:415 apply` |
+| 00:37:26 | `stake_settings` | ladder 1.0 -> `{mode: fixed, fixed 5.0, min 5.0, max 5.0, current 5.0}` | `poly_dashboard.py:326 apply` |
+| 00:37:26 | `next_stake` | 2 -> **5.0** | `poly_dashboard.py:326 apply` |
+
+`ef_enabled` was re-applied true and produced **no audit row** — `Journal.set()` is audit-on-change
+and it was already true. `ef_engine` stays `"v10"` and `calibration` stays
+`{enabled, platt, a 1.0677, b -0.3208}`, both untouched and verified after the writes.
+MAIN and REVERSAL flags left exactly as they were (both true). master **false**, halt null.
+
+`ef_cash_floor` is **absent** on live4, matching the owner's 09-23 00:1x "remove that cash floor
+thing" and London's null. Nothing on this box stops trading automatically.
+
+## Ledger correction shipped with this
+The calibration block was scoring a removed fire as "EV>0 on raw, EV<=0 on calibrated". The real EF
+rule is **EV >= the row's own threshold** (0.25 in these rows). On the same 298 rows the wrong rule
+prints **62** removed and the right one prints **9**. Fixed in `ledger_ef.py`; the comment records
+the 23-vs-4 version of the same error caught on 09-22 23:2x so it is not reintroduced.
+
+## 4-hourly EF line from here
+`EF since 00:37:26 (London mirror): n | right % | per$1 | sum pnl at $5 | maxDD | longest losing run`
+Drawdown and losing run run over the chronological sequence of settled EF trades. Stake is fixed $5
+from the switch, so sum pnl IS the $5 figure. The `* insufficient (n<60)` marker still applies.
