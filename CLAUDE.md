@@ -45,6 +45,8 @@ The two channels that work:
   below 30$ in central 2".** Built as `ef_cash_floor` + `_floor_check` in 12.12.0: EQUITY (cash + open_value), six
   reads and 360 s of persistence, turns off EF only, never master or a halt, never re-enables itself. Everything
   else stays hand-stopped: no coded PnL kill, no gates.
+  **09-23 00:1x, owner: "remove that cash floor thing"** - London's `ef_cash_floor` set to 0 (off). The code stays;
+  no session re-arms it without the owner's written order. Nothing on London stops trading automatically now.
 - **"Don't do unnecessary or unuseful work, go in a right direction not wrong."**
 - **"Rain or sun"**: a finding must work every day, or you identify *when* it works and switch only
   then. A regime switch is itself a threshold — define buckets FIRST, test them all, report the full
