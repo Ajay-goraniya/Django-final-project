@@ -111,5 +111,12 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
   2. **Timing:** after 240 s the average is part-locked - the reason late REVERSAL fails (NC-1).
   3. **Near-ties (< 1 bp)** are unreadable even with the right formula (21% proxy error) - that is where EF's
      losses concentrate (H1: near-tie candles -0.144/$1).
-- **Next test (not done):** check which label EF's v10 model was trained on; if the Binance candle, retrain on the
-  TWAP label and compare walk-forward. Not deployed anywhere; London unchanged.
+- **Follow-up 1 - EF's label is already right.** v10 was trained on Polymarket's resolved outcome (Chainlink TWAP),
+  not the Binance candle (`learner/build_features.py`). Its move/fair-value *features* use the plain close-vs-open maths,
+  but see follow-up 2 - swapping them for TWAP versions is not expected to help.
+- **Follow-up 2 - does the TWAP fair price add anything to Polymarket's own price?** Walk-forward by day, logistic on
+  logit(market) vs logit(market)+logit(TWAP fair), log loss at 8 points in the candle: adding TWAP makes it **worse at
+  every point** (+0.0002 .. +0.0228; e.g. 120 s 0.5068 -> 0.5076, 255 s 0.1584 -> 0.1812). The plain formula also adds
+  nothing. **Polymarket's price already contains everything the TWAP maths knows.**
+- **Status: CLOSED as a signal.** Do not build a TWAP fair-price model or feature. Keep: TWAP labels for any training,
+  the 240 s timing rule (NC-1), and treat near-tie candles (< 1 bp) as unreadable. Not deployed anywhere; London unchanged.
