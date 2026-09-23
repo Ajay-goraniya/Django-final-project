@@ -314,3 +314,17 @@ the raw arm measured it needs hours, not minutes, and it cannot be interleaved w
 same box without the two contaminating each other's ledger.
 
 Ledger clock restarts at **01:19:09** for fixed15.
+
+## Profile back to `raw_v10_live25` (09-23 01:36:04 UTC) — owner: Zurich runs raw, London runs fixed15
+
+| key | old -> new |
+|---|---|
+| `ef_profile` | fixed15 -> **raw_v10_live25** |
+| `ev_settings` | `{fixed, 0.15}` -> **`{fixed, 0.25}`** |
+| `calibration` | `enabled True` -> **`enabled False`** |
+
+Build 13.0.0 pid 153702, master **false**, EF on, stake fixed 5, `ef_engine` v10 (no row).
+
+**fixed15 window 01:19:09 -> 01:36:04 (16 min 55 s): 2 EF orders, 1 graded, 1 right, pnl +2.163 on
+2.84 spent.** One settled trade. The two arms now have 1 and 0 graded trades respectively, so there
+is still nothing to compare. Raw ledger clock starts 01:36:04.
