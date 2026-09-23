@@ -16,3 +16,13 @@ Predict.fun: Mumbai 8796 paper, 43 graded (recorded pnl/spent) - every cell n<60
 
 Live executor already refuses REVERSAL orders after 240 s, so "<240" is what London would trade. The 200-240 s bucket is the
 strongest cell; a <200 cut removes it. Gates (permutation / null) NOT run: this is a grid, not a finding.
+
+## Gates (analysis/v/model/rev_verify.py -> analysis/h1/verify.py), same replay, exact fee
+| window | n | per$1 | w/o top3 | halves | permutation p | +5c | beats cheap-side null | losing days |
+|---|---|---|---|---|---|---|---|---|
+| 0-240 s | 394 | +0.215 | +0.144 | +0.113/+0.318 | 0.001 PASS | +0.086 | +0.215 vs +0.114 PASS | 1/9 |
+| 0-200 s | 323 | +0.144 | +0.063 | +0.116/+0.173 | 0.042 FAIL | +0.027 | +0.144 vs +0.145 FAIL | 3/9 |
+| 200-240 s | 71 | +0.538 | +0.304 | +0.355/+0.716 | 0.000 PASS | +0.354 | +0.538 vs -0.028 PASS | 1/9 |
+Grading: replay actual == venues.outcome 394/394. 0-240 and 200-240 pass every gate; 0-200 fails two.
+Limits: replay prices every call at the 1 Hz tape ask with a guaranteed fill (live FAK refusals ~40-60% of first tries);
+no depth features; quote_age not gated. Zurich live shadow REVERSAL is far weaker so far: 32 fires +0.034 (21:30).
