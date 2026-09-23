@@ -354,3 +354,27 @@ number it has to be re-run and left alone for about 12 hours. London now carries
 which is where the sample will accumulate instead.
 
 fixed15 ledger clock starts 13:33:37.
+
+## Arms swapped back: Zurich to `raw_v10_live25` (09-23 14:07:23 UTC)
+
+Owner, verbatim via V: "Changed my decision bro do fixed in live and raw in Zurich i don't wanna get
+much drawdowns". Three audited writes, no deploy, no restart, master **false**.
+
+| key | old -> new |
+|---|---|
+| `ef_profile` | fixed15 -> **raw_v10_live25** |
+| `ev_settings` | `{fixed, 0.15}` -> **`{fixed, 0.25}`** |
+| `calibration` | `enabled True` -> **`enabled False`** |
+
+**fixed15 window 13:33:37 -> 14:07:23 (33 m 46 s): 5 EF orders, 5 fills, 4 graded.** Too small to read.
+
+### The raw arm is now a stitched series
+`ledger_ef.py` reports it across `RAW_WINDOWS = [(01:36:04, 13:33:37), (14:07:23, open)]`, excluding
+the fixed15 gaps, per V's instruction. Current: **n 50, right 58.0%, per$1 +0.328, pnl +79.21 at $5**
+— unchanged, because the second window has not settled a trade yet.
+
+**Caveat carried in the script itself:** stitching is honest for n, hit rate and per $1, which are
+per-trade quantities. **maxDD and longest losing run are not per-trade** — they read an equity curve
+joined across a gap that did not happen, so they can only *understate* a real drawdown. That matters
+because the owner's stated reason for this swap is drawdown. The 27.05 figure is a floor, not a
+measurement, and it will get less trustworthy with every further swap.

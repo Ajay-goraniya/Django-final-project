@@ -78,15 +78,20 @@ print(f"calibration since 22:40:40: EF decide rows {tot}, carrying p_raw {seen},
 # EF only, since the settings switch, graded on results.actual. Stake is fixed $5 from this point,
 # so sum pnl IS the $5 figure; per$1 stays the size-free number. Drawdown and losing run are on the
 # chronological sequence of settled EF trades, not on calendar days.
-EF_SWITCH = 1790170418.0     # 13:33:37 UTC 09-23: profile fixed15 (ef v10, Platt 1.0677/-0.3208, ev fixed
-                             # 0.15). Owner swapped the arms: London runs raw live, Zurich runs fixed in shadow.
-                             # CLOSED ARM raw_v10_live25 01:36:04 -> 13:33:37 (11 h 57 m): n 50, right 29 (58.0%),
-                             # per$1 +0.328, pnl +79.21 at $5, maxDD 27.05, longest losing run 6, spent 241.26.
-                             # It closed at n=50, TEN SHORT of the 60-fire bar, so it is not a reading.
+# The raw arm runs in SEPARATE WINDOWS because the owner has swapped the arms between boxes twice.
+# It is reported as one continuous raw series, excluding the fixed15 gaps - V's instruction 09-23 13:4x.
+# CAVEAT, stated here so it travels with the number: stitching windows is honest for n, hit rate and
+# per$1, which are per-trade. maxDD and the longest losing run are NOT per-trade - they read a joined
+# equity curve across a time gap that did not exist, so they can only understate a real drawdown.
+RAW_WINDOWS = [(1790127365.0, 1790170418.0),   # 01:36:04 -> 13:33:37  n 50, +0.328/$1
+               (1790172444.0, float('inf'))]   # 14:07:23 -> open
+ARM = 'raw_v10_live25 (stitched)'
+in_arm = lambda ts: any(a <= ts < b for a, b in RAW_WINDOWS)
 seq = []
 for r in c.execute("""SELECT o.epoch,o.ts,o.plan,sum(f.shares) sh,sum(f.spent) sp,sum(f.fees) fe FROM orders o
                       JOIN fills f ON f.order_id=o.id
-                      WHERE o.kind='EF' AND o.status='FILLED' AND o.ts>=? GROUP BY o.id ORDER BY o.ts""", (EF_SWITCH,)):
+                      WHERE o.kind='EF' AND o.status='FILLED' GROUP BY o.id ORDER BY o.ts"""):
+    if not in_arm(r['ts']): continue
     a = res.get(r['epoch'])
     if a is None: continue
     side = (json.loads(r['plan']) or {}).get('side') or (c.execute(
@@ -95,7 +100,7 @@ for r in c.execute("""SELECT o.epoch,o.ts,o.plan,sum(f.shares) sh,sum(f.spent) s
     cost = (r['sp'] or 0.) + (r['fe'] or 0.); win = (side == a)
     seq.append((win, ((r['sh'] or 0.) if win else 0.) - cost, cost))
 if not seq:
-    print(f"EF since 13:33:37 (fixed15, 13.0.0): no settled trades yet")
+    print(f"EF {ARM}: no settled trades yet")
 else:
     n = len(seq); right = sum(1 for w, _, _ in seq if w)
     pnl = sum(p for _, p, _ in seq); spent = sum(c_ for _, _, c_ in seq)
@@ -103,6 +108,6 @@ else:
     for w, p, _ in seq:
         cum += p; peak = max(peak, cum); dd = max(dd, peak - cum)
         run = 0 if w else run + 1; worst = max(worst, run)
-    print(f"EF since 13:33:37 (fixed15, 13.0.0): n {n} | right {right/n*100:.1f}% | per$1 {pnl/spent:+.3f} | "
+    print(f"EF {ARM}: n {n} | right {right/n*100:.1f}% | per$1 {pnl/spent:+.3f} | "
           f"sum pnl {pnl:+.2f} at $5 | maxDD {dd:.2f} | longest losing run {worst}"
           + ("  * insufficient (n<60)" if n < 60 else ""))
