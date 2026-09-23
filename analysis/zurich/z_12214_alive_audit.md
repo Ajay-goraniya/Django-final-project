@@ -295,3 +295,22 @@ wrong number is most likely to be believed.
 
 **Ledger clock restarts at 01:05:55.** Calibration off and a different EV bar make everything before
 this a different test. London stays on fixed15 live; Zurich is the raw-v10 arm.
+
+## Profile back to `fixed15` (09-23 01:19:09 UTC) — mirroring London's switch back
+
+| key | old -> new |
+|---|---|
+| `ef_profile` | raw_v10_live25 -> **fixed15** |
+| `ev_settings` | `{fixed, 0.25}` -> **`{fixed, 0.15}`** |
+| `calibration` | `enabled False` -> **`enabled True`** (platt, a 1.0677, b -0.3208) |
+
+`ef_engine` stays `"v10"`, no row. Stake fixed 5/5/5, EF on, MAIN/REVERSAL true, master **false**,
+build 13.0.0 pid 153702.
+
+**The raw_v10_live25 arm produced no trade at all.** In its 13 min 14 s window (01:05:55 -> 01:19:09)
+the v10 EF path wrote **13 decide rows, 0 orders, 0 fills, nothing graded**. That is not evidence for
+or against raw v10 — the window was too short for one fire, let alone a reading. If the owner wants
+the raw arm measured it needs hours, not minutes, and it cannot be interleaved with fixed15 on the
+same box without the two contaminating each other's ledger.
+
+Ledger clock restarts at **01:19:09** for fixed15.
