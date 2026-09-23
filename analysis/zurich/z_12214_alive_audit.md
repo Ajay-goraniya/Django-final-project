@@ -230,3 +230,31 @@ the 23-vs-4 version of the same error caught on 09-22 23:2x so it is not reintro
 `EF since 00:37:26 (London mirror): n | right % | per$1 | sum pnl at $5 | maxDD | longest losing run`
 Drawdown and losing run run over the chronological sequence of settled EF trades. Stake is fixed $5
 from the switch, so sum pnl IS the $5 figure. The `* insufficient (n<60)` marker still applies.
+
+---
+
+# 12.24.8 deploy — exact London mirror (09-23 00:45 UTC)
+
+| row | result |
+|---|---|
+| stage 08b7f8e | 41 files, SHA256SUMS **39/39 OK**, all == `git show` |
+| suites | all nine, **463 tests, OK** (17.2 s) |
+| clean point | 00:45:01, sec_into_candle 1, in-flight 0, stale-ungraded 0 |
+| stop | pid 152214 (12.24.1) SIGTERM, gone 00:45:02 |
+| deploy | 39 files, `__pycache__` cleared, re-verified 39/39 == 08b7f8e |
+| start | pid **153402**, 00:45:03, same live4 db, same argv, 5/5 creds |
+| log | `[REF] settlement line seeded from tape1s: 1194 s` · `Polymarket v12.24.8 LIVE credentials (master OFF = shadow paper)` |
+
+**Meta survived the restart unchanged**, which is the point of the mirror: `ef_engine v10`,
+`calibration {enabled, platt, a 1.0677, b -0.3208}`, `ev_settings {mode fixed, value 0.15}`,
+`stake_settings {mode fixed, 5/5/5}`, `next_stake 5.0`, `ef/main/reversal` all true, master **false**,
+halt null.
+
+The fix that made this deploy necessary is in the deployed tree, verified by diff against 12.24.1:
+`PaperBroker.__init__` now takes `age`, `post()` uses `self.books.quote(token,self.age)` instead of
+BookCache's 750 ms default, and the executor wires it with
+`if isinstance(broker,PaperBroker) and broker.age is None: broker.age=self.age`. On 12.24.1 the
+shadow lane refused any quote older than 750 ms while the executor was configured for 2000 ms, so
+Zurich under-filled against London and the two boxes were not running the same test.
+
+**The EF ledger clock restarts at 00:45:03**, not at the 00:37:26 settings switch, for that reason.

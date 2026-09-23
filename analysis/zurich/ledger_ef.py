@@ -75,7 +75,9 @@ print(f"calibration since 22:40:40: EF decide rows {tot}, carrying p_raw {seen},
 # EF only, since the settings switch, graded on results.actual. Stake is fixed $5 from this point,
 # so sum pnl IS the $5 figure; per$1 stays the size-free number. Drawdown and losing run are on the
 # chronological sequence of settled EF trades, not on calendar days.
-EF_SWITCH = 1790123846.0     # 00:37:26 UTC 09-23: ev_settings fixed 0.15 + stake fixed 5
+EF_SWITCH = 1790124303.0     # 00:45:03 UTC 09-23: 12.24.8 restart. The clock restarts here, not at the
+                             # 00:37:26 settings switch - before 12.24.8 PaperBroker refused quotes older than
+                             # 750 ms, so shadow under-filled against London and the two are not the same test.
 seq = []
 for r in c.execute("""SELECT o.epoch,o.ts,o.plan,sum(f.shares) sh,sum(f.spent) sp,sum(f.fees) fe FROM orders o
                       JOIN fills f ON f.order_id=o.id
@@ -88,7 +90,7 @@ for r in c.execute("""SELECT o.epoch,o.ts,o.plan,sum(f.shares) sh,sum(f.spent) s
     cost = (r['sp'] or 0.) + (r['fe'] or 0.); win = (side == a)
     seq.append((win, ((r['sh'] or 0.) if win else 0.) - cost, cost))
 if not seq:
-    print(f"EF since 00:37:26 (London mirror): no settled trades yet")
+    print(f"EF since 00:45:03 (London mirror, 12.24.8): no settled trades yet")
 else:
     n = len(seq); right = sum(1 for w, _, _ in seq if w)
     pnl = sum(p for _, p, _ in seq); spent = sum(c_ for _, _, c_ in seq)
@@ -96,6 +98,6 @@ else:
     for w, p, _ in seq:
         cum += p; peak = max(peak, cum); dd = max(dd, peak - cum)
         run = 0 if w else run + 1; worst = max(worst, run)
-    print(f"EF since 00:37:26 (London mirror): n {n} | right {right/n*100:.1f}% | per$1 {pnl/spent:+.3f} | "
+    print(f"EF since 00:45:03 (London mirror, 12.24.8): n {n} | right {right/n*100:.1f}% | per$1 {pnl/spent:+.3f} | "
           f"sum pnl {pnl:+.2f} at $5 | maxDD {dd:.2f} | longest losing run {worst}"
           + ("  * insufficient (n<60)" if n < 60 else ""))
