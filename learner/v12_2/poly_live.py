@@ -49,7 +49,7 @@ class LiveBroker:
     basis='VENUE_CONFIRMED_TRADE_AND_VENUE_FEE'
     def __init__(self,books):
         self.books=books; self.client=None; self.wallet=None
-        self.sign_mode=self.pick_sign_mode(); self.keepalive_ms=None; self.keepalive_at=None
+        self.sign_mode=self.pick_sign_mode(); self.keepalive_ms=None; self.keepalive_at=None; self.keepalive_book_ms=None
     @staticmethod
     def pick_sign_mode():
         """'inline' when eth_keys is on the coincurve backend (sub-ms sign), else 'thread'."""
@@ -65,9 +65,16 @@ class LiveBroker:
         between orders except venue_truth_loop's 20 s cadence - a coincidence, not a
         design. Records the round trip; a cold handshake shows up as a spike here, not
         inside an order's submit_ms."""
-        t=time.monotonic()
-        await self.client._ctx.secure_clob.get_json(self.KEEPALIVE_PATH)
-        self.keepalive_ms=round(1000*(time.monotonic()-t),1); self.keepalive_at=time.monotonic(); return self.keepalive_ms
+        # 13.0.2: the SDK builds `clob` (public reads: get_order_book) and `secure_clob` (order POST) as two
+        # separate transports with separate pools, so 13.0.1's REST book refresh on a retry ran on a connection
+        # nothing kept warm. Both are pinged together; the POST transport's result stays keepalive_ms.
+        async def ping(tr):
+            t=time.monotonic(); await tr.get_json(self.KEEPALIVE_PATH); return round(1000*(time.monotonic()-t),1)
+        ctx=self.client._ctx
+        post,book=await asyncio.gather(ping(ctx.secure_clob),ping(ctx.clob),return_exceptions=True)
+        self.keepalive_book_ms=None if isinstance(book,BaseException) else book
+        if isinstance(post,BaseException): raise post
+        self.keepalive_ms=post; self.keepalive_at=time.monotonic(); return self.keepalive_ms
     async def open(self):
         if importlib.metadata.version('polymarket-client')!='0.10.0': raise RuntimeError('Use polymarket-client==0.10.0')
         from polymarket import AsyncSecureClient

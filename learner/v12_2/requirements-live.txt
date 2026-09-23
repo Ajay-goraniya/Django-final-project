@@ -1,2 +1,3 @@
 -r requirements-paper.txt
 polymarket-client==0.10.0
+uvloop>=0.19,<1; sys_platform != "win32"

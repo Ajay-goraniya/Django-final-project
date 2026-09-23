@@ -1401,6 +1401,15 @@ def args():
     if a.venue=='predict' and a.live:
         p.error('--venue predict is paper-only in this build (no Predict order path)')
     return a
+def run(coro):
+    """13.0.2 (owner, 09-23: "use the specific container loop that helps it stay as fast as possible"): run on uvloop
+    when it is installed (libuv event loop, lower per-callback and socket overhead than the stdlib loop); the stdlib
+    loop otherwise. Same coroutines either way; the kind is printed here and reported as latency_stats['loop']."""
+    try:
+        import uvloop
+        print('[loop] uvloop '+getattr(uvloop,'__version__','?'),flush=True); return uvloop.run(coro)
+    except ImportError:
+        print('[loop] asyncio (uvloop not installed)',flush=True); return asyncio.run(coro)
 if __name__=='__main__':
-    try: asyncio.run(PolyRunner(args()).main())
+    try: run(PolyRunner(args()).main())
     except KeyboardInterrupt: print('Stopped; saved database retained')

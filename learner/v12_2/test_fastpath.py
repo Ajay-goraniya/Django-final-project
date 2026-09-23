@@ -86,6 +86,34 @@ class FastPath(unittest.TestCase):
             self.assertEqual(mode,'inline' if 'CoinCurve' in get_backend_class().__name__ else 'thread')
         except ImportError: self.assertEqual(mode,'thread')
 
+    def _live(self,book_fails=False):
+        from types import SimpleNamespace
+        hits=[]
+        class T:
+            def __init__(s,name): s.name=name
+            async def get_json(s,path):
+                hits.append((s.name,path))
+                if book_fails and s.name=='clob': raise ConnectionError('cold')
+                return {}
+        b=LiveBroker(self.books); b.client=SimpleNamespace(_ctx=SimpleNamespace(secure_clob=T('secure_clob'),clob=T('clob'))); return b,hits
+    def test_keepalive_warms_the_order_and_the_book_transport(self):
+        # 13.0.2: get_order_book (the retry's REST refresh) runs on `clob`, a separate pool from the POST's `secure_clob`
+        b,hits=self._live(); ms=asyncio.run(b.keepalive())
+        self.assertEqual(sorted(h[0] for h in hits),['clob','secure_clob']); self.assertIsNotNone(ms); self.assertIsNotNone(b.keepalive_book_ms)
+        st=C.Executor(self.db,self.books,b).latency_stats(); self.assertIn('keepalive_book_ms',st); self.assertIn('loop',st)
+    def test_book_transport_failure_does_not_fail_the_order_keepalive(self):
+        b,_=self._live(book_fails=True); self.assertIsNotNone(asyncio.run(b.keepalive())); self.assertIsNone(b.keepalive_book_ms)
+    def test_attempt1_fire_to_wire_is_reported_apart_from_retries(self):
+        ex=C.Executor(self.db,self.books,C.PaperBroker(self.books,self.db))
+        ex.latency_samples=[dict(attempt=1,fire_to_wire_ms=float(i),total_attempt_ms=5.) for i in range(1,11)]+[dict(attempt=2,fire_to_wire_ms=500.,total_attempt_ms=600.)]
+        a1=ex.latency_stats()['fire_to_wire_attempt1']; self.assertEqual((a1['n'],a1['max_ms'],a1['p90_ms']),(10,10.,9.))
+    def test_loop_kind(self):
+        self.assertIsNone(C.loop_kind()); self.assertEqual(asyncio.run(self._k()),'asyncio')
+        try: import uvloop
+        except ImportError: return
+        self.assertEqual(uvloop.run(self._k()),'uvloop')
+    async def _k(self): return C.loop_kind()
+
     def test_retry_tick_wait_is_bounded(self):
         self.assertEqual(C.Executor.RETRY_TICK_WAIT_S,0.1); self.assertFalse(hasattr(C.Executor,'RETRY_DELAY_S'))
 
