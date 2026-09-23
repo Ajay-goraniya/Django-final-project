@@ -211,3 +211,25 @@ class Review12248(unittest.TestCase):
         self.books.books['up']['event']-=1.0                                     # book 1 s old: inside 2 s, outside 750 ms
         asyncio.run(self.ex.fire(int(time.time())-30,decision(),'up','c',10,decision))
         self.assertEqual(len(self.db.sql('SELECT * FROM fills')),1,'a 1 s quote accepted at 2 s must fill on paper too')
+
+
+class EFProfiles13(unittest.TestCase):
+    """v13: one audited switch between raw_v10_live25 and fixed15."""
+    def test_profiles_write_the_audited_keys(self):
+        import tempfile, pathlib
+        from poly_core import Journal
+        from poly_dashboard import Dashboard
+        with tempfile.TemporaryDirectory() as d:
+            db = Journal(str(pathlib.Path(d) / 'p.db'), 'LIVE', 'h')
+            db.set('ev_settings', dict(quote_age_ms=2000))
+            ui = Dashboard.__new__(Dashboard); ui.db = db; ui.r = SimpleNamespace(CALIBRATION_DEFAULT=dict(enabled=False, cut=0.80, to=0.784, mode='cut', a=1.0, b=0.0))
+            out = ui.apply('/api/controls/profile', dict(confirmed=True, name='raw_v10_live25'))
+            self.assertFalse(db.get('calibration')['enabled']); self.assertEqual(db.get('ev_settings'), dict(quote_age_ms=2000, mode='fixed', value=0.25))
+            self.assertEqual(db.get('ef_engine'), 'v10'); self.assertEqual(db.get('ef_profile'), 'raw_v10_live25')
+            ui.apply('/api/controls/profile', dict(confirmed=True, name='fixed15'))
+            c = db.get('calibration'); self.assertTrue(c['enabled']); self.assertEqual((c['mode'], c['a'], c['b']), ('platt', 1.0677, -0.3208))
+            self.assertEqual(db.get('ev_settings')['value'], 0.15)
+            with self.assertRaises(ValueError): ui.apply('/api/controls/profile', dict(confirmed=True, name='nope'))
+            audits = [r[0] for r in db.sql("SELECT detail FROM diagnostics WHERE detail LIKE '%control_write%' AND detail LIKE '%ef_profile%'")]
+            self.assertEqual(len(audits), 2)
+            db.c.close()

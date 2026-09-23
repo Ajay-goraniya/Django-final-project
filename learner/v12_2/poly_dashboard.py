@@ -305,6 +305,14 @@ class Dashboard:
           ef_cash_floor=self.db.get('ef_cash_floor'),
           daily_stopped=bool((self.daily() or {}).get('halted')),
           daily_limits=self.daily(),shared_stake=self.db.get('stake_settings'),shared_next_stake=self.db.get('next_stake',1),win_streak=w,loss_streak=l,rules=self.db.get('rules'),lane=self.lane_label())
+    # v13 EF profiles (owner, 09-23: "recreate v13 that has raw_v10_live25 so it can keep good frequency").
+    # raw_v10_live25: the v10 EF as trained, no probability correction, one 25% EV bar - ~71 fires/day on the
+    #   09-08..16 paper run, +$692 at $5, worst drawdown $84 (analysis/v/model/EF_DRAWDOWN_V.md grid).
+    # fixed15: v10 EF with H1's Platt correction (a 1.0677, b -0.3208) and a 15% bar - ~31/day, +$512, drawdown $33.
+    EF_PROFILES={
+        'raw_v10_live25':dict(ef_engine='v10',calibration=dict(enabled=False),ev=dict(mode='fixed',value=0.25)),
+        'fixed15':dict(ef_engine='v10',calibration=dict(enabled=True,mode='platt',a=1.0677,b=-0.3208),ev=dict(mode='fixed',value=0.15)),
+    }
     def apply(self,path,p):
         if p.get('confirmed') is not True: raise ValueError('Confirmation required')
         with self.db.lock:
@@ -365,6 +373,18 @@ class Dashboard:
                     reason='halt_cleared',was=was,window_restarts_at=now))))
                 return dict(ok=True,cleared=was,window_restarts_at=now,
                             note='kill rules re-arm after 20 results settled from now')
+            elif path=='/api/controls/profile':
+                # v13: one audited switch between the two EF set-ups the owner chooses from (09-23). Each profile
+                # writes the same audited keys a hand setting would; nothing else changes (master, lanes, stake).
+                name=p.get('name')
+                if name not in self.EF_PROFILES: raise ValueError('profile must be one of '+', '.join(self.EF_PROFILES))
+                prof=self.EF_PROFILES[name]
+                cal=dict(getattr(self.r,'CALIBRATION_DEFAULT',dict(enabled=False,cut=0.80,to=0.784,mode='cut',a=1.0,b=0.0)))
+                cal.update(self.db.get('calibration') or {}); cal.update(prof['calibration'])
+                ev=dict(self.db.get('ev_settings') or {}); ev.update(prof['ev'])
+                self.db.set('ef_engine',prof['ef_engine']); self.db.set('calibration',cal); self.db.set('ev_settings',ev)
+                self.db.set('ef_profile',name)
+                return dict(ok=True,profile=name,calibration=cal,ev_settings=ev,ef_engine=prof['ef_engine'])
             elif path=='/api/controls/calibration':
                 # Turns the p-correction on or off. Bounded here like every other
                 # trading control, and it can only ever LOWER a claim - a setting
@@ -612,7 +632,7 @@ class Dashboard:
         venue_positions=list(getattr(r,'account_positions',[]) or [])
         position_value=sum(float(x.get('current_value') or 0) for x in venue_positions if isinstance(x,dict))
         sizing_bankroll=self.equity()
-        self.cache=dict(feature_names=FEATURES,open_positions=positions,economics=self.pnl(),model=dict(version=10),learning=dict(status='Fixed v10 weights'),candle=current,settlement=self.settlement(),build=self.db.get('build'),feature=d.get('features',{}),feed=self.feed_state(),metrics=dict(main=lane_metric('MAIN'),reversal=lane_metric('REVERSAL'),ef=lane_metric('EF'),combined=metric),main=self.lane_card('MAIN'),reversal=self.lane_card('REVERSAL'),lanes=(self.r.lane_decision or {}),main_block=(self.r.lane_decision or {}).get('main_block',''),ef=ef,ef_monitor=dict(status=d.get('reason') or f"v10 pnl · p {d.get('p','--')} · EV {d.get('ev','--')}"),book=book,last_fill=last,controls=ctr,capital=dict(balance=sizing_bankroll,sizing_bankroll=sizing_bankroll,wallet=cash,pending_payout=pending,open_position_value=position_value,free=cash,wallet_free=cash,funding_headroom=max(0,cash-reserve),reserve_detail=rd,fresh=age<15,balance_age_sec=age,realised=metrics['pnl'],reserved=reserve,next_stake=self.db.get('next_stake',1),truth=dict(source='Polymarket API (balance, positions, open orders, account PnL)',venue_positions=venue_positions,
+        self.cache=dict(feature_names=FEATURES,open_positions=positions,economics=self.pnl(),model=dict(version=10),learning=dict(status='Fixed v10 weights'),candle=current,settlement=self.settlement(),build=self.db.get('build'),ef_profile=self.db.get('ef_profile'),feature=d.get('features',{}),feed=self.feed_state(),metrics=dict(main=lane_metric('MAIN'),reversal=lane_metric('REVERSAL'),ef=lane_metric('EF'),combined=metric),main=self.lane_card('MAIN'),reversal=self.lane_card('REVERSAL'),lanes=(self.r.lane_decision or {}),main_block=(self.r.lane_decision or {}).get('main_block',''),ef=ef,ef_monitor=dict(status=d.get('reason') or f"v10 pnl · p {d.get('p','--')} · EV {d.get('ev','--')}"),book=book,last_fill=last,controls=ctr,capital=dict(balance=sizing_bankroll,sizing_bankroll=sizing_bankroll,wallet=cash,pending_payout=pending,open_position_value=position_value,free=cash,wallet_free=cash,funding_headroom=max(0,cash-reserve),reserve_detail=rd,fresh=age<15,balance_age_sec=age,realised=metrics['pnl'],reserved=reserve,next_stake=self.db.get('next_stake',1),truth=dict(source='Polymarket API (balance, positions, open orders, account PnL)',venue_positions=venue_positions,
                         reserve_confirmed=rd['confirmed'],reserve_unverified=rd['unverified'],
                         reserve_phantom=rd['phantom'],reserve_total_local=rd['total'],
                         reserve_phantom_ids=rd['phantom_ids'],
