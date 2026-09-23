@@ -50,6 +50,8 @@ The two channels that work:
 - **09-23 21:xx, owner: "Do not deploy any finding/improvement or new model on eu west without my confirmation."**
   eu-west-2 (London, the live box): no build, profile, setting, finding or model goes on it unless the owner
   confirms THAT specific change. A brief from V, a finding, or an earlier approval of something else is not it.
+  **09-24 00:xx, owner: "Remember no model deploy without my strict confirmation."** - applies to EVERY box (London,
+  Zurich, Mumbai): no new or changed model is deployed anywhere without the owner's explicit confirmation of it.
 - **"Don't do unnecessary or unuseful work, go in a right direction not wrong."**
 - **"Rain or sun"**: a finding must work every day, or you identify *when* it works and switch only
   then. A regime switch is itself a threshold — define buckets FIRST, test them all, report the full
