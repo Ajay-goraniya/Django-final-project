@@ -25,7 +25,7 @@ for r in rows:
     if side is None: continue
     if r['kind'] != 'EF': name = r['kind']
     elif eng.get(r['epoch']) == 'build11': name = 'EF (build11)'
-    elif r['ts'] >= V10_RESTORE: name = 'EF (v10 restored)'
+    elif r['ts'] >= V10_RESTORE: name = 'EF (v10 mixed cfg)'   # see note below: 4 config changes sit inside it
     else: name = 'EF (v10)'
     L = lines.setdefault(name, dict(n=0, w=0, cost=0., payout=0., lanes=set()))
     cost = (r['sp'] or 0.) + (r['fe'] or 0.); win = (side == a)
@@ -33,7 +33,7 @@ for r in rows:
     L['lanes'].add(r['lane'])
 print(f"# Zurich live4 ledger  {dt.datetime.now(dt.timezone.utc).strftime('%Y-%m-%d %H:%M')} UTC   graded on results.actual")
 print(f"{'line':<18} {'n':>4} {'hit':>7} {'spent':>9} {'pnl':>9} {'per$1':>8}  lane")
-for k in ('EF (v10)', 'EF (v10 restored)', 'EF (build11)', 'MAIN', 'REVERSAL'):
+for k in ('EF (v10)', 'EF (v10 mixed cfg)', 'EF (build11)', 'MAIN', 'REVERSAL'):
     L = lines.get(k)
     if not L: print(f"{k:<18} {0:>4} {'-':>7} {'-':>9} {'-':>9} {'-':>8}  -"); continue
     pnl = L['payout'] - L['cost']
@@ -44,6 +44,9 @@ tot = c.execute('SELECT count(*),coalesce(sum(shadow_pnl),0),coalesce(sum(pnl),0
 try: tape = c.execute('SELECT count(*),max(ts)-min(ts) FROM tape1s').fetchone()
 except Exception: tape = (0, 0)
 print('* a line under 60 graded fires is not a reading. Do not quote its per$1 as a result.')
+print('* "EF (v10 mixed cfg)" spans 22:17:59 onward and contains FOUR config changes (calibration on 22:40,')
+print('  ev 0.15 at 00:37, profile raw/cal-off/ev 0.25 at 01:05, fixed15 again at 01:19). It is a bucket, not')
+print('  a regime. The only single-configuration line is the "EF since ..." line at the bottom.')
 print(f"results n={tot[0]} sum(shadow_pnl)={tot[1]:+.4f} sum(pnl)={tot[2]:+.4f} | tape1s rows={tape[0]} span={tape[1] or 0:.0f}s")
 
 # ---- 12.24.1: what the Platt calibration removed (V, 09-22 22:4x) ----------------------------
