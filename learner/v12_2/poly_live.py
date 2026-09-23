@@ -101,6 +101,14 @@ class LiveBroker:
         if missing: raise RuntimeError('Missing environment variables: '+', '.join(missing))
         self.wallet=os.environ[names[1]]
         self.client=await TrackedClient.create(private_key=os.environ[names[0]],wallet=self.wallet,api_key=RelayerApiKey(key=os.environ[names[2]],address=os.environ[names[3]]))
+    async def book_snapshot(self,t):
+        """12.24.9 / 13.0.1: one REST read of the token's book, shaped as a websocket 'book' event for BookCache.apply.
+        Used only after a FAK 'no orders to match' when the websocket book has not changed, so a retry is not priced off
+        the same stale book the venue just refused."""
+        b=await self.client.get_order_book(token_id=t)
+        ts=b.timestamp.timestamp()*1000 if getattr(b,'timestamp',None) else time.time()*1000
+        lv=lambda xs:[dict(price=str(x.price),size=str(x.size)) for x in xs]
+        return dict(event_type='book',asset_id=t,timestamp=str(int(ts)),asks=lv(b.asks),bids=lv(b.bids))
     async def metadata(self,t):
         c=self.client
         b,m=await asyncio.gather(c.get_order_book(token_id=t),c._ctx.order_metadata.fetch_current_market(c._ctx,token_id=t))

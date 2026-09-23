@@ -233,3 +233,27 @@ class EFProfiles13(unittest.TestCase):
             audits = [r[0] for r in db.sql("SELECT detail FROM diagnostics WHERE detail LIKE '%control_write%' AND detail LIKE '%ef_profile%'")]
             self.assertEqual(len(audits), 2)
             db.c.close()
+
+
+class RetryRefreshesAStaleBook1301(unittest.TestCase):
+    """13.0.1: after 'no orders to match' with no websocket change, the retry re-prices off a REST book, not the refused one."""
+    def test_retry_uses_the_rest_book(self):
+        temp=tempfile.TemporaryDirectory(); db=C.Journal(str(pathlib.Path(temp.name)/'j.db'),'LIVE','abc')
+        books=C.BookCache(); books.apply(snap(ask=.40)); books.terms['up']=(.001,1,.07,1)
+        class Refuse(C.PaperBroker):
+            basis='VENUE_CONFIRMED_TRADE_AND_VENUE_FEE'
+            def __init__(s,b,d): super().__init__(b,d); s.caps=[]; s.snaps=0
+            async def post(s,signed):
+                oid,token,plan=signed; s.caps.append(plan['cap'])
+                if len(s.caps)==1: return {'rejected':{'class':'X','message':'no orders found to match with FAK order','code':'','request_reached':True}}
+                return await super().post(signed)
+            async def book_snapshot(s,t):
+                s.snaps+=1; e=snap(ask=.42); e['timestamp']=str(int(time.time()*1000)+5); return e
+        venue=Refuse(books,db); ex=C.Executor(db,books,venue,budget_s=2.0); db.set('master',True)
+        d={'fire':True,'side':'UP','p':.9,'threshold':0.,'features':{}}
+        asyncio.run(ex.fire(int(time.time())-30,d,'up','c',10,lambda:d))
+        self.assertEqual(venue.snaps,1,'one REST read after the refusal')
+        self.assertEqual(len(venue.caps),2); self.assertGreater(venue.caps[1],venue.caps[0],'the retry is priced off the refreshed book')
+        t=json.loads(db.sql("SELECT timing_json FROM orders ORDER BY attempt DESC LIMIT 1")[0][0] or "{}")
+        self.assertTrue(t.get('rest_refreshed')); self.assertIn('rest_refresh_ms',t)
+        db.c.close(); temp.cleanup()

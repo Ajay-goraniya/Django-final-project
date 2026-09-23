@@ -434,10 +434,10 @@ class Journal:
         self.c.executescript('CREATE INDEX IF NOT EXISTS diagnostics_ts ON diagnostics(ts);')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','13.0.0')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','13.0.1')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1','12.12.2','12.13.0','12.13.1','12.14.0','12.14.1','12.15.0','12.15.1','12.15.2','12.15.3','12.15.4','12.15.5','12.16.0','12.16.1','12.17.0','12.18.0','12.19.0','12.19.1','12.20.0','12.21.0','12.21.1','12.21.2','12.21.3','12.21.4','12.22.0','12.23.0','12.23.1','12.23.2','12.24.0','12.24.1','12.24.2','12.24.3','12.24.4','12.24.5','12.24.6','12.24.7','12.24.8','13.0.0'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1','12.12.2','12.13.0','12.13.1','12.14.0','12.14.1','12.15.0','12.15.1','12.15.2','12.15.3','12.15.4','12.15.5','12.16.0','12.16.1','12.17.0','12.18.0','12.19.0','12.19.1','12.20.0','12.21.0','12.21.1','12.21.2','12.21.3','12.21.4','12.22.0','12.23.0','12.23.1','12.23.2','12.24.0','12.24.1','12.24.2','12.24.3','12.24.4','12.24.5','12.24.6','12.24.7','12.24.8','13.0.0','13.0.1'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -1027,12 +1027,13 @@ class Executor:
         return type(exc).__name__ in {'TransportError','TimeoutError','ConnectionLostError','UnexpectedResponseError'} or isinstance(exc,(asyncio.TimeoutError,TimeoutError,ConnectionError,OSError))
     async def fire(self,ep,d,token,condition,stake,reassess,kind='EF'):
         if self.db.get('halt') or not self.db.reserve(ep,d,token,condition,kind): return
-        fire_start=time.monotonic(); deadline=min(fire_start+self.budget_s,fire_start+ep+240-time.time()); seq=-1; ticked=None
+        fire_start=time.monotonic(); deadline=min(fire_start+self.budget_s,fire_start+ep+240-time.time()); seq=-1; ticked=None; refresh={}
         broker,lane=self.route()
         if isinstance(broker,PaperBroker) and broker.age is None: broker.age=self.age      # 12.24.8
         for n in range(1,self.max_attempts+1):
             timing={'attempt':n,'signal_ts_ms':d.get('features',{}).get('ts_ms')}
             if ticked is not None: timing['retry_ticked']=ticked   # 12.19.0: did the book change before this re-price
+            if refresh: timing.update(refresh); refresh={}          # 13.0.1: the REST refresh that preceded this re-price
             t=time.monotonic()
             # Take the CURRENT fresh book. Until 12.8.7 attempts >= 2 waited here
             # for q['seq'] to change - for the book to TICK since the last
@@ -1185,6 +1186,19 @@ class Executor:
                 if not any(x in code for x in RETRYABLE):
                     self.db.status(ep,'REJECTED',kind); return
                 ticked=await self._await_tick(token,seq,deadline)
+                # 13.0.1 (owner, 09-23 04:00: "on retries it's not updating book?"): if the websocket book has not
+                # moved since the venue said "no orders at your price", re-pricing off it sends the SAME refused cap
+                # again - London 0x19b1b427: 4 attempts, book age 358 -> 709 -> 1024 -> 1334 ms, all refused. Read the
+                # book once over REST and apply it; the next attempt re-prices off what is really there, and order_plan
+                # still re-checks EV at that price, so a moved book can make the trade stand down but never overpay.
+                if not ticked and hasattr(broker,'book_snapshot') and deadline-time.monotonic()>self.POST_FLOOR_S:
+                    t_r=time.monotonic()
+                    try:
+                        ev=await asyncio.wait_for(broker.book_snapshot(token),min(0.4,max(.05,deadline-time.monotonic()-self.POST_FLOOR_S)))
+                        self.books.apply(ev); q2=self.books.quote(token,self.age); ticked=bool(q2 and q2.get('seq')!=seq)
+                        refresh=dict(rest_refresh_ms=round(1000*(time.monotonic()-t_r),1),rest_refreshed=ticked)
+                    except Exception as e:
+                        refresh=dict(rest_refresh_error=type(e).__name__)
                 continue
             if r.get('id')!=oid:
                 info={'class':'OrderIdentityMismatch','message':f'signed={oid} response={r.get("id")}', 'request_reached':True}
