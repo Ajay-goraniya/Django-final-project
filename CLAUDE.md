@@ -47,6 +47,9 @@ The two channels that work:
   else stays hand-stopped: no coded PnL kill, no gates.
   **09-23 00:1x, owner: "remove that cash floor thing"** - London never had `ef_cash_floor` set (null = off, confirmed 00:19). The code stays;
   no session re-arms it without the owner's written order. Nothing on London stops trading automatically now.
+- **09-23 21:xx, owner: "Do not deploy any finding/improvement or new model on eu west without my confirmation."**
+  eu-west-2 (London, the live box): no build, profile, setting, finding or model goes on it unless the owner
+  confirms THAT specific change. A brief from V, a finding, or an earlier approval of something else is not it.
 - **"Don't do unnecessary or unuseful work, go in a right direction not wrong."**
 - **"Rain or sun"**: a finding must work every day, or you identify *when* it works and switch only
   then. A regime switch is itself a threshold — define buckets FIRST, test them all, report the full
