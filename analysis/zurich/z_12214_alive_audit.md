@@ -378,3 +378,41 @@ per-trade quantities. **maxDD and longest losing run are not per-trade** — the
 joined across a gap that did not happen, so they can only *understate* a real drawdown. That matters
 because the owner's stated reason for this swap is drawdown. The 27.05 figure is a floor, not a
 measurement, and it will get less trustworthy with every further swap.
+
+---
+
+# The raw arm crossed n=60 — and it FAILS the standing verify gates (09-23 17:3x UTC)
+
+`analysis/zurich/verify_raw_arm.py`, read-only, run through `analysis/h1/verify.py`.
+Headline at 17:30: **n 79, right 59.7%, per$1 +0.337, pnl +139.75 at $5**. That is the first EF line
+on this box to clear the 60-fire bar. It does not survive the gates.
+
+```
+[FAIL] grading provenance   only one outcome source available (see below)
+[PASS] sample size          79 >= 60
+[PASS] both halves          h1 +0.258 / h2 +0.412
+[FAIL] permutation control  real +0.322 vs permuted mean +0.179 (p95 +0.357), p=0.120 over 200 draws
+[PASS] cost sensitivity     +0c +0.322 | +2c +0.263 | +5c +0.184
+[PASS] beats the null       mine +0.337 vs "buy the cheap side at the same moments" +0.265
+VERDICT: NOT A FINDING
+```
+
+**The permutation failure is the substantive one.** Shuffling *which side the model picked*, keeping
+outcome and price paired, still returns **+0.179/$1**, and the real result sits inside the permuted
+distribution (p=0.120, bar is 0.01). More than half the edge survives destroying the side pick. This
+is the same mechanism V's own `EF_REVERSAL_RESULT.md` recorded for build11 and REVERSAL: the money is
+"a cheap side bought at these moments", not the side selection. The null check says the same thing
+more mildly — the dumb rule gets +0.265 of the +0.337.
+
+**The grading gate is untestable here, not failed on the merits.** `learner/live_backup/venues.sqlite3.gz`
+covers epochs 1788881100-1789578900 (09-08 to 09-16); this arm is 09-23. **Zero overlap.** Per CLAUDE.md
+a Polymarket trade must be graded on `venues.outcome`, so until someone pushes a fresh venues snapshot
+covering 09-23 this arm is graded only on the engine's own `results.actual` and cannot be cross-checked.
+That is a gap in the evidence, and it should not be reported as if the grading had been verified.
+
+(One bug fixed while writing this: my first pass read `SELECT epoch,outcome FROM outcome`; the column
+is `actual`. It silently returned zero rows and would have made a stale-snapshot problem look like an
+empty table.)
+
+**What this does not say:** it does not say raw v10 loses. It says the +0.337 is not yet distinguishable
+from buying cheap sides at those moments, on this sample, and must not be used to justify live money.
