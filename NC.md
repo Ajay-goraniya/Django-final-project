@@ -83,3 +83,33 @@ print('concentration: all %+.3f | w/o top1 %+.3f | w/o top3 %+.3f | w/o top10 %+
 print('by day (n, per$1):', ' '.join(f'{d} {len(v)} {np.mean(v):+.3f}' for d, v in sorted(days.items())), '| losing days', sum(np.mean(v) < 0 for v in days.values()), '/', len(days))
 F.verdict()
 ```
+
+## NC-2 - TWAP settlement study (09-24) - verdict: the TWAP maths is right and needed, but on its own it is NOT an edge
+
+Data: 2,274 candles 09-08..09-16. Polymarket's own `priceToBeat`/`finalPrice` per candle (gamma API, public after
+the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
+
+- **A. Ground truth.** `finalPrice >= priceToBeat` matches Polymarket's resolution **2179/2179**. The price to beat of
+  a candle = the previous candle's final TWAP (TWAP60 of Chainlink ending at the open). Polymarket does NOT publish it
+  live - only after settlement - but it can be computed live from the Chainlink stream (London already does: `line_open`).
+- **A. Which Binance proxy predicts the settlement.** Binance TWAP60 close vs TWAP60 open agrees with Polymarket
+  **96.7%**; the plain Binance candle (close vs open) only **87.0%**. Every disagreement of the TWAP proxy is in a
+  near-tie candle (|TWAP move| < 1 bp: 21% wrong, n=349); above 1 bp it is **0% wrong** (n=1,925).
+  Chainlink sits about **$25 below Binance** (p10/p90 $-51/$-12) and that gap drifts only $2 (p50) / $6 (p90) within a candle.
+- **B. Fair-probability maths (no fitted parameters, sigma = trailing Binance volatility, 4 windows 300-3600 s).**
+  The TWAP-aware formula beats the plain close-vs-open formula at **every second of the candle, every window**
+  (log loss e.g. 120 s 0.528 vs 0.557; 240 s 0.314 vs 0.446; 270 s 0.218 vs 0.953 - the plain formula collapses after
+  240 s because it ignores the locked-in part of the average). **But Polymarket's own price beats both at every
+  second** (120 s 0.495; 240 s 0.240; 270 s 0.124). The market already prices TWAP, and more.
+- **C. Money: fire when the TWAP fair price beats Polymarket's ask** (15-239 s, first second EV >= bar, exact fee,
+  1 s decision lag, graded on Polymarket). Full grid, 24 cells: TWAP model -0.066..+0.004 per $1 (best cell n=1390,
+  +0.004, dies at +2c: -0.066); plain model -0.129..-0.036, worse in every cell. **No cell makes money.**
+- **Verdict:** a pure TWAP fair-price model has no edge against Polymarket's price - do not build it as a signal.
+  What TWAP is good for:
+  1. **Labels:** anything trained or graded on the Binance candle (close >= open) is wrong on 13% of candles; the
+     Binance TWAP60 proxy is wrong on 3.3%, all of them near-ties. Models should be trained on the TWAP label.
+  2. **Timing:** after 240 s the average is part-locked - the reason late REVERSAL fails (NC-1).
+  3. **Near-ties (< 1 bp)** are unreadable even with the right formula (21% proxy error) - that is where EF's
+     losses concentrate (H1: near-tie candles -0.144/$1).
+- **Next test (not done):** check which label EF's v10 model was trained on; if the Binance candle, retrain on the
+  TWAP label and compare walk-forward. Not deployed anywhere; London unchanged.
