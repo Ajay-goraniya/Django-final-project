@@ -258,3 +258,40 @@ shadow lane refused any quote older than 750 ms while the executor was configure
 Zurich under-filled against London and the two boxes were not running the same test.
 
 **The EF ledger clock restarts at 00:45:03**, not at the 00:37:26 settings switch, for that reason.
+
+---
+
+# 13.0.0 + profile `raw_v10_live25` (09-23 01:05 UTC) — Zurich tests raw v10 in shadow
+
+| row | result |
+|---|---|
+| stage 702ec24 | 41 files, SHA256SUMS **39/39 OK**, all == `git show` |
+| suites | all nine, **464 tests, OK** (17.4 s) |
+| clean point | 01:05:29, sec_into_candle 29, in-flight 0, stale-ungraded 0 |
+| stop | pid 153402 (12.24.8) SIGTERM, gone 01:05:30 |
+| deploy | 39 files, `__pycache__` cleared, re-verified 39/39 == 702ec24 |
+| start | pid **153702**, 01:05:30, same live4 db, same argv, 5/5 creds |
+| log | `[REF] settlement line seeded from tape1s: 1184 s` · `Polymarket v13.0.0 LIVE credentials (master OFF = shadow paper)` |
+
+## Profile applied 01:05:55 — three audit rows
+| key | old -> new |
+|---|---|
+| `ef_profile` | None -> **raw_v10_live25** |
+| `ev_settings` | `{fixed, 0.15}` -> **`{fixed, 0.25}`** |
+| `calibration` | `enabled True` -> **`enabled False`** (a/b kept at 1.0677 / -0.3208, inert) |
+
+`ef_engine` produced **no audit row** — already `"v10"`, and `Journal.set()` is audit-on-change.
+`calibration().enabled` as the engine reads it = **False**.
+Stake untouched at fixed 5/5/5, `next_stake` 5.0, EF on, MAIN and REVERSAL left true, master **false**.
+
+## Two fixes to my own deploy helper, found by this deploy
+1. The build-line check grepped `'build','12\.[0-9.]*'`, so on a 13.x tree it printed an **empty**
+   build and the deploy looked fine. Now `'build','[0-9]*\.[0-9.]*'`, re-checked: `'build','13.0.0'`.
+2. The file count in its summary was the hardcoded string `/30 OK`, which I had been `sed`-patching
+   per deploy. It now prints the real count from SHA256SUMS.
+
+Neither affected a deployed file — both were in the report line, which is exactly where a silent
+wrong number is most likely to be believed.
+
+**Ledger clock restarts at 01:05:55.** Calibration off and a different EV bar make everything before
+this a different test. London stays on fixed15 live; Zurich is the raw-v10 arm.
