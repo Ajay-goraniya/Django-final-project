@@ -434,10 +434,10 @@ class Journal:
         self.c.executescript('CREATE INDEX IF NOT EXISTS diagnostics_ts ON diagnostics(ts);')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.24.7')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','12.24.8')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1','12.12.2','12.13.0','12.13.1','12.14.0','12.14.1','12.15.0','12.15.1','12.15.2','12.15.3','12.15.4','12.15.5','12.16.0','12.16.1','12.17.0','12.18.0','12.19.0','12.19.1','12.20.0','12.21.0','12.21.1','12.21.2','12.21.3','12.21.4','12.22.0','12.23.0','12.23.1','12.23.2','12.24.0','12.24.1','12.24.2','12.24.3','12.24.4','12.24.5','12.24.6','12.24.7'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1','12.12.2','12.13.0','12.13.1','12.14.0','12.14.1','12.15.0','12.15.1','12.15.2','12.15.3','12.15.4','12.15.5','12.16.0','12.16.1','12.17.0','12.18.0','12.19.0','12.19.1','12.20.0','12.21.0','12.21.1','12.21.2','12.21.3','12.21.4','12.22.0','12.23.0','12.23.1','12.23.2','12.24.0','12.24.1','12.24.2','12.24.3','12.24.4','12.24.5','12.24.6','12.24.7','12.24.8'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -952,11 +952,13 @@ class PaperBroker:
     # Fills whatever the ladder holds, so the pre-send depth check does not apply.
     all_or_nothing=False
     basis='PAPER_DEPTH_FEE_ESTIMATE'
-    def __init__(self,books,db=None): self.books=books; self.db=db; self.pending={}
+    def __init__(self,books,db=None,age=None): self.books=books; self.db=db; self.pending={}; self.age=age
     async def prepare(self,token,plan):
         oid='paper-'+uuid.uuid4().hex; return (oid,token,plan),oid
     async def post(self,signed):
-        oid,token,plan=signed; q=self.books.quote(token)
+        # 12.24.8: the configured quote age (--quote-age-ms), not BookCache's 750 ms default - a quote the executor
+        # accepted at 1 s old was then refused here as fak_not_filled on every shadow/paper order.
+        oid,token,plan=signed; q=self.books.quote(token,self.age) if self.age else self.books.quote(token)
         f=walk_book(q,plan) if q else None
         if not f or not f['shares']: return {'rejected':{'class':'PaperReject','message':'fak_not_filled','code':'fak_not_filled','request_reached':True}}
         if self.db:
@@ -1027,6 +1029,7 @@ class Executor:
         if self.db.get('halt') or not self.db.reserve(ep,d,token,condition,kind): return
         fire_start=time.monotonic(); deadline=min(fire_start+self.budget_s,fire_start+ep+240-time.time()); seq=-1; ticked=None
         broker,lane=self.route()
+        if isinstance(broker,PaperBroker) and broker.age is None: broker.age=self.age      # 12.24.8
         for n in range(1,self.max_attempts+1):
             timing={'attempt':n,'signal_ts_ms':d.get('features',{}).get('ts_ms')}
             if ticked is not None: timing['retry_ticked']=ticked   # 12.19.0: did the book change before this re-price
@@ -1108,6 +1111,11 @@ class Executor:
             t=time.monotonic(); final=new
             if self.allowed is not None and not self.allowed(kind):
                 timing['final_recheck_ms']=1000*(time.monotonic()-t); self.db.release(ep,'SIGNAL_CHANGED',kind); return
+            # 12.24.8 (3rd-party review, RED): the broker is chosen once at fire start. If master flips OFF during
+            # signing or a retry, the order must not reach the venue - re-read the route and stand down if it moved.
+            if self.route()[1]!=lane:
+                timing['final_recheck_ms']=1000*(time.monotonic()-t); self.db.release(ep,'SIGNAL_CHANGED',kind)
+                print(f'[order not sent] master changed during the attempt ({lane} -> {self.route()[1]}); kind={kind}',flush=True); return
             timing['final_recheck_ms']=1000*(time.monotonic()-t)
             try: order_plan(latest,self.books.terms[token],stake,final,self.pad,band=self.band,require_depth=self.require_depth)
             except (KeyError,ValueError): self.db.release(ep,'EV_CHANGED',kind); return

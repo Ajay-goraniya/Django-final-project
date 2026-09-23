@@ -752,6 +752,9 @@ class PolyRunner(Runner):
                 _ask=(_q or {}).get('ask')
                 if _ask is None or float(_ask)>cap:
                     return self._lane_drop(ep,kind,f"REVERSAL entry cap: quote {'none' if _ask is None else f'{float(_ask):.2f}'} above {cap:.2f}")
+                # 12.24.8 (review): the cap travels with the order, so a retry on a moved book is held to it too
+                # (order_plan's lane_cap rule reads max_ask; it used to fall back to LANE_MAX_ASK 0.90).
+                if d.get('price_rule')=='lane_cap': d['max_ask']=min(float(d.get('max_ask',1.0)),cap)
         d['features']={'ts_ms':int(now*1000)}
         d['signal_price']=float(self.st.s_px[-1]) if self.st.s_px else None
         # 12.15.4: reassess for a lane is no longer the frozen original dict. It

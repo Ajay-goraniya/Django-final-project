@@ -925,6 +925,7 @@ class LaneEngine:
 
     def _try_ef(self, ts_ms, f):
         if self.pending.get('EF') or self.ef.fired is not None: return None
+        if 'EF' in getattr(self, 'blocked', ()): return None            # 12.24.8: blocked once per candle, like MAIN
         if self.ef.attempts >= self.MAIN_MAX_ATTEMPTS: self.ef.block = 'not payable after attempts'; return None
         m = self._ef_metrics(f, ts_ms)
         ask = None

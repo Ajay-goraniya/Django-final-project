@@ -187,3 +187,27 @@ class RestartState12247(unittest.TestCase):
         self.assertEqual(r.lanes.main_attempts, 0); self.assertFalse(r.lanes.pending['MAIN'])
         r._lane_drop(300, 'MAIN', 'stake exceeds free cash')
         self.assertEqual(r.lanes.main_attempts, 1, 'a real refusal still counts')
+
+
+class Review12248(unittest.TestCase):
+    """3rd-party review, 09-23."""
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory(); self.path=str(pathlib.Path(self.temp.name)/'j.db')
+        self.db=C.Journal(self.path,'LIVE','abc'); self.books=C.BookCache(); self.books.apply(snap()); self.books.terms['up']=(.01,1,.07,1)
+        self.venue=Venue(self.books,self.db); self.shadow=C.PaperBroker(self.books,self.db)
+        self.ex=C.Executor(self.db,self.books,self.venue,budget_s=1.0,shadow=self.shadow)
+    def tearDown(self): self.db.c.close(); self.temp.cleanup()
+
+    def test_master_off_during_the_attempt_never_posts_live(self):
+        """RED: the broker was chosen at fire start; master OFF during signing still posted to the venue."""
+        self.db.set('master',True)
+        self.ex.allowed=lambda kind: (self.db.set('master',False) or True)     # master flips OFF at the final recheck
+        asyncio.run(self.ex.fire(int(time.time())-30,decision(),'up','c',10,decision))
+        self.assertEqual(self.venue.posts,0,'no live post after master went OFF')
+        self.assertEqual(self.db.sql("SELECT count(*) FROM orders")[0][0],0,'no order row: the candle is released, not traded')
+
+    def test_paper_fill_uses_the_configured_quote_age(self):
+        self.ex.age=2.0; self.db.set('master',False)
+        self.books.books['up']['event']-=1.0                                     # book 1 s old: inside 2 s, outside 750 ms
+        asyncio.run(self.ex.fire(int(time.time())-30,decision(),'up','c',10,decision))
+        self.assertEqual(len(self.db.sql('SELECT * FROM fills')),1,'a 1 s quote accepted at 2 s must fill on paper too')
