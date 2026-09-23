@@ -257,3 +257,34 @@ class RetryRefreshesAStaleBook1301(unittest.TestCase):
         t=json.loads(db.sql("SELECT timing_json FROM orders ORDER BY attempt DESC LIMIT 1")[0][0] or "{}")
         self.assertTrue(t.get('rest_refreshed')); self.assertIn('rest_refresh_ms',t)
         db.c.close(); temp.cleanup()
+
+
+class BugHunt1302(unittest.TestCase):
+    """13.0.2 bug hunt: an identical REST book is not a 'changed' book; a hand edit clears the profile label."""
+    def test_identical_rest_book_is_not_logged_as_changed(self):
+        temp=tempfile.TemporaryDirectory(); db=C.Journal(str(pathlib.Path(temp.name)/'j.db'),'LIVE','abc')
+        books=C.BookCache(); books.apply(snap(ask=.40)); books.terms['up']=(.001,1,.07,1)
+        class Refuse(C.PaperBroker):
+            basis='VENUE_CONFIRMED_TRADE_AND_VENUE_FEE'
+            def __init__(s,b,d): super().__init__(b,d); s.n=0
+            async def post(s,signed):
+                s.n+=1
+                if s.n==1: return {'rejected':{'class':'X','message':'no orders found to match with FAK order','code':'','request_reached':True}}
+                return await super().post(signed)
+            async def book_snapshot(s,t):
+                e=snap(ask=.40); e['timestamp']=str(int(time.time()*1000)+5); return e   # same levels, new server stamp
+        ex=C.Executor(db,books,Refuse(books,db),budget_s=2.0); db.set('master',True)
+        d={'fire':True,'side':'UP','p':.9,'threshold':0.,'features':{}}
+        asyncio.run(ex.fire(int(time.time())-30,d,'up','c',10,lambda:d))
+        t=json.loads(db.sql("SELECT timing_json FROM orders ORDER BY attempt DESC LIMIT 1")[0][0] or "{}")
+        self.assertIs(t.get('rest_refreshed'),False); db.c.close(); temp.cleanup()
+    def test_hand_edit_clears_the_profile_label(self):
+        from types import SimpleNamespace
+        from poly_dashboard import Dashboard
+        temp=tempfile.TemporaryDirectory(); db=C.Journal(str(pathlib.Path(temp.name)/'p.db'),'LIVE','h')
+        ui=Dashboard.__new__(Dashboard); ui.db=db
+        ui.r=SimpleNamespace(CALIBRATION_DEFAULT=dict(enabled=False,cut=0.80,to=0.784,mode='cut',a=1.0,b=0.0),EV_MODES=('regime','fixed','accuracy'))
+        ui.apply('/api/controls/profile',dict(confirmed=True,name='fixed15')); self.assertEqual(db.get('ef_profile'),'fixed15')
+        ui.apply('/api/controls/ev',dict(confirmed=True,mode='fixed',value=0.15)); self.assertEqual(db.get('ef_profile'),'fixed15','no-op edit keeps it')
+        ui.apply('/api/controls/ev',dict(confirmed=True,value=0.05)); self.assertIsNone(db.get('ef_profile'))
+        db.c.close(); temp.cleanup()

@@ -196,6 +196,11 @@ class BookCache:
                 # the last snapshot is the only measure of how far our book may
                 # have drifted from the venue's.
                 self.seq+=1; b.update(event=stamp,arrival=time.monotonic(),seq=self.seq)
+    def levels(self,t):
+        """13.0.2: the book's price levels only (no seq/timestamps) - what a retry compares to tell a changed book
+        from a re-stamped copy of the same one."""
+        b=self.books.get(t)
+        return None if not b else (tuple(sorted(b['asks'].items())),tuple(sorted(b['bids'].items())))
     def quote(self,t,max_age=.75):
         """Top of book, or None with the reason counted.
 
@@ -532,7 +537,7 @@ class Journal:
         with self.lock,self.c:
             for k,v in updates.items():
                 self.c.execute('INSERT OR REPLACE INTO meta VALUES(?,?)',(k,json.dumps(v)))
-        for k,v in updates.items(): self._meta_cache[k]=(time.monotonic(),json.loads(json.dumps(v)))
+        now=time.monotonic(); self._meta_cache.update({k:(now,json.loads(json.dumps(v))) for k,v in updates.items()})   # 13.0.2: one step
     def reserve(self,ep,d,token,condition,kind='EF'):
         with self.lock,self.c:
             return self.c.execute('''INSERT OR IGNORE INTO signals(epoch,ts,side,token,condition_id,decision,status,kind)
@@ -971,10 +976,11 @@ class PaperBroker:
     async def keepalive(self): return None   # 12.19.0: no connection to keep warm
 
 
+LOOP_KIND=None   # 13.0.2: set once by the engine's run(); the dashboard thread has no running loop to inspect
 def loop_kind():
     """13.0.2: which event loop runs the engine ('uvloop' or 'asyncio'), for latency_stats and the boot line."""
     try: return 'uvloop' if type(asyncio.get_running_loop()).__module__.startswith('uvloop') else 'asyncio'
-    except RuntimeError: return None
+    except RuntimeError: return LOOP_KIND
 class Executor:
     # 12.19.0: after a retryable reject, re-price on a book that has CHANGED since
     # the rejected attempt was priced (the reject says the touch moved) - but wait
@@ -1195,11 +1201,17 @@ class Executor:
                 # again - London 0x19b1b427: 4 attempts, book age 358 -> 709 -> 1024 -> 1334 ms, all refused. Read the
                 # book once over REST and apply it; the next attempt re-prices off what is really there, and order_plan
                 # still re-checks EV at that price, so a moved book can make the trade stand down but never overpay.
-                if not ticked and hasattr(broker,'book_snapshot') and deadline-time.monotonic()>self.POST_FLOOR_S:
-                    t_r=time.monotonic()
+                # 13.0.2: the read only runs while it leaves the next attempt REFRESH_RESERVE_S above the floor for
+                # reassess/sign/db (a refresh that ate the floor turned into a BUDGET refusal), and "changed" is judged
+                # on the levels, not seq - /book is stamped with server time, so every read bumps seq even when the
+                # book is identical to the one the venue just refused.
+                room=deadline-time.monotonic()-self.POST_FLOOR_S-self.REFRESH_RESERVE_S
+                if not ticked and hasattr(broker,'book_snapshot') and room>0.02:
+                    t_r=time.monotonic(); before=self.books.levels(token)
                     try:
-                        ev=await asyncio.wait_for(broker.book_snapshot(token),min(0.4,max(.05,deadline-time.monotonic()-self.POST_FLOOR_S)))
-                        self.books.apply(ev); q2=self.books.quote(token,self.age); ticked=bool(q2 and q2.get('seq')!=seq)
+                        ev=await asyncio.wait_for(broker.book_snapshot(token),min(0.4,room))
+                        if ev is not None: self.books.apply(ev)
+                        ticked=ev is not None and self.books.levels(token)!=before
                         refresh=dict(rest_refresh_ms=round(1000*(time.monotonic()-t_r),1),rest_refreshed=ticked)
                     except Exception as e:
                         refresh=dict(rest_refresh_error=type(e).__name__)
@@ -1217,6 +1229,7 @@ class Executor:
         return self.broker,getattr(self.db,'lane','PAPER')
     def broker_for(self,lane):
         return self.shadow if (self.shadow is not None and lane=='PAPER' and getattr(self.db,'lane','PAPER')!='PAPER') else self.broker
+    REFRESH_RESERVE_S=0.1   # 13.0.2: time kept for the next attempt's reassess/sign/db after a REST book read
     async def _await_tick(self,token,seq,deadline):
         """12.19.0: True when the local book changed (seq) since the rejected attempt was
         priced, False when RETRY_TICK_WAIT_S (or the deadline) passed first. Local reads only."""

@@ -101,6 +101,18 @@ class FastPath(unittest.TestCase):
         b,hits=self._live(); ms=asyncio.run(b.keepalive())
         self.assertEqual(sorted(h[0] for h in hits),['clob','secure_clob']); self.assertIsNotNone(ms); self.assertIsNotNone(b.keepalive_book_ms)
         st=C.Executor(self.db,self.books,b).latency_stats(); self.assertIn('keepalive_book_ms',st); self.assertIn('loop',st)
+    def test_hanging_book_transport_does_not_hide_the_order_keepalive(self):
+        from types import SimpleNamespace
+        class T:
+            def __init__(s,d): s.d=d
+            async def get_json(s,path): await asyncio.sleep(s.d); return {}
+        b=LiveBroker(self.books); b.KEEPALIVE_BOOK_S=0.05
+        b.client=SimpleNamespace(_ctx=SimpleNamespace(secure_clob=T(0.01),clob=T(10)))
+        self.assertIsNotNone(asyncio.run(asyncio.wait_for(b.keepalive(),1))); self.assertIsNotNone(b.keepalive_at); self.assertIsNone(b.keepalive_book_ms)
+    def test_loop_kind_off_the_loop_reads_the_recorded_kind(self):
+        old=C.LOOP_KIND; C.LOOP_KIND='uvloop'
+        try: self.assertEqual(C.loop_kind(),'uvloop')
+        finally: C.LOOP_KIND=old
     def test_book_transport_failure_does_not_fail_the_order_keepalive(self):
         b,_=self._live(book_fails=True); self.assertIsNotNone(asyncio.run(b.keepalive())); self.assertIsNone(b.keepalive_book_ms)
     def test_attempt1_fire_to_wire_is_reported_apart_from_retries(self):

@@ -151,7 +151,7 @@ function updateUI(state){
   }else text('candleInfo','waiting for kline');
   text('feedLatency',feed.exchange_latency_ms==null?'--':feed.exchange_latency_ms+' ms');
   // 12.21.3: the header follows the ROUTE (LIVE / SHADOW / PAPER), live, not the page-load flag.
-  if(live.lane&&live.build)text('buildStamp',live.build+' · EF '+(live.ef_profile||'v10')+' · '+live.lane);
+  if(live.lane&&live.build)text('buildStamp',live.build+' · EF '+(live.ef_profile||('custom '+(live.ef_engine||'v10')))+' · '+live.lane);
   var sl=live.settlement||{};
   text('setLine',sl.line_now!=null?Number(sl.line_now).toFixed(1):'--');
   cls('setLine','big '+(sl.line_now!=null&&sl.line_open!=null?(sl.line_now>=sl.line_open?'up':'down'):''));

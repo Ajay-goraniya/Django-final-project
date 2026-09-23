@@ -308,7 +308,7 @@ class Dashboard:
     # v13 EF profiles (owner, 09-23: "recreate v13 that has raw_v10_live25 so it can keep good frequency").
     # raw_v10_live25: the v10 EF as trained, no probability correction, one 25% EV bar - ~71 fires/day on the
     #   09-08..16 paper run, +$692 at $5, worst drawdown $84 (analysis/v/model/EF_DRAWDOWN_V.md grid).
-    # fixed15: v10 EF with H1's Platt correction (a 1.0677, b -0.3208) and a 15% bar - ~31/day, +$512, drawdown $33.
+    # fixed15: v10 EF with H1's Platt correction (a 1.0677, b -0.3208) and a 15% bar - ~31/day, +$476 at exact fees (V, 1982015), drawdown $33 in-sample, $53 walk-forward.
     EF_PROFILES={
         'raw_v10_live25':dict(ef_engine='v10',calibration=dict(enabled=False),ev=dict(mode='fixed',value=0.25)),
         'fixed15':dict(ef_engine='v10',calibration=dict(enabled=True,mode='platt',a=1.0677,b=-0.3208),ev=dict(mode='fixed',value=0.15)),
@@ -326,6 +326,7 @@ class Dashboard:
                 if 'ef_engine' in system:                                   # 12.22.0: which brain fires EF
                     if system['ef_engine'] not in ('v10','build11'): raise ValueError('ef_engine must be v10 or build11')
                     updates['ef_engine']=system['ef_engine']
+                    if system['ef_engine']!=self.db.get('ef_engine','v10'): updates['ef_profile']=None   # 13.0.2: hand change -> no profile
                 if 'stake' in system:
                     s={**DEFAULT_STAKE,**system['stake']}
                     if s['mode'] not in ('fixed','percent','streak','ladder'): raise ValueError('Unsupported stake mode')
@@ -382,8 +383,8 @@ class Dashboard:
                 cal=dict(getattr(self.r,'CALIBRATION_DEFAULT',dict(enabled=False,cut=0.80,to=0.784,mode='cut',a=1.0,b=0.0)))
                 cal.update(self.db.get('calibration') or {}); cal.update(prof['calibration'])
                 ev=dict(self.db.get('ev_settings') or {}); ev.update(prof['ev'])
-                self.db.set('ef_engine',prof['ef_engine']); self.db.set('calibration',cal); self.db.set('ev_settings',ev)
-                self.db.set('ef_profile',name)
+                # 13.0.2: one transaction and one cache update, so a decision never sees half a profile
+                self.db.set_many({'ef_engine':prof['ef_engine'],'calibration':cal,'ev_settings':ev,'ef_profile':name})
                 return dict(ok=True,profile=name,calibration=cal,ev_settings=ev,ef_engine=prof['ef_engine'])
             elif path=='/api/controls/calibration':
                 # Turns the p-correction on or off. Bounded here like every other
@@ -407,7 +408,8 @@ class Dashboard:
                 if cfg.get('mode','cut') not in ('cut','platt'): raise ValueError("mode must be 'cut' or 'platt'")
                 if not 0.0<float(cfg.get('a',1.0))<=1.25: raise ValueError('a must be in (0, 1.25]')
                 if not math.isfinite(float(cfg.get('b',0.0))): raise ValueError('b must be finite')
-                self.db.set('calibration',cfg)
+                # 13.0.2: a hand change that moves the setting off the profile clears the header's profile label
+                if cfg!=self.db.get('calibration'): self.db.set_many({'calibration':cfg,'ef_profile':None})
                 return dict(ok=True,calibration=cfg)
             elif path=='/api/controls/ev':
                 # Changes what the engine will pay and how often it fires, so it
@@ -442,7 +444,7 @@ class Dashboard:
                     cfg['pad_ticks']=t
                 if cfg.get('mode')=='fixed' and cfg.get('value') is None:
                     raise ValueError('fixed mode needs a value')
-                self.db.set('ev_settings',cfg)
+                if cfg!=self.db.get('ev_settings'): self.db.set_many({'ev_settings':cfg,'ef_profile':None})   # 13.0.2: as calibration
                 # No executor writes here. meta is the single source and the
                 # decide loop syncs every dial from it each pass
                 # (_sync_executor_dials). Setting them here too gave `band` and
@@ -632,7 +634,7 @@ class Dashboard:
         venue_positions=list(getattr(r,'account_positions',[]) or [])
         position_value=sum(float(x.get('current_value') or 0) for x in venue_positions if isinstance(x,dict))
         sizing_bankroll=self.equity()
-        self.cache=dict(feature_names=FEATURES,open_positions=positions,economics=self.pnl(),model=dict(version=10),learning=dict(status='Fixed v10 weights'),candle=current,settlement=self.settlement(),build=self.db.get('build'),ef_profile=self.db.get('ef_profile'),feature=d.get('features',{}),feed=self.feed_state(),metrics=dict(main=lane_metric('MAIN'),reversal=lane_metric('REVERSAL'),ef=lane_metric('EF'),combined=metric),main=self.lane_card('MAIN'),reversal=self.lane_card('REVERSAL'),lanes=(self.r.lane_decision or {}),main_block=(self.r.lane_decision or {}).get('main_block',''),ef=ef,ef_monitor=dict(status=d.get('reason') or f"v10 pnl · p {d.get('p','--')} · EV {d.get('ev','--')}"),book=book,last_fill=last,controls=ctr,capital=dict(balance=sizing_bankroll,sizing_bankroll=sizing_bankroll,wallet=cash,pending_payout=pending,open_position_value=position_value,free=cash,wallet_free=cash,funding_headroom=max(0,cash-reserve),reserve_detail=rd,fresh=age<15,balance_age_sec=age,realised=metrics['pnl'],reserved=reserve,next_stake=self.db.get('next_stake',1),truth=dict(source='Polymarket API (balance, positions, open orders, account PnL)',venue_positions=venue_positions,
+        self.cache=dict(feature_names=FEATURES,open_positions=positions,economics=self.pnl(),model=dict(version=10),learning=dict(status='Fixed v10 weights'),candle=current,settlement=self.settlement(),build=self.db.get('build'),ef_profile=self.db.get('ef_profile'),ef_engine=self.db.get('ef_engine','v10'),feature=d.get('features',{}),feed=self.feed_state(),metrics=dict(main=lane_metric('MAIN'),reversal=lane_metric('REVERSAL'),ef=lane_metric('EF'),combined=metric),main=self.lane_card('MAIN'),reversal=self.lane_card('REVERSAL'),lanes=(self.r.lane_decision or {}),main_block=(self.r.lane_decision or {}).get('main_block',''),ef=ef,ef_monitor=dict(status=d.get('reason') or f"v10 pnl · p {d.get('p','--')} · EV {d.get('ev','--')}"),book=book,last_fill=last,controls=ctr,capital=dict(balance=sizing_bankroll,sizing_bankroll=sizing_bankroll,wallet=cash,pending_payout=pending,open_position_value=position_value,free=cash,wallet_free=cash,funding_headroom=max(0,cash-reserve),reserve_detail=rd,fresh=age<15,balance_age_sec=age,realised=metrics['pnl'],reserved=reserve,next_stake=self.db.get('next_stake',1),truth=dict(source='Polymarket API (balance, positions, open orders, account PnL)',venue_positions=venue_positions,
                         reserve_confirmed=rd['confirmed'],reserve_unverified=rd['unverified'],
                         reserve_phantom=rd['phantom'],reserve_total_local=rd['total'],
                         reserve_phantom_ids=rd['phantom_ids'],

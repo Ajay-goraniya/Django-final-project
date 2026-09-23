@@ -58,6 +58,7 @@ class LiveBroker:
             return 'inline' if 'CoinCurve' in get_backend_class().__name__ else 'thread'
         except Exception: return 'thread'
     KEEPALIVE_PATH='/time'
+    KEEPALIVE_BOOK_S=2.0   # 13.0.2: bound on the book-transport ping, inside keepalive_loop's 3 s
     async def keepalive(self):
         """12.19.0: one cheap GET on the SAME transport the order POST uses (secure_clob),
         so the HTTP/2 connection is never cold when a signal fires. The SDK's pool expires
@@ -70,11 +71,15 @@ class LiveBroker:
         # nothing kept warm. Both are pinged together; the POST transport's result stays keepalive_ms.
         async def ping(tr):
             t=time.monotonic(); await tr.get_json(self.KEEPALIVE_PATH); return round(1000*(time.monotonic()-t),1)
+        # The POST result is recorded BEFORE the book ping is awaited, and the book ping has its own bound, so a
+        # hanging `clob` can never hide a good order-transport keepalive behind keepalive_loop's 3 s timeout.
         ctx=self.client._ctx
-        post,book=await asyncio.gather(ping(ctx.secure_clob),ping(ctx.clob),return_exceptions=True)
-        self.keepalive_book_ms=None if isinstance(book,BaseException) else book
-        if isinstance(post,BaseException): raise post
-        self.keepalive_ms=post; self.keepalive_at=time.monotonic(); return self.keepalive_ms
+        book=asyncio.ensure_future(asyncio.wait_for(ping(ctx.clob),self.KEEPALIVE_BOOK_S))
+        try: self.keepalive_ms=await ping(ctx.secure_clob); self.keepalive_at=time.monotonic()
+        except BaseException: book.cancel(); raise
+        try: self.keepalive_book_ms=await book
+        except Exception: self.keepalive_book_ms=None
+        return self.keepalive_ms
     async def open(self):
         if importlib.metadata.version('polymarket-client')!='0.10.0': raise RuntimeError('Use polymarket-client==0.10.0')
         from polymarket import AsyncSecureClient
@@ -113,7 +118,10 @@ class LiveBroker:
         Used only after a FAK 'no orders to match' when the websocket book has not changed, so a retry is not priced off
         the same stale book the venue just refused."""
         b=await self.client.get_order_book(token_id=t)
-        ts=b.timestamp.timestamp()*1000 if getattr(b,'timestamp',None) else time.time()*1000
+        # 13.0.2: no venue timestamp -> not applied (None). Stamping it with the local clock would mix clock sources
+        # and could reset BookCache.clock_offset and drop websocket deltas for the length of the skew.
+        if not getattr(b,'timestamp',None): return None
+        ts=b.timestamp.timestamp()*1000
         lv=lambda xs:[dict(price=str(x.price),size=str(x.size)) for x in xs]
         return dict(event_type='book',asset_id=t,timestamp=str(int(ts)),asks=lv(b.asks),bids=lv(b.bids))
     async def metadata(self,t):
