@@ -2102,7 +2102,7 @@ class Build1290(unittest.TestCase):
     def test_a_12_8_11_database_opens_additively(self):
         path = tempfile.mktemp(suffix='.sqlite3'); db = C.Journal(path, 'PAPER', 'abc')
         db.set('build', '12.8.11'); db.c.close(); db = C.Journal(path, 'PAPER', 'abc')
-        self.assertEqual(db.get('build'), '13.0.2'); db.c.close(); os.unlink(path)
+        self.assertEqual(db.get('build'), '13.0.3'); db.c.close(); os.unlink(path)
 
 
 # ---------------------------------------------------------------- 12.10.0

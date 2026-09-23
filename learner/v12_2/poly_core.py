@@ -439,10 +439,10 @@ class Journal:
         self.c.executescript('CREATE INDEX IF NOT EXISTS diagnostics_ts ON diagnostics(ts);')
         if 'id' not in [r[1] for r in self.c.execute('PRAGMA table_info(results)')]:
             self.c.close(); raise ValueError('Pre-release database schema: preserve it and choose a new DB')
-        for k,v in [('lane',lane),('model_hash',model_hash),('build','13.0.2')]:
+        for k,v in [('lane',lane),('model_hash',model_hash),('build','13.0.3')]:
             old=self.get(k)
             # v12.0 -> v12.1 is an additive execution/accounting migration.
-            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1','12.12.2','12.13.0','12.13.1','12.14.0','12.14.1','12.15.0','12.15.1','12.15.2','12.15.3','12.15.4','12.15.5','12.16.0','12.16.1','12.17.0','12.18.0','12.19.0','12.19.1','12.20.0','12.21.0','12.21.1','12.21.2','12.21.3','12.21.4','12.22.0','12.23.0','12.23.1','12.23.2','12.24.0','12.24.1','12.24.2','12.24.3','12.24.4','12.24.5','12.24.6','12.24.7','12.24.8','13.0.0','13.0.1','13.0.2'): pass
+            if k=='build' and old in ('12.0','12.1','12.2','12.2.1','12.2.2','12.2.3','12.2.4','12.3.0','12.3.1','12.3.2','12.3.3','12.3.4','12.3.5','12.3.6','12.3.7','12.3.8','12.4.0','12.4.1','12.4.2','12.4.3','12.4.4','12.4.5','12.4.6','12.4.7','12.4.8','12.4.9','12.4.10','12.4.11','12.5.0','12.5.1','12.5.2','12.6.0','12.6.1','12.6.2','12.7.0','12.7.1','12.8.0','12.8.1','12.8.2','12.8.3','12.8.4','12.8.5','12.8.6','12.8.7','12.8.8','12.8.9','12.8.10','12.8.11','12.9.0','12.10.0','12.11.0','12.11.1','12.11.2','12.11.3','12.12.0','12.12.1','12.12.2','12.13.0','12.13.1','12.14.0','12.14.1','12.15.0','12.15.1','12.15.2','12.15.3','12.15.4','12.15.5','12.16.0','12.16.1','12.17.0','12.18.0','12.19.0','12.19.1','12.20.0','12.21.0','12.21.1','12.21.2','12.21.3','12.21.4','12.22.0','12.23.0','12.23.1','12.23.2','12.24.0','12.24.1','12.24.2','12.24.3','12.24.4','12.24.5','12.24.6','12.24.7','12.24.8','13.0.0','13.0.1','13.0.2','13.0.3'): pass
             elif old is not None and old!=v: raise ValueError('Database identity mismatch; choose a new DB')
             self.set(k,v)
     def _migrate_signals_multilane(self):
@@ -1058,7 +1058,7 @@ class Executor:
                 if q: break
                 await asyncio.sleep(.005)
             else: self.db.release(ep,'DEADLINE',kind); return
-            timing['quote_wait_ms']=1000*(time.monotonic()-t); timing['quote_read_ms']=timing['quote_wait_ms']; timing['book_age_ms']=q['age_ms']; seq=q['seq']
+            timing['quote_wait_ms']=1000*(time.monotonic()-t); timing['quote_read_ms']=timing['quote_wait_ms']; timing['book_age_ms']=q['age_ms']; seq=q['seq']; priced=self.books.levels(token)
             # Recorded, never gated on. 12.3.2 refused orders above a snapshot-age
             # limit; the AWS session showed that is a seconds-into-candle
             # threshold in disguise - venue() subscribes once per cycle and
@@ -1195,26 +1195,27 @@ class Executor:
                            'no orders found to match','partially filled or killed')
                 if not any(x in code for x in RETRYABLE):
                     self.db.status(ep,'REJECTED',kind); return
-                ticked=await self._await_tick(token,seq,deadline)
-                # 13.0.1 (owner, 09-23 04:00: "on retries it's not updating book?"): if the websocket book has not
-                # moved since the venue said "no orders at your price", re-pricing off it sends the SAME refused cap
-                # again - London 0x19b1b427: 4 attempts, book age 358 -> 709 -> 1024 -> 1334 ms, all refused. Read the
-                # book once over REST and apply it; the next attempt re-prices off what is really there, and order_plan
-                # still re-checks EV at that price, so a moved book can make the trade stand down but never overpay.
-                # 13.0.2: the read only runs while it leaves the next attempt REFRESH_RESERVE_S above the floor for
-                # reassess/sign/db (a refresh that ate the floor turned into a BUDGET refusal), and "changed" is judged
-                # on the levels, not seq - /book is stamped with server time, so every read bumps seq even when the
-                # book is identical to the one the venue just refused.
-                room=deadline-time.monotonic()-self.POST_FLOOR_S-self.REFRESH_RESERVE_S
-                if not ticked and hasattr(broker,'book_snapshot') and room>0.02:
-                    t_r=time.monotonic(); before=self.books.levels(token)
+                # 13.0.3 (London 09-23 12:3x: 4 of 4 EF attempts on 2 candles refused 'no orders found to match', every
+                # retry retry_ticked=True, rest_refreshed None): 13.0.1 read the venue's book only when the websocket book
+                # had NOT moved, but "moved" was any seq bump - a bid or a far level - so the retry re-priced off the same
+                # asks the venue had just refused. A refusal is itself evidence our asks are wrong, so the REST book is
+                # read FIRST after every one (warm transport, ~20 ms on London), and the tick wait is only the fallback
+                # when REST fails or there is no room. "changed" = the levels differ from those the refused order was
+                # priced from. order_plan still re-checks EV at the new price: a moved book can stand the trade down,
+                # never overpay. The earlier notes (13.0.1: London 0x19b1b427, 4 attempts on one aging book; 13.0.2:
+                # REFRESH_RESERVE_S kept for the next attempt, levels not seq because /book is re-stamped every read)
+                # still hold.
+                room=deadline-time.monotonic()-self.POST_FLOOR_S-self.REFRESH_RESERVE_S; ticked=None
+                if hasattr(broker,'book_snapshot') and room>0.02:
+                    t_r=time.monotonic()
                     try:
                         ev=await asyncio.wait_for(broker.book_snapshot(token),min(0.4,room))
                         if ev is not None: self.books.apply(ev)
-                        ticked=ev is not None and self.books.levels(token)!=before
-                        refresh=dict(rest_refresh_ms=round(1000*(time.monotonic()-t_r),1),rest_refreshed=ticked)
+                        ticked=self.books.levels(token)!=priced
+                        refresh=dict(rest_refresh_ms=round(1000*(time.monotonic()-t_r),1),rest_refreshed=ev is not None,rest_changed=ticked)
                     except Exception as e:
                         refresh=dict(rest_refresh_error=type(e).__name__)
+                if ticked is None: ticked=await self._await_tick(token,seq,deadline)
                 continue
             if r.get('id')!=oid:
                 info={'class':'OrderIdentityMismatch','message':f'signed={oid} response={r.get("id")}', 'request_reached':True}

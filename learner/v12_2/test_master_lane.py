@@ -277,7 +277,7 @@ class BugHunt1302(unittest.TestCase):
         d={'fire':True,'side':'UP','p':.9,'threshold':0.,'features':{}}
         asyncio.run(ex.fire(int(time.time())-30,d,'up','c',10,lambda:d))
         t=json.loads(db.sql("SELECT timing_json FROM orders ORDER BY attempt DESC LIMIT 1")[0][0] or "{}")
-        self.assertIs(t.get('rest_refreshed'),False); db.c.close(); temp.cleanup()
+        self.assertIs(t.get('rest_refreshed'),True); self.assertIs(t.get('rest_changed'),False); db.c.close(); temp.cleanup()
     def test_hand_edit_clears_the_profile_label(self):
         from types import SimpleNamespace
         from poly_dashboard import Dashboard
@@ -287,4 +287,31 @@ class BugHunt1302(unittest.TestCase):
         ui.apply('/api/controls/profile',dict(confirmed=True,name='fixed15')); self.assertEqual(db.get('ef_profile'),'fixed15')
         ui.apply('/api/controls/ev',dict(confirmed=True,mode='fixed',value=0.15)); self.assertEqual(db.get('ef_profile'),'fixed15','no-op edit keeps it')
         ui.apply('/api/controls/ev',dict(confirmed=True,value=0.05)); self.assertIsNone(db.get('ef_profile'))
+        db.c.close(); temp.cleanup()
+
+
+class RefreshEvenWhenTheFeedTicked1303(unittest.TestCase):
+    """13.0.3: London 12:3x - the websocket book moved (a bid), the asks did not, and the retry re-sent the refused cap.
+    After a refusal the REST book is read first, whatever the websocket did."""
+    def test_rest_read_after_refusal_even_if_ws_ticked(self):
+        temp=tempfile.TemporaryDirectory(); db=C.Journal(str(pathlib.Path(temp.name)/'j.db'),'LIVE','abc')
+        books=C.BookCache(); books.apply(snap(ask=.40)); books.terms['up']=(.001,1,.07,1)
+        class Refuse(C.PaperBroker):
+            basis='VENUE_CONFIRMED_TRADE_AND_VENUE_FEE'
+            def __init__(s,b,d): super().__init__(b,d); s.caps=[]; s.snaps=0
+            async def post(s,signed):
+                oid,token,plan=signed; s.caps.append(plan['cap'])
+                if len(s.caps)==1:
+                    e=snap(ask=.40); e['bids']=[{'price':'0.38','size':'5'}]; e['timestamp']=str(int(time.time()*1000)+2)
+                    s.books.apply(e)                                   # the feed ticks: a bid moves, the asks do not
+                    return {'rejected':{'class':'X','message':'no orders found to match with FAK order','code':'','request_reached':True}}
+                return await super().post(signed)
+            async def book_snapshot(s,t):
+                s.snaps+=1; e=snap(ask=.42); e['timestamp']=str(int(time.time()*1000)+5); return e
+        venue=Refuse(books,db); ex=C.Executor(db,books,venue,budget_s=2.0); db.set('master',True)
+        d={'fire':True,'side':'UP','p':.9,'threshold':0.,'features':{}}
+        asyncio.run(ex.fire(int(time.time())-30,d,'up','c',10,lambda:d))
+        self.assertEqual(venue.snaps,1); self.assertGreater(venue.caps[1],venue.caps[0],'priced off the venue book, not the refused asks')
+        t=json.loads(db.sql("SELECT timing_json FROM orders ORDER BY attempt DESC LIMIT 1")[0][0] or "{}")
+        self.assertTrue(t.get('rest_refreshed')); self.assertTrue(t.get('rest_changed')); self.assertTrue(t.get('retry_ticked'))
         db.c.close(); temp.cleanup()

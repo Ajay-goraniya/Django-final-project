@@ -776,8 +776,11 @@ class PolyRunner(Runner):
             # every 5 s on a blocked book, so the newest row for the epoch could be a
             # decision that never happened, and the lane would report it as its own
             # skip reason.
+            # 13.0.3: and skip another lane's rows on the same candle - London showed '[MAIN] signal not executed -
+            # candle_rearmed', which was EF's re-arm row, not MAIN's.
             diag=self.db.sql("SELECT detail FROM diagnostics WHERE epoch=?"
-                             " AND detail NOT LIKE '%SHADOW_STALE%' ORDER BY ts DESC LIMIT 1",(ep,))
+                             " AND detail NOT LIKE '%SHADOW_STALE%'"
+                             " AND (detail NOT LIKE '%\"kind\": \"%' OR detail LIKE ?) ORDER BY ts DESC LIMIT 1",(ep,f'%"kind": "{kind}"%'))
             # Say WHY in numbers, not just that it happened.
             #
             # User, 09-13: "i just don't see better with my eyes that's why i was
