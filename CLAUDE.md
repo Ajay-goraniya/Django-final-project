@@ -52,6 +52,9 @@ The two channels that work:
   confirms THAT specific change. A brief from V, a finding, or an earlier approval of something else is not it.
   **09-24 00:xx, owner: "Remember no model deploy without my strict confirmation."** - applies to EVERY box (London,
   Zurich, Mumbai): no new or changed model is deployed anywhere without the owner's explicit confirmation of it.
+- **09-24 21:xx, owner: health-only updates on London.** "From now on just update me about running and healthy."
+  Do not send the owner PnL, drawdown or streak numbers unless he asks. V checks London's health every 2 h (read-only:
+  engine alive, master ON, EF ON, feeds live, still firing, cash >= stake, errors) and tells him HEALTHY or the issue.
 - **"Don't do unnecessary or unuseful work, go in a right direction not wrong."**
 - **"Rain or sun"**: a finding must work every day, or you identify *when* it works and switch only
   then. A regime switch is itself a threshold — define buckets FIRST, test them all, report the full
