@@ -148,10 +148,51 @@ class DecideLog(unittest.TestCase):
         self.assertEqual(self.db.sql('SELECT COUNT(*) FROM decide_log')[0][0],0)
     def test_on_logs_every_pass_batched(self):
         self.db.set('decide_log',True)
-        for i in range(2): self.r._decide_log(1000+i,self.ep,self.d(i==1))
+        for i in range(2): self.r._decide_log(1000+250*i,self.ep,self.d(i==1))
         self.assertEqual(self.db.sql('SELECT COUNT(*) FROM decide_log')[0][0],0,'held until the batch fills')
-        self.r._decide_log(1002,self.ep,{'fire':False,'reason':'Warming up'})
+        self.r._decide_log(1500,self.ep,{'fire':False,'reason':'Warming up'})
         rows=self.db.sql('SELECT ts_ms,fire,up_ask,dn_ask,feats FROM decide_log ORDER BY ts_ms')
         self.assertEqual([r[1] for r in rows],[0,1,0]); self.assertEqual(rows[0][2],.41); self.assertIsNone(rows[0][3])
         self.assertEqual(json.loads(rows[0][4]),[1.,2.]); self.assertIsNone(rows[2][4])
         self.assertEqual(self.db.get('decide_log_features'),['a','b'])
+    def test_fast_passes_keep_four_rows_a_second_but_every_fire(self):
+        self.db.set('decide_log',True); self.r.DECIDE_LOG_BATCH=1
+        for i in range(50): self.r._decide_log(1000+20*i,self.ep,self.d(i==7))      # 50 passes in 1 s, one fire
+        rows=[tuple(r) for r in self.db.sql('SELECT ts_ms,fire FROM decide_log ORDER BY ts_ms')]
+        self.assertIn((1140,1),rows); self.assertLessEqual(len(rows),6)
+
+class EventDecide(unittest.TestCase):
+    """13.1.0: decide_mode 'event' wakes a fast EF pass on fresh data; full passes (lanes, tape, diagnostics) stay 0.25 s.
+    'poll' (default) is the old loop: a full pass every 0.25 s."""
+    def run_loop(self,mode,pokes_per_s=0,secs=1.0):
+        import btc_model_v12_polymarket as E
+        temp=tempfile.TemporaryDirectory(); db=C.Journal(str(pathlib.Path(temp.name)/'j.db'),'PAPER','abc')
+        if mode: db.set('decide_mode',mode)
+        r=E.PolyRunner.__new__(E.PolyRunner); r.db=db; calls=[]
+        async def once(full=True): calls.append((time.monotonic(),full))
+        r._decide_once=once
+        async def main():
+            t=asyncio.create_task(r.decide_loop())
+            end=time.monotonic()+secs
+            while time.monotonic()<end:
+                await asyncio.sleep(1/pokes_per_s if pokes_per_s else secs)
+                if pokes_per_s: r._poke()
+            t.cancel(); await asyncio.gather(t,return_exceptions=True)
+        asyncio.run(main()); db.c.close(); temp.cleanup(); return calls
+    def test_poll_is_the_old_loop(self):
+        c=self.run_loop(None,secs=1.0)
+        self.assertTrue(all(f for _,f in c)); self.assertTrue(4<=len(c)<=6,len(c))
+    def test_event_mode_reacts_but_keeps_full_cadence(self):
+        c=self.run_loop('event',pokes_per_s=200,secs=1.0)
+        full=[t for t,f in c if f]; fast=[t for t,f in c if not f]
+        self.assertTrue(4<=len(full)<=6,len(full))                                   # lanes/tape still ~4/s
+        self.assertGreater(len(fast),20)                                              # EF sees fresh data often
+        gaps=np.diff(sorted(t for t,_ in c)); self.assertGreaterEqual(gaps.min(),C_MIN_GAP-0.005)   # never faster than the floor
+    def test_event_mode_without_data_falls_back_to_polling(self):
+        c=self.run_loop('event',pokes_per_s=0,secs=1.0)
+        self.assertTrue(all(f for _,f in c)); self.assertTrue(4<=len(c)<=6,len(c))
+    def test_poke_before_loop_is_harmless(self):
+        import btc_model_v12_polymarket as E
+        r=E.PolyRunner.__new__(E.PolyRunner); r._poke()
+import numpy as np
+import btc_model_v12_polymarket as _E; C_MIN_GAP=_E.PolyRunner.DECIDE_MIN_GAP_S

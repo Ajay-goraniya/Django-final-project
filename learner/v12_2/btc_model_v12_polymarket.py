@@ -263,7 +263,7 @@ class PolyRunner(Runner):
                                 continue
                             for ev in data if isinstance(data,list) else [data]:
                                 if isinstance(ev,dict): self.books.apply(ev)
-                            self.publish(); self.msgs['venue']=self.msgs.get('venue',0)+1
+                            self.publish(); self.msgs['venue']=self.msgs.get('venue',0)+1; self._poke()
                     finally: task.cancel(); await asyncio.gather(task,return_exceptions=True)
             except Exception as e: self.error='Venue reconnect: '+type(e).__name__; await asyncio.sleep(1)
             finally:
@@ -273,13 +273,13 @@ class PolyRunner(Runner):
                         for t in self.market.pop(old): self.books.terms.pop(t,None); self.terms_age.pop(t,None)
                         self.info.pop(old,None)
     def on_spot(self,j):
-        super().on_spot(j)
+        super().on_spot(j); self._poke()
         try: self.lanes.on_spot_trade(int(j['T']),float(j['p']),float(j['q']),bool(j['m']))
         except Exception: pass
         try: self._tape_add('spot',int(j['T']),float(j['p']),float(j['q']),bool(j['m']))
         except Exception: pass
     def on_perp(self,j):
-        super().on_perp(j)
+        super().on_perp(j); self._poke()
         # 12.23.0: the perp trade tape reaches the lane engine (build11's primary EF microstructure)
         try: self.lanes.on_perp_trade(int(j['T']),float(j['p']),float(j['q']),bool(j['m']))
         except Exception: pass
@@ -344,7 +344,7 @@ class PolyRunner(Runner):
             for t_us,v in self.ref_samples(j): self.st.on_ref_price(t_us,v)
         except Exception: pass
     def on_depth(self,j):
-        super().on_depth(j)
+        super().on_depth(j); self._poke()
         try:
             b=[(float(x[0]),float(x[1])) for x in j.get('b',[])][:20]
             a=[(float(x[0]),float(x[1])) for x in j.get('a',[])][:20]
@@ -519,11 +519,29 @@ class PolyRunner(Runner):
                      ev_gate_pad=pad,ev_gate_ask=q['ask'])
             return out
         return dict(d,ev_gate='pass',ev_gate_pad=pad,ev_gate_ask=q['ask'],ev_gate_cap=plan['cap'])
+    # 13.1.0: event-driven EF decide, opt-in via meta decide_mode='event' (default 'poll' = the 12.x/13.0 loop, unchanged).
+    # London 09-24: a price move waited ~125 ms (max 250) for the next 0.25 s pass before EF even saw it, and refused
+    # attempt-1 orders were priced on older books (p50 42 ms vs 26 ms filled). In 'event' mode every spot/perp/depth/venue
+    # message wakes a FAST pass (decide_now + fire only) at most every DECIDE_MIN_GAP_S; the FULL pass (tape flush, MAIN and
+    # REVERSAL lanes, decide_log, diagnostics) keeps its 0.25 s cadence, so the lanes' read-count holds (MAIN_HOLD_READS)
+    # and every journal rate are exactly as before. The EF signal itself is unchanged - it is only seen sooner.
+    DECIDE_POLL_S=.25
+    DECIDE_MIN_GAP_S=.02
+    def decide_mode(self):
+        v=self.db.get('decide_mode','poll'); return v if v in ('poll','event') else 'poll'
+    def _poke(self):
+        ev=self.__dict__.get('_wake')
+        if ev is not None and not ev.is_set(): ev.set()
     async def decide_loop(self):
-        self._decide_last=0
+        self._decide_last=0; self._wake=asyncio.Event(); full_at=-1e9; fast_at=-1e9
         while True:
+            event=self.decide_mode()=='event'
+            full=(not event) or time.monotonic()-full_at>=self.DECIDE_POLL_S
+            self._wake.clear()          # before the pass: data that lands DURING it wakes the next one at once
             try:
-                await self._decide_once()
+                if full: full_at=time.monotonic()
+                fast_at=time.monotonic()
+                await self._decide_once(full=full)
             except asyncio.CancelledError:
                 raise
             except Exception as e:
@@ -536,7 +554,15 @@ class PolyRunner(Runner):
                 try: self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),0,json.dumps(dict(
                     reason='decide_loop_error',error=type(e).__name__,detail=str(e)[:400]))))
                 except Exception: pass
-            await asyncio.sleep(.25)
+            if not event: await asyncio.sleep(self.DECIDE_POLL_S); continue
+            # wait for fresh data, but never past the next full pass; then keep a minimum gap between passes
+            # asyncio.wait, not wait_for: on 3.11 wait_for can swallow a cancel that lands as the wake fires, and the
+            # supervised task would then never stop (reproduced in test_fastpath.EventDecide, 1 run in 5).
+            waiter=asyncio.ensure_future(self._wake.wait())
+            try: await asyncio.wait({waiter},timeout=max(0.001,self.DECIDE_POLL_S-(time.monotonic()-full_at)))
+            finally: waiter.cancel()
+            gap=self.DECIDE_MIN_GAP_S-(time.monotonic()-fast_at)
+            if gap>0: await asyncio.sleep(gap)
     def ef_engine(self):
         """12.22.0: which brain fires EF - 'v10' (packaged classifier) or 'build11' (EF reversal lane)."""
         v=self.db.get('ef_engine','v10'); return v if v in ('v10','build11') else 'v10'
@@ -544,10 +570,11 @@ class PolyRunner(Runner):
         """12.21.1: will the next order go to the venue? (Executor.route: credentials AND master ON)"""
         try: return self.executor.route()[1]=='LIVE'
         except Exception: return bool(self.a.live)
-    async def _decide_once(self):
+    async def _decide_once(self,full=True):
         if True:
-            try: self._tape_flush()
-            except Exception as e: self.error='tape1s: '+type(e).__name__
+            if full:
+                try: self._tape_flush()
+                except Exception as e: self.error='tape1s: '+type(e).__name__
             t_ms=int(time.time()*1000)
             d=self.decide_now(); ep=int(time.time()//300)*300
             # 12.22.0: ef_engine control. 'v10' = the packaged classifier fires EF here; 'build11' = the
@@ -596,9 +623,10 @@ class PolyRunner(Runner):
                     d['signal_price']=float(self.st.s_px[-1]) if self.st.s_px else None
                     await self.executor.fire(ep,d,token,self.info[ep]['conditionId'],stake,lambda: self.decide_now() if self.ui.allowed() else {'fire':False})
                     self.revision+=1
-            await self.lane_loop(ep)
             try: self._decide_log(t_ms,ep,d)
             except Exception as e: self.error='decide_log: '+type(e).__name__
+            if not full: return
+            await self.lane_loop(ep)
             if time.time()-self._decide_last>15:
                 self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(d))); self._decide_last=time.time()
     # 13.0.4: decide_log - EF's call on EVERY decide pass (~4/s), opt-in via meta 'decide_log' (default off).
@@ -609,6 +637,9 @@ class PolyRunner(Runner):
     DECIDE_LOG_BATCH=40
     def _decide_log(self,t_ms,ep,d):
         if not self.db.get('decide_log',False): return
+        # 13.1.0: event mode runs fast passes up to 50/s; keep ~4 rows/s, but never drop a fire
+        if not d.get('fire') and t_ms-self.__dict__.get('_dlog_last',-10**12)<250: return
+        self._dlog_last=t_ms
         f=d.get('features') or {}; keys=sorted(k for k in f if k!='ts_ms')
         if keys and self.__dict__.get('_dlog_keys')!=keys:
             if self.db.get('decide_log_features')!=keys: self.db.set('decide_log_features',keys)
