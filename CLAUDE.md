@@ -57,6 +57,10 @@ The two channels that work:
   okay ... make sure I don't see it") - sessions may track PnL between themselves. V checks London's health every 2 h
   (read-only: engine alive, master ON, EF ON, feeds live, still firing, cash >= stake, errors) and tells him HEALTHY or
   the issue. Applies to every session he talks to, London included.
+  **21:2x refinement - message the owner ONLY when:** (1) London runs out of money (cash + open < next stake);
+  (2) an issue no session can fix without him (anything needing a London change needs his confirmation, so it goes to
+  him); (3) something is broken - engine down, feeds dead, server/AWS problem, London unreachable; (4) equity (cash +
+  open value) reaches $500 - one message, the first time. Otherwise silence: healthy checks are not reported.
 - **"Don't do unnecessary or unuseful work, go in a right direction not wrong."**
 - **"Rain or sun"**: a finding must work every day, or you identify *when* it works and switch only
   then. A regime switch is itself a threshold — define buckets FIRST, test them all, report the full
