@@ -640,3 +640,36 @@ So the artifact I reported on 13.1.0 (117 rows for one candle) is **not fixed**;
 guard changed which row is guaranteed present, not how many are written. Anyone who resumes counting
 fires from `decide_log` because 13.1.1 "fixed it" will still see a 6-15x inflation. `count(distinct
 epoch)` remains the only honest fire count.
+
+## Ask-drift after the fire (V's metric) — and a +8-tick artifact it nearly produced
+
+V, 09-24: book_age is the wrong test for "sooner", because firing right after a Binance tick means
+firing *before* Polymarket re-quotes, so the book is older by construction. The discriminating test is
+whether the ask **rises after** we fire. `analysis/zurich/ask_drift.py`, read-only.
+
+**Measured against `signal_quote`, as briefed, the answer looks spectacular and is wrong.**
+
+| baseline | POLL (n=162) | EVENT @50 ms (n=16) |
+|---|---|---|
+| vs `signal_quote`, +1s | **+7.90** ticks, 76.5% rose | +5.25, 68.8% |
+| vs `signal_quote`, +2s | +7.81, 74.1% | +5.75, 68.8% |
+| **vs tape's own ask at the fire second, +1s** | **+0.67**, 37.0% | +0.50, 37.5% |
+| **vs tape, +2s** | +0.57, 45.7% | +1.00, 50.0% |
+
+`signal_quote` is the **executor's** read; `up_ask`/`dn_ask` in `tape1s` are a **1 Hz snapshot taken on
+the full pass**. They are different measurement sources. At the fire second itself the median gap
+between them is already **0.050 = 5 ticks** (checked directly: same-side ask closer than the opposite
+side in 148 of 201 orders, median same-side gap 0.050 vs opposite 0.150). So most of the "+7.9 tick
+rise" is that constant offset, not market movement.
+
+Taking both ends from the tape cancels the offset, and the real drift is **under one tick**. A +7.9
+tick rise would have meant EF reliably buys 8 ticks ahead of an 8-tick move — an enormous edge, and
+entirely an artifact of mixing two price sources.
+
+**On the honest baseline the two arms are indistinguishable**: +0.67 vs +0.50 ticks at +1s, 37.0% vs
+37.5% rose. n=16 against n=162 anyway.
+
+**Time from the newest spot trade to fire is NOT journaled.** `since_tick_change_s` and
+`last_tick_change` are non-null in **0 of 231** EF orders, and the aggTrade `E` field is consumed by
+`on_depth` without being stored per order. That metric cannot be produced from this journal without a
+code change; I am not proposing one.
