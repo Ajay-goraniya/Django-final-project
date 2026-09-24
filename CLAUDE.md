@@ -63,6 +63,8 @@ The two channels that work:
   open value) reaches $500 - one message, the first time: a proper congratulations.
   **21:3x final form:** healthy checks ARE reported, hourly, one line. PnL is never given as a number - only a mood word
   for the hour: "well" (flat or down), "good" (up a little), "excellent" (up ~$10+), "brilliant!!!!" (up ~$25+).
+  Same for drawdowns and losing streaks: never a number, never a warning - a down hour is just "well". The only
+  money alert is (1), running out of money.
   Incidents (1)-(3) go out with a push notification and are REPEATED every 30 min until he replies.
 - **"Don't do unnecessary or unuseful work, go in a right direction not wrong."**
 - **"Rain or sun"**: a finding must work every day, or you identify *when* it works and switch only
