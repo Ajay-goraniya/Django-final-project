@@ -581,3 +581,27 @@ the engine**, which is worth recording because it is the useful half of the even
 So the 13.1.0 shadow run has not yet said anything about whether EF sees prices sooner — n is 2 —
 but it has already paid for itself by exposing a 2x CPU cost and a logging artifact that would have
 made fire counts look 6x higher across the mode switch.
+
+## 13.1.1 deployed at 50 ms (09-24 15:15:03) — the 20 ms arm closes at n=2
+
+Owner: "Switch to 50ms now", which replaced the after-10-orders gate. Clean 15:15:01, stopped pid
+167283, **39/39 == git show a881350**, `sha256sum -c` clean, 484 suites OK, started pid **168424**.
+Unchanged: master false, raw_v10_live25, ev 0.25, calibration off, stake 5, `decide_log` true,
+`decide_mode` event, halt null.
+
+**`decide_min_gap_ms` is left UNSET in meta on purpose.** V asked for "default 50", and
+`decide_min_gap_s()` reads `db.get('decide_min_gap_ms', DECIDE_MIN_GAP_S*1000)` with
+`DECIDE_MIN_GAP_S=.05` in the deployed file. So the effective gap is 50 ms via the code default and
+the meta key reads `None` — that is correct, not a missed write. Setting it explicitly would only
+pin the value against a future default change, which nobody asked for.
+
+### The 20 ms arm, closed
+| | 20 ms event | poll |
+|---|---|---|
+| EF orders | **2** | 167 |
+| book_age_ms p50 / p90 | 56.4 / 91.6 | 39.9 / 131.7 |
+| CPU | 41.1% (120 s), 60.2% and 51.4% (300 s), 21.3% (90 s) | 28.7% (300 s) |
+
+The two book_age values were 21.2 and 91.6 ms. **n=2 is not a comparison** and the 20 ms arm never
+produced one. Its only durable results are the two measurement findings — 2.1x CPU and the
+117-fire-rows artifact — and 13.1.1 fixes both, so closing it early cost little.
