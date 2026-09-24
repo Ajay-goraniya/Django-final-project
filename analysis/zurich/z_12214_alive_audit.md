@@ -673,3 +673,26 @@ entirely an artifact of mixing two price sources.
 `last_tick_change` are non-null in **0 of 231** EF orders, and the aggTrade `E` field is consumed by
 `on_depth` without being stored per order. That metric cannot be produced from this journal without a
 code change; I am not proposing one.
+
+---
+
+# 13.1.2 + the poll/event A/B (09-24 19:30:02)
+
+Deploy: clean 19:30:00, stopped pid 168424, **39/39 == git show 327de5f**, `sha256sum -c` clean,
+**485 suites OK**, started pid **169816**. Settings all unchanged: master false, raw_v10_live25,
+ev 0.25, calibration off, stake 5, `decide_log` true, `decide_mode` event, `decide_min_gap_ms` unset
+so the 50 ms code default applies.
+
+## Design note: arm membership comes from the order, not from my flip clock
+13.1.2 journals `feed_timing.decide_mode` on every fired EF decision. `analysis/zurich/ab_decide_mode.py`
+splits the arms on **that field**, not on the flip timestamps. A flip that lands late, or a flip I fail
+to make, therefore cannot mis-assign an order — it only changes how many land in each arm. Orders whose
+decision predates 13.1.2 carry no `feed_timing` and are **excluded and counted**, never guessed at.
+The flip log (`out/ab_flips.jsonl`) is kept because V asked for it, not because the analysis needs it.
+
+Flipper: `out/ab_flip.py 60 16` — 60 min period, 16 h cap, `Journal.set` only, no restart. First arm
+EVENT from 19:30:02, so the first flip to POLL is due 20:30.
+
+**The 13.1.1 60-order watcher was stopped.** That arm measured a single fixed mode on a build the A/B
+supersedes; leaving it running would have sent a stale report against a cutoff that no longer describes
+what the engine is doing.
