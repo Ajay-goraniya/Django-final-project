@@ -147,6 +147,14 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
 - **Where master can still go OFF without the owner:** (1) a deploy that points the engine at a NEW database file;
   (2) a session briefed to park it (a safe-start deploy did this on 09-16 03:40). Both need a written owner order under
   the current rules. No automatic stop exists (cash floor removed 09-23).
-- **To do (only on the owner's confirmation):** a read-only check on London that master's audit trail shows no write
-  at any restart since 12.24.3, and a DEPLOY_LONDON.md line: "never park master on a restart/deploy unless the owner
-  says so in writing".
+- **Verified on London 09-24 19:24 (read-only):** `pm-london.service` is enabled, `Restart=always`,
+  `WantedBy=multi-user.target` -> it starts on a full server reboot and after any crash; `--db polymarket_v12_london_1.sqlite3`
+  is a fixed file; master is ON in meta. Master audit since 09-22: only dashboard (owner) writes; **none at the 7 restarts**
+  since 09-23 - master stayed ON through all of them. The dashboard is served by the same process, so it comes back too.
+- **Two small open items (recorded, not done - owner 09-24: "no need to annoy London now"):**
+  1. The boot banner still prints "(master OFF = shadow paper)" - a static label, not a write. Reword it to show the
+     real stored state (e.g. "master ON (from meta)") next time a London build is approved.
+  2. The Claude bridge on London (tmux) does not survive a server reboot. Trading continues without it, but V cannot
+     get London reports until it is restarted. Add a systemd unit or @reboot entry for it on the owner's go.
+- **Still to add (owner's go):** a DEPLOY_LONDON.md line: "never park master on a restart/deploy unless the owner says so
+  in writing".
