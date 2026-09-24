@@ -62,7 +62,8 @@ The two channels that work:
   him); (3) something is broken - engine down, feeds dead, server/AWS problem, London unreachable; (4) equity (cash +
   open value) reaches $500 - one message, the first time: a proper congratulations.
   **21:3x final form:** healthy checks ARE reported, hourly, one line. PnL is never given as a number - only a mood word
-  judged on the ALL-TIME picture (equity vs its running high since fixed15 went live 09-23), not the last hour:
+  judged on the ALL-TIME picture (owner 21:2x: "all time pnl not 24h or week one") - London's all-time PnL and equity
+  since it first went live (all lanes, venue truth) vs the all-time equity high, never a 24 h / weekly window:
   "brilliant!!!!" = at a new high; "excellent" = within ~$15 of the high; "good" = below the high but well above the
   start; "well" = near or below where it started. Drawdowns and streaks: never a number, never a warning. The only
   money alert is (1), running out of money.
