@@ -482,3 +482,41 @@ It printed `SHA256SUMS 39/38 OK` on this deploy: the denominator was `len(names)
 the original hardcoded `/30`. Both numbers now come from the hash lines actually checked, so the line
 cannot drift again. The verification itself was never wrong — 39 files verified against 39 hashes,
 all matching `git show` — only the denominator printed next to it.
+
+---
+
+# 13.1.0 event-driven decide — SHADOW test (09-24)
+
+Owner-approved via V. London and Mumbai untouched.
+
+## Step 1 — build verified
+stage 54f8ef0: 41 files, **SHA256SUMS 39/39 OK** == `git show`; `sha256sum -c SHA256SUMS.txt` clean
+(0 non-OK lines); all nine suites **482 tests, OK**. Build string reads `13.1.0`.
+
+## Step 2 — poll-mode baseline, measured BEFORE the restart
+`analysis/zurich/decide_mode_metrics.py`. V asked for the 13.0.4 window; that is only **8 EF orders**
+since 12:20:05, too thin to be a baseline, so the table below is the whole poll-mode raw arm since
+01:36:04 on 09-23 (13.0.0 + 13.0.4, `decide_mode` was poll throughout and only logging changed).
+Both are reported so nobody has to guess which window a number came from.
+
+| metric | 13.0.4 only (n=8) | whole poll arm (n=166) |
+|---|---|---|
+| `book_age_ms` at fire p50 / p90 | 40.9 / 52.0 | **39.9 / 131.7** |
+| `decision_ms` p50 / p90 | 2.08 / 2.24 | **2.08 / 3.25** |
+| signal-ask -> fill, ticks p50 / p90 / mean | +0.00 / +0.00 / -0.00 | **+0.00 / +0.50 / +0.09** |
+| partial fills | 0 | **12 of 166 (7.2%)** |
+| refusals | 0 | **0** |
+| decide passes | — | **3.76/s** (decide_log, 0.25 s cadence) |
+
+**Two things about this baseline that limit the test, both structural, neither a reason not to run it.**
+
+1. **Refusals cannot move.** Every order here is a `PaperBroker` fill that completes in-process —
+   404 of 404 orders in this journal are `FILLED`, reason `venue-confirmed fill`, zero refusals ever.
+   The refusal symptom that motivated 13.1.0 (London's refused attempt-1 orders priced on older books)
+   is a *live-venue* phenomenon the shadow lane structurally cannot reproduce. Expect 0 before and 0
+   after, and do not read that as "event mode fixed refusals".
+2. **`passes/s` will not show the speed-up.** 13.1.0 throttles `decide_log` to one row per 250 ms in
+   event mode (`btc_model_v12_polymarket.py:641`, fires exempt), precisely so the journal rate holds.
+   So decide_log reads ~4/s in *both* modes by design. The fast passes are not journalled anywhere, so
+   passes/s is not directly measurable from the DB; CPU% is the available proxy, and `book_age_ms` at
+   fire is the outcome that actually answers "did EF see it sooner".
