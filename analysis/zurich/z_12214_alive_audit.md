@@ -564,3 +564,20 @@ So event mode costs **2.1x** the CPU, not the 1.8x I reported. The direction and
 unchanged — the fast passes are real and the box has the headroom — but the ratio I gave V was wrong
 because I compared a 2-minute window against a 5-minute one.
 
+
+## 13.1.1 (a881350) verified and staged, waiting on the 10-order report
+
+484 tests OK, `sha256sum -c` clean (0 non-OK lines), 39/39 == `git show`. Not deployed yet — V's
+order is the 10-EF-order report on 13.1.0 first, and that is at **2 of 10** at 14:47.
+
+**Both changes in this build came out of measurement problems I reported rather than from a fault in
+the engine**, which is worth recording because it is the useful half of the event-mode test so far:
+
+| 13.1.1 change | the report it came from |
+|---|---|
+| `decide_min_gap_ms` live dial, default **50 ms** (was a hardcoded 20 ms floor) | my CPU correction: 20 ms cost **2.1x** poll, and the code comment now cites "Zurich 09-24" |
+| `decide_log` keeps only a candle's **first** fire row | my finding that event mode logged **117 fire rows for one candle and one order** because fires are exempt from the 250 ms throttle |
+
+So the 13.1.0 shadow run has not yet said anything about whether EF sees prices sooner — n is 2 —
+but it has already paid for itself by exposing a 2x CPU cost and a logging artifact that would have
+made fire counts look 6x higher across the mode switch.
