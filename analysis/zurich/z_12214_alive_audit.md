@@ -549,3 +549,18 @@ of **28.7%** was unaffected — it did resolve to the real engine (166436) — b
 have been a fabrication. `cpu5.py` now selects the pid by matching `/proc/<pid>/cmdline[0]` against the
 venv interpreter **and** requiring the engine script in argv, so no shell can match. Same root cause as
 the phantom "duplicate engine" pids on 09-23: a pgrep pattern that matches the observer.
+
+### CPU correction: 60.2%, not 50.9%
+I sent V **50.9%** for event mode. That came from a **120 s** sample taken while the proper **300 s**
+run was still going, and the poll baseline it was being compared against was 300 s — not like for like.
+The matched 300 s figure on the same engine pid (167283) is **60.2%**.
+
+| mode | window | CPU |
+|---|---|---|
+| poll (13.0.4, pid 166436) | 300 s | 28.7% |
+| event (13.1.0, pid 167283) | 300 s | **60.2%** |
+
+So event mode costs **2.1x** the CPU, not the 1.8x I reported. The direction and the conclusion are
+unchanged — the fast passes are real and the box has the headroom — but the ratio I gave V was wrong
+because I compared a 2-minute window against a 5-minute one.
+
