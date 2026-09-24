@@ -605,3 +605,38 @@ pin the value against a future default change, which nobody asked for.
 The two book_age values were 21.2 and 91.6 ms. **n=2 is not a comparison** and the 20 ms arm never
 produced one. Its only durable results are the two measurement findings — 2.1x CPU and the
 117-fire-rows artifact — and 13.1.1 fixes both, so closing it early cost little.
+
+## 10 orders at 50 ms — and the 13.1.1 "first fire only" change does NOT do what it says
+
+| metric | 50 ms (n=10) | 20 ms (n=2) | poll (n=167) |
+|---|---|---|---|
+| `book_age_ms` p50 / p90 | **48.8 / 288.4** | 56.4 / 91.6 | **39.9 / 131.7** |
+| `decision_ms` p50 / p90 | 2.00 / 2.24 | 1.74 / 2.94 | 2.08 / 3.25 |
+| signal-ask -> fill, ticks | p50 +0.00, mean +0.06 | +0.00 | p50 +0.00, mean +0.08 |
+| partial / refusals | 0 / 0 | 0 / 0 | 12 / 0 |
+| CPU (300 s) | 39.1% | 60.2% | 28.7% |
+
+**On this sample event mode is not beating poll on the metric it exists to improve.** p50 48.8 vs
+39.9 and p90 **288.4 vs 131.7**. n=10 against n=167, so this is not a verdict — but it is the wrong
+direction, and the p90 is more than double. The 60-order report is the one to judge on.
+
+### The defect: `_decide_log`'s first-fire guard does not limit a candle to one fire row
+Deployed code:
+```python
+first_fire = bool(d.get('fire')) and self.__dict__.get('_dlog_fire_ep') != ep
+if not first_fire and t_ms - self.__dict__.get('_dlog_last',-10**12) < 250: return
+```
+The comment above it reads *"13.1.1: only the first"*. What the code actually does is guarantee the
+**first** fire row is never dropped by the throttle. Every **later** fire pass in the same candle has
+`first_fire=False` and therefore falls through to the ordinary 250 ms throttle, which lets it log at
+4/s for as long as the signal holds.
+
+Measured on the deployed build, 11 candles since 15:15:03: **591 fire rows across 11 epochs**, per
+candle 101, 29, 133, 1, 5, 183, 88, 6, 1, 29, 15. On the busiest (epoch 1790268300, 183 rows) the gaps
+between consecutive fire rows are **min 252 ms, p50 254, p90 260** over a 90.7 s run — that is the
+250 ms throttle, not a once-per-candle rule.
+
+So the artifact I reported on 13.1.0 (117 rows for one candle) is **not fixed**; it is now 183. The
+guard changed which row is guaranteed present, not how many are written. Anyone who resumes counting
+fires from `decide_log` because 13.1.1 "fixed it" will still see a 6-15x inflation. `count(distinct
+epoch)` remains the only honest fire count.
