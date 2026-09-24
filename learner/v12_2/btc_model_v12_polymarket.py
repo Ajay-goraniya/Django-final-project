@@ -548,6 +548,7 @@ class PolyRunner(Runner):
         if True:
             try: self._tape_flush()
             except Exception as e: self.error='tape1s: '+type(e).__name__
+            t_ms=int(time.time()*1000)
             d=self.decide_now(); ep=int(time.time()//300)*300
             # 12.22.0: ef_engine control. 'v10' = the packaged classifier fires EF here; 'build11' = the
             # EF reversal lane (poly_ef via lane_loop) fires EF and v10's call is kept as a shadow reason.
@@ -596,8 +597,33 @@ class PolyRunner(Runner):
                     await self.executor.fire(ep,d,token,self.info[ep]['conditionId'],stake,lambda: self.decide_now() if self.ui.allowed() else {'fire':False})
                     self.revision+=1
             await self.lane_loop(ep)
+            try: self._decide_log(t_ms,ep,d)
+            except Exception as e: self.error='decide_log: '+type(e).__name__
             if time.time()-self._decide_last>15:
                 self.db.sql('INSERT INTO diagnostics VALUES(?,?,?)',(time.time(),ep,json.dumps(d))); self._decide_last=time.time()
+    # 13.0.4: decide_log - EF's call on EVERY decide pass (~4/s), opt-in via meta 'decide_log' (default off).
+    # Only fires were journaled, so "could the call have come 0.5-2 s earlier, and did the late fire ever come?"
+    # could not be replayed. Logging only: nothing reads it back, it runs after the fire path, rows are batched.
+    # feats is a JSON array in the order stored at meta 'decide_log_features'.
+    DECIDE_LOG_KEEP_S=4*86400
+    DECIDE_LOG_BATCH=40
+    def _decide_log(self,t_ms,ep,d):
+        if not self.db.get('decide_log',False): return
+        f=d.get('features') or {}; keys=sorted(k for k in f if k!='ts_ms')
+        if keys and self.__dict__.get('_dlog_keys')!=keys:
+            if self.db.get('decide_log_features')!=keys: self.db.set('decide_log_features',keys)
+            self._dlog_keys=keys
+        up=dn=None; toks=self.market.get(ep)
+        if toks:
+            qa=self.quote_age_s(); up=(self.books.quote(toks[0],qa) or {}).get('ask'); dn=(self.books.quote(toks[1],qa) or {}).get('ask')
+        num=lambda x: float(x) if isinstance(x,(int,float)) and math.isfinite(x) else None
+        buf=self.__dict__.setdefault('_dlog',[])
+        buf.append((t_ms,ep,d.get('side'),num(d.get('p')),num(d.get('p_raw')),num(d.get('ask')),num(d.get('ev')),1 if d.get('fire') else 0,
+                    num(up),num(dn),str(d.get('reason') or '')[:120],
+                    json.dumps([round(f[k],6) for k in keys],separators=(',',':')) if keys else None))
+        if len(buf)>=self.DECIDE_LOG_BATCH:
+            with self.db.lock,self.db.c: self.db.c.executemany('INSERT OR IGNORE INTO decide_log VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',buf)
+            buf.clear()
     @staticmethod
     def skip_reason(status,detail):
         """Say WHY in numbers, not just that it happened.
@@ -899,6 +925,7 @@ class PolyRunner(Runner):
                     self.db.sql('DELETE FROM diagnostics WHERE ts<?',(time.time()-7*86400,))
                     self.db.sql('DELETE FROM candles WHERE epoch<?',(time.time()-30*86400,))
                     self.db.sql('DELETE FROM tape1s WHERE ts<?',(int(time.time())-self.TAPE_KEEP_S,))   # 12.23.0
+                    self.db.sql('DELETE FROM decide_log WHERE ts_ms<?',(int((time.time()-self.DECIDE_LOG_KEEP_S)*1000),))   # 13.0.4
             except Exception as e: self.error='Housekeeping: '+type(e).__name__
             await asyncio.sleep(5)
     MASTER_OFF_WARN_S=300.0

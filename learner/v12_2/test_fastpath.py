@@ -133,3 +133,25 @@ class FastPath(unittest.TestCase):
         self.assertEqual(C.Executor.RETRY_TICK_WAIT_S,0.1); self.assertFalse(hasattr(C.Executor,'RETRY_DELAY_S'))
 
 if __name__=='__main__': unittest.main()
+
+class DecideLog(unittest.TestCase):
+    """13.0.4: decide_log is opt-in, batched, and records every pass - fire or not - with both asks."""
+    def setUp(self):
+        import btc_model_v12_polymarket as E
+        self.temp=tempfile.TemporaryDirectory(); self.db=C.Journal(str(pathlib.Path(self.temp.name)/'j.db'),'PAPER','abc')
+        r=E.PolyRunner.__new__(E.PolyRunner); r.db=self.db; r.books=C.BookCache(); r.books.apply(snap(.41)); self.ep=int(time.time()//300)*300
+        r.market={self.ep:('up','dn')}; r.quote_age_s=lambda: 60.; r.DECIDE_LOG_BATCH=3; self.r=r
+    def tearDown(self): self.db.c.close(); self.temp.cleanup()
+    def d(self,fire): return {'fire':fire,'side':'UP','p':.62,'ask':.41,'ev':.2,'reason':'x','features':{'b':2.,'a':1.,'ts_ms':5}}
+    def test_off_by_default(self):
+        for i in range(5): self.r._decide_log(1000+i,self.ep,self.d(False))
+        self.assertEqual(self.db.sql('SELECT COUNT(*) FROM decide_log')[0][0],0)
+    def test_on_logs_every_pass_batched(self):
+        self.db.set('decide_log',True)
+        for i in range(2): self.r._decide_log(1000+i,self.ep,self.d(i==1))
+        self.assertEqual(self.db.sql('SELECT COUNT(*) FROM decide_log')[0][0],0,'held until the batch fills')
+        self.r._decide_log(1002,self.ep,{'fire':False,'reason':'Warming up'})
+        rows=self.db.sql('SELECT ts_ms,fire,up_ask,dn_ask,feats FROM decide_log ORDER BY ts_ms')
+        self.assertEqual([r[1] for r in rows],[0,1,0]); self.assertEqual(rows[0][2],.41); self.assertIsNone(rows[0][3])
+        self.assertEqual(json.loads(rows[0][4]),[1.,2.]); self.assertIsNone(rows[2][4])
+        self.assertEqual(self.db.get('decide_log_features'),['a','b'])
