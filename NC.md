@@ -84,7 +84,7 @@ print('by day (n, per$1):', ' '.join(f'{d} {len(v)} {np.mean(v):+.3f}' for d, v 
 F.verdict()
 ```
 
-## NC-2 - TWAP settlement study (09-24) - verdict: the TWAP maths is right and needed, but on its own it is NOT an edge
+## NC-2 - TWAP settlement study (09-24) - PROVEN NOT PROFITABLE: the TWAP maths is right, but it adds no money to EF
 
 Data: 2,274 candles 09-08..09-16. Polymarket's own `priceToBeat`/`finalPrice` per candle (gamma API, public after
 the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
@@ -118,8 +118,14 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
   logit(market) vs logit(market)+logit(TWAP fair), log loss at 8 points in the candle: adding TWAP makes it **worse at
   every point** (+0.0002 .. +0.0228; e.g. 120 s 0.5068 -> 0.5076, 255 s 0.1584 -> 0.1812). The plain formula also adds
   nothing. **Polymarket's price already contains everything the TWAP maths knows.**
-- **Status: CLOSED as a signal.** Do not build a TWAP fair-price model or feature. Keep: TWAP labels for any training,
-  the 240 s timing rule (NC-1), and treat near-tie candles (< 1 bp) as unreadable. Not deployed anywhere; London unchanged.
+- **Follow-up 3 (09-24) - the near-tie idea also fails.** Retrained EF brain that sees the distance to the line (Binance
+  TWAP60 now vs at the open, signed; |dist|; < 1 bp flag), walk-forward by day, 8 days / 1,077 EF candles, same EV bar
+  0.15, Polymarket-graded, $10: fixed15 +$818 paper / +$256 held (refused if the ask runs) vs distance-aware +$505 / +$152.
+  Worse; days split 3-3 (one tie). Premise wrong at fire time: fixed15's near-tie (< 1 bp) trades made +$239 on 57. The
+  fitted weights on distance are ~0.
+- **FINAL STATUS: PROVEN NOT PROFITABLE - CLOSED.** Neither a TWAP fair-price model, TWAP features, nor distance-to-line
+  improves EF or makes money. Keep only: TWAP labels for any training (v10 already uses them) and the 240 s REVERSAL rule
+  (NC-1). Not deployed anywhere; London unchanged.
 
 ## NC-3 - Handle HTTP 425 (matching-engine restart) (09-24) - recorded, NOT built
 
