@@ -211,6 +211,15 @@ class EventDecide(unittest.TestCase):
             t.cancel(); await asyncio.gather(t,return_exceptions=True)
         asyncio.run(main()); db.c.close(); temp.cleanup()
         self.assertGreaterEqual(np.diff(c).min(),.095); self.assertLessEqual(len(c),8)
+    def test_feed_timing_records_freshest_data_age(self):
+        import btc_model_v12_polymarket as E
+        temp=tempfile.TemporaryDirectory(); db=C.Journal(str(pathlib.Path(temp.name)/'j.db'),'PAPER','abc')
+        r=E.PolyRunner.__new__(E.PolyRunner); r.db=db; now=time.time()
+        r._rx={'spot':(now-.030,int((now-.140)*1000)),'venue':(now-.005,None)}
+        ft=r.feed_timing(now); db.c.close(); temp.cleanup()
+        self.assertAlmostEqual(ft['spot_rx_age_ms'],30,delta=1); self.assertAlmostEqual(ft['spot_exch_age_ms'],140,delta=2)
+        self.assertAlmostEqual(ft['newest_rx_age_ms'],5,delta=1); self.assertNotIn('venue_exch_age_ms',ft); self.assertEqual(ft['decide_mode'],'poll')
+        r2=E.PolyRunner.__new__(E.PolyRunner); r2._rx_note('perp','x'); self.assertIsNone(r2._rx['perp'][1])
     def test_poke_before_loop_is_harmless(self):
         import btc_model_v12_polymarket as E
         r=E.PolyRunner.__new__(E.PolyRunner); r._poke()

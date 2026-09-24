@@ -263,7 +263,7 @@ class PolyRunner(Runner):
                                 continue
                             for ev in data if isinstance(data,list) else [data]:
                                 if isinstance(ev,dict): self.books.apply(ev)
-                            self.publish(); self.msgs['venue']=self.msgs.get('venue',0)+1; self._poke()
+                            self.publish(); self.msgs['venue']=self.msgs.get('venue',0)+1; self._poke(); self._rx_note('venue',None)
                     finally: task.cancel(); await asyncio.gather(task,return_exceptions=True)
             except Exception as e: self.error='Venue reconnect: '+type(e).__name__; await asyncio.sleep(1)
             finally:
@@ -273,13 +273,13 @@ class PolyRunner(Runner):
                         for t in self.market.pop(old): self.books.terms.pop(t,None); self.terms_age.pop(t,None)
                         self.info.pop(old,None)
     def on_spot(self,j):
-        super().on_spot(j); self._poke()
+        super().on_spot(j); self._poke(); self._rx_note('spot',j.get('T'))
         try: self.lanes.on_spot_trade(int(j['T']),float(j['p']),float(j['q']),bool(j['m']))
         except Exception: pass
         try: self._tape_add('spot',int(j['T']),float(j['p']),float(j['q']),bool(j['m']))
         except Exception: pass
     def on_perp(self,j):
-        super().on_perp(j); self._poke()
+        super().on_perp(j); self._poke(); self._rx_note('perp',j.get('T'))
         # 12.23.0: the perp trade tape reaches the lane engine (build11's primary EF microstructure)
         try: self.lanes.on_perp_trade(int(j['T']),float(j['p']),float(j['q']),bool(j['m']))
         except Exception: pass
@@ -344,7 +344,7 @@ class PolyRunner(Runner):
             for t_us,v in self.ref_samples(j): self.st.on_ref_price(t_us,v)
         except Exception: pass
     def on_depth(self,j):
-        super().on_depth(j); self._poke()
+        super().on_depth(j); self._poke(); self._rx_note('depth',j.get('E'))
         try:
             b=[(float(x[0]),float(x[1])) for x in j.get('b',[])][:20]
             a=[(float(x[0]),float(x[1])) for x in j.get('a',[])][:20]
@@ -535,6 +535,21 @@ class PolyRunner(Runner):
         try: v=float(self.db.get('decide_min_gap_ms',self.DECIDE_MIN_GAP_S*1000))
         except (TypeError,ValueError): return self.DECIDE_MIN_GAP_S
         return min(.25,max(.01,v/1000.)) if v==v else self.DECIDE_MIN_GAP_S
+    # 13.1.2: per-feed receive time and exchange time of the newest message, so every fired decision records how old
+    # its freshest data was at the moment it fired (the thing 13.1.0's event mode exists to shrink; book_age cannot
+    # show it - Zurich 09-24). Journal-only: nothing decides on it.
+    def _rx_note(self,src,exch_ms):
+        rx=self.__dict__.setdefault('_rx',{})
+        try: rx[src]=(time.time(),int(exch_ms) if exch_ms else None)
+        except (TypeError,ValueError): rx[src]=(time.time(),None)
+    def feed_timing(self,now=None):
+        now=time.time() if now is None else now; out={'decide_mode':self.decide_mode()}; rx=self.__dict__.get('_rx',{})
+        for src,(t,e) in rx.items():
+            out[f'{src}_rx_age_ms']=round((now-t)*1000,1)
+            if e: out[f'{src}_exch_age_ms']=round(now*1000-e,1)
+        ages=[v for k,v in out.items() if k.endswith('_rx_age_ms')]
+        if ages: out['newest_rx_age_ms']=min(ages)
+        return out
     def _poke(self):
         ev=self.__dict__.get('_wake')
         if ev is not None and not ev.is_set(): ev.set()
@@ -627,6 +642,8 @@ class PolyRunner(Runner):
                     d['submit_features']={k:float(v) for k,v in f.items()
                                           if isinstance(v,(int,float)) and math.isfinite(v)}
                     d['signal_price']=float(self.st.s_px[-1]) if self.st.s_px else None
+                    try: d['feed_timing']=self.feed_timing()
+                    except Exception: pass
                     await self.executor.fire(ep,d,token,self.info[ep]['conditionId'],stake,lambda: self.decide_now() if self.ui.allowed() else {'fire':False})
                     self.revision+=1
             try: self._decide_log(t_ms,ep,d)
