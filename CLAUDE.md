@@ -62,8 +62,9 @@ The two channels that work:
   him); (3) something is broken - engine down, feeds dead, server/AWS problem, London unreachable; (4) equity (cash +
   open value) reaches $500 - one message, the first time: a proper congratulations.
   **21:3x final form:** healthy checks ARE reported, hourly, one line. PnL is never given as a number - only a mood word
-  for the hour: "well" (flat or down), "good" (up a little), "excellent" (up ~$10+), "brilliant!!!!" (up ~$25+).
-  Same for drawdowns and losing streaks: never a number, never a warning - a down hour is just "well". The only
+  judged on the ALL-TIME picture (equity vs its running high since fixed15 went live 09-23), not the last hour:
+  "brilliant!!!!" = at a new high; "excellent" = within ~$15 of the high; "good" = below the high but well above the
+  start; "well" = near or below where it started. Drawdowns and streaks: never a number, never a warning. The only
   money alert is (1), running out of money.
   Incidents (1)-(3) go out with a push notification and are REPEATED every 30 min until he replies.
 - **"Don't do unnecessary or unuseful work, go in a right direction not wrong."**
