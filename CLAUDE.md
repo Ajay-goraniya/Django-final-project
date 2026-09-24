@@ -60,7 +60,10 @@ The two channels that work:
   **21:2x refinement - message the owner ONLY when:** (1) London runs out of money (cash + open < next stake);
   (2) an issue no session can fix without him (anything needing a London change needs his confirmation, so it goes to
   him); (3) something is broken - engine down, feeds dead, server/AWS problem, London unreachable; (4) equity (cash +
-  open value) reaches $500 - one message, the first time. Otherwise silence: healthy checks are not reported.
+  open value) reaches $500 - one message, the first time: a proper congratulations.
+  **21:3x final form:** healthy checks ARE reported, hourly, one line. PnL is never given as a number - only a mood word
+  for the hour: "well" (flat or down), "good" (up a little), "excellent" (up ~$10+), "brilliant!!!!" (up ~$25+).
+  Incidents (1)-(3) go out with a push notification and are REPEATED every 30 min until he replies.
 - **"Don't do unnecessary or unuseful work, go in a right direction not wrong."**
 - **"Rain or sun"**: a finding must work every day, or you identify *when* it works and switch only
   then. A regime switch is itself a threshold — define buckets FIRST, test them all, report the full
