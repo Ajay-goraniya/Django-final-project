@@ -526,9 +526,15 @@ class PolyRunner(Runner):
     # REVERSAL lanes, decide_log, diagnostics) keeps its 0.25 s cadence, so the lanes' read-count holds (MAIN_HOLD_READS)
     # and every journal rate are exactly as before. The EF signal itself is unchanged - it is only seen sooner.
     DECIDE_POLL_S=.25
-    DECIDE_MIN_GAP_S=.02
+    DECIDE_MIN_GAP_S=.05
     def decide_mode(self):
         v=self.db.get('decide_mode','poll'); return v if v in ('poll','event') else 'poll'
+    def decide_min_gap_s(self):
+        # 13.1.1: live dial (meta decide_min_gap_ms, 10..250, default 50). Zurich 09-24: a 20 ms floor cost 2.1x the CPU
+        # of the 0.25 s loop (60.2% vs 28.7%); 50 ms keeps the data->decide wait ~25 ms p50 at about half the extra CPU.
+        try: v=float(self.db.get('decide_min_gap_ms',self.DECIDE_MIN_GAP_S*1000))
+        except (TypeError,ValueError): return self.DECIDE_MIN_GAP_S
+        return min(.25,max(.01,v/1000.)) if v==v else self.DECIDE_MIN_GAP_S
     def _poke(self):
         ev=self.__dict__.get('_wake')
         if ev is not None and not ev.is_set(): ev.set()
@@ -561,7 +567,7 @@ class PolyRunner(Runner):
             waiter=asyncio.ensure_future(self._wake.wait())
             try: await asyncio.wait({waiter},timeout=max(0.001,self.DECIDE_POLL_S-(time.monotonic()-full_at)))
             finally: waiter.cancel()
-            gap=self.DECIDE_MIN_GAP_S-(time.monotonic()-fast_at)
+            gap=self.decide_min_gap_s()-(time.monotonic()-fast_at)
             if gap>0: await asyncio.sleep(gap)
     def ef_engine(self):
         """12.22.0: which brain fires EF - 'v10' (packaged classifier) or 'build11' (EF reversal lane)."""

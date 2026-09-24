@@ -186,11 +186,26 @@ class EventDecide(unittest.TestCase):
         c=self.run_loop('event',pokes_per_s=200,secs=1.0)
         full=[t for t,f in c if f]; fast=[t for t,f in c if not f]
         self.assertTrue(4<=len(full)<=6,len(full))                                   # lanes/tape still ~4/s
-        self.assertGreater(len(fast),20)                                              # EF sees fresh data often
+        self.assertGreater(len(fast),10)                                              # EF sees fresh data often (~16/s at the 50 ms floor)
         gaps=np.diff(sorted(t for t,_ in c)); self.assertGreaterEqual(gaps.min(),C_MIN_GAP-0.005)   # never faster than the floor
     def test_event_mode_without_data_falls_back_to_polling(self):
         c=self.run_loop('event',pokes_per_s=0,secs=1.0)
         self.assertTrue(all(f for _,f in c)); self.assertTrue(4<=len(c)<=6,len(c))
+    def test_min_gap_dial(self):
+        import btc_model_v12_polymarket as E
+        temp=tempfile.TemporaryDirectory(); db=C.Journal(str(pathlib.Path(temp.name)/'j.db'),'PAPER','abc')
+        r=E.PolyRunner.__new__(E.PolyRunner); r.db=db
+        self.assertEqual(r.decide_min_gap_s(),.05)
+        for v,want in ((20,.02),(1,.01),(5000,.25),('x',.05)): db.set('decide_min_gap_ms',v); self.assertAlmostEqual(r.decide_min_gap_s(),want)
+        db.set('decide_min_gap_ms',100); c=[]
+        async def once(full=True): c.append(time.monotonic())
+        r._decide_once=once; db.set('decide_mode','event')
+        async def main():
+            t=asyncio.create_task(r.decide_loop()); end=time.monotonic()+.6
+            while time.monotonic()<end: await asyncio.sleep(.002); r._poke()
+            t.cancel(); await asyncio.gather(t,return_exceptions=True)
+        asyncio.run(main()); db.c.close(); temp.cleanup()
+        self.assertGreaterEqual(np.diff(c).min(),.095); self.assertLessEqual(len(c),8)
     def test_poke_before_loop_is_harmless(self):
         import btc_model_v12_polymarket as E
         r=E.PolyRunner.__new__(E.PolyRunner); r._poke()
