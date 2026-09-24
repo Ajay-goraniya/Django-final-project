@@ -520,3 +520,32 @@ Both are reported so nobody has to guess which window a number came from.
    So decide_log reads ~4/s in *both* modes by design. The fast passes are not journalled anywhere, so
    passes/s is not directly measurable from the DB; CPU% is the available proxy, and `book_age_ms` at
    fire is the outcome that actually answers "did EF see it sooner".
+
+## Step 3-4 — 13.1.0 up, event mode on, 10-minute check
+
+Clean 14:20:00 (sec 0), stopped pid 166436, deployed **39/39 == git show 54f8ef0**, started pid
+**167283** 14:20:01 on the same argv and same live4 db. `decide_mode` set **event** at 14:20:27.
+Unchanged: master false, raw_v10_live25, ev 0.25, calibration off, stake 5, `decide_log` true, halt null.
+
+| 10-min check | value |
+|---|---|
+| decide_log rate | 3.82/s (poll was 3.76/s) |
+| inter-row gaps | p10 250 ms, p50 267, p90 270, min **250** |
+| `decide_loop_error` rows | **0** |
+| `/api/state` error | **empty** |
+| engine | alive, 118 tape rows/120 s |
+| EF orders since the switch | 0 |
+
+**The gap distribution proves the measurement limit rather than the speed-up.** The minimum gap is
+exactly 250 ms and the p10 is 250 ms, which is the `_decide_log` throttle binding on essentially every
+row. So 3.82/s is the *logging* rate in both modes by construction and says nothing about how often
+the fast pass ran. Reporting it as "passes/s" would be reporting the throttle.
+
+### A measurement bug of my own, caught before it was reported
+The first event-mode CPU sample returned **0.0% over 300 s**. That was not the engine. `cpu5.py`
+selected its pid with `pgrep -f pm_paper_zurich/.venv/bin/python`, and this session's own bash wrapper
+carries that path in its command line, so it sampled a dormant shell (pid 166834). The poll baseline
+of **28.7%** was unaffected — it did resolve to the real engine (166436) — but the event figure would
+have been a fabrication. `cpu5.py` now selects the pid by matching `/proc/<pid>/cmdline[0]` against the
+venv interpreter **and** requiring the engine script in argv, so no shell can match. Same root cause as
+the phantom "duplicate engine" pids on 09-23: a pgrep pattern that matches the observer.
