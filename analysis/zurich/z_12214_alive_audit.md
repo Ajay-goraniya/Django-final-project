@@ -416,3 +416,28 @@ empty table.)
 
 **What this does not say:** it does not say raw v10 loses. It says the +0.337 is not yet distinguishable
 from buying cheap sides at those moments, on this sample, and must not be used to justify live money.
+
+## RETRACTION — the raw arm's "decay" was not a trend (09-24 05:30 UTC)
+
+At the 01:30 reading I told V the raw arm's decline was "a trend, not noise". **That was wrong and I
+retract it.** The next reading reversed every number I had called a trend:
+
+| reading | n | per$1 | null | null/arm | perm p | hit |
+|---|---|---|---|---|---|---|
+| 17:30 | 79 | +0.337 | +0.265 | 79% | 0.120 | 59.7% |
+| 21:30 | 94 | +0.273 | +0.218 | 80% | 0.230 | 55.3% |
+| 01:30 | 105 | +0.241 | +0.184 | 76% | 0.280 | 53.3% |
+| **05:30** | **120** | **+0.368** | **+0.322** | **88%** | **0.065** | **58.3%** |
+
+Three readings down, one sharply up. I read a monotone run of three as direction when it was the
+sampling noise of a metric that moves ±0.10 between readings at n~100. The correct statement at
+01:30 was "this number is not stable enough to have a direction yet", and I did not make it.
+
+**What IS stable, across all four readings: the null takes 76-88% of the arm.** "Buy the cheap side
+at the same moments" tracks the arm whether the arm is rising or falling. That number does not swing
+with the noise, and it is the durable observation - the arm's return is mostly a property of *when
+and at what price* it buys, not of *which side* it picks. The permutation control says the same thing
+and has never passed (p 0.065-0.280 against a 0.01 bar).
+
+Verdict is unchanged and was never in doubt: **NOT A FINDING**. What changed is that my reason for
+saying so at 01:30 was partly wrong, even though the conclusion happened to be right.
