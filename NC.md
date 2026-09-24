@@ -120,3 +120,14 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
   nothing. **Polymarket's price already contains everything the TWAP maths knows.**
 - **Status: CLOSED as a signal.** Do not build a TWAP fair-price model or feature. Keep: TWAP labels for any training,
   the 240 s timing rule (NC-1), and treat near-tie candles (< 1 bp) as unreadable. Not deployed anywhere; London unchanged.
+
+## NC-3 - Handle HTTP 425 (matching-engine restart) (09-24) - recorded, NOT built
+
+- **What Polymarket does** (docs, "Matching Engine Restarts"): during a restart every order endpoint returns **HTTP 425
+  (Too Early)**. After each restart the engine is **post-only for 2 minutes** - non-post-only orders (our FAK) are
+  rejected. Restarts are announced ~2 days ahead on Telegram t.me/polytradingapis and Discord #trading-apis.
+- **What our engine does now** (`poly_live.py` `post()`): 425 is a 4xx, so it is booked as a plain venue rejection. It
+  is safe (no money at risk, no ambiguous order), but a restart looks like a run of EF refusals and wastes the retries.
+- **Change to build later:** on 425 -> mark "venue restarting", skip that candle's retries, back off, and do not send
+  FAK for 2 min after the first non-425 answer (post-only window); log it as its own reason, not as an EF refusal.
+- **Status:** not built, not deployed. Low priority. Needs the owner's confirmation before building and before London.
