@@ -441,3 +441,44 @@ and has never passed (p 0.065-0.280 against a 0.01 bar).
 
 Verdict is unchanged and was never in doubt: **NOT A FINDING**. What changed is that my reason for
 saying so at 01:30 was partly wrong, even though the conclusion happened to be right.
+
+---
+
+# 13.0.4 — per-second decision logging (09-24 12:20 UTC), logging only
+
+Owner-approved, V-relayed. **No model, profile, EV, stake or flag change.** Confirmed to V before the
+restart, with the pre-checks already done.
+
+| row | result |
+|---|---|
+| stage 6885af4 | 41 files, SHA256SUMS **39/39 OK** == `git show` |
+| suites | all nine, **477 tests, OK** |
+| disk | `/dev/root` 30G, **21G available**, 32% used. 4 days at ~150 MB/day ~= 600 MB, ~35x headroom |
+| clean point | 12:20:03, sec_into_candle 3 |
+| start | pid **166436**, 12:20:05, same argv, same live4 db, 5/5 creds |
+| `decide_log` | set **true** 12:20:30 via `Journal.set` |
+| unchanged | master false, raw_v10_live25, ev 0.25, calibration off, stake 5, halt null |
+
+## 10-minute measurement
+2,360 rows over 9.9 min = **238 rows/min** (target ~240). **0 fire rows.**
+`decide_log_features` **44** entries; the latest row's `feats` array is 44 long, so they line up.
+`/api/state` error field is **empty**. Engine alive, 117 tape rows/120 s.
+
+**`feats` non-null is 2.3% over the whole window, and that number is misleading on its own.** The
+null rows are not a defect:
+
+| reason | rows |
+|---|---|
+| "Warming up: 10 minutes of spot / 60 seconds of perpetual trades" | 1,641 |
+| "Waiting for fresh UP and DOWN books" | 665 |
+
+All 2,306 null-`feats` rows also have `p` NULL — the model never produced a call on those passes, so
+there were no features to store. Measured from the first feats-carrying row instead, the steady state
+is **1,054 rows over 4.5 min = 234/min, feats non-null 63.5%**, the remainder being the book-wait
+rows. Usable rows for the early-fire study run at roughly 150/min.
+
+## Third fix to the same line in my deploy helper
+It printed `SHA256SUMS 39/38 OK` on this deploy: the denominator was `len(names)-2` after I replaced
+the original hardcoded `/30`. Both numbers now come from the hash lines actually checked, so the line
+cannot drift again. The verification itself was never wrong — 39 files verified against 39 hashes,
+all matching `git show` — only the denominator printed next to it.
