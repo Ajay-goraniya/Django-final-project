@@ -643,8 +643,12 @@ class PolyRunner(Runner):
     DECIDE_LOG_BATCH=40
     def _decide_log(self,t_ms,ep,d):
         if not self.db.get('decide_log',False): return
-        # 13.1.0: event mode runs fast passes up to 50/s; keep ~4 rows/s, but never drop a fire
-        if not d.get('fire') and t_ms-self.__dict__.get('_dlog_last',-10**12)<250: return
+        # 13.1.0: event mode runs fast passes up to 50/s; keep ~4 rows/s, but never drop a candle's FIRST fire row.
+        # 13.1.1: only the first - Zurich 09-24 logged 117 fire rows for one candle and one order (every fast pass
+        # while the signal held), which reads as a fake 6x jump in fires.
+        first_fire=bool(d.get('fire')) and self.__dict__.get('_dlog_fire_ep')!=ep
+        if not first_fire and t_ms-self.__dict__.get('_dlog_last',-10**12)<250: return
+        if first_fire: self._dlog_fire_ep=ep
         self._dlog_last=t_ms
         f=d.get('features') or {}; keys=sorted(k for k in f if k!='ts_ms')
         if keys and self.__dict__.get('_dlog_keys')!=keys:

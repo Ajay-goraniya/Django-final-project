@@ -160,6 +160,11 @@ class DecideLog(unittest.TestCase):
         for i in range(50): self.r._decide_log(1000+20*i,self.ep,self.d(i==7))      # 50 passes in 1 s, one fire
         rows=[tuple(r) for r in self.db.sql('SELECT ts_ms,fire FROM decide_log ORDER BY ts_ms')]
         self.assertIn((1140,1),rows); self.assertLessEqual(len(rows),6)
+    def test_a_held_signal_logs_one_unthrottled_fire_row_per_candle(self):
+        self.db.set('decide_log',True); self.r.DECIDE_LOG_BATCH=1
+        for i in range(50): self.r._decide_log(1000+20*i,self.ep,self.d(True))       # signal held for 1 s of fast passes
+        rows=[tuple(r) for r in self.db.sql('SELECT ts_ms,fire FROM decide_log ORDER BY ts_ms')]
+        self.assertEqual(rows[0],(1000,1)); self.assertLessEqual(len(rows),5)
 
 class EventDecide(unittest.TestCase):
     """13.1.0: decide_mode 'event' wakes a fast EF pass on fresh data; full passes (lanes, tape, diagnostics) stay 0.25 s.
