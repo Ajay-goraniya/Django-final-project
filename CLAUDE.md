@@ -53,8 +53,10 @@ The two channels that work:
   **09-24 00:xx, owner: "Remember no model deploy without my strict confirmation."** - applies to EVERY box (London,
   Zurich, Mumbai): no new or changed model is deployed anywhere without the owner's explicit confirmation of it.
 - **09-24 21:xx, owner: health-only updates on London.** "From now on just update me about running and healthy."
-  Do not send the owner PnL, drawdown or streak numbers unless he asks. V checks London's health every 2 h (read-only:
-  engine alive, master ON, EF ON, feeds live, still firing, cash >= stake, errors) and tells him HEALTHY or the issue.
+  Never show the owner PnL, drawdown, streak, win-rate or cash-change numbers (owner, 21:1x: "you personally see it it's
+  okay ... make sure I don't see it") - sessions may track PnL between themselves. V checks London's health every 2 h
+  (read-only: engine alive, master ON, EF ON, feeds live, still firing, cash >= stake, errors) and tells him HEALTHY or
+  the issue. Applies to every session he talks to, London included.
 - **"Don't do unnecessary or unuseful work, go in a right direction not wrong."**
 - **"Rain or sun"**: a finding must work every day, or you identify *when* it works and switch only
   then. A regime switch is itself a threshold — define buckets FIRST, test them all, report the full
