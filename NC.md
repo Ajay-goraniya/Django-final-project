@@ -131,3 +131,22 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
 - **Change to build later:** on 425 -> mark "venue restarting", skip that candle's retries, back off, and do not send
   FAK for 2 min after the first non-425 answer (post-only window); log it as its own reason, not as an EF refusal.
 - **Status:** not built, not deployed. Low priority. Needs the owner's confirmation before building and before London.
+
+## NC-4 - Master survives restarts; only the owner (or a session on his order) turns it off (09-24)
+
+- **Owner's rule:** a server restart, crash, overload or deploy must NOT change the master switch. If master was ON
+  before, it is ON after; if OFF, it stays OFF. Only the owner (or a session acting on his written order) flips it.
+  The EF / MAIN / REVERSAL switches follow the same rule. Goal: London can run for weeks unattended.
+- **What the code does today (checked 09-24, build 13.0.3 on London):** already this. Since 12.24.3 master is no
+  longer forced OFF at boot (`btc_model_v12_polymarket.py` ~line 77, owner: "if master off it's paper and if master on
+  it's live"); it lives in the meta table like the lane switches and survives any restart. It is seeded OFF only on a
+  brand-new database (`poly_dashboard.Dashboard.__init__`). London runs under systemd `Restart=always`.
+- **Who changed it is recorded:** master and the lane switches are AUDITED controls - every write stores old value,
+  new value and the calling code, so "the owner / a session / a restart" can always be told apart. A restart writes
+  nothing to master.
+- **Where master can still go OFF without the owner:** (1) a deploy that points the engine at a NEW database file;
+  (2) a session briefed to park it (a safe-start deploy did this on 09-16 03:40). Both need a written owner order under
+  the current rules. No automatic stop exists (cash floor removed 09-23).
+- **To do (only on the owner's confirmation):** a read-only check on London that master's audit trail shows no write
+  at any restart since 12.24.3, and a DEPLOY_LONDON.md line: "never park master on a restart/deploy unless the owner
+  says so in writing".
