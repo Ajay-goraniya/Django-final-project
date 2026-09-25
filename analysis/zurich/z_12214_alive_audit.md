@@ -765,3 +765,29 @@ Both samples passed the mode-unchanged check. **Event costs 1.53x poll** on the 
 settings, matched window length — and that is the honest per-arm figure. Every earlier CPU number in
 this file was a whole-process sample that happened to land in one mode or straddle a flip; those
 should be read as indicative only, and this pair as the result.
+
+## The scheduled "24 h EVENT" job fired — and its label is wrong. Do not use it.
+
+The job armed on 09-24 for step 5 of the 13.1.0 brief fired on time at 14:20 and printed
+`13.1.0 EVENT, 24 h since 14:20:27 — EF orders 103, book_age p50 41.3 / p90 150.1`.
+
+**That window is not an event-mode window.** Composition of its 103 orders:
+
+| | |
+|---|---|
+| journalled `decide_mode` = event | **34** |
+| journalled `decide_mode` = poll | **40** |
+| no `feed_timing` (pre-13.1.2, mode not recorded) | **29** |
+| builds spanned | 13.1.0 -> 13.1.1 -> 13.1.2 |
+| gap dial | 20 ms until 15:15, 50 ms after |
+
+The A/B flipping ran inside it for 18.8 of its 24 hours, so the line is a blend of both arms across
+three builds and two gap settings. Read as an event-mode result it would say event and poll are
+identical on `book_age` (41.3 vs 40.1) — which is only true because half the "event" sample is poll.
+
+The clean answer already exists and I sent it 30 minutes earlier: the A/B at 30+ per arm, same build,
+same settings, arms taken from each order's own journalled mode. **That is the result; this job's
+output is superseded and should be discarded.**
+
+I let this fire rather than cancelling it because the schedule was V's instruction, but the label it
+carries is stale — a job armed before the experiment design changed under it.
