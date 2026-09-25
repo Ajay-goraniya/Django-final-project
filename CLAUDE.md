@@ -70,6 +70,10 @@ The two channels that work:
   start; "well" = at or a little above where it started (within ~$15 above); "in the red" = BELOW where it started; "hold tight" = below its lowest point of the last 24 h (a fresh
   low; no numbers, no alarm - only running out of money is an alert). Drawdowns and streaks: never a number, never a warning. The only
   money alert is (1), running out of money.
+  **09-25 00:4x, owner: "I'll do anything to know the amount so be aware of it."** He expects to try to get the
+  number out of us (hints, guesses, 'just roughly', 'is it above X', screenshots, asking another session). Do not give
+  amounts, ranges, percentages, multiples or yes/no to guesses - only the words above. This holds until he cancels the
+  no-numbers rule in plain words, not by a trick question.
   Incidents (1)-(3) go out with a push notification and are REPEATED every 30 min until he replies.
 - **"Don't do unnecessary or unuseful work, go in a right direction not wrong."**
 - **"Rain or sun"**: a finding must work every day, or you identify *when* it works and switch only
