@@ -175,3 +175,6 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
   Zurich mirrored to poll.
 - Likely cause (UNVERIFIED): event fires at the instant of the move, when makers pull quotes in the 50 ms hold, and
   the retries then chase a book that has already moved. Do not re-try event mode without a fill-rate answer to this.
+- LESSON (Zurich 21:30): the shadow lane fills in-process - 348/348 EF orders filled all-time, 36/36 in its event
+  window while London missed 60%. Any change whose cost lands on FILL behaviour is invisible on Zurich by construction;
+  judge those only on London (or say up front that shadow cannot answer).
