@@ -696,3 +696,33 @@ EVENT from 19:30:02, so the first flip to POLL is due 20:30.
 **The 13.1.1 60-order watcher was stopped.** That arm measured a single fixed mode on a build the A/B
 supersedes; leaving it running would have sent a stale report against a cutoff that no longer describes
 what the engine is doing.
+
+## A/B interim (09-25 ~08:4x): the direct speed metric, and which one actually measures it
+
+13 flips logged, arms split from each order's own `feed_timing.decide_mode`. POLL n=23, EVENT n=27
+distinct epochs. 0 orders excluded for missing `feed_timing`.
+
+| at fire | POLL (n=23) | EVENT (n=27) |
+|---|---|---|
+| `newest_rx_age_ms` p50 / p90 | 14.8 / 20.2 | **14.8** / 23.0 |
+| `spot_rx_age_ms` p50 / p90 | **95.9** / 371.1 | **62.2** / 337.6 |
+| `spot_exch_age_ms` p50 / p90 | 211.0 / 485.7 | 174.8 / 449.9 |
+| `book_age_ms` p50 / p90 | 23.7 / 111.1 | 35.1 / 126.8 |
+
+**V's prediction is right, but it describes `spot_rx_age_ms`, not `newest_rx_age_ms`.** Poll's spot
+age sits mid-range of the predicted 0-250 band (p50 95.9) and event's lands in the predicted 0-50
+neighbourhood (p50 62.2) — a 1.5x improvement in the right direction, and the earlier 10-per-arm cut
+had it at 116.4 vs 43.8, 2.7x.
+
+**`newest_rx_age_ms` cannot show the difference and should be dropped from the comparison.** It is
+`min()` over four continuously-streaming feeds (spot, perp, depth, venue). With four independent
+streams, *something* has always just arrived, so the minimum is ~15 ms whatever the decide cadence.
+It measures feed density, not decide latency. Both arms read p50 14.8 — identical to one decimal,
+which is the giveaway.
+
+`book_age_ms` is *worse* in event (35.1 vs 23.7 p50), exactly as V predicted it would be: firing
+sooner means firing before Polymarket re-quotes, so the book we price against is older.
+
+**CPU caveat:** my sampler reads the process, not the arm, so a 300 s CPU sample lands in whichever
+mode happens to be active. The 26.1% at the interim is a single-mode window, not a per-arm figure. A
+per-arm CPU number needs the sample pinned inside one flip period; I will do that for the final.
