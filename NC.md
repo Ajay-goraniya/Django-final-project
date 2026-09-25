@@ -164,3 +164,14 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
      get London reports until it is restarted. Add a systemd unit or @reboot entry for it on the owner's go.
 - **Still to add (owner's go):** a DEPLOY_LONDON.md line: "never park master on a restart/deploy unless the owner says so
   in writing".
+
+## NC-5 - Event-driven decide loop (13.1.x decide_mode=event) on London (09-25) - TRIED LIVE, REVERTED TO POLL
+- Zurich A/B (shadow): event made spot price 2.3x fresher at fire (spot_rx p50 ~50 vs ~115 ms) for 1.53x CPU.
+  Shadow cannot show refusals, so it was tried live on the owner's go: London 13.1.2 event/50 ms from 14:05 UTC.
+- London live, 30 EF candles on event vs poll (grade: venues.outcome): never filled 18/30 (60%) vs 9/30 equal-N (30%)
+  and 60/172 over the prior 48 h (35%); Fisher p 0.037 / 0.014. Retry fills 3 vs 12. First-try fills equal (9 vs 9).
+  Event's per-candle PnL looked better but rests on 12 fills - insufficient, not a finding.
+- Owner: "Switch to old please". London decide_mode=poll 21:17:15 UTC (live meta, no restart; build stays 13.1.2).
+  Zurich mirrored to poll.
+- Likely cause (UNVERIFIED): event fires at the instant of the move, when makers pull quotes in the 50 ms hold, and
+  the retries then chase a book that has already moved. Do not re-try event mode without a fill-rate answer to this.
