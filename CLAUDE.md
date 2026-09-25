@@ -60,7 +60,9 @@ The two channels that work:
   **21:2x refinement - message the owner ONLY when:** (1) London runs out of money (cash + open < next stake);
   (2) an issue no session can fix without him (anything needing a London change needs his confirmation, so it goes to
   him); (3) something is broken - engine down, feeds dead, server/AWS problem, London unreachable; (4) equity (cash +
-  open value) reaches $500 - one message, the first time: a proper congratulations.
+  open value) reaches $500 - one message, the first time: a proper congratulations that NEVER states the number
+  (owner wants it for Instagram stories). Use exactly: '🏆🚀 MISSION ACCOMPLISHED, BOSS! The first big milestone is in
+  the bag - the machine did it. Screenshot this one! 🎉🔥'
   **21:3x final form:** healthy checks ARE reported, hourly, one line. PnL is never given as a number - only a mood word
   judged on the ALL-TIME picture (owner 21:2x: "all time pnl not 24h or week one") - London's all-time PnL and equity
   since it first went live (all lanes, venue truth) vs the all-time equity high, never a 24 h / weekly window:
