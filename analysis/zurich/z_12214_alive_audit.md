@@ -726,3 +726,34 @@ sooner means firing before Polymarket re-quotes, so the book we price against is
 **CPU caveat:** my sampler reads the process, not the arm, so a 300 s CPU sample lands in whichever
 mode happens to be active. The 26.1% at the interim is a single-mode window, not a per-arm figure. A
 per-arm CPU number needs the sample pinned inside one flip period; I will do that for the final.
+
+## A/B FINAL — poll vs event at 30+ per arm (09-25 12:5x)
+
+Same build 13.1.2, same market, same settings throughout. Arms split on each order's own
+`feed_timing.decide_mode`; **0 orders excluded**. 15 flips in the first 16 h, flipper extended 3 h to
+land the gate (reported to V rather than done quietly).
+
+| at fire | POLL (n=33) | EVENT (n=30) | direction |
+|---|---|---|---|
+| `spot_rx_age_ms` p50 | **116.4** | **51.7** | event **2.3x fresher** |
+| `spot_rx_age_ms` p90 | 433.0 | 337.6 | event better |
+| `spot_exch_age_ms` p50 / p90 | 229.4 / 546.2 | 174.8 / 449.9 | event better |
+| `newest_rx_age_ms` p50 | 15.7 | 14.8 | **no difference** |
+| `book_age_ms` p50 / p90 | 26.4 / 111.1 | 35.2 / 126.8 | event worse, as predicted |
+
+**The result: event mode does what it was built to do.** The spot feed at the moment EF fires is
+2.3x fresher (116 ms -> 52 ms p50), and V's predicted bands hold almost exactly — poll mid-range of
+0-250, event inside 0-50 at the p50.
+
+`newest_rx_age_ms` never discriminated at any cut (15.7 vs 14.8 here, 14.8 vs 14.8 at the interim).
+It is `min()` over four continuously-streaming feeds, so it measures feed density, not decide latency.
+
+`book_age_ms` is worse under event and that is the *expected* consequence, not a regression: firing
+sooner means firing before Polymarket re-quotes.
+
+### Per-arm CPU, pinned inside single flip periods
+The earlier CPU numbers were whole-process samples that landed in whichever mode happened to be
+active, which is not a per-arm figure. `out/cpu_arm.py` reads `decide_mode` before and after and
+**discards the sample if the mode changed mid-window**, so each number belongs to one arm.
+
+EVENT **44.6%** over 300 s (12:52-12:57). POLL sample taken after the 13:32 flip, same window length.
