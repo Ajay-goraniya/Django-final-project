@@ -817,3 +817,34 @@ master **false**, halt null, raw_v10_live25, ef_engine v10, ev fixed 0.25, calib
 
 The A/B evidence stays as recorded — this is not a re-opening of it. Zurich is now a shadow mirror of
 what London runs live, which is the arrangement that makes Zurich's numbers comparable to London's.
+
+## Back to `poll` to mirror London (09-25 21:20:34) — and London's live verdict on event mode
+
+V's written instruction after the owner ordered London back to poll at 21:17:15. One `Journal.set`,
+no restart. `decide_mode` `"event"` -> `"poll"`. Meta diffed before and after: **`decide_mode` is the
+only key that changed.** Engine alive, no `decide_loop_error`. Zurich ran event for 6 h 43 m
+(14:37:23 -> 21:20:34).
+
+**London's result, live, where it could actually be measured:**
+
+| | event | poll |
+|---|---|---|
+| never-filled | **60%** | 30% equal-N / 35% over 48 h (n=172) |
+| retry fills | 3 | 12 |
+| Fisher p | 0.037 / 0.014 | |
+
+**This is the answer to the question shadow structurally could not ask, and it is the opposite of
+what the latency metric suggested.** I reported event as 2.3x fresher on spot feed age at fire and
+said the latency win was "real and cheap" — it was, and it still cost money, because firing sooner
+means firing before Polymarket re-quotes and the order never fills.
+
+The tell was in my own Zurich data and I read it as a curiosity rather than a warning: `book_age_ms`
+was consistently **worse** under event (28.7 -> 38.5 p50 at close). V had already explained why — you
+are pricing against a book the venue has not refreshed. In shadow that is harmless because
+`PaperBroker` fills in-process, so it showed up as a slightly stale book and nothing else. In live the
+same fact is a 60% never-fill rate. Same mechanism, and the shadow lane cannot express its cost.
+
+**What I should have said:** not just "refusals cannot move in shadow, so run it in London", but
+"event mode prices against a staler book, and the one venue where that matters is the one shadow
+cannot model — so treat the latency win as unproven until London measures fills." I had every number
+needed for that sentence and did not write it.
