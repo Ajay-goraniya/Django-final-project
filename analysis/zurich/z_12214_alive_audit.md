@@ -804,3 +804,16 @@ is in hand — event is 2.3x fresher on spot feed age at fire for 1.53x the CPU,
 any money effect that shadow can measure — but picking the standing mode is V's or the owner's call,
 not mine. It stays on poll until someone says otherwise, and poll is the pre-experiment default, so
 leaving it there is the conservative end.
+
+## Zurich set to `event` to mirror London (09-25 14:37:23)
+
+V's written instruction after London went live on 13.1.2 event/50 ms at 14:05 (owner's go), first EF
+fill there at `spot_rx` 12 ms. One `Journal.set`, no restart.
+
+`decide_mode` `"poll"` -> `"event"`. **Diffed the whole meta bundle before and after: `decide_mode` is
+the only key that changed.** build 13.1.2, `decide_min_gap_ms` unset (50 ms default, matching London),
+master **false**, halt null, raw_v10_live25, ef_engine v10, ev fixed 0.25, calibration off, stake 5,
+`decide_log` true. Engine alive, no `decide_loop_error` rows.
+
+The A/B evidence stays as recorded — this is not a re-opening of it. Zurich is now a shadow mirror of
+what London runs live, which is the arrangement that makes Zurich's numbers comparable to London's.
