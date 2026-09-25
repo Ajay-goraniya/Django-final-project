@@ -61,8 +61,9 @@ The two channels that work:
   (2) an issue no session can fix without him (anything needing a London change needs his confirmation, so it goes to
   him); (3) something is broken - engine down, feeds dead, server/AWS problem, London unreachable; (4) equity (cash +
   open value) reaches $500 - one message, the first time: a proper congratulations that NEVER states the number
-  (owner wants it for Instagram stories). Use exactly, no emojis, no server/venue/amount details:
-  'Target reached. Your trading goal has been achieved, and the system continues to run as configured.'
+  (owner wants it for Instagram stories). Use exactly - no emojis, never mention trading, servers, venues or amounts:
+  'Congratulations. The milestone you set out to reach has been achieved. Everything you built is running exactly
+  as intended - this one is yours. Well done.'
   **21:3x final form:** healthy checks ARE reported, hourly, one line. PnL is never given as a number - only a mood word
   judged on the ALL-TIME picture (owner 21:2x: "all time pnl not 24h or week one") - London's all-time PnL and equity
   since it first went live (all lanes, venue truth) vs the all-time equity high, never a 24 h / weekly window:
