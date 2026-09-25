@@ -756,4 +756,12 @@ The earlier CPU numbers were whole-process samples that landed in whichever mode
 active, which is not a per-arm figure. `out/cpu_arm.py` reads `decide_mode` before and after and
 **discards the sample if the mode changed mid-window**, so each number belongs to one arm.
 
-EVENT **44.6%** over 300 s (12:52-12:57). POLL sample taken after the 13:32 flip, same window length.
+| arm | window | CPU |
+|---|---|---|
+| EVENT | 300 s, 12:52-12:57 | **44.6%** |
+| POLL | 300 s, 13:34-13:39 | **29.2%** |
+
+Both samples passed the mode-unchanged check. **Event costs 1.53x poll** on the same build, same
+settings, matched window length — and that is the honest per-arm figure. Every earlier CPU number in
+this file was a whole-process sample that happened to land in one mode or straddle a flip; those
+should be read as indicative only, and this pair as the result.
