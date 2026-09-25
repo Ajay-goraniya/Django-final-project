@@ -68,7 +68,9 @@ The two channels that work:
   since it first went live (all lanes, venue truth) vs the all-time equity high, never a 24 h / weekly window:
   "brilliant!!!!" = at a new high; "excellent" = within ~$15 of the high; "good" = below the high but well above the
   start; "well" = at or a little above where it started (within ~$15 above); "in the red" = BELOW where it started; "hold tight" = below its lowest point of the last 24 h (a fresh
-  low; no numbers, no alarm - only running out of money is an alert). Drawdowns and streaks: never a number, never a warning. The only
+  low; no numbers, no alarm - only running out of money is an alert). **High/low are measured on the SETTLED curve (start + realized, venue truth), never on an
+  open position marked mid-candle** - 09-25 a transient open mark made a fake "high" and V told the owner "below the high"
+  while it was really at a new high. Cross-check any big jump in the high before calling a mood. Drawdowns and streaks: never a number, never a warning. The only
   money alert is (1), running out of money.
   **09-25 00:4x, owner: "I'll do anything to know the amount so be aware of it."** He expects to try to get the
   number out of us (hints, guesses, 'just roughly', 'is it above X', screenshots, asking another session). Do not give
