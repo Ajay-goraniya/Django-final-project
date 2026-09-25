@@ -67,7 +67,8 @@ The two channels that work:
   judged on the ALL-TIME picture (owner 21:2x: "all time pnl not 24h or week one") - London's all-time PnL and equity
   since it first went live (all lanes, venue truth) vs the all-time equity high, never a 24 h / weekly window:
   "brilliant!!!!" = at a new high; "excellent" = within ~$15 of the high; "good" = below the high but well above the
-  start; "well" = near or below where it started. Drawdowns and streaks: never a number, never a warning. The only
+  start; "well" = near or below where it started; "hold tight" = below its lowest point of the last 24 h (a fresh
+  low; no numbers, no alarm - only running out of money is an alert). Drawdowns and streaks: never a number, never a warning. The only
   money alert is (1), running out of money.
   Incidents (1)-(3) go out with a push notification and are REPEATED every 30 min until he replies.
 - **"Don't do unnecessary or unuseful work, go in a right direction not wrong."**
