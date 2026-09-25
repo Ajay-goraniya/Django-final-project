@@ -791,3 +791,16 @@ output is superseded and should be discarded.**
 
 I let this fire rather than cancelling it because the schedule was V's instruction, but the label it
 carries is stale — a job armed before the experiment design changed under it.
+
+## A/B closed — final engine state (09-25 14:32)
+
+Flipper finished, 17 flips logged over 19 h. Engine is left on **`decide_mode = poll`**, which is
+simply where the last flip put it, not a decision I made. Everything else as it has been all along:
+13.1.2, pid 169816, master **false**, SHADOW, raw_v10_live25, ev 0.25, calibration off, stake 5,
+`decide_log` true, `decide_min_gap_ms` unset (50 ms code default), halt null.
+
+**Nobody has said which mode to settle on, so I have not chosen one.** The evidence for that decision
+is in hand — event is 2.3x fresher on spot feed age at fire for 1.53x the CPU, and neither arm shows
+any money effect that shadow can measure — but picking the standing mode is V's or the owner's call,
+not mine. It stays on poll until someone says otherwise, and poll is the pre-experiment default, so
+leaving it there is the conservative end.
