@@ -74,3 +74,17 @@ removed from this data and it is the first thing I would want fixed before anyon
 
 Second: the 5th/95th bands are wide and overlap heavily (RAW -409 to -99, FIXED -240 to +17), so the
 gap between the arms under execution is directional, not a clean separation.
+
+## Chart data
+`analysis/zurich/raw_vs_fixed_candles.csv` — one row per scored candle (357), 19 columns: epoch,
+utc_time, fired flags, side, ask, won, paper PnL, expected London-exec PnL (mean over the 1000 runs,
+so the fill probability is already folded in), the cumulative 5th/95th exec band per arm, and the
+grading source for that candle.
+
+The bands are the percentile of the **cumulative** exec PnL across runs, evaluated at each fire and
+**carried forward** on candles the arm skips — so plotting them gives a funnel that widens with trades
+and stays flat where an arm did not trade, rather than snapping to zero.
+
+Totals reconcile with the tables above: raw 336 fires, paper +127.78, exec -255.10, final band
+[-409.41, -99.27]; fixed 277 fires, paper +256.47, exec -112.33, final band [-240.40, +17.37];
+grading 306 engine / 51 venues.

@@ -176,3 +176,48 @@ if __name__ == '__main__':
             print(row(f'{arm}  both-fire candles', summarise(fires_of(arm, both), exec_on, pb)))
         for arm in ('RAW', 'FIXED'):
             print(row(f'{arm}  {arm}-only (discordant)', summarise(fires_of(arm, only[arm]), exec_on, pb)))
+
+# ---------------------------------------------------------------- per-candle CSV for charting
+def write_csv(cands, path='analysis/zurich/raw_vs_fixed_candles.csv'):
+    """One row per scored candle. Bands are the 5th/95th percentile of the CUMULATIVE London-exec
+    PnL across the 1000 runs, evaluated at each fire and carried forward on candles the arm skips -
+    so a chart of the band is a proper funnel and never jumps on a candle the arm did not trade."""
+    eps = sorted(cands.values(), key=lambda c: c['epoch'])
+    per = {}
+    for arm in ('RAW', 'FIXED'):
+        fires = [(c['epoch'], c['fire'][arm]) for c in eps if arm in c['fire']]
+        order = [f for _, f in fires]
+        runs = [score(order, random.Random(1000 + i), True, False)['seq'] for i in range(RUNS)]
+        cums = [[sum(r[:k + 1]) for k in range(len(r))] for r in runs]
+        mean = [st.mean(r[k] for r in runs) for k in range(len(order))]
+        pct = lambda k, q: sorted(c[k] for c in cums)[min(RUNS - 1, int(q * (RUNS - 1)))]
+        p05 = [pct(k, .05) for k in range(len(order))]
+        p95 = [pct(k, .95) for k in range(len(order))]
+        paper = [x for x in score(order, random.Random(7), False, False)['seq']]
+        per[arm] = dict(idx={ep: k for k, (ep, _) in enumerate(fires)},
+                        mean=mean, p05=p05, p95=p95, paper=paper, fires=dict(fires))
+    hdr = ('epoch,utc_time,raw_fired,fixed_fired,side_raw,side_fixed,ask_raw,ask_fixed,won_raw,won_fixed,'
+           'paper_pnl_raw,paper_pnl_fixed,exec_exp_pnl_raw,exec_exp_pnl_fixed,'
+           'exec_p05_cum_raw,exec_p95_cum_raw,exec_p05_cum_fixed,exec_p95_cum_fixed,grading_source')
+    carry = {'RAW': (0., 0.), 'FIXED': (0., 0.)}
+    lines = [hdr]
+    for c in eps:
+        ep = c['epoch']; row = [str(ep), dt.datetime.fromtimestamp(ep, dt.timezone.utc).strftime('%Y-%m-%d %H:%M:%S')]
+        cell = {}
+        for arm in ('RAW', 'FIXED'):
+            P = per[arm]
+            if ep in P['idx']:
+                k = P['idx'][ep]; fr = P['fires'][ep]
+                carry[arm] = (P['p05'][k], P['p95'][k])
+                cell[arm] = dict(fired=1, side=fr['side'], ask=f"{fr['ask']:.4f}", won=int(fr['win']),
+                                 paper=f"{P['paper'][k]:.4f}", exp=f"{P['mean'][k]:.4f}")
+            else:
+                cell[arm] = dict(fired=0, side='', ask='', won='', paper='0', exp='0')
+        r, x = cell['RAW'], cell['FIXED']
+        row += [str(r['fired']), str(x['fired']), r['side'], x['side'], r['ask'], x['ask'],
+                str(r['won']), str(x['won']), r['paper'], x['paper'], r['exp'], x['exp'],
+                f"{carry['RAW'][0]:.4f}", f"{carry['RAW'][1]:.4f}",
+                f"{carry['FIXED'][0]:.4f}", f"{carry['FIXED'][1]:.4f}", c['src']]
+        lines.append(','.join(row))
+    open(path, 'w').write('\n'.join(lines) + '\n')
+    print(f'\nwrote {path}: {len(lines)-1} candle rows')
