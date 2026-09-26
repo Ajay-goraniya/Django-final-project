@@ -54,9 +54,14 @@ f.halves(first=first, second=second)
 # verify.permutation is numeric (it calls np.isnan on pred), so encode the side UP=1.0 / DOWN=0.0
 enc=lambda v: 1.0 if v=='UP' else 0.0
 y=[enc(x['actual']) for x in rows]; pred=[enc(x['side']) for x in rows]; price=[x['price'] for x in rows]
+# FIX (V 09-26): a flipped side must be priced at ITS OWN ask (~1-p+1c), not the chosen side's ask.
+# The old version paid the cheap side's price for the opposite side - a free lunch that made the
+# shuffled control look profitable (+0.200/$1) and the arm look like luck.
+orig=list(pred)
 def pnl_fn(y_, pred_, price_):
     tot=cost=0.
-    for a,s,p in zip(y_,pred_,price_):
+    for a,s,p,o in zip(y_,pred_,price_,orig):
+        if s!=o: p=min(0.99,1-p+0.01)
         sh=5.0/p; fee=0.07*sh*p*(1-p)
         cost+=5.0+fee; tot+=(sh if s==a else 0)
     return (tot-cost)/cost

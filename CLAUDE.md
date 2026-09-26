@@ -149,7 +149,10 @@ overstate the evidence. Run `paired()`; a 150-trade sample can really be a 54-tr
 
 **On `permutation()`:** permute the model's *predictions*, never the labels. Shuffling labels also
 destroys the market's calibration, so cheap longshots "win" at the base rate and the control prints
-a fake profit. That mistake cost an hour on 09-10.
+a fake profit. That mistake cost an hour on 09-10. **And when a shuffle flips a side, price it at
+THAT side's ask (~1−p+spread), never the original side's ask** - 09-26 the Zurich raw-arm control
+paid the cheap side's price for the opposite side, printed +0.200/$1 for coin flips and called the
+arm luck (on the 336-candle CSV: buggy p=0.56, correct p=0.02-0.04).
 
 ## Method (these were expensive lessons, not preferences)
 
