@@ -185,3 +185,8 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
   "no orders found" (not auth/sign), book moved away within 1 s - no fault.
 - Proposed fix (exclude pm-london from needrestart auto-restart) NOT applied: owner 09-26 11:3x "No need".
   Do not re-raise unless an auto-restart lands mid-order.
+
+## NC-7 - Retry levers on London EF (09-26, read-only backtests on the London DB) - KEEP AS IS
+- **No-EV retries** (buy the never-filled candles at the best ask +1s/+2s): 100 graded, 45% win, **-0.124/-0.163 per $1**; every bucket INSUFFICIENT. They lose. The EV re-check on retries stays.
+- **Retry fills as they are** (attempt >=2, n54 INSUFFICIENT): 50% win vs 48% break-even, +0.03/$1. Dropping retries costs ~11 in total, and the halves disagree. No evidence either way; no change.
+- The fill-side levers are now all closed: pad/cap (PAD_GRID_LONDON), speed (NC-5), size (R-14), no-EV retry and no-retry (this entry). Re-open only with a new mechanism, not a new threshold.
