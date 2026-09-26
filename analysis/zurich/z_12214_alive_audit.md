@@ -881,3 +881,26 @@ because that CSV spans journals beyond live4 while the opposite-ask lookup only 
 It is still shadow, still ungraded against `venues.outcome` for this window, and the earlier finding
 stands that its sibling test on London execution turns it negative once adverse selection is applied.
 Passing the control means the side pick is not noise; it does not mean the arm makes money live.
+
+## 09-26 14:0x UTC - timing test + London-exec split (commit 39bc379), sent to V
+
+Read-only. No deploy, no config change. Engine 13.1.2, pid 169816, master OFF, halt null,
+`decide_mode` poll, profile `raw_v10_live25`, stake 5, `decide_log` true.
+
+V's random-second control **cannot** answer the timing question as specified: it buys Raw's side at a
+second that may PRECEDE the second Raw named that side (fire second p50 99). Reported as a defect in
+the control, not as a result. +0.504/$1 vs own-second +0.078, p(random>=own) 1.000, entirely lookahead.
+
+My own two defects in the first attempt, both found before anything was sent:
+- `value()` averaged per-trade ratios, so one 2c longshot win (+48/$1) moved a 339-trade mean by +0.14.
+  Now capital-weighted `sum(pnl)/sum(cost)`, as the ledger computes it.
+- controls priced from `tape1s` were compared against a baseline priced from the executor's fills. The
+  two differ by +0.050 median at the fire second. Everything is now tape-to-tape.
+
+Finding that does hold: **delay costs money.** Raw's own second beats +15/+30/+60/+120 s on the same
+candles, no price cap, 61/70/75/72% of discordant pairs, sign-test p 6.0e-05..2.1e-19, both halves.
+Stated caveat against it: the arm's own level is +0.135 h1 / -0.0005 h2 on tape pricing, so the ARM is
+not both-halves profitable - only the delay penalty is.
+
+London-exec split, RAW per $1, paper +0.0378 -> full -0.1244: missed fills on winners -0.0970,
+slippage -0.0711, random subsampling +0.0022 (the soundness check), interaction +0.0038.
