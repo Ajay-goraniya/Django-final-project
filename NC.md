@@ -178,3 +178,10 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
 - LESSON (Zurich 21:30): the shadow lane fills in-process - 348/348 EF orders filled all-time, 36/36 in its event
   window while London missed 60%. Any change whose cost lands on FILL behaviour is invisible on Zurich by construction;
   judge those only on London (or say up front that shadow cannot answer).
+
+## NC-6 - Ubuntu needrestart auto-restarted pm-london (09-26 06:13) - owner: "No need" to block it
+- unattended-upgrades (libexpat1/curl/libpcap) -> needrestart restarted the service; clean stop/start, meta intact,
+  no order in flight. Post-restart zero-fill run checked: order shape identical, every reject a matching-engine
+  "no orders found" (not auth/sign), book moved away within 1 s - no fault.
+- Proposed fix (exclude pm-london from needrestart auto-restart) NOT applied: owner 09-26 11:3x "No need".
+  Do not re-raise unless an auto-restart lands mid-order.
