@@ -25,3 +25,12 @@ G volatility scaled: stake proportional to 1/sigma(BTC 1h realised, known before
 Per arm: total PnL, maxDD, PnL/maxDD, first-half/second-half by time, worst day. Parameters for B/F picked on the
 first half only, scored on the second. Mark anything under 60 trades INSUFFICIENT. An arm "wins" only if it beats A
 on BOTH total PnL and maxDD on the second half, on BOTH London and Zurich.
+
+## RESULT 09-26 01:1x - NOTHING SHIPS. Fixed $ stays.
+- London (153 live EF fills, H2 n=77): no arm beats A on both H2 PnL and maxDD. E closest (more PnL, DD +1.2 worse);
+  F MA20 less DD but less PnL; F MA40 and B lose PnL. File on the London box only (no git creds there).
+- Zurich (765 shadow fills, H2 n=490, per $ deployed): only F de-risk MA(40) beats A on both - but the fit half was a
+  straight EF loss, equal capital drifts inside H2, shadow has no refusal cost, EF edge never passed permutation.
+  analysis/zurich/STAKING_GRID_ZURICH.md.
+- F (half stake while equity < MA) is the only CANDIDATE: wins on Zurich, fails the both-venues rule on London.
+  Re-run on London once it has ~300 live fills (about 3 more days). Live use needs the owner's two confirmations.
