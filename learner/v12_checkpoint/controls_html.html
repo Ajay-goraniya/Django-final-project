@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Trade Controls v__VERSION__</title>
+<style>
+:root{color-scheme:dark;--bg:#080b10;--panel:#10151d;--panel2:#0b1017;--line:#263142;--muted:#8b98aa;--text:#eaf0f8;--up:#27d17f;--down:#ff5d6c;--main:#60a5fa;--rev:#f7b955;--ef:#9b59ff;--warn:#ffd166;--blue:#8ab4ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:13px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.shell{max-width:760px;margin:auto}.top{position:sticky;top:0;z-index:5;background:#080b10f2;border-bottom:1px solid var(--line);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px}.brand{font-weight:900;letter-spacing:.5px}.small{font-size:11px;color:var(--muted);line-height:1.5}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:8px;padding:8px}.card{grid-column:span 12;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:12px}.label{font-size:10px;color:var(--muted);letter-spacing:.7px;text-transform:uppercase}.big{font-size:21px;font-weight:900;margin-top:4px}.row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.nav{color:var(--blue);text-decoration:none;border:1px solid var(--line);padding:7px 10px;border-radius:8px}.toggle{width:155px;height:56px;border:0;border-radius:14px;background:var(--up);color:#06140d;font:900 18px inherit}.toggle.off{background:#293342;color:#b7c1cf}.stateGrid,.stakeGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px}.cell{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px}.cell b{display:block;margin-top:3px;font-size:15px}.up{color:var(--up)}.down{color:var(--down)}.main{color:var(--main)}.rev{color:var(--rev)}.ef{color:var(--ef)}.warn{color:var(--warn)}.note{margin-top:10px;border-left:3px solid var(--blue);background:#0b1119;padding:8px 10px;color:#aab7c8;line-height:1.5}.formGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:9px}label{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;margin:5px 0 3px}input,select{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:8px;border-radius:7px;font:inherit}.btn{border:1px solid var(--line);background:#161d27;color:var(--text);padding:8px 12px;border-radius:8px;font:700 12px inherit}.primary{border-color:var(--blue);color:var(--blue)}.danger{border-color:var(--down);color:var(--down);background:transparent}.rule{display:flex;justify-content:space-between;gap:8px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px;margin-top:7px}.chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}.chip{border:1px solid var(--line);background:var(--panel2);color:var(--muted);padding:5px 8px;border-radius:999px}.chip.on{border-color:var(--blue);color:var(--blue)}.msg{min-height:18px;margin-top:8px;font-weight:700}.readiness{white-space:pre-wrap}.kindLine{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:3px}.miniToggle{min-width:50px;height:27px;padding:0 10px;border:1px solid #2d9b68;border-radius:999px;background:#10291f;color:#71e4a7;font:900 11px inherit;cursor:pointer}.miniToggle.off{border-color:#5b6675;background:#151b24;color:#94a0b2}.miniToggle:disabled{opacity:.5;cursor:wait}.miniToggle:active{transform:translateY(1px)}
+.stateXBox{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}.sxActive{color:var(--warn)}
+@media(max-width:520px){.stateGrid,.stakeGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.formGrid{grid-template-columns:1fr}.toggle{width:120px;height:50px}}
+</style></head><body><div class="shell">
+<header class="top"><div><div class="brand">TRADE CONTROLS · v__VERSION__</div><div class="small">build __BUILD__</div><div id="runStamp" class="small">--</div></div><a class="nav" href="/">← Dashboard</a></header>
+<div class="grid">
+<section class="card"><div class="row"><div><div class="label">Master live-order switch</div><div class="big">MAIN · REVERSAL · EF</div><div id="masterStatus" class="small">loading safe state…</div></div><button id="master" class="toggle off">OFF</button></div>
+<div id="kindStates" class="stateGrid"></div><div class="note">Master controls all new real orders; the small MAIN / REVERSAL / EF switches can block each stream individually. Master starts OFF after every terminal launch. Individual choices persist across restarts. Signal generation, settlement and accuracy remain active while trading is OFF or banned.</div>
+<div id="ready" class="small readiness" style="margin-top:9px"></div>
+<div class="stateXBox"><div class="row"><div><div class="label">State X Protection</div><div id="stateXStatus" class="big" style="font-size:17px">NORMAL</div><div id="stateXDetails" class="small">loading…</div></div><button id="stateXToggle" type="button" class="miniToggle off">OFF</button></div></div></section>
+
+<section class="card"><div class="label">Shared staking · all three signals</div><div class="row"><div><div id="nextStake" class="big">--</div><div class="small">one current stake and one combined streak</div></div><div id="streak" class="small"></div></div>
+<div class="formGrid">
+<div><label>Mode</label><select id="mode"><option value="ladder">Polymarket ladder ($1–$20)</option><option value="fixed">fixed</option><option value="percent">percent</option><option value="streak">streak</option></select></div>
+<div><label>Fixed stake $</label><input id="fixed_stake" type="number" min="1" step="0.01"></div>
+<div><label>% free capital</label><input id="percent" type="number" min="0.01" step="0.01"></div>
+<div><label>Current stake $</label><input id="current_stake" type="number" min="1" step="0.01"></div>
+<div><label>Recalc after wins</label><input id="win_trigger" type="number" min="1" step="1"></div>
+<div><label>Recalc after losses</label><input id="loss_trigger" type="number" min="1" step="1"></div>
+<div><label>Minimum $</label><input id="min_stake" type="number" min="0.01" step="0.01"></div>
+<div><label>Maximum $</label><input id="max_stake" type="number" min="0.01" step="0.01"></div>
+</div><div style="margin-top:10px"><button id="saveStake" class="btn primary">Review & save shared stake</button></div></section>
+
+<section class="card"><div class="label">Daily take-profit · stop-loss</div><div class="row"><div><div id="dlToday" class="big">--</div><div id="dlStatus" class="small">loading…</div></div><div id="dlReset" class="small"></div></div>
+<div class="formGrid"><div><label>Take-profit $</label><input id="take_profit" type="number" min="0" step="1"></div><div><label>Stop-loss $</label><input id="stop_loss" type="number" min="0" step="1"></div></div><div class="small" style="margin-top:4px">0 = off</div>
+<div class="small" style="margin-top:6px">REAL realised PnL only. The trading day runs noon to noon London time. When either limit is reached no new order is placed for the rest of that day; open positions still settle. Shadow never counts.</div>
+<div style="margin-top:10px"><button id="saveLimits" class="btn primary">Review &amp; save daily limits</button></div></section>
+<section class="card"><div class="big" style="font-size:17px">BANNED HOURS</div><div class="small">Execution-only bans. Blocked signals are stored as F in Data; the BTC chart never prints F.</div><div id="rules"></div>
+<div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px"><div class="label">Add a ban rule</div><label>Signals</label><div id="kinds" class="chips"></div><label>Days</label><div id="days" class="chips"></div>
+<div class="formGrid"><div><label>Start (24h HH:MM)</label><input id="start" type="time" value="15:00"></div><div><label>End exclusive</label><input id="end" type="time" value="19:00"></div></div>
+<div style="margin-top:9px"><button id="addRule" class="btn primary">Review & add ban</button></div></div></section>
+<section class="card"><div id="msg" class="msg"></div></section>
+</div></div>
+<script>
+(function(){'use strict';
+var state=null,KINDS=['MAIN','REVERSAL','EF'],DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+var RUN_UPTIME_BASE=Number('__UPTIME_SEC__')||0;
+var RUN_PAGE_BASE=(window.performance&&typeof window.performance.now==='function')?window.performance.now():Date.now();
+function runtimeText(totalSeconds){
+  var left=Math.max(0,Math.floor(Number(totalSeconds)||0)),out=[];
+  var units=[['y',31536000],['mo',2592000],['d',86400],['h',3600],['m',60],['s',1]];
+  units.forEach(function(unit){var n=Math.floor(left/unit[1]);if(n){out.push(n+unit[0]);left-=n*unit[1];}});
+  return out.length?out.join(' '):'0s';
+}
+function countdownText(totalSeconds){var left=Math.max(0,Math.ceil(Number(totalSeconds)||0)),m=Math.floor(left/60),s=left%60;return m+'m '+String(s).padStart(2,'0')+'s'}
+function tickRuntime(){
+  var node=document.getElementById('runStamp');if(!node)return;
+  var now=(window.performance&&typeof window.performance.now==='function')?window.performance.now():Date.now();
+  node.textContent='runtime · '+runtimeText(RUN_UPTIME_BASE+(now-RUN_PAGE_BASE)/1000);
+}
+
+function e(id){return document.getElementById(id)}function money(v){return '$'+Number(v||0).toFixed(2)}
+function request(method,url,body,done){var x=new XMLHttpRequest();x.open(method,url,true);if(body)x.setRequestHeader('Content-Type','application/json');x.onreadystatechange=function(){if(x.readyState===4){var r={};try{r=JSON.parse(x.responseText)}catch(_){r={ok:false,error:'bad server response'}}done(r)}};x.send(body?JSON.stringify(body):null)}
+function show(msg,ok){e('msg').textContent=msg||'';e('msg').className='msg '+(ok?'up':'down')}
+function minutes(v){var p=String(v||'').split(':');return Number(p[0])*60+Number(p[1])}
+function bindSignalToggles(){
+ Array.prototype.forEach.call(document.querySelectorAll('[data-kind-toggle]'),function(b){
+  b.onclick=function(){
+   var k=b.getAttribute('data-kind-toggle'),s=(state.kinds||{})[k]||{};
+   var current=s.manual_enabled!==false,next=!current;
+   if(next&&state.master_enabled&&!confirm('Turn '+k+' live execution ON?'))return;
+   b.disabled=true;
+   request('POST','/api/controls/signal',
+     {confirmed:true,kind:k,manual_enabled:next},
+     function(r){
+       if(!r.ok){b.disabled=false;show(r.error||('Could not change '+k),false);return}
+       state=r.state||state;
+       show(k+' execution '+(next?'ON':'OFF'),true);
+       render();
+     });
+  };
+ });
+}
+var limitsDirty=false;
+function render(){
+ var on=!!state.master_enabled,ready=state.execution||{},stake=state.shared_stake||{},sx=state.state_x||{},sxOn=!!sx.enabled,sxActive=!!sx.active;
+ e('master').textContent=on?'ON':'OFF';e('master').className='toggle'+(on?'':' off');
+ e('masterStatus').textContent=(on?state.lane+' ORDERS ARMED':'SAFE · NEW ORDERS BLOCKED')+' · '+state.clock+' '+state.timezone;
+ e('masterStatus').className='small '+(on?'up':'');
+ e('ready').textContent=ready.ready?'Execution preflight READY · mainnet websocket fresh':('Execution locked · '+(ready.missing||[]).join(' · '));
+ e('ready').className='small readiness '+(ready.ready?'up':'warn');
+ e('kindStates').innerHTML=KINDS.map(function(k){var s=state.kinds[k]||{},manual=s.manual_enabled!==false;return '<div class="cell"><div class="label '+(k==='MAIN'?'main':k==='REVERSAL'?'rev':'ef')+'">'+k+'</div>'+'<div class="kindLine"><b class="'+(s.effective_enabled?'up':s.auto_banned?'warn':'down')+'">'+(s.effective_enabled?'TRADING':s.auto_banned?'BANNED':'BLOCKED')+'</b>'+'<button type="button" class="miniToggle'+(manual?'':' off')+'" data-kind-toggle="'+k+'">'+(manual?'ON':'OFF')+'</button></div>'+'<div class="small">'+(s.status||'')+'</div></div>'}).join('');bindSignalToggles();
+ e('stateXToggle').textContent=sxOn?'ON':'OFF';e('stateXToggle').className='miniToggle'+(sxOn?'':' off');
+ e('stateXStatus').textContent=sxActive?(sxOn?'SX ACTIVE · BLOCKING':'SX ACTIVE · SHADOW'):(sxOn?'ARMED':'SHADOW');e('stateXStatus').className='big '+(sxActive?'sxActive':'up');e('stateXStatus').style.fontSize='17px';
+ e('stateXDetails').textContent=sxActive?((sxOn?'no new orders until ':'would block until ')+(sx.resume_time||'--')+' · '+(sx.trigger_reason||'--')+' · triggered '+Number(sx.trigger_count||0)+'x'):('2 consecutive settled losses → 15 min no new orders · '+(sxOn?'ON: blocks':'OFF: service disabled')+' · loss streak '+Number(sx.loss_streak||0)+' · triggered '+Number(sx.trigger_count||0)+'x');
+ var dl=state.daily_limits||{};var dlp=Number(dl.pnl||0);e('dlToday').textContent=(dlp>=0?'+':'')+dlp.toFixed(2)+' USD today';e('dlToday').className='big '+(dl.halted?'sxActive':(dlp>=0?'up':'down'));
+ e('dlStatus').textContent=dl.halted?('HALTED · '+(dl.reason||'')):('TP '+(Number(dl.take_profit||0)>0?money(dl.take_profit):'off')+' · SL '+(Number(dl.stop_loss||0)>0?money(dl.stop_loss):'off')+' · '+Number(dl.trades||0)+' real settled');
+ e('dlReset').innerHTML=(limitsDirty?'<span class="warn">unsaved changes</span><br>':'')+'counter resets '+(dl.resets_at||'--')+' '+(dl.resets_label||'');
+ if(!limitsDirty){e('take_profit').value=Number(dl.take_profit||0);e('stop_loss').value=Number(dl.stop_loss||0);}
+ e('nextStake').textContent=money(state.shared_next_stake);e('streak').innerHTML='<span class="up">wins '+Number(state.win_streak||0)+'</span> · <span class="down">losses '+Number(state.loss_streak||0)+'</span>';
+ Object.keys(stake).forEach(function(k){if(e(k))e(k).value=stake[k]});
+ e('rules').innerHTML=(state.rules||[]).map(function(r){return '<div class="rule"><div><b>'+r.describe+'</b><div class="small">'+(r.kinds||[]).join(', ')+'</div></div><button class="btn danger" data-delete="'+r.id+'">Remove</button></div>'}).join('')||'<div class="small" style="margin-top:7px">No ban rules.</div>';
+ Array.prototype.forEach.call(document.querySelectorAll('[data-delete]'),function(b){b.onclick=function(){if(!confirm('Remove this execution ban?'))return;request('POST','/api/controls/rule/delete',{confirmed:true,id:b.dataset.delete},finish)}});
+}
+function load(){request('GET','/api/controls',null,function(r){state=r;render()})}
+function finish(r){if(!r.ok){show(r.error||'Change failed.',false);return}show('Applied.',true);load()}
+e('master').onclick=function(){var target=!state.master_enabled;var warning=target?'Enable '+state.lane+' Polymarket v10 orders?':'Turn OFF all new live orders? Existing accepted orders are not cancelled.';if(!confirm(warning))return;request('POST','/api/controls/apply',{confirmed:true,system:{manual_enabled:target}},finish)};
+e('stateXToggle').onclick=function(){var sx=state.state_x||{},target=!sx.enabled,warning=target?'Turn State X ON? After 2 consecutive settled losses no new orders are placed for 15 minutes.':'Turn State X OFF? The service and its window are disabled.';if(!confirm(warning))return;request('POST','/api/controls/state-x',{confirmed:true,manual_enabled:target},finish)};
+e('take_profit').oninput=function(){limitsDirty=true;};
+e('stop_loss').oninput=function(){limitsDirty=true;};
+e('saveLimits').onclick=function(){var tp=Number(e('take_profit').value),sl=Number(e('stop_loss').value);if(!confirm('Set daily take-profit '+(tp>0?'$'+tp:'OFF')+' and stop-loss '+(sl>0?'$'+sl:'OFF')+'? Trading halts until the next London noon when either is reached.'))return;request('POST','/api/controls/daily-limits',{confirmed:true,take_profit:tp,stop_loss:sl},function(r){limitsDirty=false;finish(r)})};
+e('saveStake').onclick=function(){var s={};['fixed_stake','percent','current_stake','win_trigger','loss_trigger','min_stake','max_stake'].forEach(function(k){s[k]=Number(e(k).value)});s.mode=e('mode').value;if(!confirm('Apply this one shared stake to MAIN, REVERSAL and EF?'))return;request('POST','/api/controls/apply',{confirmed:true,system:{stake:s}},finish)};
+function chips(id,values,selected){e(id).innerHTML=values.map(function(v,i){return '<button type="button" class="chip '+(selected.indexOf(i)>=0||selected.indexOf(v)>=0?'on':'')+'" data-value="'+i+'">'+v+'</button>'}).join('');Array.prototype.forEach.call(e(id).querySelectorAll('.chip'),function(b){b.onclick=function(){b.classList.toggle('on')}})}
+chips('kinds',KINDS,['MAIN']);chips('days',DAYS,[0,1,2,3]);
+e('addRule').onclick=function(){var ks=[],ds=[];Array.prototype.forEach.call(e('kinds').querySelectorAll('.chip.on'),function(b){ks.push(KINDS[Number(b.dataset.value)])});Array.prototype.forEach.call(e('days').querySelectorAll('.chip.on'),function(b){ds.push(Number(b.dataset.value))});var rule={kinds:ks,days:ds,start_minute:minutes(e('start').value),end_minute:minutes(e('end').value)};if(!confirm('Add this execution-only ban?'))return;request('POST','/api/controls/rule',{confirmed:true,rule:rule},finish)};
+load();setInterval(load,3000);
+tickRuntime();setInterval(tickRuntime,1000);
+})();
+</script></body></html>

@@ -1,0 +1,4 @@
+END-TO-END on raw streams, 2026-09-06, 257 candles  (IN-SAMPLE parameters — this proves the file runs live, not new edge)
+  pnl mode  EV>=0.20         fires  39  acc 61.5%  mean ask 0.438  PnL $+130.19
+  accuracy mode 0.85/0.02    fires  37  acc 100.0%  mean ask 0.864  PnL $+55.06
+  (out-of-sample for this day earlier: pnl mode 38 trades 57.9% +$87 ; accuracy mode 41 trades 95.1% +$20)

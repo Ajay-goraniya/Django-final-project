@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git fetch *)",
+      "Bash(curl -s http://127.0.0.1:*)",
+      "Bash(curl -s --max-time * http://127.0.0.1:*)",
+      "Bash(python3 /tmp/claude-0/-home-user-Django-final-project/6e3b6e11-d14f-50d1-8719-c1998d0e6b9a/scratchpad/b10live/fair.py)",
+      "Bash(python3 /tmp/claude-0/-home-user-Django-final-project/6e3b6e11-d14f-50d1-8719-c1998d0e6b9a/scratchpad/b10live/fair.py *)",
+      "Bash(python3 /tmp/claude-0/-home-user-Django-final-project/6e3b6e11-d14f-50d1-8719-c1998d0e6b9a/scratchpad/scan_perms.py)"
+    ]
+  }
+}

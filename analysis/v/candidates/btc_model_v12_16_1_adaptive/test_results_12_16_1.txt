@@ -1,0 +1,23 @@
+v12.16.1 adaptive candidate validation
+=======================================
+
+Date: 2026-09-16
+
+Targeted:
+- python test_adaptive.py : 9 passed
+- python test_lanes.py    : 36 passed
+- python test_polymarket.py : 71 passed
+- python -m compileall -q . : passed
+
+Full discovery:
+- 386 tests discovered
+- 384 passed
+- 2 environment-only errors because this build container does not have optional
+  live dependencies installed:
+    * polymarket.clients.async_secure (polymarket-client)
+    * eth_account
+- No strategy/adaptive/execution test failures.
+
+Important: these are software/regression tests, not historical or live
+profitability validation. The archive contains no full replay dataset from which
+to claim that the adaptive probability improves returns.
