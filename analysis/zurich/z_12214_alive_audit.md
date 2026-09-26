@@ -848,3 +848,36 @@ same fact is a 60% never-fill rate. Same mechanism, and the shadow lane cannot e
 "event mode prices against a staler book, and the one venue where that matters is the one shadow
 cannot model — so treat the latency win as unproven until London measures fills." I had every number
 needed for that sentence and did not write it.
+
+---
+
+# RETRACTION: fifteen "fails permutation" verdicts were produced by a broken control (09-26)
+
+V found the bug (c299e19): my `pnl_fn` charged the **chosen** side's ask for a **flipped** side. A
+shuffle that turned a 0.30 UP into DOWN still paid 0.30 for it, when the real DOWN ask was ~0.70. The
+shuffled arm was buying whichever side was cheap at the cheap price — a free lunch that printed
+**+0.200/$1 for coin flips** and made the real +0.26 look unremarkable.
+
+The error pushed p **up**, not down, so it made me *too* conservative, and I reported "NOT A FINDING,
+fifteenth reading" fifteen times on a test that could not have passed. **I retract those verdicts.**
+
+| run | real | shuffled mean | p95 | p | null |
+|---|---|---|---|---|---|
+| corrected `verify_raw_arm.py` (flip priced 1−p+1c) | **+0.263** | **+0.052** | +0.146 | **0.000** | +0.230 |
+| flip priced at the REAL opposite ask (`_ask_up`/`_ask_dn`, 0 of 338 missing) | **+0.260** | **+0.049** | +0.141 | **0.000** | +0.225 |
+| 336-candle CSV, $10 stake, no exec cost | +0.037 | −0.072 | −0.001 | **0.015** | −0.058 |
+
+The real-opposite-ask run is the better one and it needed no approximation: every one of the 338 fires
+has `_ask_up`/`_ask_dn` journalled at the fire second. It passes **all** checks it runs.
+
+`verify_raw_arm.py` now fails on **grading provenance only** — the venues snapshot still does not reach
+this window, which is a data gap, not a result.
+
+**The 336-candle CSV p=0.015 is worth reading carefully**: that passes at the conventional 0.05 and
+fails `verify.py`'s deliberately stricter 0.01 bar. It also falls back to 1−p+1c on 205 of 336 rows,
+because that CSV spans journals beyond live4 while the opposite-ask lookup only covers live4.
+
+**What this does and does not change.** The raw arm now clears permutation, halves, costs and the null.
+It is still shadow, still ungraded against `venues.outcome` for this window, and the earlier finding
+stands that its sibling test on London execution turns it negative once adverse selection is applied.
+Passing the control means the side pick is not noise; it does not mean the arm makes money live.
