@@ -60,3 +60,67 @@ weekend effect. REVERSAL's entire weekend record is **one trade that won**.
 Sat and Sun traded for enough weekends to put 60+ graded fires per lane in the weekend bucket. At
 MAIN's observed ~70 fires/day that is roughly one full weekend for MAIN, but REVERSAL runs ~19/day so
 it needs about four weekends, and the weekday side needs to come from the same period to be comparable.
+
+---
+
+# Do MAIN and REVERSAL help in EF drawdown? (09-26, read-only)
+
+`analysis/zurich/lane_overlap.py`. Journal `live4` — the only one where all three lanes ran together.
+**Common period, all three lanes live: 09-22 17:12 -> 09-26 00:35 UTC, 79.4 h.**
+Every trade normalised to a **$5 stake** so the lanes compare regardless of what the stake dial was
+at the time: `pnl = 5 * (payout/cost - 1)`.
+
+| lane | n | total at $5 |
+|---|---|---|
+| EF | 346 | **+461.06** |
+| MAIN | 266 | **-114.34** |
+| REVERSAL | 66 | **-6.53** |
+
+Same grading caveat as the day-of-week grid above: **not** `venues.outcome` (zero epoch overlap with
+the snapshot on the branch), graded on `results.actual`. All shadow, master OFF.
+
+## (1) Correlation — paired
+
+| | per hour (80 h) | per candle, BOTH fired |
+|---|---|---|
+| EF vs MAIN | **r -0.417** | **r -0.550** on 96 candles |
+| EF vs REVERSAL | **r +0.227** | **r +0.761** on 31 candles |
+
+MAIN moves **against** EF; REVERSAL moves **with** it, strongly so candle-by-candle. On
+diversification grounds alone MAIN is the hedge and REVERSAL is the opposite of one.
+
+## (2) EF drawdown episodes — the brief's threshold never occurs
+
+The brief said peak-to-trough >= 10 stakes ($50). **EF's deepest drawdown in the whole period is
+49.44, so there are zero such episodes.** Rather than pick a threshold that produces some, here is the
+whole sweep:
+
+| threshold | 2 st ($10) | 4 st ($20) | 6 st ($30) | 8 st ($40) | 10 st ($50) | 12 st ($60) |
+|---|---|---|---|---|---|---|
+| episodes | 24 | 7 | 4 | 2 | **0** | 0 |
+
+At >= 4 stakes, 7 episodes, MAIN+REVERSAL offset of the EF drawdown: **-65%, +9%, +0%, -37%, +17%,
+-11%, +29%**. Three of seven make the drawdown *worse*. At >= 6 stakes: -57%, +17%, +19%, +29%. At
+>= 8 stakes, the only two deep ones: +29%, +19%.
+
+So on the deepest two episodes the pair offsets about a quarter of the loss, but across all seven the
+sign is not stable, and MAIN and REVERSAL pull in opposite directions inside the same window (episode
+#6: MAIN +12.81, REVERSAL -18.25).
+
+## (3) Portfolio curves — the direct answer
+
+| portfolio | n | total pnl | maxDD |
+|---|---|---|---|
+| EF alone | 346 | **+461.06** | **49.44** |
+| EF + MAIN | 612 | +346.71 | 52.72 |
+| EF + REVERSAL | 412 | +454.53 | 63.92 |
+| EF + MAIN + REVERSAL | 678 | +340.18 | 58.53 |
+
+**No. Neither helps, on either axis.** Every combination lowers total PnL *and* raises max drawdown
+against EF alone. MAIN's negative correlation is real but it does not buy a smoother curve, because
+the lane loses money: you pay -114.34 for a hedge that still leaves drawdown worse. REVERSAL is
+positively correlated and adds the most drawdown of the three (+14.5 on maxDD for -6.5 of PnL).
+
+**Caveats, so the table is not over-read.** 79 h and one EF regime. REVERSAL is n=66 over the period
+and 31 shared candles, under the 60-fire bar for the paired cell. And none of this touches whether
+EF's own +461 is real — it still fails the permutation control at n=303 on the standing ledger.
