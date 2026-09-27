@@ -30,7 +30,8 @@ Everything below was fixed BEFORE any result was looked at:
             same cell (McNemar on candles, right = traded and won; plus a sign-flip test on candle PnL).
 Grading: venues.outcome (Polymarket's own resolution)."""
 import argparse, csv, glob, gzip, math, os, sqlite3, sys, bisect, datetime as dt
-import numpy as np, pandas as pd
+import numpy as np, pandas as pd, warnings
+warnings.filterwarnings('ignore', category=RuntimeWarning)
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.metrics import roc_auc_score, brier_score_loss
@@ -209,6 +210,13 @@ te = PRED[('B', 'LR', 'NULL')][0]
 print(f'  market alone (1 - ask_leader normalised, no fit), arm-B rows: AUC {roc_auc_score(te.y, te.ask_dog / (te.ask_dog + te.ask_lead)):.4f} '
       f'Brier {brier_score_loss(te.y, te.ask_dog / (te.ask_dog + te.ask_lead)):.4f}')
 
+print('  on the REAL REV call rows (age 0; label = REV side wins; p = model p for that side):')
+for (arm, kind, sname), (_, rv) in PRED.items():
+    r = rv[0]; ps = np.where(r.side == r.dog, r.p, 1 - r.p)
+    print(f'    {arm} {kind:4s} {sname:5s} n {len(r):5d} base {r.win.mean():.3f} AUC {roc_auc_score(r.win, ps):.4f} Brier {brier_score_loss(r.win, ps):.4f}')
+r = PRED[('B', 'LR', 'NULL')][1][0]; mk = 1 - np.where(r.side == 'UP', r.ask_dn, r.ask_up) / (r.ask_up + r.ask_dn)
+print(f'    market alone on the same rows: AUC {roc_auc_score(r.win, mk):.4f}; lane p: AUC {roc_auc_score(r.win, r.lane_p):.4f}')
+
 # ---------------------------------------------------------------- trading cells
 SLIP = [(0.10, -0.01), (0.50, 0.02), (0.90, 0.11)]
 def slip_vec(u):
@@ -244,7 +252,10 @@ def cell(label, R, cand_epochs=None, null_R=None, extra=None):
     pair = None
     if null_R is not None:
         ep = sorted(set(R.epoch) | set(null_R.epoch)); mw = dict(zip(R.epoch, R.win)); nw = dict(zip(null_R.epoch, null_R.win))
-        mine = [bool(mw.get(e, 0)) for e in ep]; theirs = [bool(nw.get(e, 0)) for e in ep]
+        # right = the better decision on that candle: traded and won, or stayed out while the other rule's trade lost
+        # (a plain 'traded and won' count would reward whichever rule simply trades more)
+        mine = [bool(mw[e]) if e in mw else (e in nw and not nw[e]) for e in ep]
+        theirs = [bool(nw[e]) if e in nw else (e in mw and not mw[e]) for e in ep]
         b = sum(x and not y for x, y in zip(mine, theirs)); c = sum(y and not x for x, y in zip(mine, theirs))
         from math import comb
         pm = min(1.0, 2 * sum(comb(b + c, k) * 0.5 ** (b + c) for k in range(0, min(b, c) + 1))) if b + c else 1.0
@@ -278,20 +289,23 @@ for arm in ARMS:
                     g = cell(f'{kind:3s} {sname} theta {th:.2f}', res[sname], null_R=(res['NULL'] if sname == 'FULL' else None))
                     if g: g.update(arm=arm, universe=universe, age=age, kind=kind, theta=th, set=sname)
 
-# ---------------------------------------------------------------- verify.py on the best-looking FULL cell (by London per$1, n >= 60)
+# ---------------------------------------------------------------- verify.py on the best-looking FULL cells (by London per$1, n >= 60)
+def run_verify(best):
+    print(f"\n== verify.py: arm {best['arm']} {best['universe']} age {best['age']} {best['kind']} FULL theta {best['theta']}")
+    R = best['R']; f = Finding(f"REV brain {best['arm']}/{best['universe']}/age{best['age']}/{best['kind']}/th{best['theta']}", per_fire=best['london'], n=best['n'])
+    f.grading(venues_outcome={e: OUT[e] for e in R.epoch}, v12_lane_actual=LA)
+    f.quote_age('same-instant' if best['age'] == 0 else 'stale', max_age_s=float(best['age']), source='Polymarket tape q')
+    f.sample({'cell': best['n']})
+    f.halves(best['h1'], best['h2'])
+    f._add('permutation control', best['perm'] <= 0.01, f"coin-flip side at the opposite ask, p={best['perm']:.3f}")
+    same = lambda g, st: g.get('set') == st and all(g.get(k) == best[k] for k in ('arm', 'universe', 'age', 'kind'))
+    f.sweep([g['london'] for g in GRID if same(g, 'FULL')])
+    f.costs({c: per1(R.win.values, np.minimum(.99, R.ask.values + c)).mean() for c in (0.0, 0.02, 0.05)})
+    f.null(best['london'], BASE[(best['arm'], best['age'], 'R1')]['london'], 'REV R1 lane-p baseline (London)')
+    nl = [g for g in GRID if same(g, 'NULL') and g['theta'] == best['theta']]
+    f.null(best['london'], nl[0]['london'] if nl else -9, 'same cell, venue-only NULL learner (London)')
+    if best['pair']: f.paired(*best['pair'])
+    return f.verdict()
 cand = [g for g in GRID if g.get('set') == 'FULL' and g['n'] >= 60]
-best = max(cand, key=lambda g: g['london'])
-print(f"\n== verify.py on the best-looking FULL cell: arm {best['arm']} {best['universe']} age {best['age']} {best['kind']} theta {best['theta']}")
-R = best['R']; f = Finding(f"REV brain {best['arm']}/{best['universe']}/age{best['age']}/{best['kind']}/th{best['theta']}", per_fire=best['london'], n=best['n'])
-f.grading(venues_outcome={e: OUT[e] for e in R.epoch}, v12_lane_actual=LA)
-f.quote_age('same-instant' if best['age'] == 0 else 'stale', max_age_s=float(best['age']), source='Polymarket tape q')
-f.sample({'cell': best['n']})
-f.halves(best['h1'], best['h2'])
-f._add('permutation control', best['perm'] <= 0.01, f"coin-flip side at the opposite ask, p={best['perm']:.3f}")
-sw = [g['london'] for g in GRID if g.get('set') == 'FULL' and g.get('arm') == best['arm'] and g.get('universe') == best['universe'] and g.get('age') == best['age'] and g.get('kind') == best['kind']]
-f.sweep(sw)
-f.costs({c: per1(R.win.values, np.minimum(.99, R.ask.values + c)).mean() for c in (0.0, 0.02, 0.05)})
-bl = BASE[(best['arm'], best['age'], 'R1')]
-f.null(best['london'], bl['london'], 'REV R1 lane-p baseline (London)')
-if best['pair']: f.paired(*best['pair'])
-f.verdict()
+run_verify(max(cand, key=lambda g: g['london']))
+run_verify(max([g for g in cand if g['age'] == 0], key=lambda g: g['london']))
