@@ -18,11 +18,20 @@ event_type in {book, price_change, tick_size_change} with asset_id and bids/asks
 import asyncio, json, sqlite3, time, urllib.request, datetime as dt, math, sys, os
 
 DB = '/home/ubuntu/pm_multi/multi_market.sqlite3'
-GAMMA = 'https://gamma-api.polymarket.com/events?slug={}-updown-5m-{}'
+GAMMA = 'https://gamma-api.polymarket.com/events?slug={}-{}'
 WS = 'wss://ws-subscriptions-clob.polymarket.com/ws/market'
 BOOK = 'https://clob.polymarket.com/book?token_id={}'
 KLINES = 'https://data-api.binance.vision/api/v3/klines?symbol={}&interval=1s&limit={}'
-COINS = {'eth': 'ETHUSDT', 'sol': 'SOLUSDT'}
+# market key -> slug prefix, epoch grid in seconds, Binance symbol for its 1 s klines.
+# BTC 15m sits on a 900 s grid, so the epoch is NOT interchangeable with the 5 m markets - every loop
+# derives the epoch from the market's own step rather than assuming 300.
+MARKETS = {
+    'eth':   dict(slug='eth-updown-5m',  step=300, sym='ETHUSDT'),
+    'sol':   dict(slug='sol-updown-5m',  step=300, sym='SOLUSDT'),
+    'btc15': dict(slug='btc-updown-15m', step=900, sym='BTCUSDT'),
+}
+COINS = {k: v['sym'] for k, v in MARKETS.items()}
+SYMS = sorted({v['sym'] for v in MARKETS.values()})
 
 DDL = [
     """CREATE TABLE IF NOT EXISTS books(ts INTEGER, market TEXT, epoch INTEGER,
@@ -57,10 +66,11 @@ def get_json(url, timeout=12):
     with urllib.request.urlopen(req, timeout=timeout) as r: return json.load(r)
 
 def discover(market, epoch):
-    data = get_json(GAMMA.format(market, epoch))
+    slug = f"{MARKETS[market]['slug']}-{epoch}"
+    data = get_json(GAMMA.format(MARKETS[market]['slug'], epoch))
     for e in data or []:
         for m in e.get('markets', []):
-            if m.get('slug') != f'{market}-updown-5m-{epoch}': continue
+            if m.get('slug') != slug: continue
             t = json.loads(m['clobTokenIds'])
             return str(t[0]), str(t[1]), m.get('slug')
     return None
@@ -68,9 +78,10 @@ def discover(market, epoch):
 async def gamma_loop(db):
     while True:
         try:
-            now = int(time.time()); eps = [now // 300 * 300, now // 300 * 300 + 300]
-            for market in COINS:
-                for ep in eps:
+            now = int(time.time())
+            for market, cfg in MARKETS.items():
+                st = cfg['step']
+                for ep in (now // st * st, now // st * st + st):
                     if (ep, market) in toks: continue
                     r = await asyncio.to_thread(discover, market, ep)
                     if not r: continue
@@ -139,9 +150,10 @@ async def snap_loop(db):
         await asyncio.sleep(0.15)
         now = int(time.time())
         if now == last: continue
-        last = now; ep = now // 300 * 300
+        last = now
         rows = []
-        for market in COINS:
+        for market, cfg in MARKETS.items():
+            ep = now // cfg['step'] * cfg['step']
             t = toks.get((ep, market))
             if not t: continue
             up, dn = t
@@ -179,9 +191,10 @@ async def resync_loop(db):
 async def klines_loop(db):
     while True:
         try:
-            for coin, sym in COINS.items():
+            for sym in SYMS:
                 k = await asyncio.to_thread(get_json, KLINES.format(sym, 120), 20)
-                rows = [(int(x[0]) // 1000, coin, float(x[1]), float(x[2]), float(x[3]), float(x[4]),
+                tag = sym.replace('USDT', '').lower()          # eth / sol / btc, one row per symbol
+                rows = [(int(x[0]) // 1000, tag, float(x[1]), float(x[2]), float(x[3]), float(x[4]),
                          float(x[5]), int(x[8]), float(x[9])) for x in k]
                 db.executemany('INSERT OR REPLACE INTO k1s VALUES(?,?,?,?,?,?,?,?,?)', rows)
             db.commit()
@@ -190,10 +203,11 @@ async def klines_loop(db):
         await asyncio.sleep(45)
 
 def resolve(market, epoch):
-    data = get_json(GAMMA.format(market, epoch))
+    slug = f"{MARKETS[market]['slug']}-{epoch}"
+    data = get_json(GAMMA.format(MARKETS[market]['slug'], epoch))
     for e in data or []:
         for m in e.get('markets', []):
-            if m.get('slug') != f'{market}-updown-5m-{epoch}': continue
+            if m.get('slug') != slug: continue
             op = m.get('outcomePrices')
             if not op: return None
             try: op = json.loads(op) if isinstance(op, str) else op
@@ -208,8 +222,9 @@ async def resolve_loop(db):
     while True:
         try:
             now = int(time.time())
-            for ep in range(now // 300 * 300 - 7200, now // 300 * 300 - 300, 300):
-                for market in COINS:
+            for market, cfg in MARKETS.items():
+                st = cfg['step']
+                for ep in range(now // st * st - 8 * st, now // st * st - st, st):
                     if (ep, market) not in toks: continue
                     if db.execute('SELECT 1 FROM resolutions WHERE epoch=? AND market=?', (ep, market)).fetchone(): continue
                     r = await asyncio.to_thread(resolve, market, ep)

@@ -224,3 +224,48 @@ This is the third time this exact self-match has cost something here: phantom du
 09-23, and `cpu5.py` reporting 0.0% CPU over 300 s for a busy engine. `flock -n` has no pattern to
 self-match: the lock is held for the process's lifetime, so a live process blocks the restart and a dead
 one frees it. All three came up within 60 s of the corrected install.
+
+---
+
+# BTC 15-minute market added to the recorder (owner 09-27 03:2x)
+
+`btc-updown-15m-{epoch}` on a **900 s** grid, both tokens at 1 Hz plus its gamma resolution. Recording
+since 03:37 UTC. The epoch is derived from each market's own `step`, not assumed to be 300 — the three
+markets now sit on two different grids and sharing an epoch would have silently mislabelled every BTC-15m
+row. No shadow, as ordered.
+
+| market | grid | books |
+|---|---|---|
+| eth | 300 s | flowing |
+| sol | 300 s | flowing |
+| **btc15** | **900 s** | flowing (first rows 03:37, e.g. epoch 1790479800 up 0.70/0.71 ×70, dn 0.30) |
+
+`k1s` now also carries BTCUSDT.
+
+# Settlement-rule audit (owner standing rule, CLAUDE.md f21fbfa)
+
+Truth = `venues.outcome`, Polymarket's own resolution, on **2,232 settled BTC 5m epochs** (09-08..09-16),
+computed from the same Binance 1 s klines every test here uses:
+
+| direction computed as | agreement with the venue's resolution |
+|---|---|
+| **closing TWAP60 vs opening TWAP60** (the settlement rule) | **96.73%** |
+| sec-299 close vs opening TWAP60 (the label I had used) | 91.71% |
+
+The two disagree on **146 of 2,232 epochs (6.5%)**, so the old label was not a rounding detail.
+
+Two honest points about the 96.73%:
+
+1. It is **below the ~97% bar** CLAUDE.md names, and it cannot be fixed by better arithmetic: Polymarket
+   settles on its **Chainlink** reference, not Binance. A Binance TWAP60 is a proxy for a Chainlink
+   TWAP60 and the residual 3.27% is the two feeds disagreeing. That is the reason every shadow here
+   grades on `gamma outcomePrices` rather than on any computed direction.
+2. So a computed direction is fit for *features* and for *sanity checks*, never for grading a result.
+
+**Fixed:** `lead_lag_eth_sol.py` and `pbtc_gain.py` both used the sec-299 close as the label. Both now use
+the closing TWAP60. **Already correct, checked:** `eth_sol_shadow.py` and `lag_from_books.py` grade on
+`gamma outcomePrices`; the BTC 5m work (`timing_test.py`, `rev_brain.py`, `rev_frozen_oos.py`,
+`lane_ev_pastonly.py`, `exec_cost_split.py`, `ledger_ef.py`, `verify_raw_arm.py`) grades on
+`results.actual` / `venues.outcome`, which are the venue's settlement; the frozen ETH/SOL coefficients
+were fitted on the closing-TWAP60 label from the start. Move reference was already the opening TWAP60
+line everywhere.

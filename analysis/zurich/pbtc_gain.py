@@ -82,7 +82,9 @@ if __name__ == '__main__':
     D = {}
     for k in ('btc', 'eth', 'sol'):
         a = px[k]; line = np.array([a[i-60:i].mean() for i in idx])
-        D[k] = dict(win=(a[idx+299] >= line).astype(float),
+        # SETTLEMENT RULE: closing TWAP60 vs opening TWAP60, not the sec-299 close.
+        fin = np.array([a[i+240:i+300].mean() for i in idx])
+        D[k] = dict(win=(fin >= line).astype(float), fin=fin,
                     mv={s: 1e4*(a[idx+s]/line - 1) for s in SECS})
     ages = []
     pb = {}

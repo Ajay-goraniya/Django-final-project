@@ -44,7 +44,11 @@ def build(px, lo, n):
         a = px[k]
         line = np.array([a[i - 60:i].mean() for i in idx])
         close = a[idx + 299]
-        out[k] = dict(line=line, close=close, win=(close >= line).astype(float),
+        # SETTLEMENT RULE (owner, 09-27 03:3x): the venue settles CLOSING TWAP60 vs OPENING TWAP60, not
+        # the live close. This line previously used the single sec-299 close as the label, which is not
+        # what the market pays on.
+        fin = np.array([a[i + 240:i + 300].mean() for i in idx])
+        out[k] = dict(line=line, close=close, fin=fin, win=(fin >= line).astype(float),
                       mv={s: 1e4 * (a[idx + s] / line - 1) for s in SECS})
     return eps, out
 
