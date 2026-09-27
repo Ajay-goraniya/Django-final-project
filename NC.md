@@ -232,3 +232,9 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
   and gone in 2-3 s. analysis/v/multi/btc15/BTC15_EF.md.
 - **BTC 5m race, quantified:** after a signal, the fired side reprices +7c within 1 s. Paper +0.64/$1 at 0 s, +0.15 at 1 s late, about 0 at 2 s.
 - **ETH/SOL 5m** (NC-10 file, ETH_SOL_EF.md): all cells lose London-exec. The live-book shadows on Zurich (since 03:33 09-27) are the open test.
+
+## NC-12 - "Stable EF": selectivity + hybrid staking (09-27, Zurich, 490 fires / 9 days, gamma-graded) - NOT YET
+- Top 20% of fires per day by calibrated edge (RAW): 6/day, 59% win, paper +0.225, London-exec +0.060, the only London-positive family.
+  FIXED is London-negative at every tier. verify.py REJECTS it: random 6/day reaches p95 +0.262 (p=0.084), the sweep is non-monotone (peaks at 20%), and n=54.
+- Staking is second order: once selective, all arms (fixed / tiered / half-Kelly capped / de-risk F) are within one point per $1.
+- Hints (n<60): ask 0.25-0.35 loses in both profiles (16.7% win); sec 180-240 is the best bucket in both. Re-run at ~30 days. analysis/zurich/STABLE_EF.md.
