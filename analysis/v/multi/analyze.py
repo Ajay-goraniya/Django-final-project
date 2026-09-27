@@ -18,7 +18,7 @@ T3 score each cell: n, hit, median ask, paper per$1 at exec price, paper per$1 a
    print, fee 0.07*sh*p*(1-p), $10, 1000 runs) per$1 and total p05/p95, H1/H2, negative days, permutation (shuffle the
    side, price the flipped side at ITS OWN exec print), paired McNemar vs arm (i).
 T4 verify.Finding on the best cell per coin (by London-exec); the whole grid is printed regardless.
-usage: analyze.py PANEL.npz COIN > out.txt"""
+usage: analyze.py PANEL.npz COIN [--t1] > out.txt   (T1 skipped unless --t1: Zurich ran it on 30 days, 0.000 AUC gain)"""
 import sys, random, numpy as np, datetime as dt
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
@@ -45,28 +45,30 @@ print(f'spread (ask_up+ask_dn-1, both prints <=2 s old, n={len(spr)}): p25 {np.p
       f'p75 {np.percentile(spr,75):+.3f};  exec - past (same side) mean {np.nanmean((eu-au)[:, W]):+.4f}')
 
 # ---------------- T1 ----------------
-print('\n## T1 lead-lag (Binance only), walk-forward by day, pooled over test days')
-print('| sec | n | AUC A | AUC B | AUC C | dAUC B-A [95% CI by day] | days B>A | Brier A | Brier B | Brier C |')
-print('|---|---|---|---|---|---|---|---|---|---|')
-FEAT = {'A': ['z'], 'B': ['z', 'bz'], 'C': ['z', 'bz', 'r10', 'br10']}
-rng = np.random.default_rng(3); T1rows = []
-for s in range(15, 241, 15):
-    X = {k: np.column_stack([P[f][:, s] for f in v]) for k, v in FEAT.items()}
-    pr = {k: np.full(N, np.nan) for k in FEAT}
-    for d in TEST:
-        tr, te = day < d, day == d
-        for k in FEAT:
-            m = LogisticRegression(C=1.0).fit(X[k][tr], y[tr]); pr[k][te] = m.predict_proba(X[k][te])[:, 1]
-    t = np.isin(day, TEST); yt = y[t]
-    auc = {k: roc_auc_score(yt, pr[k][t]) for k in FEAT}; br = {k: np.mean((pr[k][t] - yt) ** 2) for k in FEAT}
-    dd = [roc_auc_score(y[day == d], pr['B'][day == d]) - roc_auc_score(y[day == d], pr['A'][day == d]) for d in TEST]
-    boots = []
-    for _ in range(500):
-        pick = rng.choice(TEST, len(TEST)); ii = np.concatenate([np.where(day == d)[0] for d in pick])
-        boots.append(roc_auc_score(y[ii], pr['B'][ii]) - roc_auc_score(y[ii], pr['A'][ii]))
-    lo, hi = np.percentile(boots, [2.5, 97.5])
-    print(f'| {s} | {t.sum()} | {auc["A"]:.4f} | {auc["B"]:.4f} | {auc["C"]:.4f} | {auc["B"]-auc["A"]:+.4f} [{lo:+.4f},{hi:+.4f}] | '
-          f'{sum(x > 0 for x in dd)}/{len(dd)} | {br["A"]:.4f} | {br["B"]:.4f} | {br["C"]:.4f} |')
+if '--t1' in sys.argv:   # skipped by default: V 09-27, done by Zurich on 30 days (analysis/zurich/MULTI_MARKET.md, 34cf8ad)
+    print('\n## T1 lead-lag (Binance only), walk-forward by day, pooled over test days')
+    print('| sec | n | AUC A | AUC B | AUC C | dAUC B-A [95% CI by day] | days B>A | Brier A | Brier B | Brier C |')
+    print('|---|---|---|---|---|---|---|---|---|---|')
+    FEAT = {'A': ['z'], 'B': ['z', 'bz'], 'C': ['z', 'bz', 'r10', 'br10']}
+    rng = np.random.default_rng(3); T1rows = []
+    for s in range(15, 241, 15):
+        X = {k: np.column_stack([P[f][:, s] for f in v]) for k, v in FEAT.items()}
+        pr = {k: np.full(N, np.nan) for k in FEAT}
+        for d in TEST:
+            tr, te = day < d, day == d
+            for k in FEAT:
+                m = LogisticRegression(C=1.0).fit(X[k][tr], y[tr]); pr[k][te] = m.predict_proba(X[k][te])[:, 1]
+        t = np.isin(day, TEST); yt = y[t]
+        auc = {k: roc_auc_score(yt, pr[k][t]) for k in FEAT}; br = {k: np.mean((pr[k][t] - yt) ** 2) for k in FEAT}
+        dd = [roc_auc_score(y[day == d], pr['B'][day == d]) - roc_auc_score(y[day == d], pr['A'][day == d]) for d in TEST]
+        boots = []
+        for _ in range(500):
+            pick = rng.choice(TEST, len(TEST)); ii = np.concatenate([np.where(day == d)[0] for d in pick])
+            boots.append(roc_auc_score(y[ii], pr['B'][ii]) - roc_auc_score(y[ii], pr['A'][ii]))
+        lo, hi = np.percentile(boots, [2.5, 97.5])
+        print(f'| {s} | {t.sum()} | {auc["A"]:.4f} | {auc["B"]:.4f} | {auc["C"]:.4f} | {auc["B"]-auc["A"]:+.4f} [{lo:+.4f},{hi:+.4f}] | '
+              f'{sum(x > 0 for x in dd)}/{len(dd)} | {br["A"]:.4f} | {br["B"]:.4f} | {br["C"]:.4f} |')
+
 
 # ---------------- T2 ----------------
 S = np.arange(300); TR = np.arange(15, 241, 5)
