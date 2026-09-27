@@ -130,21 +130,29 @@ def nxt_ptr(sec):
     have = ~np.isnan(sec); ar = np.broadcast_to(np.arange(sec.shape[1]), sec.shape)
     nx = np.where(have, ar, 10**6); return np.minimum.accumulate(nx[:, ::-1], axis=1)[:, ::-1]
 NU, ND = nxt_ptr(SU), nxt_ptr(SDn)
-def price_at(i, side, t):          # first print in [ep+t, ep+t+4], t in candle seconds
-    k = 60 + t
-    if k >= LQ: return np.nan
-    nx = (NU if side else ND)[i, k]
-    return (SU if side else SDn)[i, nx] if nx < LQ and nx - k <= 4 else np.nan
-KS = (0, 1, 2, 3, 5, 10, 20, 30, 60, 120, 240)
-print('\n## T5 lead lifetime: the same fires priced k s after the decision (first print in [s+k, s+k+4])')
-print('| arm | theta | k (s) | n priced | paper/$1 at s+k | same fires, priced at s | fired-side price drift s -> s+k (c) |')
-print('|---|---|---|---|---|---|---|')
-for arm, th in [(a, t) for a in ('(ii) venue+move', '(iii) model-only') for t in (0.10, 0.25)]:
-    R = GRID[(arm, th)]['R']
-    for k in KS:
-        px = np.array([price_at(f['i'], f['side'], f['s'] + k) for f in R]); ok = ~np.isnan(px) & (px >= .01) & (px <= .99)
-        w = np.array([f['win'] for f in R])[ok]; x0 = np.array([f['x'] for f in R])[ok]
-        print(f'| {arm} | {th:.2f} | {k} | {ok.sum()}{"*" if ok.sum() < 60 else ""} | {per1(w, px[ok]).mean():+.3f} | {per1(w, x0).mean():+.3f} | {100*np.mean(px[ok]-x0):+.1f} |')
+def price_at(i, side, s0, k):
+    """Price available k s after the decision at s0: the first print in [s0+k, s0+k+4]; if none, the latest print in
+    [s0, s0+k) (every fire has an exec print in [s0, s0+4], so this is always defined -> no subset selection). Returns (px, fresh)."""
+    sec = SU if side else SDn; t = 60 + s0 + k
+    if t < LQ:
+        nx = (NU if side else ND)[i, t]
+        if nx < LQ and nx - t <= 4: return sec[i, nx], 1
+    seg = sec[i, 60 + s0:min(t, LQ)]; seg = seg[~np.isnan(seg)]
+    return (seg[-1] if len(seg) else np.nan), 0
+KS = (0, 1, 2, 3, 5, 10, 20, 30, 60)
+print('\n## T5 lead lifetime: ALL fires of the cell priced k s after the decision (first print in [s+k, s+k+4], else the latest print since s)')
+print('paper/$1 at s+k (SE); the fired side\'s price drift from s to s+k in cents; share of fires with a fresh print at s+k')
+print('| arm | theta | n | row | ' + ' | '.join(f'k={k}' for k in KS) + ' |')
+print('|---|---|---|---|' + '---|' * len(KS))
+for arm, th in [(a, t) for a in ('(ii) venue+move', '(iii) model-only') for t in (0.10, 0.15, 0.25)]:
+    R = GRID[(arm, th)]['R']; n = len(R)
+    Q = [[price_at(f['i'], f['side'], f['s'], k) for k in KS] for f in R]
+    PX = np.clip(np.array([[q[0] for q in r] for r in Q]), .01, .99); FR = np.array([[q[1] for q in r] for r in Q])
+    w = np.array([f['win'] for f in R]); x0 = np.array([f['x'] for f in R])
+    pp = [per1(w, PX[:, j]) for j in range(len(KS))]
+    print(f'| {arm} | {th:.2f} | {n}{"*" if n < 60 else ""} | paper | ' + ' | '.join(f'{v.mean():+.3f} ({v.std() / np.sqrt(n):.3f})' for v in pp) + ' |')
+    print(f'| {arm} | {th:.2f} | {n} | drift c | ' + ' | '.join(f'{100 * np.mean(PX[:, j] - x0):+.1f}' for j in range(len(KS))) + ' |')
+    print(f'| {arm} | {th:.2f} | {n} | fresh | ' + ' | '.join(f'{FR[:, j].mean():.2f}' for j in range(len(KS))) + ' |')
 
 # ---------------- T4 ----------------
 best = max(GRID, key=lambda k: GRID[k]['le']); name, th = best; R = GRID[best]['R']
