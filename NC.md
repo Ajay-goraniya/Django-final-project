@@ -208,3 +208,13 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
 - **09-27 01:3x, the last lead closed:** the price-calibrated REV filter, FROZEN on window 1 and tested on window 2 with no refit:
   n53 (<60), paper +0.062 (H1 +0.209 / H2 -0.080), London-exec -0.060/$1. The calibration transferred exactly (pred 0.660 = actual
   0.660), so the price is a true probability, and that is exactly why it does not pay after costs. REVERSAL stays off. File: analysis/zurich/REV_FROZEN_OOS.md.
+
+## NC-10 - Paper vs live on London EF: cause found, no fix yet (09-27)
+- **Cause (London's own data):** 104 of 263 EF candles never filled; they would have won 63% vs 52% for the fills, and hold
+  ~80% of the paper profit. Winners' asks are gone before our FAK lands (the venue's 50 ms taker hold lets makers cancel).
+- **Order-side fixes, all tested on London data and dead:** pad/cap (PAD_GRID_LONDON), speed (NC-5), resting/maker (R-18),
+  no-EV retries and no retries (NC-7), size (R-14).
+- **Fill-aware brain (10 decision-time features, leave-one-day-out):** AUC 0.419 [0.325, 0.509], anti-predictive.
+  The one univariate hint ("fire only if the ask is flat or falling over the last 5 s") covers n=11 of 162 fills. That is
+  insufficient, the sweep is non-monotone, and it would be a fire gate. Not a finding.
+- Open paths: the ETH/SOL head-start shadow on Zurich (analysis/zurich/ETH_SOL_SHADOW.md); re-check the d_ask5 hint when London has more than 600 fills.
