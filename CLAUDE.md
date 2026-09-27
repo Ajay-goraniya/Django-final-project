@@ -165,6 +165,12 @@ finding — including your own. A non-monotone sweep peaking at your chosen valu
 Sample size on every claim; **under 60 graded fires in a bucket is "insufficient"** — mark it, do not
 read it. Walk-forward only. **Retract your own claims when the data reverses them.**
 
+**EVERY test follows the venue's settlement rule (owner, 09-27 03:3x: "all test should be based on settlement rules").**
+Polymarket up/down markets settle on the closing TWAP60 vs the opening TWAP60 of its Chainlink reference, not on the live
+Binance price. So: labels = the market's own resolution; the "move" = distance from the opening TWAP60 line (and in the last
+minute, the projected closing TWAP60); report the % agreement of your computed direction with the venue's resolution (≥~97%)
+before trading anything. A test built on the live Binance close is not a result.
+
 **Check what a label MEANS before you use it.** The `outcome` table in `venues.sqlite3` is
 *Polymarket's* resolution; Predict.fun settles on the engine's `candles.actual` (Binance close ≥
 open). They disagree on ~10% of candles. Grading Predict.fun trades with Polymarket's answer
