@@ -148,3 +148,53 @@ book age **0.22 s** against 24.83 s before.
 All three processes were restarted on the fixed code at 03:33 UTC, so **the 24 h/48 h clocks restart from
 03:33 09-27**. That is the right trade: 24 h of fills decided on a 5-second-stale book cannot answer how
 fast the shares disappear.
+
+---
+
+# First 6 h of live shadow: the paper +0.10/+0.11 does not survive a live ask, and execution is not why
+
+09:30 UTC, ~6 h in. Both cells are **n<60 so not yet a reading**, but the direction is strong and the
+mechanism is identifiable, so it goes out now rather than at 24 h — V and the owner are building on the
++0.10 paper number.
+
+| | n | hit | **per$1** | total | ask p50 | model p p50 | break-even hit needed |
+|---|---|---|---|---|---|---|---|
+| ETH | 51* | **25.5%** | **−0.353** | −$88.15 on $249.97 | 0.350 | 0.497 | **36.6%** |
+| SOL | 56* | **12.5%** | **−0.684** | −$187.39 on $273.93 | 0.295 | 0.443 | **31.0%** |
+
+## Execution is clean — so it is not the fill story
+
+| | slippage p50 / p90 | book age p50 | depth at cap p50 | spent p50 |
+|---|---|---|---|---|
+| ETH | **+0.00c** / +0.24c | 0.21 s | $46.44 | $4.99 |
+| SOL | **+0.00c** / +0.52c | 0.50 s | $15.18 | $5.00 |
+
+The shadow gets the price it saw, at full $5 size, on a book a fifth of a second old. Whatever is wrong
+here, it is **not** slippage, staleness or depth. That is worth stating plainly because it is the opposite
+of what the BTC-fitted London model would have predicted.
+
+## The rule buys the underdog whenever the model is agnostic
+
+The model's p at fire is **0.497 (ETH) / 0.443 (SOL)** — near a coin flip — while the ask it pays is
+**0.350 / 0.295**. The rule takes the **max-EV side**, and with a near-0.5 model p the max-EV side is
+always the **cheaper** one. So the rule systematically buys whichever side the venue thinks is less
+likely, every time the model has no opinion. EV p50 is +0.407 / +0.349 purely because a 0.5 numerator over
+a 0.3 denominator is a large ratio.
+
+The outcomes then come in **below even the venue's own price**: SOL realised 12.5% where the market priced
+~29.5%. On n=56 that is 7 wins against an expected 16.5, z ≈ −2.8 — too far to shrug off as luck. The rule
+is not merely uninformative, it is selecting adversely.
+
+## What this says about ETH_SOL_EF.md
+
+The paper +0.10/+0.11 was priced on a taker-print ask proxy **4–6 s stale**. A stale "cheap side" is often
+a price that had already moved — the arm was buying a quote that no longer existed. On a live ask the same
+rule buys genuinely cheap underdogs and loses ~0.35–0.68 per $1. **This is the direct answer to the
+question V flagged as open ("the paper number is uncertain"): it does not survive, and the reason is the
+side-selection rule, not the fills.**
+
+The fix implied, and not implemented without an order: the model p must be *calibrated against the venue
+price* before an EV test, exactly as the BTC Fixed profile does with Platt. An uncalibrated model-only p
+fed into a max-EV side choice is a machine for buying longshots.
+
+24 h and 48 h reports still due (03:33 + 24 h / 48 h) with the fill-rate and slippage splits V specified.
