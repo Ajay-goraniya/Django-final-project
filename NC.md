@@ -222,3 +222,13 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
   (09-08..09-16), bids at mid-1..5c posted at 0 s or 30 s. Both sides fill in 55-74% of candles (+2k each), one side fills in 26-44%,
   and those one-side fills LOSE 96% (591 of 613 at mid-2c). Net -9..-11c per candle in every cell, conservative or optimistic.
   The complement-book "back door" is also dead: the books mirror (up+dn ask = 1.01 in 96% of seconds), and the venue already mint-matches inside the FAK.
+
+## NC-11 - "Fire before the crowd" and other markets (09-27) - nothing tradeable yet
+- **Predicting Binance's next move** (8 days of spot+perp aggTrades, walk-forward): WHEN a ≥5 bps move comes is predictable (AUC 0.75-0.80),
+  but its DIRECTION 100/250/500 ms ahead is chance (AUC 0.54/0.55/0.51). Small (≥2 bps) moves are directional, but worth +0.1-0.2 bps,
+  i.e. +1-3 pp of resolution probability, the size of the Binance-to-Chainlink error. The perp leads spot by 2-5 ms, which is useless against ~230 ms.
+  analysis/v/lead/BINANCE_LEAD.md.
+- **BTC 15m** (1,343 candles, gamma labels, TWAP60 agreement 98.5%): EF loses in all 12 London-exec cells; the lead is smaller than on 5m
+  and gone in 2-3 s. analysis/v/multi/btc15/BTC15_EF.md.
+- **BTC 5m race, quantified:** after a signal, the fired side reprices +7c within 1 s. Paper +0.64/$1 at 0 s, +0.15 at 1 s late, about 0 at 2 s.
+- **ETH/SOL 5m** (NC-10 file, ETH_SOL_EF.md): all cells lose London-exec. The live-book shadows on Zurich (since 03:33 09-27) are the open test.
