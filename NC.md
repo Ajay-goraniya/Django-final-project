@@ -218,3 +218,7 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
   The one univariate hint ("fire only if the ask is flat or falling over the last 5 s") covers n=11 of 162 fills. That is
   insufficient, the sweep is non-monotone, and it would be a fire gate. Not a finding.
 - Open paths: the ETH/SOL head-start shadow on Zurich (analysis/zurich/ETH_SOL_SHADOW.md); re-check the d_ask5 hint when London has more than 600 fills.
+- **09-27 03:0x, market-making (two-sided resting bids) CLOSED on data** (owner called it): on 2,052 candles of the 1 Hz tape
+  (09-08..09-16), bids at mid-1..5c posted at 0 s or 30 s. Both sides fill in 55-74% of candles (+2k each), one side fills in 26-44%,
+  and those one-side fills LOSE 96% (591 of 613 at mid-2c). Net -9..-11c per candle in every cell, conservative or optimistic.
+  The complement-book "back door" is also dead: the books mirror (up+dn ask = 1.01 in 96% of seconds), and the venue already mint-matches inside the FAK.
