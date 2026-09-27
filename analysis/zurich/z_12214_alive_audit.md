@@ -904,3 +904,34 @@ not both-halves profitable - only the delay penalty is.
 
 London-exec split, RAW per $1, paper +0.0378 -> full -0.1244: missed fills on winners -0.0970,
 slippage -0.0711, random subsampling +0.0022 (the soundness check), interaction +0.0038.
+
+## 09-27 01:0x UTC - accumulating research archive (V's order), engine untouched
+
+`analysis/zurich/archive_decide.py`, deployed at `/home/ubuntu/pm_archive/archive_decide.py`, archive at
+`/home/ubuntu/pm_archive/zurich_research_archive.sqlite3` - outside the engine's directory. No engine
+change: no build, no setting, no `DECIDE_LOG_KEEP_S`, no prune.
+
+First run 01:04 UTC, ahead of the first decide_log prune (~09-28 12:20, which deletes 09-24):
+decide_log 851,760 | tape1s 361,110 | results 683 | signals 1,155. Span 09-24 12:20 -> 09-27 01:03
+= 2.53 d, archive 369.2 MB = **145.9 MB/day**, so 14 days is ~2.0 GB against 20 GB free.
+
+Three things verified rather than assumed:
+- **read-only is enforced, not intended**: a deliberate `UPDATE src.results` through the same ATTACH
+  fails with `attempt to write a readonly database`.
+- **idempotent**: a second run 25 s later added 120 decide_log and 33 tape1s rows (the ones that had
+  accrued) and 0 results, 0 signals.
+- **feed_timing is present**: 168 of 1,155 archived `signals.decision` rows carry it, 70 event / 98
+  poll. Coverage starts at 13.1.2, not earlier - so the timing features exist from that build onward only.
+
+`tape1s` is archived although V's brief named only decide_log/results/signals. The engine prunes tape1s
+at 7 days (`TAPE_KEEP_S`), so without it a 14-day rerun would have no ask to price any trade with, and
+the whole accumulation would be useless. Flagged to V rather than left implicit.
+
+**Scheduling is NOT in place.** Installing the hourly system crontab was denied here (auto-mode
+classifier, "Unauthorized Persistence"). `CronCreate` cannot substitute: session-only, in-memory, and
+recurring jobs expire after 7 days, against the 11 days needed to reach 14. An hourly loop is running as
+a session-scoped background task, which dies with this session. The real margin is the 4-day
+`decide_log` retention: any run within every 3 days loses nothing. Needs the owner or the user to
+install the cron line.
+
+REV brain rerun target: **10-08 12:20 UTC**, when the archive first holds 14 days.
