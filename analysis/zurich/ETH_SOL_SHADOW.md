@@ -270,3 +270,46 @@ Three things in that table, and the second is the one that matters:
 mid closely, so EV ≥ 0.15 should fire *rarely* and only where the model genuinely disagrees with the
 market. The risk is now the opposite of the frozen arm's — too few fires to reach n≥60 in 24 h rather than
 too many bad ones. If that happens the honest report is "insufficient", not a lowered θ.
+
+## 17:30 UTC — first arm-vs-arm comparison. The Platt arm behaves exactly as predicted.
+
+| arm | orders | graded | hit% | **per$1** | ask p50 | drift +1 s | drift +2 s |
+|---|---|---|---|---|---|---|---|
+| eth frozen | 108 | 107 | 33.6% | **−0.023** | 0.340 | +0.875c | +0.804c |
+| sol frozen | 122 | 121 | 24.0% | **−0.359** | 0.310 | +0.523c | +0.877c |
+| **eth platt** | 38 | 37* | 35.1% | **+0.035** | 0.350 | +0.342c | +0.737c |
+| **sol platt** | 54 | 53* | 37.7% | **−0.076** | 0.380 | +0.833c | +0.426c |
+
+`*` = under 60 graded, **not a reading**. The frozen arms are 14 h old, the Platt arms 7.4 h.
+
+Both halves of the prediction I put on the record before the data existed came true:
+
+1. **It fires about a third as often** — 38/54 orders in 7.4 h against the frozen arms' 108/122 in 14 h.
+2. **Both Platt arms beat their frozen twin**: ETH −0.023 → **+0.035** (the first positive per$1 anything
+   in this whole ETH/SOL exercise), SOL −0.359 → **−0.076**, a 28-point improvement.
+
+And it is winning in the way calibration is supposed to: **higher hit rate at a HIGHER ask** (ETH 35.1% at
+0.350 vs 33.6% at 0.340; SOL **37.7% at 0.380 vs 24.0% at 0.310**). It pays more per trade and buys better
+trades, instead of hunting cheap sides. Post-fire drift is also smaller on ETH platt (+0.342c vs +0.875c at
++1 s), i.e. it fires at moments the book moves against less.
+
+**Two cautions against reading this as a win yet.** Both Platt cells are n<60. And the frozen ETH arm has
+itself improved from −0.353 (n51) to −0.125 (n80) to −0.023 (n107) purely as sample grew — so a good part
+of the original alarm was small-sample noise, and the same could be true in reverse here. 24 h marks:
+frozen arms 03:33, Platt arms 10:06 on 09-28.
+
+### Correction to what I sent V at 13:32
+
+I reported the lag arm's ETH delay-0 value as **+0.007** on 101 fires. At 13.95 h and 138 fires it is
+**−0.049**, and SOL has gone −0.124 → −0.135. The conclusion in `FEED_LEAD.md` is unchanged and in fact
+firmer — the lead is real (~1.7–2.5c within one second) and acting instantly still does not make money —
+but the specific number I quoted has moved and should not be requoted as +0.007.
+
+| delay | ETH ask move | ETH per$1 | SOL ask move | SOL per$1 |
+|---|---|---|---|---|
+| 0 s | — | **−0.049** | — | **−0.135** |
+| +1 s | +1.71c | −0.070 | +2.50c | −0.179 |
+| +2 s | +1.91c | −0.079 | +3.38c | −0.311 |
+| +3 s | +2.37c | −0.127 | +3.76c | −0.312 |
+
+n 138 (ETH) / 133 (SOL) over 13.95 h. SOL's touch still holds **$4.00** at the median.
