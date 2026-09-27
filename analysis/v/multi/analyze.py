@@ -103,15 +103,20 @@ def slip(r):
     if u >= q3: return v3
     return v1 + (v2 - v1) * (u - q1) / (q2 - q1) if u <= q2 else v2 + (v3 - v2) * (u - q2) / (q3 - q2)
 def london(F, runs=1000):
-    r = random.Random(11); tots = []; sp = []
+    """London-exec MC. Also returns the per$1 with the fill odds ONLY (no extra slippage): the exec print is already a
+    price paid after the decision, so the +2c median slippage on top of it may double-count."""
+    r = random.Random(11); tots = []; sp = []; t2 = []; s2 = []
     for _ in range(runs):
-        tot = spent = 0.0
+        tot = spent = tot2 = spent2 = 0.0
         for f in F:
             if r.random() > (0.541 if f['win'] else 0.650): continue
             px = min(0.99, max(0.01, f['x'] + slip(r))); sh = 10 / px; fee = 0.07 * sh * px * (1 - px)
             spent += 10 + fee; tot += (sh if f['win'] else 0) - 10 - fee
-        tots.append(tot); sp.append(spent)
-    tots = np.array(tots); return tots.mean() / max(1e-9, np.mean(sp)), tots.mean(), np.percentile(tots, 5), np.percentile(tots, 95)
+            px = f['x']; sh = 10 / px; fee = 0.07 * sh * px * (1 - px)
+            spent2 += 10 + fee; tot2 += (sh if f['win'] else 0) - 10 - fee
+        tots.append(tot); sp.append(spent); t2.append(tot2); s2.append(spent2)
+    tots = np.array(tots)
+    return tots.mean() / max(1e-9, np.mean(sp)), tots.mean(), np.percentile(tots, 5), np.percentile(tots, 95), np.mean(t2) / max(1e-9, np.mean(s2))
 
 def fires(pu, theta):
     """Vectorised: EV per side per second; the first second (15..240) where the better side clears theta AND has an exec print."""
@@ -131,8 +136,8 @@ def fires(pu, theta):
     return out
 
 print('\n## T2/T3 EF grid (walk-forward, test days only). paper = every order fills at the exec print; London-exec adds fill odds + slippage ON TOP of the exec print')
-print('| arm | theta | n | hit | med ask | med sec | paper/$1 (exec) | paper/$1 (past proxy) | H1 | H2 | neg days | London-exec/$1 | London total $ [p05, p95] | perm p | paired vs (i): disc b/c, p |')
-print('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|')
+print('| arm | theta | n | hit | med ask | med sec | paper/$1 (exec) | paper/$1 (past proxy) | H1 | H2 | neg days | London-exec/$1 | fill odds only/$1 | London total $ [p05, p95] | perm p | paired vs (i): disc b/c, p |')
+print('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|')
 GRID = {}; FI = {}
 for name in ARMS:
     for th in (0.05, 0.10, 0.15, 0.25):
@@ -143,7 +148,7 @@ for name in ARMS:
         dv = {}
         for f, val in zip(R, v): dv.setdefault(f['day'], []).append(val)
         neg = sum(np.sum(z) < 0 for z in dv.values())
-        le, lt, l5, l95 = london(R)
+        le, lt, l5, l95, lf = london(R)
         side = np.array([f['side'] for f in R]); yy = np.array([y[f['i']] for f in R])
         XU = np.array([f['x'] if f['side'] == 1 else f['xo'] for f in R]); XD = np.array([f['xo'] if f['side'] == 1 else f['x'] for f in R])
         def pnl(y_, p_, _):
@@ -159,7 +164,7 @@ for name in ARMS:
             pr = f'{len(common)} common, {b}/{c}, p={pv:.3f}'
         GRID[(name, th)] = dict(n=len(R), le=le, v=v.mean(), R=R)
         print(f'| {name} | {th:.2f} | {len(R)}{"*" if len(R) < 60 else ""} | {w.mean():.3f} | {np.median(x):.2f} | {np.median([f["s"] for f in R]):.0f} | '
-              f'{v.mean():+.3f} | {vp.mean():+.3f} | {v[:h].mean():+.3f} | {v[h:].mean():+.3f} | {neg}/{len(dv)} | {le:+.3f} | {lt:+.1f} [{l5:+.1f}, {l95:+.1f}] | {pp:.3f} | {pr} |')
+              f'{v.mean():+.3f} | {vp.mean():+.3f} | {v[:h].mean():+.3f} | {v[h:].mean():+.3f} | {neg}/{len(dv)} | {le:+.3f} | {lf:+.3f} | {lt:+.1f} [{l5:+.1f}, {l95:+.1f}] | {pp:.3f} | {pr} |')
 print('(* = under 60 fires: insufficient)')
 
 # ---------------- T4 ----------------
