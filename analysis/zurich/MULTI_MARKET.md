@@ -269,3 +269,17 @@ the closing TWAP60. **Already correct, checked:** `eth_sol_shadow.py` and `lag_f
 `results.actual` / `venues.outcome`, which are the venue's settlement; the frozen ETH/SOL coefficients
 were fitted on the closing-TWAP60 label from the start. Move reference was already the opening TWAP60
 line everywhere.
+
+## Both reruns on the settlement label — conclusions hold, and one spurious finding disappeared
+
+**Phase 1(b) lead-lag** (30 days, 8,351 scored per cell): the BTC-move AUC gain is still **0.000 in all
+32 cells**, every cell "no change", none "helps" or "hurts"; the BTC coefficient is still negative. The
+base AUC at sec 240 *rose* from 0.935/0.940 to **0.973** for both coins — the closing TWAP60 is a smoother
+target than a single close, so a coin's own move tracks it better. Verdict unchanged, now on the right label.
+
+**`p_btc` gain** (712 candles, 2 test days): still no B−A cell reaches +0.01, and all 32 are "no change".
+The label fix **removed a spurious finding of mine**: ETH sec 225/240 previously read −0.014 and −0.018
+("hurts") and are now −0.001 and −0.000. That apparent late-candle harm was the sec-299 label, not BTC.
+Model C (own + `p_btc` + BTC move) now peaks at **+0.017 at ETH sec 60** (was +0.010), ETH |t| 1.8-2.7.
+Verdict unchanged: at most one or two AUC points for ETH, nothing for SOL, and far too little to clear
+the spread plus execution.
