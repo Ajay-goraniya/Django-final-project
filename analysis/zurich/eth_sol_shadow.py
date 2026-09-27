@@ -29,11 +29,20 @@ sys.path.insert(0, '/home/ubuntu/claude-work/repo/learner/v12_2')
 import poly_core as PC
 
 ap = argparse.ArgumentParser(); ap.add_argument('--coin', required=True, choices=('eth', 'sol'))
-ap.add_argument('--stake', type=float, default=5.0); ap.add_argument('--theta', type=float, default=0.25)
+ap.add_argument('--stake', type=float, default=5.0); ap.add_argument('--theta', type=float, default=None)
+ap.add_argument('--arm', default='frozen', choices=('frozen', 'platt'),
+                help="frozen: the model-only logistic from ETH_SOL_EF.md arm (iv), theta 0.25, unchanged. "
+                     "platt: a Platt fit on [logit(model p), logit(venue mid of that side)], theta 0.15.")
 A = ap.parse_args()
 COIN = A.coin; SYM = {'eth': 'ETHUSDT', 'sol': 'SOLUSDT'}[COIN]
-DB = f'/home/ubuntu/pm_multi/shadow_{COIN}.sqlite3'
+ARM = A.arm
+DB = f'/home/ubuntu/pm_multi/shadow_{COIN}.sqlite3' if ARM == 'frozen' else f'/home/ubuntu/pm_multi/shadow_{COIN}_platt.sqlite3'
 FROZEN = {'eth': (-0.007173, 1.487533), 'sol': (-0.027489, 1.863596)}[COIN]
+# Platt on [logit(model p), logit(venue mid of that side)], fitted on the 14-day panel and frozen here.
+# Filled in by fit_platt_arm.py once the panel rebuild lands; None means the arm refuses to trade rather
+# than trading an unfitted model.
+PLATT = {'eth': None, 'sol': None}[COIN]
+if A.theta is None: A.theta = 0.25 if ARM == 'frozen' else 0.15
 GAMMA = 'https://gamma-api.polymarket.com/events?slug=%s-updown-5m-%d'
 BOOK = 'https://clob.polymarket.com/book?token_id=%s'
 KL = 'https://data-api.binance.vision/api/v3/klines?symbol=%s&interval=1s&limit=1000'
@@ -50,6 +59,11 @@ DDL = [
        book_age_s REAL, decide_ms REAL, depth_at_cap REAL, engine_ok INTEGER, reason TEXT, spot_age_s REAL)""",
     """CREATE TABLE IF NOT EXISTS skips(epoch INTEGER, sec INTEGER, reason TEXT, detail TEXT,
        PRIMARY KEY(epoch, sec, reason))""",
+    # post-fire drift on LIVE books: what the side's ask was 1 s and 2 s after we fired. On the frozen
+    # arm's first 6 h the slippage at the fill was +0.00c, so the question is not what we paid but what
+    # the book did next - that is the number that says whether the fire moment was any good.
+    """CREATE TABLE IF NOT EXISTS drift(epoch INTEGER PRIMARY KEY, sec INTEGER, side TEXT,
+       ask0 REAL, ask1 REAL, ask2 REAL, sz0 REAL, sz1 REAL, sz2 REAL)""",
     """CREATE TABLE IF NOT EXISTS results(epoch INTEGER PRIMARY KEY, actual TEXT, src TEXT, ts REAL,
        payout REAL, pnl REAL)""",
     """CREATE TABLE IF NOT EXISTS health(ts REAL PRIMARY KEY, note TEXT)""",
@@ -61,7 +75,7 @@ errs = {}
 def log(db, s):
     try: db.execute('INSERT OR REPLACE INTO health VALUES(?,?)', (time.time(), s[:400])); db.commit()
     except Exception: pass
-    print(f'{dt.datetime.now(dt.timezone.utc):%H:%M:%S} [{COIN}] {s}', flush=True)
+    print(f'{dt.datetime.now(dt.timezone.utc):%H:%M:%S} [{COIN}/{ARM}] {s}', flush=True)
 
 def gj(url, timeout=12):
     r = urllib.request.Request(url, headers={'User-Agent': UA, 'Accept': 'application/json'})
@@ -205,6 +219,7 @@ def quote_of(tk):
                 age=age, age_ms=age * 1000.0, seq=b.get('seq', 0))
 
 ev_of = lambda p, a: p / (a * (1 + RATE * (1 - a))) - 1
+lgt = lambda x: math.log(min(max(x, 1e-3), 1 - 1e-3) / (1 - min(max(x, 1e-3), 1 - 1e-3)))
 
 async def decide_loop(db):
     last = 0
@@ -226,9 +241,23 @@ async def decide_loop(db):
         p_up, zt, sig, line, spot, spot_age = sg
         up, dn = toks[ep]
         best = None
+        qs = {t: quote_of(t) for t in (up, dn)}
         for tk, side, ps in ((up, 'UP', p_up), (dn, 'DOWN', 1 - p_up)):
-            q = quote_of(tk)
+            q = qs.get(tk)
             if not q: continue
+            if ARM == 'platt':
+                # venue mid of the UP side, exactly as build_panel/analyze define it: (ask_up + 1-ask_dn)/2.
+                qu, qd = qs.get(up), qs.get(dn)
+                if not (qu and qd): continue
+                mid_up = (qu['ask'] + (1 - qd['ask'])) / 2.0
+                m = mid_up if side == 'UP' else 1 - mid_up
+                if PLATT is None:
+                    db.execute('INSERT OR IGNORE INTO skips VALUES(?,?,?,?)',
+                               (ep, s, 'platt_unfitted', 'coefficients not yet frozen')); db.commit()
+                    return
+                c0, c1, c2 = PLATT
+                z = c0 + c1 * lgt(ps) + c2 * lgt(m)
+                ps = 1 / (1 + math.exp(-max(-30, min(30, z))))
             e = ev_of(ps, q['ask'])
             if best is None or e > best[0]: best = (e, tk, side, ps, q)
         if best is None:
@@ -261,8 +290,21 @@ async def decide_loop(db):
                     f['shares'], f['spent'], f['fees'], f['price'], (f['price'] - q['ask']),
                     q['age'], dms, depth, engine_ok, reason[:120], spot_age))
         db.commit(); fired.add(ep)
+        asyncio.create_task(drift(db, ep, s, side, tk, q['ask'], q['ask_sz']))
         log(db, f'{ep} s{s} {side} p {p_side:.3f} ask {q["ask"]:.2f} ev {ev:+.3f} -> {f["shares"]:.1f} sh '
                 f'@ {f["price"]:.4f} slip {100*(f["price"]-q["ask"]):+.2f}c age {q["age"]:.2f}s')
+
+async def drift(db, ep, sec, side, tk, ask0, sz0):
+    """Record the same side's best ask 1 s and 2 s after the fire."""
+    out = [ask0, None, None]; szs = [sz0, None, None]
+    for k in (1, 2):
+        await asyncio.sleep(1.0)
+        qq = quote_of(tk)
+        if qq: out[k] = qq['ask']; szs[k] = qq['ask_sz']
+    try:
+        db.execute('INSERT OR REPLACE INTO drift VALUES(?,?,?,?,?,?,?,?,?)',
+                   (ep, sec, side, out[0], out[1], out[2], szs[0], szs[1], szs[2])); db.commit()
+    except Exception as e: errs['drift'] = repr(e)[:110]
 
 def resolve(ep):
     for e in gj(GAMMA % (COIN, ep)) or []:
@@ -307,12 +349,14 @@ async def main():
     db.execute('PRAGMA journal_mode=WAL')
     for x in DDL: db.execute(x)
     db.executemany('INSERT OR REPLACE INTO meta VALUES(?,?)', [
-        ('coin', COIN), ('stake', str(A.stake)), ('theta', str(A.theta)),
+        ('coin', COIN), ('arm', ARM), ('stake', str(A.stake)), ('theta', str(A.theta)),
+        ('platt', json.dumps(PLATT)),
         ('frozen', json.dumps(dict(b0=FROZEN[0], b_zt=FROZEN[1], source='ETH_SOL_EF.md arm (iv), 14 days 09-13..09-26, no refit'))),
         ('money_path', 'poly_core.order_plan + walk_book + fee, imported from learner/v12_2'),
         ('started', dt.datetime.now(dt.timezone.utc).isoformat())])
     db.commit()
-    log(db, f'shadow start stake ${A.stake} theta {A.theta} frozen p=sigmoid({FROZEN[0]:+.6f}{FROZEN[1]:+.6f}*zt)')
+    log(db, f'shadow start arm={ARM} stake ${A.stake} theta {A.theta} '
+        f'frozen p=sigmoid({FROZEN[0]:+.6f}{FROZEN[1]:+.6f}*zt)' + (f' platt={PLATT}' if ARM=='platt' else ''))
     async def guard(fn):
         """A shadow that dies silently is worse than one that logs and carries on: restart each loop."""
         while True:

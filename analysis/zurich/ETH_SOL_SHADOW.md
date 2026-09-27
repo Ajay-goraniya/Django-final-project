@@ -198,3 +198,37 @@ price* before an EV test, exactly as the BTC Fixed profile does with Platt. An u
 fed into a max-EV side choice is a machine for buying longshots.
 
 24 h and 48 h reports still due (03:33 + 24 h / 48 h) with the fill-rate and slippage splits V specified.
+
+---
+
+# Arm 2 (Platt) and post-fire drift — V's 09:4x order
+
+**Post-fire drift is live on BOTH arms now.** For every fire, the same side's best ask and size are recorded
+1 s and 2 s later (`drift` table). This is the number that matters after the 6 h result: slippage at the
+fill was +0.00c, so the question is not what we paid but what the book did next — which is what says
+whether the fire *moment* was any good.
+
+Both frozen arms restarted 09:4x with the drift logging (pids 198523 eth / 198521 sol). The frozen rule
+itself is untouched — same coefficients, same θ=0.25, same database — so the 24 h/48 h comparison stays
+valid.
+
+**Arm 2 is built but deliberately NOT trading yet.** `--arm platt` runs in its own process and its own
+database (`shadow_{coin}_platt.sqlite3`), with
+
+```
+p = sigmoid(c0 + c1·logit(model p) + c2·logit(venue mid of that side))      θ = 0.15
+venue mid of the UP side = (ask_up + 1 − ask_dn)/2, exactly as build_panel/analyze define it
+```
+
+Its coefficients are `None` until fitted, and with `None` the arm **refuses to trade and logs
+`platt_unfitted`** rather than guessing. Trading an unfitted calibration is precisely the error that
+produced the −0.35/−0.68 result, so it waits.
+
+What it is waiting on: the 14-day panel is not on the branch (only the scripts are), so the venue price
+history has to be rebuilt with V's own `fetch_poly.py` — ~1.4 M taker prints across 4,031 ETH and 4,031
+SOL markets, running now. When it lands the fit is one pass and the arm starts.
+
+One deviation from the brief, stated rather than hidden: V asked for closing-TWAP60 labels, but the panel
+carries the **venue's own resolution** (`mkt.outcome`), and the standing settlement rule says labels are
+the market's resolution. The computed TWAP60 direction only agrees with it **96.73%** of the time
+(measured, `MULTI_MARKET.md`), so using the resolution is strictly better. That is what the fit will use.
