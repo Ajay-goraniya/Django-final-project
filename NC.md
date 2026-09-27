@@ -198,3 +198,10 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
   "MAIN after 240 s" was the future quote (W1); W2 has too little tape after 240 s to say. No reason to lift the 240 s rule.
 - **REVERSAL R1 0-240 s, London-exec**: W1 +0.065 (p05 below zero), W2 -0.023. Zurich live shadow +0.064 on 77. Not a finding.
 - Calibration (R2) never beat its null (R3). Files: analysis/v/model/MAIN_REV_*.md, analysis/zurich/LANE_EV_ZURICH_W2.md.
+
+## NC-9 - REVERSAL "brain" on Binance perp/flow/depth features (09-27) - NOT A FINDING
+- Rebuilt perp, flow, depth and settlement-line features from data.binance.vision for 09-08..09-16 (parity with the live
+  parquet: corr 1.000 on 4 features), plus 08-29..09-06 as training. Walk-forward AUC: brain 0.746 vs the venue-only null 0.750-0.754.
+- As a REV filter: the best n>=60 cell is +0.150/$1 London-exec (n64), below its own null cell (+0.178); paired test 28 vs 27, p=1.0.
+- The market price already carries what these features know. Open, and only window 2 can say: REV filtered by the calibrated venue
+  price alone (+0.12..+0.18 on n59-65). File: analysis/v/model/REV_BRAIN_HIST.md.
