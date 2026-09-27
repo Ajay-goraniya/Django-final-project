@@ -41,17 +41,21 @@ for asset in ASSETS:
     want = set(range(T0, T1, 300)) - have
     off = 0
     while want and off < 20000:
-        d = get(f'https://gamma-api.polymarket.com/events?series_slug={asset}-up-or-down-5m&closed=true&limit=100&offset={off}&order=startTime&ascending=false')
+        try:
+            d = get(f'https://gamma-api.polymarket.com/events?series_slug={asset}-up-or-down-5m&closed=true&limit=100&offset={off}&order=startTime&ascending=false', tries=2)
+        except RuntimeError:
+            break                                   # gamma refuses deep offsets (~2000); the rest go by slug
         if not d: break
         eps = [add_event(asset, e) for e in d if e.get('markets')]
         want -= set(eps); off += 100
         if eps and min(eps) < T0: break
         time.sleep(0.2)
     db.commit()
-    for ep in sorted(want):
+    def one(ep):
         d = get(f'https://gamma-api.polymarket.com/events?slug={asset}-updown-5m-{ep}')
         if d: add_event(asset, d[0])
         time.sleep(0.1)
+    with ThreadPoolExecutor(6) as ex: list(ex.map(one, sorted(want)))
     db.commit()
     print(asset, 'markets', db.execute('select count(*), sum(outcome is not null) from mkt where asset=?', (asset,)).fetchone(), flush=True)
 
