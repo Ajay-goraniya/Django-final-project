@@ -6,7 +6,7 @@
 - **No cell of 32 is positive under London execution** - not even with London's fill odds alone and zero extra slippage (best: SOL -0.004, ETH -0.019).
 - **The one real signal is Binance leading the venue print by seconds** (arms iii/iv, no venue in the model): paper +0.10/+0.11 at theta 0.25,
   perm p 0.000, both halves +, SOL 0/12 and ETH 2/12 negative days. It dies at +5c cost and under London's adverse fill (54%/65%).
-- **BTC info does not help.** Own-move model with vs without BTC (iii vs iv): within 0.006/$1 in every cell. Venue + BTC (ii) vs venue (i):
+- **BTC info does not help.** Own-move model with vs without BTC (iii vs iv): within 0.015/$1 in every cell, London-exec within 0.012. Venue + BTC (ii) vs venue (i):
   paper better in 5 of 8 cells, worse in 3; paired McNemar p<0.05 in 1 of 4 thetas per coin, still negative London-exec. Lead-lag AUC: Zurich, 30 days,
   0.000 gain in all 32 cells (analysis/zurich/MULTI_MARKET.md, 34cf8ad) - not re-run here (V, 09-27).
 - **Data quality limits this:** the only history is data-api taker prints. Past ask proxy age p50 4 s (ETH) / 6 s (SOL), p90 15 s / 28 s.
