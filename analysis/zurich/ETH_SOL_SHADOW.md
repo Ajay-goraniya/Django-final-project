@@ -232,3 +232,41 @@ One deviation from the brief, stated rather than hidden: V asked for closing-TWA
 carries the **venue's own resolution** (`mkt.outcome`), and the standing settlement rule says labels are
 the market's resolution. The computed TWAP60 direction only agrees with it **96.73%** of the time
 (measured, `MULTI_MARKET.md`), so using the resolution is strictly better. That is what the fit will use.
+
+## Arm 2 is running — and the fit says something worth reading before the 24 h numbers
+
+Both Platt arms started 10:06 UTC, own processes and own databases, four shadow processes now under cron:
+`198523` eth frozen, `198521` sol frozen, `199025` eth platt, `199027` sol platt. The frozen arms were not
+touched.
+
+Panel rebuilt with V's own `fetch_poly.py` and it **matches ETH_SOL_EF.md exactly**: ETH 948,834 taker
+prints / 4,031 markets, SOL 451,625 / 4,032, every market carrying a venue resolution. So the fit is on
+V's panel, not an approximation of it.
+
+```
+ETH  p = sigmoid(0.0 + 0.557393·logit(model p) + 0.515179·logit(mid))
+SOL  p = sigmoid(0.0 + 0.735893·logit(model p) + 0.305051·logit(mid))
+```
+
+| | rows | walk-forward AUC | calibration (pred vs actual) | mid alone | model p alone |
+|---|---|---|---|---|---|
+| ETH | 349,782 | **0.8489** | 0.5000 vs 0.5000 (+0.00 pp) | 0.8480 | **0.8501** |
+| SOL | 310,052 | **0.8444** | 0.5000 vs 0.5000 (+0.00 pp) | 0.8388 | **0.8446** |
+
+Three things in that table, and the second is the one that matters:
+
+1. **The intercept is exactly 0** (−1.3e-17). That is not a bug, it is the construction: fitting both sides
+   of every candle-second makes the base rate exactly 0.500 and the features antisymmetric, so a non-zero
+   intercept would have meant an error somewhere.
+2. **Both slopes are well below 1** — 0.56/0.52 for ETH, 0.74/0.31 for SOL. That is the entire correction.
+   The frozen arm behaved as if the model p deserved weight **1.0** and the venue mid **0**, which is why it
+   claimed 0.497 where the market said 0.350 and then bought the underdog.
+3. **The blend does NOT improve ranking.** On ETH the model p alone has the *highest* AUC of the three
+   (0.8501 vs the blend's 0.8489); on SOL they are level (0.8446 vs 0.8444). So the Platt buys nothing in
+   discrimination. What it fixes is the **level** — the calibrated p now sits near the market's price
+   instead of far above it, so the EV test stops being a longshot generator.
+
+**Prediction, on the record before the data arrives:** with slopes near 0.5 the calibrated p will track the
+mid closely, so EV ≥ 0.15 should fire *rarely* and only where the model genuinely disagrees with the
+market. The risk is now the opposite of the frozen arm's — too few fires to reach n≥60 in 24 h rather than
+too many bad ones. If that happens the honest report is "insufficient", not a lowered θ.

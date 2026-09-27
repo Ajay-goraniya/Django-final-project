@@ -22,10 +22,14 @@ RATE, SEC_LO, SEC_HI, DELAYS = 0.07, 15, 240, (0, 1, 2, 3)
 cost = lambda x: 1 + RATE * (1 - x)
 ev_of = lambda p, a: p / (a * cost(a)) - 1
 
+# Books written BEFORE 09-27 03:33 UTC came from the pre-fix recorder, which dropped every
+# price_change delta and so carried only REST-resync freshness (45 s). Those rows are real reads but they
+# cannot answer a per-second lag question, so the window starts at the fixed-code boundary.
+FIXED_FROM = 1790480000        # 09-27 03:33 UTC, the delta fix
 c = sqlite3.connect(f'file:{A.db}?mode=ro', uri=True)
 f = lambda t: dt.datetime.fromtimestamp(t, dt.timezone.utc).strftime('%m-%d %H:%M')
-bl, bh = c.execute('SELECT min(ts),max(ts) FROM books').fetchone()
-print(f'recorded books {f(bl)} -> {f(bh)} = {(bh-bl)/3600:.2f} h'
+bl, bh = c.execute('SELECT max(min(ts), ?),max(ts) FROM books', (FIXED_FROM,)).fetchone()
+print(f'recorded books (post-fix only) {f(bl)} -> {f(bh)} = {(bh-bl)/3600:.2f} h'
       + ('' if (bh - bl) >= 12 * 3600 else '   *** UNDER 12 h: not a reading yet ***'))
 
 for coin in ('eth', 'sol'):
@@ -34,7 +38,8 @@ for coin in ('eth', 'sol'):
     res = dict(c.execute('SELECT epoch,outcome FROM resolutions WHERE market=?', (coin,)).fetchall())
     bk = {}
     for ts, ua, uz, da, dz in c.execute(
-            'SELECT ts,up_ask,up_ask_sz,dn_ask,dn_ask_sz FROM books WHERE market=?', (coin,)):
+            'SELECT ts,up_ask,up_ask_sz,dn_ask,dn_ask_sz FROM books WHERE market=? AND ts>=?',
+            (coin, FIXED_FROM)):
         bk[ts] = (ua, uz, da, dz)
     def close_at(t, limit=3600):
         for k in range(limit + 1):

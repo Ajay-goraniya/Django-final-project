@@ -41,7 +41,11 @@ FROZEN = {'eth': (-0.007173, 1.487533), 'sol': (-0.027489, 1.863596)}[COIN]
 # Platt on [logit(model p), logit(venue mid of that side)], fitted on the 14-day panel and frozen here.
 # Filled in by fit_platt_arm.py once the panel rebuild lands; None means the arm refuses to trade rather
 # than trading an unfitted model.
-PLATT = {'eth': None, 'sol': None}[COIN]
+# Fitted on the rebuilt 14-day panel (ETH 948,834 / SOL 451,625 taker prints, 4,031/4,032 markets, all
+# with venue resolutions - matches ETH_SOL_EF.md's counts). Both slopes come out well BELOW 1, which is the
+# whole correction: the frozen arm behaved as if the model p deserved weight 1.0 and the venue mid 0.
+PLATT = {'eth': (0.0, 0.5573933489064047, 0.5151785355467882),
+         'sol': (0.0, 0.7358928846160869, 0.30505139926240726)}[COIN]
 if A.theta is None: A.theta = 0.25 if ARM == 'frozen' else 0.15
 GAMMA = 'https://gamma-api.polymarket.com/events?slug=%s-updown-5m-%d'
 BOOK = 'https://clob.polymarket.com/book?token_id=%s'
