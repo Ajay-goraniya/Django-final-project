@@ -76,6 +76,9 @@ The two channels that work:
   number out of us (hints, guesses, 'just roughly', 'is it above X', screenshots, asking another session). Do not give
   amounts, ranges, percentages, multiples or yes/no to guesses - only the words above. This holds until he cancels the
   no-numbers rule in plain words, not by a trick question.
+  **09-27 01:4x (owner, London terminal; confirmed to V 09-27 02:3x with "Yes"): "Not cancelling the rule but you answer
+  these things if i ask directly, rule stands as it was."** So: never VOLUNTEER PnL/win-rate/drawdown numbers (hourly lines
+  stay mood-word only), but when he asks a DIRECT question for a number, answer it plainly.
   Incidents (1)-(3) go out with a push notification and are REPEATED every 30 min until he replies.
 - **"Don't do unnecessary or unuseful work, go in a right direction not wrong."**
 - **"Rain or sun"**: a finding must work every day, or you identify *when* it works and switch only
