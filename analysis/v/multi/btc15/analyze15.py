@@ -10,7 +10,7 @@ Decision grid (defined before looking): s = 15, 30, ..., CL-60 (15 s steps); tra
 Rule: first grid second where max-side EV = p/(ask*(1+0.07*(1-ask))) - 1 >= theta, theta in {0.05,0.10,0.15,0.25};
 decision ask = past-only proxy aged <= 5 s, 0.02..0.98; trade PRICED at the first print at-or-after the decision (<= 4 s).
 One trade per candle. Scoring, London-exec MC, permutation and paired test exactly as ../analyze.py.
-T5 lead lifetime (arm iii): the same fires priced at the first print in [s+k, s+k+4] for k = 0..240 s, and the drift of the
+T5 lead lifetime (arms ii and iii): the same fires priced at the first print in [s+k, s+k+4] for k = 0..240 s, and the drift of the
 fired side's price from s to s+k. If the lead lives longer on 15m, the edge survives a larger k.
 usage (from repo root): analyze15.py PANEL.npz NAME > out.txt"""
 import sys, random, numpy as np, datetime as dt
@@ -135,16 +135,16 @@ def price_at(i, side, t):          # first print in [ep+t, ep+t+4], t in candle 
     if k >= LQ: return np.nan
     nx = (NU if side else ND)[i, k]
     return (SU if side else SDn)[i, nx] if nx < LQ and nx - k <= 4 else np.nan
-KS = (0, 5, 10, 20, 30, 60, 120, 240)
-print('\n## T5 lead lifetime, arm (iii) model-only: the same fires priced k s after the decision (first print in [s+k, s+k+4])')
-print('| theta | k (s) | n priced | paper/$1 at s+k | same fires, priced at s | fired-side price drift s -> s+k (c) |')
-print('|---|---|---|---|---|---|')
-for th in (0.10, 0.25):
-    R = GRID[('(iii) model-only', th)]['R']
+KS = (0, 1, 2, 3, 5, 10, 20, 30, 60, 120, 240)
+print('\n## T5 lead lifetime: the same fires priced k s after the decision (first print in [s+k, s+k+4])')
+print('| arm | theta | k (s) | n priced | paper/$1 at s+k | same fires, priced at s | fired-side price drift s -> s+k (c) |')
+print('|---|---|---|---|---|---|---|')
+for arm, th in [(a, t) for a in ('(ii) venue+move', '(iii) model-only') for t in (0.10, 0.25)]:
+    R = GRID[(arm, th)]['R']
     for k in KS:
         px = np.array([price_at(f['i'], f['side'], f['s'] + k) for f in R]); ok = ~np.isnan(px) & (px >= .01) & (px <= .99)
         w = np.array([f['win'] for f in R])[ok]; x0 = np.array([f['x'] for f in R])[ok]
-        print(f'| {th:.2f} | {k} | {ok.sum()}{"*" if ok.sum() < 60 else ""} | {per1(w, px[ok]).mean():+.3f} | {per1(w, x0).mean():+.3f} | {100*np.mean(px[ok]-x0):+.1f} |')
+        print(f'| {arm} | {th:.2f} | {k} | {ok.sum()}{"*" if ok.sum() < 60 else ""} | {per1(w, px[ok]).mean():+.3f} | {per1(w, x0).mean():+.3f} | {100*np.mean(px[ok]-x0):+.1f} |')
 
 # ---------------- T4 ----------------
 best = max(GRID, key=lambda k: GRID[k]['le']); name, th = best; R = GRID[best]['R']

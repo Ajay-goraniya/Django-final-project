@@ -8,7 +8,9 @@ Resolution (gamma event description, btc-updown-15m-1790477100, identical wordin
 (Chainlink btc-usd-twap-60s stream) of the time range ... >= the price at the beginning of that range". So both ends are
 60 s TWAPs:  line = mean Binance 1 s close over [ep-60, ep-1];  settle proxy = mean over [ep+CL-60, ep+CL-1].
 Decision at second s of candle ep = instant ep+s. Allowed: klines with open <= ep+s-1, prints with ts <= ep+s-1.
-- z   = ln(P/line) / (sig1s*sqrt(CL));  zt = ln(P/line) / (sig1s*sqrt(max(CL-60-s,0)+20))  (time left to the TWAP window)
+- proj = projected CLOSING TWAP60 at s (known closes of the closing window + current price for the rest; = P before it opens)
+- z   = ln(proj/line) / (sig1s*sqrt(CL));  zt = ln(proj/line) / (sig1s*sqrt(var_u)),  var_u = max(CL-60-s,0) + m(m+1)(2m+1)/21600
+  (m = unknown seconds of the closing window; before it opens var_u = time left + 20.5, the 5m builder's '+20')
 - sig1s = std of 1 s log returns over the prior 900 s
 - ask proxy per side (UP shown): taker BUY of UP at p -> UP ask p; taker SELL of DOWN at q -> UP ask 1-q. Per-second mean.
   past ask at s = last print second <= ep+s-1; exec at s = first print second in [ep+s, ep+s+4] (at-or-after).
@@ -35,8 +37,16 @@ def feats(ser, ep):
     ip = i_open + S - 1; P = c[ip]
     a, b = ip - 899, ip + 1
     m = (cs[b] - cs[a]) / 900; v = (cs2[b] - cs2[a]) / 900 - m * m
-    sig = np.sqrt(np.maximum(v, 1e-12)); mv = np.log(P / line)
-    z = mv / (sig * np.sqrt(CL)); zt = mv / (sig * np.sqrt(np.maximum(CL - 60 - S, 0) + 20))
+    sig = np.sqrt(np.maximum(v, 1e-12))
+    # move vs the OPENING TWAP60 line, measured on the PROJECTED CLOSING TWAP60: known closes inside the closing window
+    # [ep+CL-60, ep+CL) plus the current price for the rest (before the window opens this is just the current price).
+    kn = np.clip(ip - (i_open + CL - 60) + 1, 0, 60)                      # closes of the closing window already known
+    ccs = np.concatenate([[0], np.cumsum(c[i_open + CL - 60:i_open + CL])])
+    proj = (ccs[kn] + (60 - kn) * P) / 60
+    mv = np.log(proj / line)
+    m_ = 60 - kn                                                           # unknown seconds of the closing TWAP
+    var_u = np.maximum(CL - 60 - S, 0) + m_ * (m_ + 1) * (2 * m_ + 1) / 21600.0   # = time-to-window + ~20.5 before it opens
+    z = mv / (sig * np.sqrt(CL)); zt = mv / (sig * np.sqrt(np.maximum(var_u, 0.5)))
     return z, zt, int(fin >= line)
 
 def quotes(ep, rows):
