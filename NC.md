@@ -190,3 +190,11 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
 - **No-EV retries** (buy the never-filled candles at the best ask +1s/+2s): 100 graded, 45% win, **-0.124/-0.163 per $1**; every bucket INSUFFICIENT. They lose. The EV re-check on retries stays.
 - **Retry fills as they are** (attempt >=2, n54 INSUFFICIENT): 50% win vs 48% break-even, +0.03/$1. Dropping retries costs ~11 in total, and the halves disagree. No evidence either way; no change.
 - The fill-side levers are now all closed: pad/cap (PAD_GRID_LONDON), speed (NC-5), size (R-14), no-EV retry and no-retry (this entry). Re-open only with a new mechanism, not a new threshold.
+
+## NC-8 - MAIN / REVERSAL new EV logic, two windows (09-27) - NOTHING SHIPS
+- Rules: R0 first call, R1 the lane's own p at breakeven, R2 walk-forward calibrated EV, R3 venue-only null. Priced with
+  PAST-ONLY quotes (the old +-5 s nearest-row quote was lookahead: 52% of MAIN R1's picks used a future row).
+- **MAIN dead** in both windows, all rules, all ages: W1 0-240 s R0 -0.017 paper / -0.10 London-exec; W2 R0 -0.140 / -0.228.
+  "MAIN after 240 s" was the future quote (W1); W2 has too little tape after 240 s to say. No reason to lift the 240 s rule.
+- **REVERSAL R1 0-240 s, London-exec**: W1 +0.065 (p05 below zero), W2 -0.023. Zurich live shadow +0.064 on 77. Not a finding.
+- Calibration (R2) never beat its null (R3). Files: analysis/v/model/MAIN_REV_*.md, analysis/zurich/LANE_EV_ZURICH_W2.md.
