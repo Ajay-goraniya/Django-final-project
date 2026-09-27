@@ -205,3 +205,6 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
 - As a REV filter: the best n>=60 cell is +0.150/$1 London-exec (n64), below its own null cell (+0.178); paired test 28 vs 27, p=1.0.
 - The market price already carries what these features know. Open, and only window 2 can say: REV filtered by the calibrated venue
   price alone (+0.12..+0.18 on n59-65). File: analysis/v/model/REV_BRAIN_HIST.md.
+- **09-27 01:3x, the last lead closed:** the price-calibrated REV filter, FROZEN on window 1 and tested on window 2 with no refit:
+  n53 (<60), paper +0.062 (H1 +0.209 / H2 -0.080), London-exec -0.060/$1. The calibration transferred exactly (pred 0.660 = actual
+  0.660), so the price is a true probability, and that is exactly why it does not pay after costs. REVERSAL stays off. File: analysis/zurich/REV_FROZEN_OOS.md.
