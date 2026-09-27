@@ -204,3 +204,23 @@ EV ≥ 0.15, priced past-only and run through `lane_exec_sim.py` — cannot star
 ETH/SOL book history, and (c) established that public `prices-history` cannot substitute. The recorder
 began at 02:11 UTC on 09-27, so the earliest that test can run is ~09-29, and only if the recorder
 survives (see "What needs the owner" above — it has no durable scheduling and no retention margin).
+
+## Keep-alive installed (owner granted 09-27 03:1x) — and why it is `flock`, not `pgrep`
+
+```
+* * * * * /usr/bin/flock -n /home/ubuntu/pm_multi/.rec.lock -c 'cd /home/ubuntu/pm_multi && exec /home/ubuntu/pm_paper_zurich/.venv/bin/python recorder.py >> recorder.log 2>&1'
+* * * * * /usr/bin/flock -n /home/ubuntu/pm_multi/.eth.lock -c 'cd /home/ubuntu/pm_multi && exec /home/ubuntu/pm_paper_zurich/.venv/bin/python eth_sol_shadow.py --coin eth >> shadow_eth.log 2>&1'
+* * * * * /usr/bin/flock -n /home/ubuntu/pm_multi/.sol.lock -c 'cd /home/ubuntu/pm_multi && exec /home/ubuntu/pm_paper_zurich/.venv/bin/python eth_sol_shadow.py --coin sol >> shadow_sol.log 2>&1'
+7 * * * * /usr/bin/flock -n /home/ubuntu/pm_archive/.arch.lock /home/ubuntu/pm_paper_zurich/.venv/bin/python /home/ubuntu/pm_archive/archive_decide.py >> /home/ubuntu/pm_archive/cron.log 2>&1
+```
+
+**The `pgrep -f ... || start` line I wrote in this file earlier does not work, and I installed it before
+noticing.** A cron entry runs as `/bin/sh -c "pgrep -f 'pm_multi/recorder.py' || (start)"`, so the pattern
+appears in the *shell's own* command line and `pgrep -f` matches that shell. The guard therefore always
+"finds" the process and never restarts anything: 150 s after installing it, all three were still down.
+Verified directly — `sh -c "pgrep -f 'pm_multi/recorder.py'"` returns its own pid.
+
+This is the third time this exact self-match has cost something here: phantom duplicate-engine pids on
+09-23, and `cpu5.py` reporting 0.0% CPU over 300 s for a busy engine. `flock -n` has no pattern to
+self-match: the lock is held for the process's lifetime, so a live process blocks the restart and a dead
+one frees it. All three came up within 60 s of the corrected install.

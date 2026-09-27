@@ -103,3 +103,48 @@ untaken shadow trade are both gone for good, and the 24 h/48 h clocks restart. T
 ```
 * * * * * for c in eth sol; do pgrep -f "eth_sol_shadow.py --coin $c" >/dev/null || (cd /home/ubuntu/pm_multi && nohup /home/ubuntu/pm_paper_zurich/.venv/bin/python eth_sol_shadow.py --coin $c >> shadow_$c.log 2>&1 &); done; pgrep -f pm_multi/recorder.py >/dev/null || (cd /home/ubuntu/pm_multi && nohup /home/ubuntu/pm_paper_zurich/.venv/bin/python recorder.py >> recorder.log 2>&1 &)
 ```
+
+## Keep-alive installed (owner granted 09-27 03:1x) — and why it is `flock`, not `pgrep`
+
+```
+* * * * * /usr/bin/flock -n /home/ubuntu/pm_multi/.rec.lock -c 'cd /home/ubuntu/pm_multi && exec /home/ubuntu/pm_paper_zurich/.venv/bin/python recorder.py >> recorder.log 2>&1'
+* * * * * /usr/bin/flock -n /home/ubuntu/pm_multi/.eth.lock -c 'cd /home/ubuntu/pm_multi && exec /home/ubuntu/pm_paper_zurich/.venv/bin/python eth_sol_shadow.py --coin eth >> shadow_eth.log 2>&1'
+* * * * * /usr/bin/flock -n /home/ubuntu/pm_multi/.sol.lock -c 'cd /home/ubuntu/pm_multi && exec /home/ubuntu/pm_paper_zurich/.venv/bin/python eth_sol_shadow.py --coin sol >> shadow_sol.log 2>&1'
+7 * * * * /usr/bin/flock -n /home/ubuntu/pm_archive/.arch.lock /home/ubuntu/pm_paper_zurich/.venv/bin/python /home/ubuntu/pm_archive/archive_decide.py >> /home/ubuntu/pm_archive/cron.log 2>&1
+```
+
+**The `pgrep -f ... || start` line I wrote in this file earlier does not work, and I installed it before
+noticing.** A cron entry runs as `/bin/sh -c "pgrep -f 'pm_multi/recorder.py' || (start)"`, so the pattern
+appears in the *shell's own* command line and `pgrep -f` matches that shell. The guard therefore always
+"finds" the process and never restarts anything: 150 s after installing it, all three were still down.
+Verified directly — `sh -c "pgrep -f 'pm_multi/recorder.py'"` returns its own pid.
+
+This is the third time this exact self-match has cost something here: phantom duplicate-engine pids on
+09-23, and `cpu5.py` reporting 0.0% CPU over 300 s for a busy engine. `flock -n` has no pattern to
+self-match: the lock is held for the process's lifetime, so a live process blocks the restart and a dead
+one frees it. All three came up within 60 s of the corrected install.
+
+## Defect found after the first report: every book delta was being dropped
+
+The ms probe (`/home/ubuntu/pm_probe/ms_probe.py`) captured **zero** `price_change` events in 3 minutes
+while Binance delivered 7,860. Cause, measured on raw frames: the venue sends `book` snapshots as a
+**list** but `price_change` and `last_trade_price` as a **bare dict** — 2,496 dict `price_change` against
+2 list `book` in 50 s. Iterating the parsed payload directly walks a dict's *keys*, so every delta was
+silently discarded.
+
+That hit three processes, two of which I had already reported as working:
+
+- **recorder.py** (02:11-03:30): books were only as fresh as the 45 s REST resync. The `up_snap_age_s`
+  I reported (avg 18.8 s) was the honest symptom and I misread it as "the venue only sends `book` on
+  subscribe" — the venue was sending thousands of deltas and I was dropping them.
+- **eth_sol_shadow.py** (03:12-03:30): decisions read a book refreshed only every 5 s. The first ETH
+  order's `book_age_s 24.83` was this bug, and the 5 s REST resync I added as "fix 3" masked the cause.
+- **ms_probe.py**: no deltas at all, which is how it was caught.
+
+Fixed in all three by normalising the payload before iterating. Proof it works: the first order after the
+restart is `[sol] 1790479800 s187 DOWN p 0.177 ask 0.11 ev +0.513 -> 42.1 sh @ 0.1115 age 0.22s` —
+book age **0.22 s** against 24.83 s before.
+
+All three processes were restarted on the fixed code at 03:33 UTC, so **the 24 h/48 h clocks restart from
+03:33 09-27**. That is the right trade: 24 h of fills decided on a 5-second-stale book cannot answer how
+fast the shares disappear.

@@ -97,7 +97,12 @@ async def ws_loop(db):
                 end = time.time() + 300
                 while time.time() < end:
                     raw = await asyncio.wait_for(w.recv(), timeout=30)
-                    for e in (raw if isinstance(raw, list) else json.loads(raw)) or []:
+                    # The venue sends `book` as a LIST but price_change / last_trade_price as a BARE
+                    # DICT (measured: 2,496 dict price_change vs 2 list book in 50 s). Iterating the
+                    # dict walks its KEYS, so every delta was being dropped silently - the books were
+                    # only as fresh as the REST resync. Normalise the payload before iterating.
+                    _p = raw if isinstance(raw, (list, dict)) else json.loads(raw)
+                    for e in (_p if isinstance(_p, list) else [_p]):
                         if not isinstance(e, dict): continue
                         k = e.get('event_type'); tk = str(e.get('asset_id') or '')
                         if k == 'book':
