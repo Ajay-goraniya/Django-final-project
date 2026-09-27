@@ -131,3 +131,76 @@ recorder, which makes Phase 2 dependent on (a) surviving — see below.
 3. Phase 2 stays as ordered: EF shadow on ETH+SOL, Fixed-style EV ≥ 0.15 on a calibrated p, one trade per
    market per candle (≤3 per 5 min with BTC), reported per market and combined with n, hit, per$1, maxDD
    and the correlation of daily PnL with BTC EF. It cannot start before ~2 days of recorded books exist.
+
+---
+
+# Owner's design, item 2: does `p_btc` help ETH/SOL? Tested on the real running model
+
+Scope per the owner's 02:0x clarification — *"test first, whether it works individually; merging comes
+later."* **The merged 3-lane engine is NOT built and will not be** until he says so. Work here is the
+recorder, the lead-lag, and ETH alone / SOL alone with and without `p_btc`.
+
+`analysis/zurich/pbtc_gain.py`. Phase 1(b) tested the weaker version of the hypothesis — BTC's raw
+*move* — and got 0.000 AUC on 30 days. This tests the version the owner specified: `p_btc`, the **live
+BTC EF model's probability**, taken from `decide_log` written by the running engine (via the archive), not
+reconstructed. Each row's `p` is P(the model's chosen side), so the directional feature is
+`p_up_btc = p if side=='UP' else 1−p`, joined **past-only** (latest row at or before `epoch+s`).
+
+Join quality: **age p50 0 s, p95 0 s, max 5 s** — the engine writes ~4 rows/s, so the feature is
+essentially contemporaneous.
+
+The cost of insisting on the real artifact: `decide_log` starts 09-24 12:30, so this is
+**712 candles over 3 day buckets → 2 test days**, against Phase 1(b)'s 8,351 scored candles per cell.
+
+| | ETH B−A | ETH coef (\|t\|) | ETH C−A | SOL B−A | SOL coef (\|t\|) | SOL C−A | n |
+|---|---|---|---|---|---|---|---|
+| sec 15 | +0.008 | +1.557 (2.3) | +0.007 | −0.004 | +0.361 (0.6) | +0.002 | 575 |
+| sec 30 | +0.006 | +1.626 (2.6) | +0.008 | +0.002 | +0.834 (1.4) | +0.006 | 574 |
+| sec 45 | +0.001 | +1.048 (1.8) | +0.008 | +0.001 | +0.650 (1.2) | +0.006 | 575 |
+| sec 60 | +0.000 | +1.002 (1.7) | **+0.010** | +0.001 | +0.427 (0.8) | +0.005 | 574 |
+| sec 75 | +0.003 | +1.565 (2.8) | **+0.010** | +0.001 | +0.868 (1.8) | +0.006 | 574 |
+| sec 90 | +0.004 | +1.362 (2.6) | +0.009 | +0.002 | +0.787 (1.7) | +0.004 | 574 |
+| sec 105 | +0.001 | +0.982 (2.0) | +0.002 | +0.001 | +0.584 (1.3) | −0.000 | 573 |
+| sec 120 | +0.001 | +0.919 (2.0) | +0.005 | +0.001 | +0.455 (1.1) | +0.002 | 575 |
+| sec 135 | −0.001 | +0.940 (2.1) | −0.001 | −0.001 | +0.385 (0.9) | −0.002 | 574 |
+| sec 150 | −0.004 | +1.260 (3.0) | −0.004 | −0.000 | +0.409 (1.0) | +0.000 | 572 |
+| sec 165 | −0.003 | +1.143 (2.9) | −0.003 | −0.000 | +0.004 (0.0) | −0.002 | 564 |
+| sec 180 | −0.005 | +1.002 (2.7) | −0.005 | +0.001 | −0.208 (0.6) | −0.003 | 555 |
+| sec 195 | −0.004 | +1.056 (2.9) | −0.005 | −0.001 | −0.136 (0.4) | −0.003 | 525 |
+| sec 210 | −0.003 | +0.842 (2.4) | −0.004 | −0.000 | −0.304 (0.8) | −0.004 | 508 |
+| sec 225 | **−0.014** | +0.759 (2.1) | −0.014 | −0.002 | −0.444 (1.2) | −0.011 | 242 |
+| sec 240 | **−0.018** | +0.823 (2.4) | −0.017 | −0.003 | −0.401 (1.1) | −0.004 | 218 |
+
+A = own move only · B = own + `p_btc` · C = own + `p_btc` + BTC move. Base AUC (A) runs 0.661→0.921 for
+ETH and 0.647→0.929 for SOL.
+
+## Reading it honestly, in both directions
+
+**For the owner's hypothesis:** on ETH the `p_btc` coefficient is **positive at every second bucket, with
+|t| between 1.7 and 3.0** — that is a genuinely detectable relationship, not noise, and it is the first
+sign of anything in this direction. Adding BTC's move on top (model C) is the best variant, reaching
+**+0.010 AUC at sec 60 and 75**.
+
+**Against it:** the effect is economically negligible. The best cell in the whole grid is +0.010 AUC —
+one point — and the ETH gain **turns negative from sec 135 onward, reaching −0.018 at sec 240**. On SOL
+there is nothing at all: |t| ≤ 1.8, the coefficient changes sign after sec 165, and B−A never leaves
+±0.004.
+
+Three limits that bound how much any of this is worth:
+
+1. **2 test days.** Every cell has n≥60 so it passes the sample rule, but 3 day buckets cannot satisfy
+   "rain or sun". This needs re-running when the archive has more days.
+2. **The late buckets lose sample** (n 575 → 218 by sec 240) because the past-only `p_btc` join fails
+   within 5 s late in the candle — the same coverage collapse the tape shows near settlement. So the two
+   "hurts" cells are also the two thinnest.
+3. **AUC gain is not money.** A +0.010 AUC has to clear the spread and London execution. The frozen-filter
+   test (`REV_FROZEN_OOS.md`) showed a rule that was *perfectly calibrated* out of sample still lost
+   −0.060/$1 once execution was applied, because the ask already prices public information.
+
+## What is still blocked, and on what
+
+The trading half of items 1 and 2 — each coin's own EF model on **its own `p_venue`**, Platt-calibrated,
+EV ≥ 0.15, priced past-only and run through `lane_exec_sim.py` — cannot start yet. It needs recorded
+ETH/SOL book history, and (c) established that public `prices-history` cannot substitute. The recorder
+began at 02:11 UTC on 09-27, so the earliest that test can run is ~09-29, and only if the recorder
+survives (see "What needs the owner" above — it has no durable scheduling and no retention margin).
