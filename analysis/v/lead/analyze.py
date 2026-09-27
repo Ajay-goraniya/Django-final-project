@@ -60,7 +60,7 @@ for x in (2, 5, 10):
         acc = {(L, i): [0, 0] for L in LEADS for i in range(len(RATES))}; chance = np.zeros(len(RATES)); nt = 0
         dirsc = {L: ([], []) for L in LEADS}
         for f in folds:
-            k = kidx[f['test']]; z = Z[f['test']]; d0 = None
+            k = kidx[f['test']]; z = Z[f['test']]
             ev = z['ev']; ev = ev[ev[:, 1] == x]
             day0 = int(np.datetime64(f['test'] + 'T00:00:00', 'us').astype(np.int64))
             su = S[f'{k}|up|{x}|1000|{m}']; sd = S[f'{k}|dn|{x}|1000|{m}']
