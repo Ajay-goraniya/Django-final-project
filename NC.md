@@ -586,3 +586,5 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   -$214.6, 0/3 days - its only positive days are the model's own training days. Control (real fixed15 fills, same universe): -$26.6, DD $156.
   A buys favourites at 74% and still loses; worse than fixed15 on every column. The forward shadow continues as pre-registered, but the
   prior on A is now strongly against it. ef2_late.py stays OFF and unwired.
+- Zurich independent lag read (15:10, 09-27 2 h, 1,591 unambiguous pairs + a 305k-pair cross-correlation vs a null): data-api - WS p50 +2.20 s
+  (p10 +1.42, p90 +3.00), 98.8% >= 1 s - matches V's live +2.2 s. Public-tape prices are not usable at second resolution. Rule recorded.
