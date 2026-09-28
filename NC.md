@@ -188,6 +188,9 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
 
 ## NC-7 - Retry levers on London EF (09-26, read-only backtests on the London DB) - KEEP AS IS
 - **No-EV retries** (buy the never-filled candles at the best ask +1s/+2s): 100 graded, 45% win, **-0.124/-0.163 per $1**; every bucket INSUFFICIENT. They lose. The EV re-check on retries stays.
+  **RETRACTED 09-28 (London):** that test used tape-INFERRED sides, which match the logged side only 69% (195/283). With logged sides the
+  never-filled candles would have won 65% (94/144, gamma), as PAD_GRID said. Superseded by NC-13. The fillwin/d_ask5 cells that fell back
+  to inferred sides are retracted too.
 - **Retry fills as they are** (attempt >=2, n54 INSUFFICIENT): 50% win vs 48% break-even, +0.03/$1. Dropping retries costs ~11 in total, and the halves disagree. No evidence either way; no change.
 - The fill-side levers are now all closed: pad/cap (PAD_GRID_LONDON), speed (NC-5), size (R-14), no-EV retry and no-retry (this entry). Re-open only with a new mechanism, not a new threshold.
 
@@ -238,3 +241,27 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
   FIXED is London-negative at every tier. verify.py REJECTS it: random 6/day reaches p95 +0.262 (p=0.084), the sweep is non-monotone (peaks at 20%), and n=54.
 - Staking is second order: once selective, all arms (fixed / tiered / half-Kelly capped / de-risk F) are within one point per $1.
 - Hints (n<60): ask 0.25-0.35 loses in both profiles (16.7% win); sec 180-240 is the best bucket in both. Re-run at ~30 days. analysis/zurich/STABLE_EF.md.
+
+## NC-13 - Predict.fun-style execution on London (owner: "fix the order failure", 09-28) - raises fills, not money
+- **Why Predict.fun fills ~93%** (learner/btc_model_build11.py:603-650): EF is a MARKET BUY with a VWAP-band price tolerance
+  (<0.10 +100%, 0.10-0.20 +70%, 0.20-0.30 +50%, 0.30-0.40 +20%, >=0.40 +10%) and up to 3 re-quoted replacements with no EV re-check.
+  London caps at ask+1 tick and re-checks EV. 69% of London's 580 EF orders end "no orders found to match with FAK order".
+- **Test (London's own DB, 326 EF candles, logged sides, gamma-graded; fill = our side's best ask <= cap in (submit, +3 s], 1 Hz tape):**
+
+  | cap | fills | win | per $1 optimistic / pessimistic |
+  |---|---|---|---|
+  | +1c | 43% | 44% | +0.00 / -0.09 |
+  | +3c | 49% | 46% | +0.06 / -0.06 |
+  | +5c | 58% | 47% | +0.06 / -0.08 |
+  | +10c | 70% | 50% | +0.06 / -0.13 |
+  | +15c | 79% | 51% | +0.07 / -0.17 |
+  | Predict bands | 59% | 47% | +0.04 / -0.12 |
+
+  The halves flip at every cap (H1 +0.22..+0.33 optimistic, H2 -0.06..-0.15). Fills over the attempt-1 top-of-book size: 37 at +1c, 54 at +5c,
+  79 at +15c (no depth archive, so the real price is worse than optimistic).
+- **Why:** the extra fills are the candles whose ask stayed reachable; they win about what they cost (the added fills win ~56-60% at ~+5-15c).
+  The 65% winners are the ones the book runs away from, and many stay out of reach even at +15c within 3 s. The venue takes ~230 ms to
+  process our order, so the fill problem is the latency race (NC-5, NC-10), not the cap.
+- **Verdict:** a wider cap copies Predict.fun's fill rate but not its money. Nothing changes on London. File (London box, local):
+  analysis/london/PREDICT_STYLE_EXEC.md + pexec.py.
+
