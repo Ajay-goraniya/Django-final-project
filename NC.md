@@ -745,3 +745,9 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   candles) showed the last-60 s cheap side (<0.45) at +0.169/$1, both halves positive. On 48 h (576 candles) the same cell is -0.083
   (H1 -0.232 / H2 +0.092; 76/215 and 93/216 candles positive) - the 10 h slice was the recent half. Buying both sides costs >= $1.01
   before fees (books mirror). Other pre-open cells ~0 at ~0.50 (coin-flip noise). Closed.
+- **EF-9 v1 (Zurich 41bc12a): 250 ms asks + Binance spot AND perp price/signed flow from data.binance.vision aggTrades (09-24..27),
+  10 channels, strict q.90 trailing 1 h, anchors 0/15/30/45, 3 test days.** Mean +$161.8 [+154.0, +167.9], DD $140.5, 277/day, fill
+  91.1%, win 74.2%, ask 0.717, 3/3 days; +1c +$62.1, +2c -$40.0; favourite null +$27.6; fixed15 +$43.4 / DD $93.1. First version to
+  survive one tick. BUT ~all of the gain vs the INSUF version is 09-26 (-100.2 -> +111.1), overall correlations unchanged (the gain is in
+  the top-decile ranking), 3 test days only, DD 1.5x C. Candidate, NOT a finding. Zurich fixed a p_side str-vs-int bug first (assert
+  added). Live perp flow is unreachable from Zurich (fstream), so a forward arm needs spot-only or another perp route.
