@@ -616,3 +616,7 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   shadow and it is ill-posed on 3 days (floor 33%, unbounded when totals are small). V relaxes the ENTRY bar - not the forward decision
   rule - and registers W1h q.90 as E3, marked "entered on a relaxed entry bar". The forward decision rule (NC-19: $ > C, DD <= C, >= 2/3
   days, fill >= C, flip p < 0.05 after >= 3 full forward days) is unchanged and applies to E3 exactly as to every arm.
+- **E3 registered and live on Zurich (19ea92a): start 09-28 16:39 UTC, first ledger 17:30, first full forward day 09-29; three full forward
+  days complete 23:59 UTC 10-01 -> the decision rule is first evaluable on 10-02 for all arms.** Marked "entered on a relaxed entry bar".
+  Zurich added a day-boundary SEED (previous day's final hour re-scored under the new model) so E3's first hour does not mix two models;
+  09-28 ran seedless and is backfill. ef6_lane.py draft now loads the seed too (11 tests).

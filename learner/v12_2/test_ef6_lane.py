@@ -25,6 +25,18 @@ class Model(unittest.TestCase):
         self.assertIsNone(x.decide(900, 1000.0, 100, {}, 0.4, 0.6, 'UP', 0.9))
 
 
+class Seed(unittest.TestCase):
+    def test_day_boundary_seed_fills_the_window_and_old_rows_are_dropped(self):
+        d = tempfile.mkdtemp()
+        with open(os.path.join(d, 'ef6_2026-09-29.json'), 'w') as f: json.dump(MODEL, f)
+        with open(os.path.join(d, 'ef6_2026-09-29_seed.json'), 'w') as f: json.dump([[t, float(t)] for t in range(0, 10)], f)
+        x = L.EF6Lane(dict(enabled=True, model_dir=d, min_rows=5, q=0.5))
+        x.tq.add(-5.0, 999.0)                                   # a row from the old model must not survive the reload
+        self.assertTrue(x.load_day_model('2026-09-29'))
+        self.assertEqual(len(x.tq.rows), 10)
+        self.assertAlmostEqual(x.tq.threshold(60.0), 4.5)
+
+
 class Quantile(unittest.TestCase):
     def test_causal_grid_uses_only_rows_before_the_step(self):
         tq = L.TrailingQuantile(0.5, 3600.0, 60.0, 3)

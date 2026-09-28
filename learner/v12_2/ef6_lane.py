@@ -99,8 +99,15 @@ class EF6Lane:
         self.asks = AskState(); self.candle = None; self.fired = set()
 
     def load_day_model(self, day):
+        """Loads the day's model and, if present, its SEED: the previous day's final hour of candidate predictions re-scored under
+        THIS model (ef5_nightly.py, Zurich 16:40). Without it the first hour of a day would mix two models' scales in the window."""
         p = os.path.join(self.cfg['model_dir'], f'ef6_{day}.json')
         self.model = StumpModel.load(p) if os.path.exists(p) else None     # no model for the day -> the lane never fires
+        self.tq = TrailingQuantile(self.cfg['q'], self.cfg['window_s'], self.cfg['grid_s'], self.cfg['min_rows'])
+        sp = os.path.join(self.cfg['model_dir'], f'ef6_{day}_seed.json')
+        if self.model is not None and os.path.exists(sp):
+            with open(sp) as f:
+                for t, v in json.load(f): self.tq.add(float(t), float(v))
         return self.model is not None
 
     def decide(self, ep, now, sec, feats, up_ask, dn_ask, side, p):
