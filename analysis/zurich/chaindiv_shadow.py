@@ -60,14 +60,22 @@ def top(tk, side='asks'):
     return (p, d[p], b.get('snapshot'))
 
 
-def div_now(ts):
-    """The engine's own tape, read-only. Returns (div_bps, ref, spot) for the given second or None."""
+def div_now(ts, back=5):
+    """The engine's own tape, read-only. The most recent second at or before `ts` that has BOTH feeds.
+
+    Looking only at `ts` loses candles to a write race rather than to the signal: the engine commits the
+    row for second t a fraction of a second into t, so a read at t+0.05 can miss it. Measured on the first
+    live candle - one skip logged as no_div at 11:00:45 with the tape perfectly healthy. Scanning back a
+    few seconds keeps the denominator honest, and the age is recorded so a stale div can be filtered later.
+    Returns (div_bps, ref, spot, age_s) or None."""
     try:
         c = sqlite3.connect(f'file:{LIVE}?mode=ro', uri=True)
-        r = c.execute('SELECT spot_px,ref_px FROM tape1s WHERE ts=?', (ts,)).fetchone()
+        r = c.execute('SELECT ts,spot_px,ref_px FROM tape1s WHERE ts<=? AND ts>=? '
+                      'AND spot_px IS NOT NULL AND ref_px IS NOT NULL ORDER BY ts DESC LIMIT 1',
+                      (ts, ts - back)).fetchone()
         c.close()
-        if not r or r[0] is None or r[1] is None: return None
-        return ((r[1] - r[0]) / r[0] * 1e4, float(r[1]), float(r[0]))
+        if not r: return None
+        return ((r[2] - r[1]) / r[1] * 1e4, float(r[2]), float(r[1]), ts - int(r[0]))
     except Exception:
         return None
 
@@ -159,11 +167,11 @@ async def decide_loop(db):
         if ep not in toks:
             db.execute('INSERT OR REPLACE INTO skips VALUES(?,?,?,?)', (ep, SEC, None, 'no_tokens'))
             db.commit(); continue
-        dd = div_now(ts) or div_now(ts - 1)
+        dd = div_now(ts)
         if dd is None:
-            db.execute('INSERT OR REPLACE INTO skips VALUES(?,?,?,?)', (ep, SEC, None, 'no_div'))
+            db.execute('INSERT OR REPLACE INTO skips VALUES(?,?,?,?)', (ep, SEC, None, 'no_div_5s'))
             db.commit(); continue
-        div, ref, spot = dd
+        div, ref, spot, dage = dd
         side = 'DOWN' if div <= -THR else ('UP' if div >= THR else None)
         if side is None:
             db.execute('INSERT OR REPLACE INTO skips VALUES(?,?,?,?)', (ep, SEC, div, 'no_signal'))
@@ -188,8 +196,9 @@ async def decide_loop(db):
         db.execute('INSERT OR REPLACE INTO fires VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                    (ep, now, SEC, side, div, ref, spot, a, sz, oa, la, lat, filled, fp, shares,
                     (STAKE if fp else None), fees, age, None, None, None))
+        db.execute('UPDATE fires SET div_age_s=? WHERE epoch=?', (dage, ep))
         db.commit()
-        log(db, f'{ep} div {div:+.2f} -> {side} ask {a:.3f} later {la} '
+        log(db, f'{ep} div {div:+.2f} (age {dage}s) -> {side} ask {a:.3f} later {la} '
                 f'{"FILL @ " + format(fp, ".3f") if filled else "no fill"} (PAPER)')
 
 
@@ -219,6 +228,8 @@ async def grade_loop(db):
 async def main():
     db = sqlite3.connect(DB)
     for q in DDL: db.execute(q)
+    try: db.execute('ALTER TABLE fires ADD COLUMN div_age_s REAL')
+    except Exception: pass
     db.commit()
     log(db, 'chaindiv shadow start - PAPER ONLY, no order path in this file')
     await asyncio.gather(gamma_loop(db), ws_loop(db), resync_loop(db), decide_loop(db), grade_loop(db))

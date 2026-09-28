@@ -12,7 +12,7 @@ permutation is V's stricter one: a flipped draw is priced at the **opposite side
 through the identical FAK test, so the control answers "what if the model had picked the other side", fully
 priced, rather than "what if the payout flipped".
 
-## Answer in six parts
+## Answer in seven parts
 
 **1. The owner is right that EF fires late.** Baseline fixed15 fire second: **p10 45, p50 126, p90 198**. Only
 **5.1%** of fires happen at or before second 30; **55.4%** happen at second 120 or later.
@@ -42,6 +42,12 @@ these inputs there is very little the crowd is not already looking at.
 every second, and mid+flow is *worse* than mid alone at all four. The Chainlink-minus-Binance divergence is
 the one input tested that is genuinely independent of the price (|corr| 0.10–0.13) and it predicts nothing —
 AUC 0.470–0.512 against the venue's own outcome.
+
+**7. And the settlement reference is a lagged copy of Binance, which is why section 5's divergence was
+noise (section 6).** Binance leads Chainlink by **2–3 s** at corr **0.81**; the reverse never exceeds 0.095,
+and conditioning on Binance's own last 5 s collapses it from 0.074 to **0.007**. At the candle level the two
+lines disagree on sign 6.5–7.0% of the time — the ceiling on any reference-based edge — but on those candles
+the move is a median 0.09–0.18 bps against 1.66–2.34 bps overall, so the ceiling is lower still.
 
 **Every cell that met the standing precondition was put through verify.py and every one came back
 NOT A FINDING** — six from the grid, one from section 4, and section 5 produced no candidate at all. The
@@ -457,6 +463,85 @@ one, and that the search should move to data the engine does not currently colle
 trade prints being the obvious first candidate, since Zurich has 81,222 of them sitting unused in the ms probe
 archive and they are the one thing measured on the venue's clock rather than Binance's.
 
+## 6. LEAD-LAG: the Chainlink settlement reference against Binance spot
+
+Both series from the engine's own 1 Hz tape: `ref_px` is the venue's RTDS `crypto_prices_chainlink` topic
+(`poly_feeds.py:90-94`), `spot_px` is Binance. **438,395 shared seconds over 5.7 days** (89.9% of slots).
+
+Two caveats that apply to every number here. **Overlap**: using every second makes the k-second windows
+overlap almost completely, so correlations are unbiased but the effective sample is nearer n/k than n — no
+p-values are quoted, and every figure is repeated on a **non-overlapping** subsample (every k-th second).
+**Cadence**: the feeds do not tick alike — unchanged second-to-second on **23.0%** of seconds for Chainlink
+and **43.9%** for Binance — and that many zeros attenuates any 1 s correlation toward zero, so small numbers
+here are a floor, not a ceiling.
+
+### (1) Binance leads. It is not close, and the lead is 2–3 seconds.
+
+| k | BIN leads CL | (non-ovl) | CL leads BIN | (non-ovl) | diff |
+|---|---|---|---|---|---|
+| 1 s | 0.2038 | 0.2038 | 0.0584 | 0.0584 | +0.1454 |
+| 2 s | 0.7803 | 0.7856 | 0.0852 | 0.0852 | **+0.6950** |
+| **3 s** | **0.8123** | 0.8124 | 0.0948 | 0.0940 | **+0.7175** |
+| 5 s | 0.5673 | 0.5582 | 0.0862 | 0.0870 | +0.4811 |
+| 10 s | 0.3150 | 0.2955 | 0.0642 | 0.0533 | +0.2508 |
+| 20 s | 0.1685 | 0.1743 | 0.0488 | 0.0396 | +0.1197 |
+
+`BIN leads CL` = corr(Chainlink return over [t, t+k], Binance return over [t−k, t]). It peaks at **k=3 s with
+0.8123** while the reverse direction never exceeds **0.095** at any horizon. The non-overlapping column is
+identical to three decimals, so the precision is real rather than an artefact of overlap.
+
+### (2) The relationship is one-way
+
+| horizon | corr(BIN last-5 s, CL forward) | partial, given CL's own last-5 s | corr(CL last-5 s, BIN forward) | partial, given BIN's own last-5 s |
+|---|---|---|---|---|
+| 10 s | 0.4153 | **0.4238** | 0.0739 | **0.0074** |
+| 30 s | 0.2401 | **0.2350** | 0.0536 | **0.0114** |
+
+Binance's last 5 seconds predicts the reference's next 10 seconds at 0.42, and **conditioning on the
+reference's own last 5 seconds does not reduce that at all** — it rises slightly, so the reference's recent
+move carries no information about its own future that Binance does not already carry. The reverse collapses:
+0.0739 → **0.0074**. Once you know what Binance just did, the reference tells you nothing about where Binance
+goes next.
+
+So the settlement reference is a *lagged, smoothed copy* of the exchange the model already watches. That is
+the mechanism behind section 5's result that the Chainlink−Binance divergence predicts nothing: the
+divergence is mostly the 2–3 second lag plus feed noise, and a lag is not information about the future.
+
+### (3) The candle version — and the ceiling on any settlement-reference edge
+
+Binance move = spot(ep+S) against the TWAP60 of spot over [ep−60, ep−1]; Chainlink move = ref(ep+S) against
+the TWAP60 of **ref** — the line the venue actually pays on. A line needs ≥45 of its 60 seconds on both
+feeds, the same rule `arb_5m_15m.py` and `ef_chainlink_div.py` already use.
+
+| S | n | corr(moves) | **sign disagree** | median \|BIN\| bps | median \|CL\| bps | median \|BIN\| **on disagreements** |
+|---|---|---|---|---|---|---|
+| 20 s | 1375 | 0.9784 | **7.0%** | 1.66 | 1.61 | **0.10** |
+| 30 s | 1386 | 0.9802 | **6.9%** | 1.95 | 1.89 | **0.09** |
+| 45 s | 1378 | 0.9874 | **6.7%** | 2.13 | 2.10 | **0.15** |
+| 60 s | 1398 | 0.9870 | **6.5%** | 2.34 | 2.35 | **0.18** |
+
+**The ceiling is 6.5–7.0%, and the last column says it is worth even less than that.** The two lines point at
+different sides on about one candle in fifteen — but on exactly those candles the Binance move is a median of
+**0.09–0.18 bps**, against **1.66–2.34 bps** across all candles. Disagreement happens only where the move is
+roughly fifteen times smaller than typical, i.e. where the market is on the line and neither side is
+meaningfully favoured anyway.
+
+That reconciles the 6.5–7.0% here with the ~3.3% outcome-level disagreement measured in MULTI_MARKET.md: a
+sign difference at second S often has 240 seconds left to resolve itself, and the ones that survive to
+settlement are fewer still.
+
+### Answer to part 6
+
+Binance leads the settlement reference by **2–3 seconds** with a correlation of 0.81, the reverse direction is
+0.09, and conditioning kills the reverse entirely (0.074 → 0.007). The reference is a lagged copy, so there is
+no reference-based edge to find — and the candle-level ceiling on one, 6.5–7.0%, sits almost entirely on
+candles where the move is a tenth of a basis point.
+
+The one genuinely useful consequence is operational rather than predictive, and it is the same one section 5
+surfaced: because the reference lags by 2–3 s and runs ~2 bps below spot, a **Binance-derived line is
+untrustworthy whenever the gap it is being asked to resolve is small** — which is precisely the regime the
+5m/15m arb pairs live in.
+
 ## verify.py on the grid cells (section 2)
 
 Standing rule: run verify.py on any cell positive in both halves with n ≥ 60. Six qualified — S ∈ {15, 20, 30}
@@ -635,3 +720,4 @@ in sections 2 and 4 turns on a simulated 82–100% fill that no live system has 
 - `ef_spot_only.py` — section 4: the walk-forward spot-only model and the disagreement cells
 - `ef_spot_only_verify.py` — verify.py on the one qualifying section-4 cell
 - `ef_flow_only.py` — section 5: the flow-only model, mid+flow, and the Chainlink divergence
+- `ef_leadlag_ref.py` — section 6: Chainlink vs Binance lead-lag, partials, and the candle-line disagreement
