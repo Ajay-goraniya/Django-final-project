@@ -620,3 +620,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   days complete 23:59 UTC 10-01 -> the decision rule is first evaluable on 10-02 for all arms.** Marked "entered on a relaxed entry bar".
   Zurich added a day-boundary SEED (previous day's final hour re-scored under the new model) so E3's first hour does not mix two models;
   09-28 ran seedless and is backfill. ef6_lane.py draft now loads the seed too (11 tests).
+- **E3 lane parity (Zurich 4375885): NOT at parity on the first replay** (09-27: shadow 136 fired candles, lane 80, 14 identical). Causes:
+  ask bounds (lane 0-1 vs shadow 0.01-0.99, 3.4% extra rows in the window), cold start (8 of 136), and nightly models that split on
+  _ask_up/_ask_dn/opp_ask. V fixed the lane (997da51: bounds 0.01-0.99; rows carry _ask_up, _ask_dn, opp_ask). Engine check: the live
+  FeatureState already writes _ask_up/_ask_dn (btc_model_v10.py:190) and decide_now copies every finite numeric feature into
+  d['features'], so the engine side has them. Zurich also fixed its shadow's in-candle buffer order. Parity re-run pending.
