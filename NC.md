@@ -727,3 +727,5 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   Paper at diag ask, no fill model: L4 +$65.4 [58.8, 71.2] DD 112.9, L5 +$20.3 DD 98.4, both positive 2 of 4 days, win ~80% on expensive
   favourites. Follow-up (costs / favourite null / flip): it UNDERPERFORMS the buy-the-favourite baseline at the same seconds. Closed. The
   pre-registered decide_log run (10-01) stays on record, but the London-trained version of this family has already failed its first read.
+  Detail (London 18:04): L5 paid 0.814, +0.004/$1, +1c -$35.5, +2c -$82.5, favourite null +$33.2 (picked the favourite in 95% of fires);
+  L4 paid 0.782, +0.011/$1, +1c -$8.1, +2c -$70.4, favourite null +$131.7 (92% favourite). It is a favourite-buyer that dies at +1c.
