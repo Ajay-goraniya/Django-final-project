@@ -585,3 +585,116 @@ question that turns on a fill model neither of them measures well.
 
 The honest state: **not established either way, and the cheap thing that would settle it is London reporting
 its real fill rate for attempts after second 200** — it has the only real fills anyone has.
+
+---
+
+# The SECOND TRIGGER — the owner's design, tested
+
+Owner, 09-28 13:0x: keep the current EF, add a second trigger in the same candle that can only fire after the
+first, at any time after it. His reasoning: London's real 60–120 s fires re-cross the line 65% of the time and
+then win 25%, so the second trigger is *"a brain that knows the move is wrong and reverses"*.
+
+First fire = the current rule exactly. Second fire = the first strictly later pass clearing the same bar, in
+three variants: **A** either side, **B** opposite only (the reversal), **C** same side only (the add). Fills
+are ef_persist's per-pass simulator, so the fill collapse with the second is inside every number rather than
+applied as a flat rate. 1,015 candles, 5 days, venue labels.
+
+```
+decide_log both-sides candidates: 1015 candles, 1,606,978 rows, days ['09-24', '09-25', '09-26', '09-27', '09-28']
+Fills are the ef_persist per-pass simulator, so the fill collapse with the second is inside every number below.
+
+============================================================================================================================================
+raw25: FIRST FIRE (the current rule) - 326 candles, 138 fills (42.3%), win 44.2%, per$1 +0.079, total +107.3$, DD 98.4$, longest losing run 5
+============================================================================================================================================
+  variant                     cands  fill%   win%   2nd$1     2nd$   CANDLE$   vs 1st     DD$  run      H1      H2
+  A either side                 278  64.7%  34.4%  -0.154   -275.4    -179.2   -275.4   411.3   13  -0.021  -0.287
+  B opposite only (reversal)     38  52.6%   5.0%  -0.795   -158.7     -84.0   -158.7   138.0    6  -0.590  -1.000  *n<60
+  C same side only (add)        260  65.0%  36.7%  -0.111   -187.4    -103.0   -187.4   313.1   15  -0.038  -0.183
+
+  per-day CANDLE $ (both legs) minus first-only, by variant:
+    variant                          09-24       09-25       09-26       09-27       09-28
+    A either                         +57.4      -105.8      -155.4       -43.5       -28.1
+    B opposite                       -10.0        +1.3       -90.0       -60.0           -
+    C same                           +57.4      -127.7       -85.4        -3.5       -28.1
+
+  2nd fire SPLIT by FIRST-fire second (rows) x 2nd-fire second (cols), variant B (reversal):
+    1st sec             2nd 15-120         2nd 120-200         2nd 200-241
+    15-120            -1.000 (2/6)        +0.032 (4/9)        -1.000 (4/8)
+    120-200                      -        -1.000 (2/4)       -1.000 (7/10)
+    200-241                      -                   -        -1.000 (1/1)
+
+  WHERE THE FIRST FIRE LOST - did a qualifying OPPOSITE-side pass appear later?
+    first fire FILLED and LOST   n   77  opposite pass appeared on    4 (  5.2%)  its ask p10/p50/p90 0.19/0.44/0.57  sec p50 194  it would fill 0.0%
+    first fire FILLED and WON    n   61  opposite pass appeared on    9 ( 14.8%)  its ask p10/p50/p90 0.04/0.09/0.49  sec p50 226  it would fill 55.6%
+
+============================================================================================================================================
+fixed15: FIRST FIRE (the current rule) - 178 candles, 73 fills (41.0%), win 46.6%, per$1 +0.104, total +73.8$, DD 75.8$, longest losing run 6
+============================================================================================================================================
+  variant                     cands  fill%   win%   2nd$1     2nd$   CANDLE$   vs 1st     DD$  run      H1      H2
+  A either side                 131  55.7%  45.2%  +0.020    +14.2    +111.2    +14.2   145.9    8  +0.193  -0.147
+  B opposite only (reversal)     10  60.0%  50.0%  +0.017     +1.1     -18.9     +1.1    22.9    2  +0.192  -0.157  *n<60
+  C same side only (add)        125  55.2%  44.9%  +0.011     +7.1    +124.1     +7.1   135.9    8  +0.195  -0.167
+
+  per-day CANDLE $ (both legs) minus first-only, by variant:
+    variant                          09-24       09-25       09-26       09-27       09-28
+    A either                          -0.1       +62.8       -13.3        +4.9       -40.0
+    B opposite                        -6.0       +17.1        +0.0       -10.0           -
+    C same                            -0.1       +45.7       -13.3       +14.9       -40.0
+
+  2nd fire SPLIT by FIRST-fire second (rows) x 2nd-fire second (cols), variant B (reversal):
+    1st sec             2nd 15-120         2nd 120-200         2nd 200-241
+    15-120            -0.368 (4/4)          +nan (0/2)                   -
+    120-200                      -        +0.399 (1/2)        +1.187 (1/2)
+    200-241                      -                   -                   -
+
+  WHERE THE FIRST FIRE LOST - did a qualifying OPPOSITE-side pass appear later?
+    first fire FILLED and LOST   n   39  opposite pass appeared on    2 (  5.1%)  its ask p10/p50/p90 0.38/0.41/0.44  sec p50 148  it would fill 100.0%
+    first fire FILLED and WON    n   34  no opposite pass
+
+```
+
+## The answer: the reversal fires when you were RIGHT, and is absent when you were WRONG
+
+This is the whole result, and it is the exact inverse of what the design needs.
+
+| arm | first fire FILLED and **LOST** | first fire FILLED and **WON** |
+|---|---|---|
+| raw25 | qualifying opposite pass on **4 of 77 (5.2%)**, and those 4 would fill **0.0%** | on **9 of 61 (14.8%)**, filling **55.6%** |
+| fixed15 | on **2 of 39 (5.1%)** | **none at all** |
+
+A "brain that knows the move is wrong" has to appear *when the move is wrong*. On raw25 it appears three times
+more often when the move was **right**, and on the losing candles — the ones it exists for — it appears on one
+in twenty and would not have filled once.
+
+**Why, mechanically:** the second trigger requires the opposite side to clear the same EV bar on *its own* p,
+which is 1 − p and therefore usually below 0.5. The only way that clears is if the opposite ask has become
+very cheap — and an ask becomes cheap precisely when that side is losing. On raw25's winning candles the
+qualifying opposite ask has a median of **0.09**. That is not a reversal signal, it is a lottery ticket on the
+side that is already dead, and raw25's B arm wins **5.0%** of the time accordingly.
+
+## What it costs
+
+| arm | first only | +A either | +B reversal | +C add |
+|---|---|---|---|---|
+| raw25 total $ | **+107.3** | −179.2 | −84.0 | −103.0 |
+| raw25 drawdown $ | **98.4** | 411.3 | 138.0 | 313.1 |
+| raw25 longest losing run | **5** | 13 | 6 | 15 |
+| fixed15 total $ | **+73.8** | +111.2 | −18.9 | +124.1 |
+| fixed15 drawdown $ | **75.8** | 145.9 | 22.9 | 135.9 |
+
+On raw25 every variant turns a profit into a loss and multiplies the drawdown up to 4×. On fixed15 the two
+non-reversal variants add a little (+$14.2 and +$7.1 of second-leg money) while roughly doubling the drawdown
+— and their halves flip sign, +0.193 / −0.147.
+
+The reversal itself is also simply **rare**: 38 candles on raw25 and **10 on fixed15** across five days, two a
+day, which is not a mechanism anyone could lean on even if it worked.
+
+## What I would say to the owner
+
+The premise is sound and the implementation cannot express it. London's 65% re-cross is a real observation
+about the *price*, but "the opposite side clears the same EV bar" is not the same event — it fires on
+cheapness, not on the move being wrong, and cheapness arrives when you are winning.
+
+If he wants the reversal tested properly, the second trigger needs its own condition — something like *the
+reference has re-crossed the opening line since the first fire* — not a re-run of the entry rule on the other
+side. That is a different test and I have not run it.
