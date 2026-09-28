@@ -552,3 +552,10 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   decision); v1 tables kept as LATE_RULES.txt / FP_EVAL_v1.txt for the record.
 - Footprint (8 days, perp aggTrades: absorption, stacked imbalance, POC, acceptance vs line, big prints, CVD divergence): corr with the
   venue mid 0.90-0.93; AUC alone 0.820-0.926 vs mid 0.839-0.944. **Already in the price, like every other flow input (NC-16).**
+- **Zurich CORRECTION 14:23 (analysis-side float32 tick bug, live engine unaffected):** fixed15's null was inflated by a free extra tick on
+  44.8% of rows (float32 0.34 -> ceiling 0.35 -> fire at 0.36). Corrected fixed15: +$54.5 / DD $85.3 / 0.64 (was +73.8/75.8). All three v0
+  arms now PASS beats-the-null; remaining fails are the jagged sweep and the 09-28 part day. raw25/v0 numbers unchanged; the 220 s answer stands.
+  Caught by the pre-registered shadow (sqlite float64 vs npz float32, 196 vs 178 candles).
+- **Pre-registered shadow running (ef3_shadow.py, paper, arm A frozen by sha256).** Backfill (in-sample for A, excluded from the decision):
+  A v0 S0>=150 +$132.2 / DD $84.8 / 1.56 / fill 89.5% | **B raw25 S0>=60 +$187.1 / DD $58.1 / 3.22 / fill 43.2%** | C fixed15 +$54.5 / DD
+  $85.3 / 0.64 / fill 42.3%. On backfill B beats C on every column of the decision rule. Forward days: 0 of 3.
