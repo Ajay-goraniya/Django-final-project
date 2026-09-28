@@ -700,3 +700,12 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
 - **EF-8 regime read (V, EF8_REGIME.txt, terciles cut on the training days only): no rule.** Vol at the open: the money sits in the MIDDLE
   tercile only (E4 q.80 pinned: low -$10 n179 | mid +$238 n202 | high -$42 n86) - non-monotone, i.e. not a regime you can name in advance;
   q.90 cells all n<60. |mom60| at the fire: flat-to-falling across terciles. 09-14 is not explained by vol or trend. Not a finding.
+- **PRE-REGISTERED 18:0x, before any London decide_log day exists: the London-native EF test (W25).** Code = Zurich's ef3_shadow.py
+  builder + ef4.gb_reg (stumps, LEVEL columns excluded) + ef5_nightly.py, UNCHANGED except paths (London archive). Rows = every London
+  decide_log pass 15-240 s, both sides, ask 0.01-0.99; target = after-fill $ per $1 with the +250 ms FAK sim; labels = gamma/venue.
+  Walk-forward: day D's model trains on London days < D only (>= 2 days), 21-day cap. Arms (all pinned to p_side >= 0.5, once per candle):
+  L5 = one strict q.90 cut per day from D-1 rows under D's model; L4 = trailing 1 h strict q.90, 60 s grid, anchors 0/15/30/45 (all four
+  must beat the control). Control = London's REAL fixed15 fills on the same candles. Scoring days = every full London day from the THIRD
+  one on (first = 10-01 if the archive is complete). Decision after >= 3 scoring days, same rule as NC-19: $ > C, DD <= C, positive on
+  >= 2 of 3 days, sim fill% >= C's real fill%, opposite-ask flip p < 0.05. Then the arm's REAL-fill check: London's real attempts on the
+  candles where arm and fixed15 overlap (fills and rejects). Nothing else, no retuning; a failure is recorded as a failure.
