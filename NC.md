@@ -829,3 +829,11 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   (< 180 s) and on NEUTRAL |z| (+0.146), negative late and on decided |z|>=1.5 (-0.119). 0xc4e2 (138 candles) buys favourites at ~0.74 in
   the first 3 minutes, win 83-87%, +0.123 - selective favourite buying that works for them. 0x9783 (+0.44, 29 candles) and 0xb7e3 (1
   candle) are too few candles to read. No single public pattern stands out; the reliable winners win by volume and latency.
+- **Favourite-buyer wallet 0xc4e2 profiled (FAV_BUYER.txt):** first entries n138, win 76%, paid 0.695, +0.067/$1, median sec 40, trailing
+  vol 0.19 vs 0.29 for all market favourite prints (+0.027/$1) - it enters EARLY, in LOW-VOL candles, ~3c cheaper.
+- **Its style as a rule on INDEPENDENT days (V, 09-13..16 polybook 1 s, fill model, fee-exact; FAV_RULE_TEST.txt, 36-cell grid fixed
+  before the run, vol terciles cut on 09-11/12):** LOW-vol tercile is positive in 8 of 9 window x band cells; MID-vol is negative in 9 of 9
+  (-9..-187); high mixed. Best-looking cells (quoted with the grid, not alone): 60-180 s, fav ask 0.65-0.85, low vol: +$149.2 / DD 68.6 /
+  75 per day / fill 85% / 4 of 4 days / +1c +$113.1; 0.65-0.75: +$120.2 / DD 80.9 / 4 of 4 / +1c +$88.9. CAUTION: the vol pattern is
+  non-monotone (low +, mid --, high ~) and EF-8's regime read had a different shape; 4 test days. CANDIDATE only - replication briefed to
+  Zurich on 09-22..28 with the identical grid.

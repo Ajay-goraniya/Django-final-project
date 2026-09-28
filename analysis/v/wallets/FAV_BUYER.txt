@@ -1,0 +1,12 @@
+576 candles (48 h). Wallet 0xc4e21390: FIRST buy per candle; market = favourite prints 0.65-0.85 at sec 30..150 in every candle.
+wallet first entries         n  138 win 76.1% paid 0.695 per$1 +0.067 | median z +0.69 m30 +0.9bp m60 +1.2bp vol 0.19 sec 40
+market favourites (all)      n 1529 win 76.2% paid 0.729 per$1 +0.027 | median z +0.74 m30 +0.5bp m60 +1.5bp vol 0.29 sec 90
+market fav, z -9.0..+0.5     n  463 win 73.4% paid 0.691 per$1 +0.041 | median z +0.26 m30 +0.0bp m60 +0.2bp vol 0.34 sec 90
+market fav, z +0.5..+1.0     n  607 win 74.8% paid 0.723 per$1 +0.014 | median z +0.74 m30 +0.9bp m60 +2.0bp vol 0.33 sec 90
+market fav, z +1.0..+1.5     n  304 win 81.6% paid 0.774 per$1 +0.042 | median z +1.19 m30 +1.1bp m60 +2.6bp vol 0.25 sec 90
+market fav, z +1.5..+2.5     n  118 win 79.7% paid 0.792 per$1 -0.005 | median z +1.74 m30 +0.5bp m60 +1.7bp vol 0.14 sec 90
+market fav, z +2.5..+99.0    n   25 win 80.0% paid 0.744 per$1 +0.066 | median z +13.06 m30 +0.0bp m60 +0.0bp vol 0.00 sec 150
+market fav, m60 -99..0 bp    n  332 win 72.3% paid 0.718 per$1 -0.010 | median z +0.42 m30 -0.5bp m60 -1.2bp vol 0.30 sec 90
+market fav, m60 0..5 bp      n  972 win 78.4% paid 0.729 per$1 +0.058 | median z +0.79 m30 +0.7bp m60 +1.7bp vol 0.24 sec 90
+market fav, m60 5..15 bp     n  212 win 74.1% paid 0.749 per$1 -0.031 | median z +0.87 m30 +3.5bp m60 +7.0bp vol 0.53 sec 60
+market fav, m60 15..999 bp   n   13 win 46.2% paid 0.755 per$1 -0.391 | median z +0.80 m30 +10.1bp m60 +19.3bp vol 0.98 sec 90
