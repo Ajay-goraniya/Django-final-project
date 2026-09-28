@@ -735,3 +735,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
 - **EF-9 V-side: GRU sequence model on the raw 1 s stream (V, 09-11..16, EF9_SEQ_V.txt, walk-forward, rules fixed before the run): LOSES.**
   30 s of both asks/bids/sizes/age + Binance line distance and its change, after-fill target. E5 none -$412.5 (0/4 days) | E5 phys -$279.5
   (1/4) | E4 none -$536.0 (0/4) | E4 phys -$248.2 (1/4); all worse at +1c/+2c; favourite null -$88..-$311. Worse than the stump version.
+- **EF-9 INSUF (Zurich 0086b15, 4.24 d, 250 ms asks + sec + line distance, strict q.90 trailing 1 h, anchors 0/15/30/45):** mean +$27.3
+  [+24.1, +29.4], DD $198.2, 197/day, fill 94.7%, win 75.4%, ask 0.739; +1c -$69.3, +2c -$164.4; 3/4 days; favourite null -$36.7; fixed15
+  +$13.4 / DD $96.3. Beats the null by ~$64 but twice C's DD and dead at one tick - the same favourite-buyer shape. Recorders LIVE (btc5
+  bid/ask/sizes; Binance spot aggTrades 250 ms signed; perp unreachable from Zurich). Arm S (Stable EF, top-20% trailing 24 h, FIXED
+  primary + RAW) LIVE in the forward shadow (d98f8e6), 12 arms. EF-9 v1 with Binance aggTrades history briefed 18:48.
