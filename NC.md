@@ -265,3 +265,15 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
 - **Verdict:** a wider cap copies Predict.fun's fill rate but not its money. Nothing changes on London. File (London box, local):
   analysis/london/PREDICT_STYLE_EXEC.md + pexec.py.
 
+
+## NC-14 - TWAP physics vs the market, and where the fees bite (V, 09-28 night) - no edge, one structural fact
+- **TWAP physics** (Brownian projection of the closing TWAP60 vs the opening TWAP60, Binance 1 s as the reference; 2,052 venue-graded
+  candles 09-08..16; analysis/v/twap/twap_lock_binance.py): the market's price has a lower Brier than ours in EVERY window
+  (0-15 s 0.233 vs 0.238 ... 240-270 s 0.071 vs 0.098). The trading grids are negative or flip halves in every window, at the quote and 5 s later.
+  In the last 30 s the Binance stand-in is wrong on 21% of the still-contested candles, so the last-minute question is re-run on the
+  real Chainlink feed by London (analysis/v/twap/twap_lock_ref.py). The early and mid-candle answer is final: the book already prices the TWAP rule.
+- **Favourite/long-shot grid** (same data, first quote per candle per cell, both sides, venue-graded, full grid in the session log):
+  favourites (ask >= 0.60) are priced fair (per $1 about -0.04..+0.03 in every time bucket); cheap shares lose in every cell and both halves
+  (0.40-0.50: -0.04..-0.10; 0.20-0.30: -0.05..-0.21; 0.02-0.10: -0.05..-0.44 per $1). Cause: the taker fee is 0.07(1-p) per $1 and the
+  1-tick spread is a bigger share of a cheap price. **EF buys cheap shares (ask <= 0.60), so it starts about 5-10% per $1 in the hole on
+  every fire before any model edge.** No single cell is a finding (the best, 0-60 s at 0.90-0.98, is +0.03 on n95, one standard error).
