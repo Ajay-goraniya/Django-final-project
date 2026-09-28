@@ -10,17 +10,16 @@
 - Two drafts are on the branch, OFF, not deployed: a delay-brain VETO (helps Raw on Zurich, fails on Fixed and on London's real fills)
   and FRESH-BOOK SEND. Zurich's trigger-source test (785k passes) then showed every extra fill on this book is a losing fill, so NEITHER is recommended.
 
-## 2. The new lead: the 5m/15m TWAP pair (model-free)
-The 15m market and the last 5m candle inside it settle on the **same Chainlink TWAP at the same second**, only against different
-lines. Buying the right side of each pays $1 or $2, **never $0**. When both asks plus fees cost under $1, the profit is locked in.
-- Zurich books, 22.8 h: under $1 in **25 of 81** windows, median 4.4c per pair (up to 27c). 0 zero-payoffs in 725 checks.
-- Public trade tape (independent): real buyers bought both legs within 3 s under $1 in **19/91 BTC** and **15/91 ETH** windows;
-  pair payoff never 0 on either. SOL, XRP and DOGE have the same markets.
-- **Every day for 7 days** (public trades 09-20..26): 13 to 36 BTC windows a day, 22.8% of all windows. One zero payoff in 763 windows,
-  caused by lines only $2.33 apart on the Binance proxy; the bot now skips gaps under $5 and uses the real Chainlink feed.
-- The one open risk is **both legs filling at once**. A ms probe of both books runs on Zurich until 06:45; the paper bot runs alongside.
+## 2. The 5m/15m TWAP pair: real, but too small (retracted at 05:5x)
+The 15m market and its last 5m candle settle on the same Chainlink TWAP, so the right pair pays $1 or $2, never $0. That holds.
+But the "under $1" frequency was overstated twice:
+- Zurich's books had a stale 15m quote (recorder bug, fixed). With fresh books: **5 of 105** windows, 1-9 seconds each, 1-4c profit.
+- My public-trade check mixed prices up to 3 s apart. Buying both legs in the same second at what takers really paid: **1 of 87** windows (09-27).
+So it is a few cents a few times a day. Not a profit engine at our size. The paper bot and code stay on the branch; no live test proposed.
 
-## 3. What needs your decision
-- A **live micro-test of the pair bot** on London: a separate process, the engine untouched, $5 per pair, one pair per 15m window,
-  daily cap. Code: learner/v12_2/pair_bot.py (13 tests). It cannot go live without `--live --owner-confirmed`.
-- EF on London: keep as is, or pause it while the pair is tested. Your call; nothing is changed.
+## 3. Also closed overnight
+- EF on ETH and SOL (Zurich, 24 h, 4 arms): 3 of 4 negative, the 4th is noise. No.
+
+## 4. Honest answer
+No profitable version was found tonight. Every EF fix makes more fills, and on this venue the extra fills are the losing ones.
+EF on London: keep or pause is your call; nothing is changed.
