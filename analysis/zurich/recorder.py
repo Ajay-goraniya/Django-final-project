@@ -171,10 +171,17 @@ async def snap_loop(db):
 
 async def resync_loop(db):
     """A price_change delta does not resync the book, and the venue sends a full `book` event only on
-    subscribe, so snapshot age grows for the whole candle. Refetching REST /book every 45 s bounds the
-    drift to 45 s instead of 300 s. 8 requests per 45 s is negligible against the venue's limits."""
+    subscribe, so snapshot age grows for the whole candle. Refetching REST /book bounds the drift.
+
+    The period is 10 s, not 45. At 45 s the first fix (per-market step, below) bounded btc15's snapshot age
+    but left minutes 11-14 of the 15m candle averaging 20-24 s, because inside those minutes there is no new
+    5m market to discover and therefore no resubscribe to deliver a fresh `book`: the REST period IS the age
+    distribution, mean ~period/2. Measured against the independent ms probe, error is 0.71c under 3 s and
+    0.79c from 3-15 s but 8.81c from 15-60 s, so a 45 s period puts about half of that window in the bad
+    bucket. 10 s keeps it in the good one. eth_sol_shadow.py already resyncs every 5 s, so this rate is
+    known to be acceptable; ~12 live tokens per 10 s is ~1.2 requests/s."""
     while True:
-        await asyncio.sleep(45)
+        await asyncio.sleep(10)
         try:
             now = int(time.time())
             # Each market's candle is live until ep + ITS OWN step. The old test (ep >= now//300*300)
