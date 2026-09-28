@@ -460,3 +460,9 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   the same 4 days it beat fixed15 on execution (89.6% vs 42.4% fill) and total $ (+128 vs +26.5 at $1), lost on per$1 (+0.016 vs +0.050,
   the latter unmeasured at 56 fills). Bar to clear: positive per day at +1c cost (London's cap is ask+1 tick), fires NOT early, calibration
   holds, then a 24 h paper shadow beside fixed15, then London's real-attempt scoring with the london44 refit. Briefed 11:53.
+- **v0b timing grid (Zurich 11:59, ran before my cancel; CLOSED by the owner's ruling and by the data).** S=15 cap 0.60: 168 fires/day,
+  85% sim fill, 57.4% win, +0.057/$1, +$410 vs fixed15 +0.104/$1, +$74 - but **positive on 2 of 5 days** (-0.006/+0.097/-0.011/+0.126/-0.116).
+  Mechanism absent: the model's side's ask is 0.619 at sec 15, 0.619 at 45, 0.629 at 120 - the crowd does not move toward the model's
+  side before the outcome; the model does not lead. Only the S sweep is monotone (+0.057/+0.046/+0.023/+0.009). verify NOT A FINDING.
+  **fixed15 itself is positive on 2 of 5 days** (+0.282/+0.324/-0.020/-0.229/-0.477): the baseline the owner's bar names is two good days.
+  Zurich: five days cannot settle "beats fixed on profit"; the archive gains ~1 day/day. (analysis/zurich/EF2.md)
