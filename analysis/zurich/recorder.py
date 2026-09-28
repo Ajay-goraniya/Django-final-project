@@ -26,6 +26,9 @@ KLINES = 'https://data-api.binance.vision/api/v3/klines?symbol={}&interval=1s&li
 # BTC 15m sits on a 900 s grid, so the epoch is NOT interchangeable with the 5 m markets - every loop
 # derives the epoch from the market's own step rather than assuming 300.
 MARKETS = {
+    # btc5 added 09-28 18:1x for EF-9: the 5-minute BTC market is the one the engine actually trades and
+    # its BID side had never been recorded anywhere, at any cadence. Additive - other markets untouched.
+    'btc5':  dict(slug='btc-updown-5m',  step=300, sym='BTCUSDT'),
     'eth':   dict(slug='eth-updown-5m',  step=300, sym='ETHUSDT'),
     'sol':   dict(slug='sol-updown-5m',  step=300, sym='SOLUSDT'),
     'btc15': dict(slug='btc-updown-15m', step=900, sym='BTCUSDT'),
