@@ -16,6 +16,8 @@ lines. Buying the right side of each pays $1 or $2, **never $0**. When both asks
 - Zurich books, 22.8 h: under $1 in **25 of 81** windows, median 4.4c per pair (up to 27c). 0 zero-payoffs in 725 checks.
 - Public trade tape (independent): real buyers bought both legs within 3 s under $1 in **19/91 BTC** and **15/91 ETH** windows;
   pair payoff never 0 on either. SOL, XRP and DOGE have the same markets.
+- **Every day for 7 days** (public trades 09-20..26): 13 to 36 BTC windows a day, 22.8% of all windows. One zero payoff in 763 windows,
+  caused by lines only $2.33 apart on the Binance proxy; the bot now skips gaps under $5 and uses the real Chainlink feed.
 - The one open risk is **both legs filling at once**. A ms probe of both books runs on Zurich until 06:45; the paper bot runs alongside.
 
 ## 3. What needs your decision
