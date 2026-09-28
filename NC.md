@@ -356,3 +356,6 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   0.54, fill 82-87%, ask reversion +0.6c (not selected dips). Baseline: 0.43 ask, 44% win, +7c reversion, 42% fill. The gain is WHEN, not the
   p bar. Caveats: sim fill rate unvalidated above ~42%; verify.py NOT A FINDING on the P=0.55 cells (they lose to their own placebo);
   the placebo is the candidate. Only London can measure real fills at sec 15. (analysis/zurich/EF_FIRE_TIME.md)
+  verify.py on the S=15 placebo: NOT A FINDING - cost sensitivity +0c +0.045 / +1c +0.026 / +2c +0.007; sweep over S non-monotone
+  (15 +0.045, 45 -0.044, 60 +0.008); does not beat fixed15 unfiltered (+0.061 sim); paired vs fixed15 McNemar p=0.21 (23 discordant).
+  Reading: early timing is a real direction with the SAME order of edge as the current rule, not more, and 2c of slippage removes it.
