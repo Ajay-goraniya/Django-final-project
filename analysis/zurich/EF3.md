@@ -340,6 +340,78 @@ So the public-data result is fully consistent with **a rule that has no edge, pl
 trade at.** The lesson generalises past this rule: the dangerous half of a stale price source is not that
 it biases selection, it is that it lets the backtest transact at it.
 
+## The 10-day read — `ef3_ten.py`. The start-second story does not survive it.
+
+V, 14:4x: (c) showed the start-second bar is pure composition, so the 10 `stable_ef` days can be read the
+same way and give B more history for free. They can, and the answer is negative on every count.
+
+**One caveat first, because it cuts against every number here.** A slice can only DROP a fire; the rule
+can also ADD one, firing at a later qualifying pass in a candle whose first qualifying pass was early. On
+the 5 per-pass days the rule has **121 fills where the slice has 102**. So everything below is a lower
+bound on the rule's activity. This is the same slice-vs-rule distinction the fires-after-220 test turned
+on, pointing the other way.
+
+These are the engine's own fires (one per candle, its own EV bar) at $10 — a different instrument from
+the per-pass decide_log grids above, so cells are not comparable one-to-one across the two sections.
+
+```
+  cell             |    $tot    DD$   P/DD  f/day  days+  run      H1      H2 |  L $tot   L DD L P/DD  L days+
+  RAW sec>=0       |  +142.3  258.4   0.55   29.9   5/10    7  +0.027  +0.070 |  -206.6  267.6  -0.77   2.8/10
+  RAW sec>=30      |  +125.2  273.0   0.46   29.2   4/10    6  +0.019  +0.068 |  -210.1  272.2  -0.77   2.8/10
+  RAW sec>=45      |  +155.6  243.0   0.64   27.8   5/10    6  +0.051  +0.066 |  -174.6  240.9  -0.72   3.1/10
+  RAW sec>=60      |  +125.1  223.0   0.56   26.3   5/10    5  +0.044  +0.056 |  -179.3  239.7  -0.75   2.9/10
+  RAW sec>=75      |   +76.1  193.6   0.39   23.5   5/10    6  +0.021  +0.053 |  -180.0  228.7  -0.79   2.7/10
+  FIXED sec>=0     |  +233.7  233.4   1.00   25.2   6/10    7  +0.043  +0.121 |   -95.0  189.8  -0.50   3.7/10
+  FIXED sec>=30    |  +233.7  233.4   1.00   25.2   6/10    7  +0.043  +0.121 |   -95.0  189.8  -0.50   3.7/10
+  FIXED sec>=45    |  +215.4  227.4   0.95   24.6   6/10    7  +0.037  +0.118 |   -95.8  183.5  -0.52   3.7/10
+  FIXED sec>=60    |  +229.4  207.4   1.11   23.8   6/10    6  +0.047  +0.124 |   -83.3  173.9  -0.48   3.8/10
+  FIXED sec>=75    |  +177.8  187.9   0.95   22.1   6/10    5  +0.030  +0.118 |   -95.7  167.6  -0.57   3.8/10
+```
+
+**1. The start-second bar does nothing on 10 days.** RAW runs +142.3 → +125.2 → +155.6 → +125.1 → +76.1;
+FIXED +233.7 → +233.7 → +215.4 → +229.4 → +177.8. Flat, with no trend in either direction. The 5-day
+`+107.3 → +187.1` does not survive the longer history.
+
+**2. The mechanism I reported is retracted as a general claim.** On the 5 per-pass days the dropped
+`sec<60` set was 36 fills at a **33.3%** win rate worth **−$77.2**, which is why I called it a veto on bad
+early fires. On these 10 days:
+
+```
+    RAW   dropped sec<30: n   7  win 57.1%  $  +17.1    dropped sec<60: n  36  win 47.2%  $  +17.2
+    RAW   dropped sec<45: n  21  win 42.9%  $  -13.3    dropped sec<75: n  64  win 50.0%  $  +66.2
+    FIXED dropped sec<45: n   6  win 66.7%  $  +18.3    dropped sec<60: n  14  win 50.0%  $   +4.3
+    FIXED dropped sec<75: n  31  win 58.1%  $  +55.9
+```
+
+The dropped set is **mildly profitable**, not a pit of bad trades. So "early fires lose" is a fact about
+one 5-day window, not a property of the clock, and I have **not** confirmed the owner's "no early
+gambling" — I over-read a single window and said so to V rather than leaving it standing.
+
+**3. The two-good-days pattern holds and hardens.**
+
+```
+  RAW sec>=60:   +125.1 over 10 days, 5/10 positive.  Best two (09-22 +123.7, 09-23 +74.6) = +198.4
+                 = 159% of the total, so the other EIGHT days are -73.3 combined.
+  FIXED sec>=60: +229.4 over 10 days, 6/10 positive.  Best two = +254.7 = 111% of the total, rest -25.2.
+  RAW   per day: 09-15 -21.7  09-16 -48.1  09-21 -32.9  09-22 +123.7  09-23 +74.6
+                 09-24 +58.9  09-25 +20.5  09-26 -40.1  09-27 +22.3   09-28 -32.3
+  FIXED per day: 09-15 -52.9  09-16 -58.1  09-21 +38.0  09-22 +121.7  09-23 +132.9
+                 09-24 +89.9  09-25 +18.1  09-26 -49.9  09-27 -34.9   09-28 +24.7
+```
+
+**4. Under the London execution model every cell of both arms loses.** RAW −$206.6 at `sec≥0` and −$179.3
+at `sec≥60` (P/DD −0.77 / −0.75, 2.8 of 10 days positive); FIXED −$95.0 and −$83.3 (P/DD −0.50 / −0.48).
+Paper positive and London negative in **every single cell**. That gap is the adverse fill, measured
+directly, and it is the same thing the ledger section says with different arithmetic: these arms look
+profitable exactly to the extent that the fill is assumed rather than simulated.
+
+Drawdown here is taken **per simulation run and then averaged**, not computed on the averaged curve —
+the average of many paths is smoother than any path, and a drawdown nobody could have lived through is
+not a drawdown.
+
+None of this changes the pre-registered B. It does mean the forward shadow is now the only evidence that
+could support it, which is what it was set up to be.
+
 ## Correction — a free extra tick on the fixed15 arm (found 09-28 14:1x, after the first push)
 
 **Every `fixed15` number in this document was wrong on its first publication, by about one tick.** raw25
