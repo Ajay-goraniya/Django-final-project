@@ -34,7 +34,12 @@ from london_z import london_z_at
 
 ARCH = '/home/ubuntu/pm_archive/zurich_research_archive.sqlite3'
 LIVE = '/home/ubuntu/pm_paper_zurich/polymarket_v12_zurich_live4.sqlite3'
-GAMMA_DBS = ['/tmp/poly/btc5.sqlite3', '/tmp/poly/btc5b.sqlite3']
+# /tmp/poly/* froze at 09-28 01:42 and this shadow grades every arm off them, so it scored nothing
+# after the 01:30 candle. gamma_zurich.sqlite3 is Zurich's own mirror (gamma_outcomes.py, V authorised
+# 09-28), same table shape, read alongside rather than instead: the frozen files are another session's
+# and stay untouched, and keeping both means a disagreement between them would surface rather than hide.
+GAMMA_DBS = ['/tmp/poly/btc5.sqlite3', '/tmp/poly/btc5b.sqlite3',
+             '/home/ubuntu/pm_ef3/gamma_zurich.sqlite3']
 FITS, ROWS = '/home/ubuntu/pm_ef2/ef2_fits.npz', '/home/ubuntu/pm_ef2/ef2_rows.npz'
 DB = '/home/ubuntu/pm_ef3/ef3_shadow.sqlite3'
 MODEL = '/home/ubuntu/pm_ef3/ef3_model_A.json'
@@ -44,13 +49,50 @@ DYN = (1000, 5000, 30000)
 ARMS = ('A_v0_m02_S150', 'B_raw25_S60', 'C_fixed15', 'D_ef4gb_t000', 'D2_ef4gb_q95',
         'E1_nightly_q90', 'E2_nightly_q95', 'E3_trail_1h_q90',
         'E4_trail_1h_q90_strict', 'E5_causal_q90_strict', 'S_fixed_top20', 'S_raw_top20',
-        'F_z50', 'F25_z25', 'F75_z75')
+        'F_z50', 'F25_z25', 'F75_z75', 'FAV', 'FAV_mid', 'FAV_all')
 # ---- ARM F, registered 09-28 21:4x, rule frozen before its first forward row (V, after EF-14).
 # fixed15's OWN fire, skipped when |z| < 0.50 with LONDON'S EXACT z (ef14.london_z_at). F25 and F75 are
 # REFERENCE arms: logged so the sweep's shape is watched forward rather than re-picked. The backfill sweep
 # is non-monotone - +48.6 / +64.7 / +2.4 / +16.6 at .25/.50/.75/1.00 - so a forward run that keeps only the
 # cell that won the backfill would be measuring my hindsight, not the rule.
 F_CUTS = {'F_z50': 0.50, 'F25_z25': 0.25, 'F75_z75': 0.75}
+# ---- ARM FAV, registered 09-28 23:5x, rule frozen before its first forward row (V, after the parity run).
+# The favourite-buyer wallet's style as a rule: per candle, the FIRST pass in 60-180 s where OUR side is the
+# favourite (own ask > opp ask) with own ask in 0.65-0.85, taken only when the candle's trailing-5-min vol at
+# the open sits in the LOW tercile. Cuts are FROZEN from 09-22/23 and are not recomputed forward.
+#   FAV      vol <  0.281                 (the registered rule)
+#   FAV_mid  0.281 <= vol < 0.418         REFERENCE only
+#   FAV_all  every favourite, no vol cut  REFERENCE only - the null the rule has to beat
+# FAV_mid and FAV_all exist so the SHAPE is watched forward. The vol effect came out monotone on my days
+# and non-monotone on V's, and that disagreement is unresolved; logging only the winning bucket would hide
+# whichever way it resolves.
+#
+# WHICH vol SERIES. These cuts (0.281/0.418) are the CHAINLINK ref_px terciles. The parity grid that
+# validated the rule used Binance 1 s closes, whose terciles are 0.304/0.466 - same definition, different
+# series, so the numbers are not interchangeable. ref_px is used here for two reasons: V froze 0.281, and
+# it is the only one of the two available FORWARD (the Binance 1 s daily archives lag a day, and ref_px is
+# also the settlement reference). Flagged to V; if V means the Binance series the cut must become 0.304.
+#
+# NO CROSS-SOURCE FILL HERE. own and q both come out of build_rows, i.e. one source, which is exactly the
+# mistake that inflated my first-pass replication 2.3x (a decide_log ask tested against a tape1s ask).
+# vol comes from the ref tape, but vol is a regime label and never a price comparison, so it cannot
+# reintroduce that selection.
+FAV_SEC = (60, 180)
+FAV_BAND = (0.65, 0.85)
+# The exact 09-22/23 terciles from _vol_open are 0.28105 / 0.41862. V registered 0.281, so 0.281 is what
+# runs - a rule frozen to three decimals is still the frozen rule, and silently substituting the longer
+# number would change which candles are 'low' without anyone registering that change. Do NOT 'correct'
+# these to the exact values. Recomputing them forward would also drift: 09-22/23 held 340 candles when the
+# cut was taken and 341 an hour later, which is precisely why the cut is frozen rather than derived.
+FAV_CUT_LOW, FAV_CUT_MID, FAV_VOL_MIN_PTS = 0.281, 0.418, 60
+
+
+def _vol_open(ref, ep):
+    """Trailing-5-min vol at the open: 1 s log-return std over [ep-300, ep), x1e4. STRICTLY pre-open."""
+    w = [ref[t] for t in range(ep - 300, ep) if t in ref]
+    if len(w) < FAV_VOL_MIN_PTS: return None
+    return float(np.std(np.diff(np.log(np.asarray(w, dtype=np.float64)))) * 1e4)
+
 # ---- ARM S, registered 09-28 18:5x, rule written BEFORE its first forward row (V, owner's NC-12
 # "stable version", STABLE_EF.md). Take the profile's OWN fire pass in a candle and keep it only when its
 # calibrated edge sits in the top 20% of the edges of that profile's fires over the TRAILING 24 h,
@@ -212,7 +254,10 @@ def build_rows(rs, ep, out, keys_n):
                 if 0.01 < lat < 0.99 and lat <= own + TICK + 1e-12: q = lat
             x = v + [own, opp, dyn[0], dyn[1], dyn[2], dip, float((ts // 1000) - ep),
                      (p_l if side == side_l else 1.0 - p_l)]
-            R.append(dict(x=np.array(x, dtype=np.float32), own=own, q=(q if q is not None else float('nan')),
+            # opp is stored as well as fed into x: arm FAV needs "is our side the favourite", and reading
+            # it back out of x by index (x[-7]) would break silently the next time a feature is added.
+            R.append(dict(x=np.array(x, dtype=np.float32), own=own, opp=opp,
+                          q=(q if q is not None else float('nan')),
                           win=(1.0 if side == out else 0.0), sec=int((ts // 1000) - ep), ts=ts,
                           up=(1 if side == 'UP' else 0), pe=x[-1]))
     return R
@@ -448,6 +493,19 @@ def run_once():
                 zz = zt if r0['up'] else -zt          # sign to the side being bought
                 for arm, cut in F_CUTS.items():
                     if abs(zz) >= cut: sel[arm] = (r0, p0)
+        # ---- arms FAV / FAV_mid / FAV_all: first favourite in 60-180 s, split by frozen vol terciles ----
+        v0 = _vol_open(REF, ep)
+        if v0 is not None:
+            fv = sorted((r for r in rows
+                         if FAV_SEC[0] <= r['sec'] <= FAV_SEC[1]
+                         and r['own'] > r['opp']
+                         and FAV_BAND[0] <= r['own'] <= FAV_BAND[1]),
+                        key=lambda r: r['ts'])
+            if fv:
+                r0 = fv[0]                      # p column carries the candle's vol - there is no model here
+                sel['FAV_all'] = (r0, v0)
+                if v0 < FAV_CUT_LOW: sel['FAV'] = (r0, v0)
+                elif v0 < FAV_CUT_MID: sel['FAV_mid'] = (r0, v0)
         sel.pop('_RAW0', None)
         for arm, (r, p) in sel.items():
             q = r['q']
