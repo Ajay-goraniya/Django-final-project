@@ -193,10 +193,14 @@ async def decide_loop(db):
             filled, fp = 1, la
         shares = (STAKE / fp) if fp else None
         fees = (RATE * shares * fp * (1 - fp)) if fp else None
-        db.execute('INSERT OR REPLACE INTO fires VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-                   (ep, now, SEC, side, div, ref, spot, a, sz, oa, la, lat, filled, fp, shares,
+        # Named columns, not positional VALUES(...): the div_age_s column was added by ALTER TABLE and a
+        # positional insert then supplied 21 values for 22 columns, which killed decide_loop and left the
+        # process in a cron restart loop. An explicit list cannot break that way again.
+        db.execute('INSERT OR REPLACE INTO fires(epoch,ts,sec,side,div,div_age_s,ref,spot,ask,ask_sz,'
+                   'opp_ask,later_ask,later_ms,filled,fill_price,shares,spent,fees,book_age_s,'
+                   'outcome,win,graded_ts) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                   (ep, now, SEC, side, div, dage, ref, spot, a, sz, oa, la, lat, filled, fp, shares,
                     (STAKE if fp else None), fees, age, None, None, None))
-        db.execute('UPDATE fires SET div_age_s=? WHERE epoch=?', (dage, ep))
         db.commit()
         log(db, f'{ep} div {div:+.2f} (age {dage}s) -> {side} ask {a:.3f} later {la} '
                 f'{"FILL @ " + format(fp, ".3f") if filled else "no fill"} (PAPER)')
@@ -232,7 +236,15 @@ async def main():
     except Exception: pass
     db.commit()
     log(db, 'chaindiv shadow start - PAPER ONLY, no order path in this file')
-    await asyncio.gather(gamma_loop(db), ws_loop(db), resync_loop(db), decide_loop(db), grade_loop(db))
+    async def guard(fn):
+        """One loop's exception must not cancel the gather and kill the process - that is what happened at
+        11:05 when a schema mismatch in decide_loop put the shadow into a cron restart loop."""
+        while True:
+            try: await fn(db)
+            except Exception as e:
+                log(db, f'{fn.__name__} crashed, restarting: {repr(e)[:140]}')
+                await asyncio.sleep(2)
+    await asyncio.gather(*(guard(fn) for fn in (gamma_loop, ws_loop, resync_loop, decide_loop, grade_loop)))
 
 
 if __name__ == '__main__':

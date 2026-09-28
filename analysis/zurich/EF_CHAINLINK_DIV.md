@@ -50,7 +50,7 @@ already contradicted by the distribution.
 ## The full run
 
 ```
-tape rows with BOTH feeds 438067, 09-22 19:30 -> 09-28 10:56 = 135.4 h; gamma-graded 5m candles 1747
+tape rows with BOTH feeds 438998, 09-22 19:30 -> 09-28 11:12 = 135.7 h; gamma-graded 5m candles 1747
 scannable candles at sec 45 with both feeds, both asks and a venue outcome: 1352
   div at sec 45: mean -2.12  p10 -3.27  p50 -2.13  p90 -0.95  sd 1.07   |   frac <= -3: 16.6%,  frac >= +3: 0.1%
 
@@ -101,6 +101,17 @@ scannable candles at sec 45 with both feeds, both asks and a venue outcome: 1352
       -3.5     87   41.4%   -0.022  0.413
       -4.0     42   35.7%   -0.072  0.399  *n<60
 
+  DIV-LAG SENSITIVITY. The engine writes each tape1s second about 2 s later (measured: newest
+  complete row is p50 1.97 s behind wall clock, min 1.46, max 2.49), so a live reader deciding at
+  sec 45 sees the div for sec ~43, not sec 45. A 2 s stale div sits on the OTHER side of the
+  -3 threshold 9.51% of the time (autocorr 0.739, |diff| mean 0.42 bps). Same cell, div taken at:
+     div sec      n    win%    per$1    ask
+          45    224   48.2%   +0.016  0.468   <- what London's tape number uses
+          44    184   49.5%   +0.033  0.454
+          43    196   43.4%   -0.109  0.444   <- what the LIVE shadow actually sees
+          42    192   52.1%   +0.054  0.474
+          40    204   50.5%   +0.047  0.476
+
   second sweep at div <= -3 (is sec 45 special, or is any second the same?):
        sec      n    win%    per$1    ask
         15    233   45.5%   -0.034  0.465
@@ -112,6 +123,34 @@ scannable candles at sec 45 with both feeds, both asks and a venue outcome: 1352
        180    181   43.1%   -0.082  0.451
        240     94   37.2%   -0.407  0.426
 ```
+
+## The strongest tell of all: read the same series one second earlier and the sign flips
+
+The engine writes each `tape1s` second about **2 seconds later** — measured live, the newest complete row is
+p50 **1.97 s** behind wall clock (min 1.46, max 2.49). So a live reader deciding at second 45 does not see the
+div for second 45; it sees the div for second ~43. That turned out to be worth measuring rather than waving
+through, because a 2 s stale div sits on the **other side of the −3 threshold 9.51%** of the time (1 s: 5.60%,
+3 s: 11.48%) even though the series is slow — autocorrelation 0.739 at 2 s, mean absolute change 0.42 bps.
+
+Same cell, same candles, only the second the divergence is read from:
+
+| div read at | n | win% | per $1 |
+|---|---|---|---|
+| sec 45 | 224 | 48.2% | **+0.016**  ← London's tape number |
+| sec 44 | 184 | 49.5% | +0.033 |
+| **sec 43** | 196 | 43.4% | **−0.109**  ← what a live reader actually sees |
+| sec 42 | 192 | 52.1% | +0.054 |
+| sec 40 | 204 | 50.5% | +0.047 |
+
+**Shifting the read by one second moves per $1 by 0.16 and the win rate by 8.7 points**, on a series whose
+value barely changes over that interval. Nothing that behaves this way is a signal. This is a stronger
+argument than the threshold sweep, because there the condition was being changed; here the condition, the
+candles and the prices are all identical and only the clock moves.
+
+**Consequence for the shadow arm, stated before its first ledger rather than after.** The live arm reads div
+at ~sec 43, so it is running the **−0.109** row, not the +0.016 one. If its per $1 comes in below the
+frozen-tape cell at 13:30, that is this effect and not a fault — and the two numbers being far apart is itself
+the finding, not a discrepancy to reconcile.
 
 ## Why it is a regime, not a signal — three independent tells
 

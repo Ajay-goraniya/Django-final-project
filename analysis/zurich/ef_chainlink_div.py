@@ -187,6 +187,27 @@ if __name__ == '__main__':
               f'{(W([(x["win"],x["q"]) for x in e]) if e else float("nan")):+9.3f}'
               f'{(np.mean([x["q"] for x in e]) if e else float("nan")):7.3f}'
               + ('  *n<60' if len(e) < 60 else ''))
+    print(f'\n  DIV-LAG SENSITIVITY. The engine writes each tape1s second about 2 s later (measured: newest')
+    print(f'  complete row is p50 1.97 s behind wall clock, min 1.46, max 2.49), so a live reader deciding at')
+    print(f'  sec {SEC} sees the div for sec ~{SEC-2}, not sec {SEC}. A 2 s stale div sits on the OTHER side of the')
+    print(f'  -3 threshold {9.51:.2f}% of the time (autocorr 0.739, |diff| mean 0.42 bps). Same cell, div taken at:')
+    print(f'    {"div sec":>8}{"n":>7}{"win%":>8}{"per$1":>9}{"ask":>7}')
+    for ds in (SEC, SEC - 1, SEC - 2, SEC - 3, SEC - 5):
+        e = []
+        for r in rows:
+            t = r['ep'] + ds
+            if t not in dv: continue
+            if dv[t] > -THR: continue
+            e.append(dict(win=1 if r['out'] == 'DOWN' else 0, q=r['da'], opp=r['ua'],
+                          day=r['day'], ep=r['ep']))
+        print(f'    {ds:>8}{len(e):7d}'
+              f'{(100*np.mean([x["win"] for x in e]) if e else float("nan")):7.1f}%'
+              f'{(W([(x["win"],x["q"]) for x in e]) if e else float("nan")):+9.3f}'
+              f'{(np.mean([x["q"] for x in e]) if e else float("nan")):7.3f}'
+              + ('  *n<60' if len(e) < 60 else '')
+              + ('   <- what the LIVE shadow actually sees' if ds == SEC - 2 else
+                 '   <- what London\'s tape number uses' if ds == SEC else ''))
+
     print(f'\n  second sweep at div <= -{THR:.0f} (is sec 45 special, or is any second the same?):')
     print(f'    {"sec":>6}{"n":>7}{"win%":>8}{"per$1":>9}{"ask":>7}')
     for S2 in (15, 30, 45, 60, 90, 120, 180, 240):
