@@ -815,3 +815,10 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   London's +$19.42 inflow on the SAME wallet, which the owner claimed as his (20:5x) - so most likely the owner armed Zurich himself.
   Asked the owner to confirm. Zurich told to change nothing, leave master false, exclude the 11 LIVE rows from all paper/shadow tables.
   NOTE: Zurich and London trade from ONE wallet - any Zurich live fill moves London's cash/equity.
+- **Who makes money on BTC 5m (V, public data-api both legs + taker legs, 48 h, 576 candles, 10,170 wallets; TOP_WALLETS.txt).**
+  Check: sum of all wallets' PnL = -$216.0k = -fees (closes). Top by PnL: many of the CONSISTENT winners (trade ~all 570 candles) are
+  MAKERS - 0x86b1 +$6.3k on $499k (96% maker), 0x7743 +$3.4k (100%), 0xc1b4 +$2.3k (100%), 0xcd30 +$2.1k (99%), 0xc387 +$2.8k (100%
+  maker, buys at 0.265, late: sec p50 177), 0x32ed +$2.0k (90%). Consistent TAKER-heavy winners exist too: 0x3048 +$7.6k on $329k (41%
+  maker, 572 candles), 0x41e2 +$3.5k (23% maker, 568), 0xc533 +$2.2k (35%, 565), 0x9e3e +$3.0k (7%, 443); 0xc4e2 +$4.1k on $38k,
+  0% maker, buys favourites at 0.738, sec p50 63 (138 candles). Big losers are makers too (0xcc0d -$30.8k, 0x4b01 -$16.7k). Margins are
+  ~1-3% of volume for the frequent winners. Next: per-trade context (sec, price, TWAP z, Binance move) for the top consistent takers.
