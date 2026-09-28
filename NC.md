@@ -428,3 +428,14 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   features decision-time for 415, diag-within-3 s for 66, none for 173 (refused candles store no decision). Ready to score.
 - Chainlink cell footnote (Zurich 11:15): reading the same div one second earlier flips per$1 by 0.16 and win% by 8.7 pp - a coin whose
   sign depends on the clock. Close confirmed. Shadow stopped 11:24.
+- **EF-2 rung v0 (Zurich 11:43, logistic walk-forward, 883 candles / 4 scored days): NO MARGIN PASSES THE BAR.** fixed15 on the same days:
+  132 fires (33/day), 42% fill, 43% win, +0.050/$1, +$26.5, halves +0.277/-0.177, perm 0.45 (56 fills - not a measurement). EF-2 m=0.02:
+  883 fires (221/day), **89.6% fill**, 65.9% win, +0.016/$1, +$128, halves +0.018/+0.013, opposite-ask flip p=0.007; m=0 +0.013, 0.05 -0.014,
+  0.10 -0.236. Execution: EF-2 wins outright. Profit per $1: fixed15; total $: EF-2 5x. verify.py on EF-2 0.02: NOT A FINDING - permutation
+  0.585, non-monotone margin sweep, **dies by +2c of cost**, fails the null and paired (McNemar 0.35).
+  **The structural result: the ASK ALONE scores AUC 0.8611 vs the 52-feature model 0.8608 and p_side alone 0.8580, and matches the
+  model within 0.005 at EVERY horizon (0.72 at sec 15-29 -> 0.93 at 180-240).** 1.6 M rows and 52 features add +0.003 over the price.
+  Capacity is not the limit (stump ensemble 0.8599; HistGB worse). So P(win | features) collapses to the market price: no private
+  information in the engine's inputs at any second. Ask dynamics do outweigh move_bps (0.113 vs 0.084 coefficient mass) but the price
+  carries 1.443. The S=15 placebo (model's side, no p bar, fire at 15 s) is again the only arm that beats the null and passes costs
+  (+0.067/$1, 615 fills, both halves positive) - the edge that exists is TIMING, not modelling. (analysis/zurich/EF2.md)
