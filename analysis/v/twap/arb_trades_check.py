@@ -6,6 +6,7 @@ have BOUGHT the two dominance legs at such prices. This uses Polymarket's public
 taker side) - an independent source - and Binance 1 s klines for the two lines (the ~3% Chainlink/Binance
 disagreement only matters when L15 ~ L5, and those windows are reported separately).
 
+usage: arb_trades_check.py <first 15m epoch> <last 15m epoch> [asset BINANCESYMBOL], e.g. eth ETHUSDT
 Legs: L15 < L5 -> 15m UP + 5m DOWN; L15 > L5 -> 15m DOWN + 5m UP (payoff 1 or 2, never 0).
 For every second of the last 5m candle: the latest taker BUY price of each leg within the previous W seconds.
 cost = p15 + fee + p5 + fee, fee = 0.07 p (1-p). A window "trades riskless" if some second has cost < 1.
@@ -15,7 +16,8 @@ import json, time, sys, urllib.request, datetime as dt, collections
 
 GAMMA = 'https://gamma-api.polymarket.com/events?slug={}'
 TRADES = 'https://data-api.polymarket.com/trades?market={}&limit=500&offset={}&takerOnly=true'
-KL = 'https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=1s&startTime={}&limit=1000'
+KL = 'https://data-api.binance.vision/api/v3/klines?symbol={}&interval=1s&startTime={}&limit=1000'
+ASSET, SYM = 'btc', 'BTCUSDT'
 fee = lambda p: 0.07 * p * (1 - p)
 W = 3
 
@@ -48,7 +50,7 @@ def trades(cid, t_lo):
 def closes(t0, t1):
     px, t = {}, t0 * 1000
     while t < t1 * 1000:
-        rows = get(KL.format(t))
+        rows = get(KL.format(SYM, t))
         if not rows: break
         for r in rows: px[int(r[0]) // 1000] = float(r[4])
         t = int(rows[-1][0]) + 1000
@@ -62,7 +64,7 @@ def main(a, b):
     line = lambda e: (lambda v: sum(v) / len(v) if len(v) >= 45 else None)([px[k] for k in range(e - 60, e) if k in px])
     rep = collections.Counter(); rows = []
     for e in eps:
-        m15, m5 = market(f'btc-updown-15m-{e}'), market(f'btc-updown-5m-{e+600}')
+        m15, m5 = market(f'{ASSET}-updown-15m-{e}'), market(f'{ASSET}-updown-5m-{e+600}')
         if not m15 or not m5: rep['no_market'] += 1; continue
         L15, L5 = line(e), line(e + 600)
         if L15 is None or L5 is None: rep['no_line'] += 1; continue
@@ -82,7 +84,7 @@ def main(a, b):
             if p15 is None or p5 is None: continue
             c = p15 + fee(p15) + p5 + fee(p5)
             if best is None or c < best[0]: best = (c, s - e - 600, p15, p5)
-        close_lines = abs(L15 - L5) < 5.0
+        close_lines = abs(L15 - L5) < 5.0 * (L5 / 84000.0)   # ~$5 at BTC 84k, scaled by price
         rows.append(dict(e=e, gap=round(L5 - L15, 2), n15=len(t15), n5=len(t5), best=best, pay=pay, close=close_lines))
         rep['windows'] += 1
         time.sleep(0.1)
@@ -96,7 +98,8 @@ def main(a, b):
         c, sec, p15, p5 = r['best']
         print(f"  {dt.datetime.fromtimestamp(r['e'], dt.timezone.utc):%m-%d %H:%M} gap {r['gap']:+8.2f}  cost {c:.4f} at sec {sec:3d} "
               f"(15m {p15:.3f} + 5m {p5:.3f})  trades 15m/5m {r['n15']}/{r['n5']}  pay {r['pay']}")
-    json.dump(rows, open('arb_trades_rows.json', 'w'))
+    json.dump(rows, open(f'arb_trades_rows_{ASSET}.json', 'w'))
 
 if __name__ == '__main__':
+    if len(sys.argv) > 3: ASSET, SYM = sys.argv[3], sys.argv[4]
     main(int(sys.argv[1]), int(sys.argv[2]))
