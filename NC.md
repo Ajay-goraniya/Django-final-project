@@ -788,3 +788,9 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   all fills. The loss is the NEUTRAL bucket (z -0.5..+0.5): n123 win 49% paid 0.510 -0.110/$1 -$111 (H1 -21 / H2 -91), worst < 120 s
   (n62 -$142). By sec: < 120 s -$117 (both halves negative), 120-200 +$120, > 200 n25 INSUF +$76. EF is a cheap contrarian; blocking
   'against' fills would remove the profitable part. Not acted on (grid only, cells INSUF); the neutral/early loss is the lead to watch.
+- **EF-12 (Zurich d6444cb): giving EF the TWAP60 line makes it WORSE on the sim (1,001 candles 09-24..28).** fixed15 A +$41.1 / DD 85.3 /
+  39/day / 2 of 5 / +1c +18.7; B |z| >= 0.25/0.50/0.75/1.00: -29.5 / -51.5 / -26.2 / -61.0 (fill rises 42% -> 51-61%); raw25 +$82.5 vs
+  |z| cuts -4.7 / -16.3 / +30.2 / +28.4; C (z + twap distance as inputs) -11.5. Skipping neutral hurts at every cut - the easy-to-fill
+  fires are the ones not worth having. CONFLICTS with London's real-fill read (neutral n123 -0.110/$1): different instrument (real fills
+  vs FAK sim over all passes) and z formula. London asked to push twapz.py so Zurich re-runs on the identical z. Arm E (P_twap +
+  move strength replacing EF's p) pending.
