@@ -1,5 +1,5 @@
 {
- "name": "ef2_london",
+ "name": "ef2_london44",
  "version": 1,
  "produced_by": "Zurich, analysis/zurich/ef2_london_refit.py",
  "produced_at": "2026-09-28T11:53:51Z",
@@ -219,5 +219,24 @@
   ],
   "walk_forward_best": "margin 0.02: per $1 +0.020, total +161.1, 89.8% sim fill, 66.0% win, halves +0.028/+0.012, perm 0.007 - and it still does NOT pass the owner's bar, which requires beating fixed15 on per $1 as well"
  },
- "not_a_deploy": "A scorer for London to evaluate its own real attempts. Not a config; arms nothing."
+ "not_a_deploy": "A scorer for London to evaluate its own real attempts. Not a config; arms nothing.",
+ "london44": "THIS IS THE london44 MODEL. Fitted on exactly the 44 features London's final-test table can supply; the 8 it cannot are not imputed, they are absent from the fit. Score London's 654 attempts with THIS file, not with ef2_model.json.",
+ "do_not_use_the_52_feature_model_on_londons_table": "ef2_model.json has 52 features. Scoring London's table with it and imputing the 8 missing keys keeps AUC almost unchanged (0.8608 -> 0.8573) but INVERTS the trading result: win 65.9% -> 32.5%, per $1 +0.016 -> -0.076, total +128 -> -573. AUC is rank-based and survives imputation; the decision depends on the calibrated LEVEL of p_win against the price, and the missing features carry 34.2% of the coefficient mass. That is why london44 exists.",
+ "walk_forward": {
+  "auc_london44": 0.8609,
+  "auc_full52": 0.8608,
+  "per_day_auc": [
+   0.8532,
+   0.854,
+   0.8741,
+   0.8961
+  ],
+  "days": [
+   "09-25",
+   "09-26",
+   "09-27",
+   "09-28"
+  ],
+  "note": "london44 matches the 52-feature model to 0.0001 - the 8 dropped features add nothing once the model is calibrated without them."
+ }
 }
