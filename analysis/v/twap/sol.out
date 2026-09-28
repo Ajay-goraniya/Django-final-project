@@ -1,0 +1,10 @@
+binance 1 s closes: 83000
+windows scanned 91 (no market 0, no line 0)
+windows with a TRADED pair cost < 1 (both legs bought by takers within 3s): 6 of 91; of those with lines < $5 apart: 1
+payoff of the dominance pair on gamma, all windows: {2: 31, 1: 60}  (0 would break the structure)
+  09-27 14:00 gap    -0.01  cost 0.6794 at sec  53 (15m 0.420 + 5m 0.230)  trades 15m/5m 31/46  pay 1
+  09-27 18:00 gap    -0.02  cost 0.8358 at sec  33 (15m 0.151 + 5m 0.660)  trades 15m/5m 4/28  pay 1
+  09-27 10:00 gap    +0.03  cost 0.8518 at sec 170 (15m 0.710 + 5m 0.120)  trades 15m/5m 23/44  pay 1
+  09-27 11:15 gap    -0.01  cost 0.9366 at sec 195 (15m 0.100 + 5m 0.820)  trades 15m/5m 28/60  pay 1
+  09-27 11:45 gap    +0.12  cost 0.9652 at sec 204 (15m 0.850 + 5m 0.100)  trades 15m/5m 33/75  pay 2
+  09-27 13:15 gap    -0.00  cost 0.9668 at sec 123 (15m 0.230 + 5m 0.710)  trades 15m/5m 12/46  pay 1
