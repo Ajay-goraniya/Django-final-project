@@ -698,3 +698,107 @@ cheapness, not on the move being wrong, and cheapness arrives when you are winni
 If he wants the reversal tested properly, the second trigger needs its own condition — something like *the
 reference has re-crossed the opening line since the first fire* — not a re-run of the entry rule on the other
 side. That is a different test and I have not run it.
+
+---
+
+# The reversal on its OWN condition — the reference re-crosses the line
+
+V, 09-28 13:2x, confirming the owner's intent. The previous test re-ran the entry rule on the other side,
+which fires on cheapness. This one fires on what he actually means: **the settlement reference has crossed
+back through the opening line**, so the move that justified the first leg is now wrong.
+
+Trigger: the first second after the first fire at which `ref_px` is on the other side of the candle's TWAP60
+opening line from our leg, and has been there for **K consecutive seconds** (K = 0, 2, 5, 10), all K seconds
+strictly before the trigger. Two actions: **(i)** buy the opposite side at its ask with the ef_persist FAK
+fill, **(ii)** sell the first leg at its bid, priced as `1 − opposite ask` since the two tokens are
+complements, with the 0.07·sh·p·(1−p) fee charged on the exit as well as the entry.
+
+```
+candles 1015, days ['09-24', '09-25', '09-26', '09-27', '09-28']; opening line from the Chainlink ref on 1015 of them; ref seconds held 490,244
+
+======================================================================================================================================================
+raw25: first fire on 326 candles with a line, 138 fills, total +107.3$, DD 98.4$, run 5
+======================================================================================================================================================
+  K / action                    trig  fill% win/save   leg$1     leg$   CANDLE$   vs 1st    DD$  run      H1      H2  oppAsk
+  K=0 i BUY opposite             300  96.2%    60.0%  -0.030    -38.9     -22.4    -37.0   92.0    5  -0.158  +0.094    0.56
+  K=0 ii SELL first leg          300 100.0%    59.2%  -0.109   -141.5    -124.9   -139.5  127.2   29  -0.330  +0.112    0.56
+  ----------------------------------------------------------------------------------------------------------------------------------------------------
+  K=2 i BUY opposite             298  95.3%    59.3%  -0.036    -45.0     -18.1    -42.7   88.3    5  -0.180  +0.104    0.56
+  K=2 ii SELL first leg          298 100.0%    58.9%  -0.109   -140.1    -113.1   -137.7  115.4   28  -0.305  +0.085    0.56
+  ----------------------------------------------------------------------------------------------------------------------------------------------------
+  K=5 i BUY opposite             292  94.5%    59.5%  -0.039    -48.3     -37.2    -46.6   93.4    5  -0.205  +0.122    0.57
+  K=5 ii SELL first leg          292 100.0%    59.4%  -0.102   -130.1    -119.1   -128.5  121.3   28  -0.312  +0.109    0.57
+  ----------------------------------------------------------------------------------------------------------------------------------------------------
+  K=10 i BUY opposite            283  96.1%    60.7%  -0.020    -25.2     -26.5    -24.0   79.1    5  -0.198  +0.157    0.57
+  K=10 ii SELL first leg         283 100.0%    59.8%  -0.098   -125.0    -126.2   -123.7  128.5   28  -0.347  +0.146    0.57
+  ----------------------------------------------------------------------------------------------------------------------------------------------------
+  NULL at K=2: the opposite ask AT THE TRIGGER is p10 0.43 p50 0.56 p90 0.67; on candles where the first leg went on to LOSE it is p50 0.58, where it WON p50 0.55
+  SPLIT by first-fire second, K=2, action (i) buy opposite:
+    1st 15-120: n 184  opp win  54.3%  per$1  -0.043  opp ask p50 0.56
+    1st 120-200: n  76  opp win  55.3%  per$1  -0.079  opp ask p50 0.60
+    1st 200-241: n  19  opp win  42.1%  per$1  -0.088  opp ask p50 0.52  *n<60
+
+======================================================================================================================================================
+fixed15: first fire on 178 candles with a line, 73 fills, total +73.8$, DD 75.8$, run 6
+======================================================================================================================================================
+  K / action                    trig  fill% win/save   leg$1     leg$   CANDLE$   vs 1st    DD$  run      H1      H2  oppAsk
+  K=0 i BUY opposite             149  96.7%    62.1%  +0.016     +9.5      +6.8    +11.4   67.6    6  -0.098  +0.131    0.55  *n<60
+  K=0 ii SELL first leg          149 100.0%    61.7%  -0.105    -62.8     -65.5    -60.9   67.5   20  -0.340  +0.131    0.55
+  ----------------------------------------------------------------------------------------------------------------------------------------------------
+  K=2 i BUY opposite             147  96.6%    61.4%  -0.015     -8.5      -1.0     -6.3   64.7    6  -0.119  +0.085    0.56  *n<60
+  K=2 ii SELL first leg          147 100.0%    61.0%  -0.121    -71.1     -63.6    -68.9   65.5   19  -0.323  +0.075    0.56  *n<60
+  ----------------------------------------------------------------------------------------------------------------------------------------------------
+  K=5 i BUY opposite             145  96.6%    60.7%  -0.011     -6.6     +11.3     -4.0   54.3    6  -0.110  +0.087    0.56  *n<60
+  K=5 ii SELL first leg          145 100.0%    60.3%  -0.117    -68.0     -50.1    -65.4   52.0   18  -0.309  +0.075    0.56  *n<60
+  ----------------------------------------------------------------------------------------------------------------------------------------------------
+  K=10 i BUY opposite            138  96.5%    60.0%  -0.030    -17.2     +11.0    -14.4   55.4    6  -0.155  +0.088    0.56  *n<60
+  K=10 ii SELL first leg         138 100.0%    59.6%  -0.137    -78.0     -49.8    -75.2   51.8   18  -0.357  +0.076    0.56  *n<60
+  ----------------------------------------------------------------------------------------------------------------------------------------------------
+  NULL at K=2: the opposite ask AT THE TRIGGER is p10 0.39 p50 0.56 p90 0.71; on candles where the first leg went on to LOSE it is p50 0.56, where it WON p50 0.55
+  SPLIT by first-fire second, K=2, action (i) buy opposite:
+    1st 15-120: n  63  opp win  54.0%  per$1  -0.024  opp ask p50 0.56
+    1st 120-200: n  61  opp win  54.1%  per$1  -0.091  opp ask p50 0.57
+    1st 200-241: n  15  opp win  73.3%  per$1  +0.530  opp ask p50 0.44  *n<60
+```
+
+## Three reasons it does not work, in order of how much they matter
+
+**1. The re-cross is not an event, it is the weather.** It fires on **300 of 326** raw25 candles (92%) and
+**149 of 178** fixed15 candles (84%). A condition that occurs nine times in ten cannot select anything. That
+alone makes it unusable as a trigger, before any money is counted.
+
+**2. The crowd has already priced it — this is the null V asked for, and it is decisive.** At the trigger the
+opposite ask is already **p50 0.56**. And it barely moves with the eventual outcome: on candles where the
+first leg went on to **lose** it is 0.58 (raw25) / 0.56 (fixed15); where it **won**, 0.55 / 0.55. Three
+cents, or none.
+
+That is exactly what section 6 predicts. Binance leads the Chainlink reference by **2–3 seconds** at a
+correlation of 0.81, so by the time the settlement reference confirms a re-cross, the book has had seconds to
+absorb it. The trigger is looking at a lagged copy of information the price already has.
+
+**3. Both actions lose.** Buying the opposite is negative at every K on raw25 (−0.020 to −0.039 per $1,
+candle total −$24 to −$47 against first-fire-only). Exiting is worse and is uniformly bad: −0.098 to −0.109
+per $1, candle total **−$113 to −$126**, which turns raw25's +$107.3 into roughly −$6 to −$19. The longest
+losing run goes from **5 to 28**.
+
+Exiting fails for a structural reason worth stating: the exit bid is `1 − 0.56 = 0.44` on a leg bought near
+0.45, so it crystallises a small loss **plus a second fee**, on 100% of triggers — and since the trigger
+fires on 84–92% of candles, it exits almost everything, winners included.
+
+## K does not matter here, which is itself informative
+
+Across K = 0, 2, 5, 10 the raw25 buy-opposite arm moves only −0.030 → −0.036 → −0.039 → −0.020. Compare the
+Chainlink-divergence rule, where shifting the read by **one second** flipped the sign. This trigger is not
+knife-edge; it is flat and slightly negative, which is what a condition carrying no information looks like.
+
+## The one positive corner, reported and not sold
+
+fixed15, first fire at second ≥ 200, K=2, buy opposite: **n=15**, opposite wins 73.3%, per $1 **+0.530**,
+opposite ask p50 0.44. Fifteen trades. It is the only positive corner in the whole grid and it is a quarter of
+the way to the sample bar. It is here because the grid is reported in full, not because it is a candidate.
+
+## Answer
+
+The owner's mechanism is real as an observation and empty as a trigger. The reference does re-cross — almost
+always — and by the time it does, the price has already moved. Acting on it loses money in both directions,
+and the exit version is the more expensive of the two.
