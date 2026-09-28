@@ -778,3 +778,7 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   way, H2 negative in every cell, 09-14 carries all of it. Slower retraining is WORSE, not better, and fixes none of the one-day problem.
   WEEKLY cannot be tested: it needs >= 2 weeks of history at the same resolution (a train week + a test week); first possible ~10-08 on
   the Zurich/London decide_log archives. Recorded, not a finding.
+- London 20:51: RECONCILE_STUCK 'expected shape' is the known get_order parser miss on FAK no-match orders (261 rows since 09-22, handled
+  since 12.8.11, poly_live.py:220), all REJECTED, nothing stuck - no update needed, 'API change' watch retracted. The 19.42 is logged as a
+  deposit (health.py; deposits total 70.42); trading-only settled then sits below the start, so the 20:33 mood 'well' is corrected to
+  'in the red'.
