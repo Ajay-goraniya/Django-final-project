@@ -625,3 +625,7 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   _ask_up/_ask_dn/opp_ask. V fixed the lane (997da51: bounds 0.01-0.99; rows carry _ask_up, _ask_dn, opp_ask). Engine check: the live
   FeatureState already writes _ask_up/_ask_dn (btc_model_v10.py:190) and decide_now copies every finite numeric feature into
   d['features'], so the engine side has them. Zurich also fixed its shadow's in-candle buffer order. Parity re-run pending.
+- **OWNER ORDER 17:0x: "Tell london to record that, Zurich wont stay active always."** Relayed 17:00: London sets meta decide_log=true
+  (the 13.0.4 per-pass logger already in its build: logging only, after the fire path, no restart, no trading setting) and archives each
+  UTC day outside the engine DB (engine keeps 4 days, EF-6 trains on 21). This is the owner's confirmation of THAT change only.
+  Nightly training is an automatic scheduled job (ef5_nightly.py at 00:05 UTC on Zurich) - no human and no session runs it.
