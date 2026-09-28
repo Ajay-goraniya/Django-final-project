@@ -648,3 +648,10 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   The 130/136 parity was checked on 09-27, which carries only +$10 of the +$222 - the days that carry it were never parity-checked.
   London (-$287) and Zurich's four regimes agree with each other; **ef6.py's backtest is the outlier. E3 = UNVALIDATED.** Next: Zurich
   reconciles 09-26 fire by fire between ef6.py and the lane path to find the defect; if ef6.py is wrong, EF-5/EF-6 tables are re-run.
+- **09-26 reconciled (Zurich 548f04d): no coding defect - the RULE is tie-degenerate.** The stump ensemble emits few distinct values (09-26:
+  545 distinct over 472k rows; the top value covers 13.3%), so the q.90 threshold IS one of them and 'pred >= thr' is decided by ties; which
+  second fires then depends on where the 60 s grid is anchored (ef6.py at the day's first row, the lane at wall-clock). Same candle set
+  (221 of ~225 shared) but only 23 agree on the second -> +$119.8 vs -$147.9 from the same model on the same day. The EF-6 grid's fire
+  times were an artifact. V ACCEPTS Zurich's proposed fix (stated before any re-run): threshold = smallest distinct prediction strictly
+  above the sample quantile (causal, deterministic, no boundary ties). Re-run EF-5 CAUSAL and EF-6 under it, AND at grid anchors 0/15/30/45 s:
+  a result that moves materially with the anchor is noise, whatever its mean.
