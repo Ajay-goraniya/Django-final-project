@@ -1,3 +1,9 @@
+*** SUPERSEDED IN PART - see FAV_RULE_PARITY.txt. The mid-vol and unfiltered-positive claims
+*** below were inflated by a cross-source fill comparison (decide_log ask vs tape1s ask). Through
+*** V's own code on the same days: low 8/9 positive, mid NEGATIVE 7/9, all NEGATIVE. Low-vol still
+*** replicates, at +0.043/$1 not +0.100. The low-vol rows here are directionally right, the mid/all
+*** rows are not. 09-28 21:5x.
+
 ZURICH REPLICATION of V's favourite-buyer grid (NC-19, 1e58001, analysis/v/wallets/fav_rule_test.py)
 =====================================================================================================
 Identical 36-cell grid (3 windows x 3 ask bands x {low,mid,high,all} vol), no retune, no parameter
