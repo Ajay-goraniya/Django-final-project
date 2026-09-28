@@ -452,6 +452,61 @@ it came out large. The objections, stated now and not after the forward days:
 On the evidence I would call it noise. It is in the shadow because the rule said so, with a negative
 prior recorded, and the forward days will settle it.
 
+## EF-6 — the trailing-window quantile. Rate-stability solved; the E3 bar not met. `ef6.py`
+
+Arm E carries yesterday's quantile as a VALUE across a nightly refit that moves the prediction scale, so
+the same q lands at a different rank each day — 4 fills one day, 188 the next. V's fix: at time t, take
+the q-quantile of this model's predictions over the candidate rows in the last W hours. Only past rows,
+so still causal; continuously re-anchored, so rate-stable. At the start of a day the window reaches back
+into yesterday, scored under today's model.
+
+The threshold is recomputed on a **60 s grid**, not per row — 1,440 updates a day rather than ~450,000,
+which is also what an implementation would really do. Between updates the rule uses the older threshold,
+which is the more conservative reading.
+
+```
+  cell             $tot    DD$   P/DD  f/day  fill%  days+  fmin  fmax    CV  per$1   flipP
+  W=1h q=0.80    +179.4  117.4   1.53  161.8  93.5%   4/4     11   246  0.57  +0.030  0.127
+  W=1h q=0.90    +222.1   72.6   3.06  126.2  93.1%   3/4      7   217  0.63  +0.048  0.037
+  W=3h q=0.80    +267.4   99.7   2.68  147.2  93.0%   4/4     13   211  0.54  +0.049  0.007
+  W=3h q=0.90    +213.4   92.8   2.30  115.5  91.1%   3/4      9   197  0.63  +0.051  0.000
+  W=6h q=0.80    +161.2   85.8   1.88  129.0  92.1%   4/4     14   169  0.52  +0.035  0.027
+  C fixed15       +16.3   85.3   0.19   37.2  43.6%   1/4      4    33  0.68  +0.028  0.527
+```
+
+**The rate-stability worked, and the headline CV column understates it.** 09-28 is a part day — 13 fills
+against 156–211 on the full days — and it drags every CV up. On the three complete days:
+
+```
+                  CV all 4   CV 3 full    best-day share (3 full)   $ (3 full)    DD
+  W=3h q=0.80       0.54       0.13                53%                +252.5     99.7
+  W=1h q=0.90       0.63       0.29                52%                +230.9     72.6
+  W=3h q=0.90       0.63       0.31                53%                +228.9     92.8
+  C fixed15         0.68       0.48               232%                 +35.4     85.3
+  arm E causal q=0.90 (for comparison)  CV 3 full 0.94
+```
+
+**CV falls from 0.94 (arm E) to 0.13–0.31.** That is the problem V set out to fix, fixed, and it is better
+than the incumbent control's 0.48 as well.
+
+### No E3 — the bar was not met, and I am not rounding in my favour
+
+`W=1h q=0.90` passes **$** (+222.1 vs +16.3), **DD** (72.6 vs 85.3) and **CV** (0.29 vs < 0.50). It fails
+**best-day share: 52% against a bar of < 50%.** Two percentage points, on three days. It fails, so nothing
+is registered; a bar that only binds when you round it is not a bar.
+
+Two properties of that metric worth knowing before it is used again:
+
+* **It is ill-behaved as a ratio when the total is small.** C scores **503%** on four days and 232% on
+  three, because its total is +$16.3 while its best day is +$82.0. A denominator that can approach zero
+  makes the statistic unbounded. Share of the *positive* days is the robust form; on that, C is 100%.
+* **Its floor depends on the day count.** Uniform across three days is 33%, across four days 25%. So
+  "< 50%" is a much tighter demand on a three-day sample than on a longer one, and the arms above are
+  being judged on three complete days.
+
+Both point the same way: the rule is closer to passing than 52% vs 50% suggests, and the right response is
+more days rather than a softer bar.
+
 ## Priors recorded BEFORE the forward days arrive (09-28 15:1x)
 
 Pre-registration only works if the prior is written down before the evidence. Two updates landed after
