@@ -224,6 +224,82 @@ from firing 33 times at 42%, and if the owner's objective is total dollars rathe
 capital, the table already favours it. But it does not clear the bar as written, and I am not going to
 present a cell that fails five gates as though it did.
 
+---
+
+# v1 — gradient boosting (sklearn HistGradientBoosting)
+
+Neither lightgbm nor sklearn was on this box. sklearn 1.9.1 went into a **separate** venv at
+`/home/ubuntu/pm_ml_venv`; the engine's interpreter and its numpy were checked afterwards and are untouched.
+
+**v1 is worse than v0 on everything.** Pooled AUC **0.8386** against the logistic's 0.8608, and worse on every
+day (0.8177 / 0.8402 / 0.8656 / 0.8839 against 0.8529 / 0.8540 / 0.8741 / 0.8962). It is also worse than
+`p_side` alone (0.8580) at every second bucket. Its best margin, 0.02, pays +0.002/$1 and +19.6 total — it
+loses to fixed15 on both profit measures, where v0 at least won on total dollars. No margin passes.
+
+## A correction to what I told V about feature importance
+
+In the v0 report I said ask dynamics beat the move, 0.113 against 0.084 of standardised coefficient mass, and
+called it "directionally yes" on V's question. **That does not survive the better measurement.** v1 gives
+PERMUTATION importance — how much AUC is lost when a column is shuffled — which is the right instrument,
+because a coefficient can be large purely from collinearity with another feature. It says:
+
+```
+    block ask dynamics   -0.0008
+    block the price      +0.0969
+    block the move       -0.0003
+    block the engine p   +0.0526
+```
+
+Ask dynamics and the move are both **negative**: shuffling them very slightly *improves* AUC, which is what
+noise looks like. So the honest answer to "does the model lean on ask dynamics rather than move_bps" is
+**no — it leans on neither.** It leans on the price and on the p the engine already computes. I withdraw the
+v0 phrasing.
+
+---
+
+# The London table: a failure that AUC would not have shown
+
+London's final-test table carries 35 feature keys; the model has 52. The exported scorer imputes a missing
+feature at its training mean. Running that on Zurich's own rows:
+
+| | AUC | win% | per $1 | total $ |
+|---|---|---|---|---|
+| full 52 keys, margin 0.02 | 0.8608 | 65.9% | **+0.016** | +128.0 |
+| **imputed to London's 35** | 0.8573 | **32.5%** | **−0.076** | **−573.4** |
+| imputed, with dip30 added back | 0.8576 | 30.7% | −0.102 | −774.2 |
+
+**AUC moved by 0.0034. The win rate halved and the sign of the money flipped.** AUC is rank-based and
+survives imputation; the *decision* is not a ranking, it is the calibrated **level** of `p_win` against the
+price, and the 8 imputed features carry **34.2%** of the coefficient mass. Move the level and the EV rule
+selects the wrong trades.
+
+This is the ETH_SOL_DIAG failure again — the ranking transfers, the level does not — arriving through
+imputation instead of through a different coin. Had London scored its 654 attempts with the imputed model it
+would have produced a confident negative, and it would have read as EF-2 failing rather than as the
+imputation failing. Adding `dip30` back makes it worse, so this is not about the selected-dip feature.
+
+## The fix: train on what London will have
+
+Not a better imputer — the right feature list. Refitting the whole walk-forward on London's 44 available
+features, same rows and same protocol:
+
+```
+  day 09-25 AUC 0.8532   day 09-26 0.8540   day 09-27 0.8741   day 09-28 0.8961   pooled 0.8609
+```
+
+**0.8609 on 44 features against 0.8608 on 52.** The eight dropped features add nothing when the model is
+properly calibrated on the rest, and the entire −0.076 disaster was an artefact of imputing them. The
+acceptance table on the refit is the best EF-2 variant so far:
+
+| arm | fires/day | fill% | win% | per $1 | total $ | H1 / H2 | permP |
+|---|---|---|---|---|---|---|---|
+| fixed15 | 33 | 42.4% | 42.9% | +0.050 | +26.5 | +0.277 / −0.177 | 0.448 |
+| **EF-2 London refit, m=0.02** | 220 | 89.8% | **66.0%** | **+0.020** | **+161.1** | +0.028 / +0.012 | **0.007** |
+
+It still does not pass — per $1 is +0.020 against fixed15's +0.050 — but it is the model London should
+actually run, and it is exported as `learner/v12_2/ef2/ef2_model_london.json` with the reason written into
+the file so it cannot be confused with the 52-feature object.
+
 ## Files
 
 - `ef2_rows.py` — the candidate table

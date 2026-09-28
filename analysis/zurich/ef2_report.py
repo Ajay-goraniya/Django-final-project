@@ -18,7 +18,7 @@ from decimal import Decimal, ROUND_CEILING
 sys.path.insert(0, '/home/ubuntu/claude-work/repo/analysis/zurich')
 from ef2_model import ROWS, per1, cost, halves, perm_opp, auc, be, MIN_CELL, MARGINS
 
-FITS = '/home/ubuntu/pm_ef2/ef2_fits.npz'
+FITS = sys.argv[1] if len(sys.argv) > 1 else '/home/ubuntu/pm_ef2/ef2_fits.npz'
 A_P, B_P, TICK, RATE, PAD = 1.0677, -0.3208, 0.01, 0.07, 1
 Dc = lambda x: Decimal(str(x))
 
@@ -83,7 +83,8 @@ if __name__ == '__main__':
     X, y, q, ep, ts, day = (z[k][keep] for k in ('X', 'y', 'q', 'ep', 'ts', 'day'))
     y = y.astype(float); isup = z['is_up'][keep]
     names = [str(s) for s in z['names']]
-    pw, pg = f['pw'], f['pg']
+    pw = f['pw']
+    pg = f['pg'] if 'pg' in f.files else np.full(len(pw), np.nan)
     sc = np.isfinite(pw)
     ia, ip, isec = names.index('own_ask'), names.index('p_side'), names.index('sec')
     dayset = sorted(set(day[sc].tolist())); nday = len(dayset)
@@ -110,7 +111,7 @@ if __name__ == '__main__':
                                       sec=int(X[i, isec]),
                                       oq=opp.get((int(ts[i]), int(isup[i])), float('nan'))))
 
-    print(f'\n{"="*126}\nACCEPTANCE TABLE - fixed15 vs EF-2, same candles, same fill simulator, same days\n{"="*126}')
+    print(f'\n{"="*126}\nACCEPTANCE TABLE [' + FITS.split('/')[-1] + '] - fixed15 vs EF-2, same candles, same fill simulator, same days\n{"="*126}')
     print(HDR)
     base = line('fixed15 (London, live)',
                 fire(cands, lambda c, px: c['pe'] >= 0.5 and (platt(c['pe']) / pad_cost(px) - 1) >= 0.15), nday)
@@ -141,17 +142,33 @@ if __name__ == '__main__':
     for m in MARGINS:
         line(f'lookahead {m:.2f}', fire(cands, lambda c, px, m=m: c['p'] / be(px) - 1 >= m, use_fill=True), nday)
 
-    print(f'\n{"="*126}\nFEATURE IMPORTANCE - |standardised coefficient|, mean over the walk-forward fits\n{"="*126}')
-    A = np.mean(np.abs(f['coef'][:, 1:]), axis=0)
-    order = np.argsort(-A)
+    # v0 exports coefficients, v1 exports permutation importance. Permutation is the better measure of
+    # whether the model LEANS on a feature - a coefficient can be large only because its feature is
+    # collinear with another - so where the two disagree the permutation number is the one to believe.
+    # a refit on a CUT feature list ships its own names; using the row table's 52 against a 44-wide
+    # coefficient matrix is how this section broke on the London refit.
+    fnames = [str(x) for x in f['names']] if 'names' in f.files else names
+    if 'coef' in f.files and f['coef'].shape[1] == len(fnames) + 1:
+        print(f'\n{"="*126}\nFEATURE IMPORTANCE - |standardised coefficient|, mean over the walk-forward '
+              f'fits\n{"="*126}')
+        A = np.mean(np.abs(f['coef'][:, 1:]), axis=0)
+    elif 'imp' in f.files and len(f['imp']) == len(fnames):
+        print(f'\n{"="*126}\nFEATURE IMPORTANCE - PERMUTATION (AUC lost when the column is shuffled)\n{"="*126}')
+        A = f['imp']
+    else:
+        print(f'\n(no importance vector matching {len(fnames)} features in this fits file)')
+        A = None
+    names = fnames
     DYN = ('d_ask_1s', 'd_ask_5s', 'd_ask_30s', 'dip30')
     PRICE = ('own_ask', 'opp_ask', 'lv', 'p_venue', '_ask_up', '_ask_dn')
     MOVE = ('move_bps', 'mv_x_sec')
-    for r, j in enumerate(order[:18], 1):
-        tag = '  <- ASK DYNAMICS' if names[j] in DYN else '  <- the price' if names[j] in PRICE else \
-              '  <- the move' if names[j] in MOVE else '  <- the engine p' if names[j] == 'p_side' else ''
-        print(f'    {r:>2}. {names[j]:16s} {A[j]:.4f}{tag}')
-    print(f'\n  block totals - V\'s question is whether the first line beats the third:')
-    for lab, ks in (('ask dynamics (d1,d5,d30,dip30)', DYN), ('the price (ask/lv/p_venue)', PRICE),
-                    ('the move (move_bps,mv_x_sec)', MOVE), ('the engine model p (p_side)', ('p_side',))):
-        print(f'    {lab:34s} {sum(A[names.index(k)] for k in ks if k in names):.4f}')
+    if A is not None:
+        order = np.argsort(-A)
+        for r, j in enumerate(order[:18], 1):
+            tag = '  <- ASK DYNAMICS' if names[j] in DYN else '  <- the price' if names[j] in PRICE else \
+                  '  <- the move' if names[j] in MOVE else '  <- the engine p' if names[j] == 'p_side' else ''
+            print(f'    {r:>2}. {names[j]:16s} {A[j]:.4f}{tag}')
+        print(f'\n  block totals - V\'s question is whether the first line beats the third:')
+        for lab, ks in (('ask dynamics (d1,d5,d30,dip30)', DYN), ('the price (ask/lv/p_venue)', PRICE),
+                        ('the move (move_bps,mv_x_sec)', MOVE), ('the engine model p (p_side)', ('p_side',))):
+            print(f'    {lab:34s} {sum(A[names.index(k)] for k in ks if k in names):.4f}')
