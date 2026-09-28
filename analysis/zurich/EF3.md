@@ -340,6 +340,68 @@ So the public-data result is fully consistent with **a rule that has no edge, pl
 trade at.** The lesson generalises past this rule: the dangerous half of a stale price source is not that
 it biases selection, it is that it lets the backtest transact at it.
 
+## EF-4 — model the money after the fill, not P(win). `ef4.py`, `ef4_freeze.py`
+
+V, 14:5x: every model so far learned P(side wins), but paper is positive and London-exec negative in every
+cell, so the loss is in WHICH fires fill. Target changed to the realised return AS EXECUTED — `0` if the
++250 ms FAK does not fill, `per1(win, fill_price)` if it does — regressed on the 52 features with ridge
+linear (primary) and a squared-loss stump booster (capacity check). Book age is **not** in the logged
+features, so it is absent rather than approximated; given the hypothesis is about fill quality that is a
+real limit on the test.
+
+**The target does shift what the model reaches for**, which is the part that holds up:
+
+```
+  block               after-fill $      P(win)      (sum |coef|, standardised, same ridge, same features)
+  the price                 0.1593      0.2297
+  the engine p              0.1747      0.0817
+  ask dynamics              0.0523      0.0086      <- 6x
+  the clock                 0.0447      0.0006      <- 70x
+```
+
+P(win) is dominated by the price; the after-fill target moves mass onto ask dynamics and the clock. The
+hypothesis behaves as intended.
+
+**The headline did not survive, twice, for two different reasons.**
+
+*First*, the linear model's best cell was +$417.1 / DD 76.2 / P/DD 5.47 / 4-of-4 days / flip p=0.000. The
+coefficients gave it away: `ref_open −2.6881` and `bn_line_open +2.4082` — two **absolute BTC prices near
+$84,000 correlated at +0.999886**. A large opposed pair on two copies of the same number is ridge
+amplifying their numerical difference by ~10⁴ and using BTC's level as a per-day offset, i.e. fitting the
+date. The tell was already visible in the walk-forward correlations: −0.046, +0.021, +0.043, +0.090, with
+one test day *anti*-correlated, which cannot produce a genuine 4-of-4 arm. Dropping the six level columns
+took it to **+$116.2 / DD 96.0 / P/DD 1.21**, 8 of 12 cells negative, and no cell beating C on both.
+
+*Second*, the stumps largely survived that (they bin, so they cannot amplify a collinear pair): EF-4gb
+t=0.00 S0=0 at **+$164.0 / DD $75.5 / P/DD 2.17 / 90.8% fill / 4-of-4 days / flip p=0.003**, against C at
++$16.3 / $85.3. Monotone in t, and unlike every other arm today the non-top-two days still summed
+**positive** (+$26.0). Eight stump cells cleared C on both columns. My first qualification check missed
+all of them — it only scanned the linear cells and printed "NONE" while the stump rows sat above it.
+
+So the model was frozen as arm D and put in the shadow. **It does not reproduce.**
+
+```
+  D_ef4gb_t000   -138.1   DD 226.7   P/DD -0.61   416 fires   89.7% fill   1/5 days
+     per day $:  09-24 -65.8   09-25 -7.9   09-26 -45.1   09-27 -38.1   09-28 +18.7
+     (the four walk-forward days sum -72.4, where the grid said +164.0)
+```
+
+Checked before concluding: the shadow's scorer matches `ef4.gb_reg_pred` to 0.0, and the feature map drops
+exactly the six level columns. Not a bug. **The cause is the threshold.** Predictions have sd 0.130 about
+a base of −0.0996, so `pred ≥ 0` is a cut ~0.76 sd into the upper tail, and where that cut lands depends
+on each fit's calibration offset. A model trained on 213k rows (walk-forward day 1) and one trained on
+1.58M put it in different places. The grid's success was partly a per-day quantile accident, not a rule —
+and a rule that only works when refitted nightly on a rolling window is not the rule that was tested.
+
+**Arm D therefore stays in the shadow as a falsification check with a negative prior on record, NOT as a
+qualifying candidate.** V's authorisation was conditional on beating C, and the frozen, forward-usable
+form does not. It costs nothing to leave running (paper, no order path) and V can drop it at will.
+
+The generalisable lesson, which is the third time today in a different costume: **an absolute threshold on
+a model score is not a rule unless the score is calibrated.** EF-2 v0 used `p/be(ask) − 1 ≥ m`, which is
+scale-free and survived freezing. EF-4 used `pred ≥ t` on an uncalibrated regression output, and did not.
+A quantile cut ("fire on the top 20% of predictions") would have been the portable form.
+
 ## Priors recorded BEFORE the forward days arrive (09-28 15:1x)
 
 Pre-registration only works if the prior is written down before the evidence. Two updates landed after

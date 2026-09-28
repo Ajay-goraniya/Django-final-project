@@ -28,7 +28,7 @@ THE MODEL IS FROZEN
 """
 import sys, os, json, time, sqlite3, hashlib, collections, datetime as dt, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from ef2_model import per1, cost, be
+from ef2_model import ROWS, per1, cost, be
 from ef3 import platt, pad_cost, STAKE
 
 ARCH = '/home/ubuntu/pm_archive/zurich_research_archive.sqlite3'
@@ -37,9 +37,11 @@ GAMMA_DBS = ['/tmp/poly/btc5.sqlite3', '/tmp/poly/btc5b.sqlite3']
 FITS, ROWS = '/home/ubuntu/pm_ef2/ef2_fits.npz', '/home/ubuntu/pm_ef2/ef2_rows.npz'
 DB = '/home/ubuntu/pm_ef3/ef3_shadow.sqlite3'
 MODEL = '/home/ubuntu/pm_ef3/ef3_model_A.json'
+MODEL_D = '/home/ubuntu/pm_ef3/ef4_model_D.json'
 SEC_LO, SEC_HI, TICK, DELAY_MS = 15, 240, 0.01, 250
 DYN = (1000, 5000, 30000)
-ARMS = ('A_v0_m02_S150', 'B_raw25_S60', 'C_fixed15')
+ARMS = ('A_v0_m02_S150', 'B_raw25_S60', 'C_fixed15', 'D_ef4gb_t000')
+ALL52 = None            # set in run_once from the frozen row table's name list
 
 # The frozen arm-A model was trained on 09-24..09-27, so those days are IN-SAMPLE for it and 09-28 was
 # already on the table when V wrote the decision rule. The rule says "from now". Everything up to and
@@ -57,6 +59,45 @@ def outcomes():
                 "SELECT epoch,outcome FROM mkt WHERE asset='btc' AND outcome IS NOT NULL")})
         except Exception: pass
     return out
+
+
+def load_D():
+    """Arm D - registered 09-28 15:4x with a NEGATIVE prior. NOT a qualifying candidate.
+
+    V authorised arm D if EF-4 beat C on $ and drawdown. Walk-forward it did: EF-4gb t=0.00 S0=0 was
+    +$164.0 / DD $75.5 / 4-of-4 days against C's +$16.3 / $85.3. Frozen into a SINGLE model - the only
+    form that could ever run forward - it does not reproduce: -$138.1 / DD $226.7 / 1-of-5 days on the
+    same candles, -$72.4 on the four walk-forward days where the grid said +$164.0.
+
+    That is not a bug. The scorer was checked against ef4.gb_reg_pred (max abs diff 0.0) and the feature
+    map drops exactly the six level columns. The cause is the threshold: predictions have sd 0.130 about
+    a base of -0.0996, so "pred >= 0" is a cut about 0.76 sd into the upper tail, and WHERE that cut
+    lands depends on each fit's calibration offset. A walk-forward model trained on 213k rows and one
+    trained on 1.58M put it in different places, so the grid's success was partly a per-day quantile
+    accident rather than a rule.
+
+    It stays in the shadow as a FALSIFICATION CHECK, not a candidate: the prediction on record is that
+    it runs negative forward. V can drop it at will - it costs nothing, this is paper with no order
+    path. It must not be read as qualifying under the A/B/C decision rule.
+    """
+    if not os.path.exists(MODEL_D): return None
+    M = json.load(open(MODEL_D))
+    body = {k: M[k] for k in M if k not in ('sha256', 'frozen_at')}
+    h = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()
+    if h != M['sha256']:
+        raise SystemExit(f'REFUSING TO RUN: {MODEL_D} has changed since it was frozen '
+                         f'({M["sha256"][:16]} -> {h[:16]}). Arm D must not move.')
+    return M
+
+
+def score_D(X, M):
+    """X must be the 52-wide row; the level columns are dropped to match the frozen 46."""
+    idx = [ALL52.index(n) for n in M['names']]
+    Z = (X[:, idx] - np.array(M['mean'])) / np.array(M['sd'])
+    F = np.full(len(Z), M['base'])
+    for j, thr, vl, vr in M['trees']:
+        F += np.where(Z[:, int(j)] <= thr, vl, vr)
+    return F
 
 
 def freeze_model():
@@ -156,7 +197,7 @@ def score_A(X, M):
     return 1.0 / (1.0 + np.exp(-np.clip(z, -30, 30)))
 
 
-def pick(rows, pA):
+def pick(rows, pA, pD=None):
     """The three arms, each taking its FIRST qualifying row in the candle. One fire per candle, max."""
     out = {}
     for i, r in enumerate(rows):
@@ -169,6 +210,8 @@ def pick(rows, pA):
         if 'C_fixed15' not in out and r['pe'] >= 0.5 \
                 and (platt(r['pe']) / pad_cost(r['own']) - 1) >= 0.15:
             out['C_fixed15'] = (r, r['pe'])
+        if pD is not None and 'D_ef4gb_t000' not in out and r['pe'] >= 0.5 and pD[i] >= 0.0:
+            out['D_ef4gb_t000'] = (r, r['pe'])
     return out
 
 
@@ -182,7 +225,9 @@ def db():
 
 
 def run_once():
-    M = freeze_model()
+    global ALL52
+    M = freeze_model(); MD = load_D()
+    ALL52 = [str(x) for x in np.load(ROWS, allow_pickle=True)['names']]
     d = db()
     done = {e for (e,) in d.execute('SELECT epoch FROM seen')}
     hi = d.execute('SELECT max(epoch) FROM seen').fetchone()[0]
@@ -199,9 +244,10 @@ def run_once():
             d.execute('INSERT OR REPLACE INTO seen VALUES(?,?)', (ep, int(time.time()))); continue
         X = np.stack([r['x'] for r in rows])
         pA = score_A(X, M)
+        pD = score_D(X, MD) if MD is not None else None
         opp = {(r['ts'], 1 - r['up']): r['q'] for r in rows}
         day = dt.datetime.fromtimestamp(ep, dt.timezone.utc).strftime('%m-%d')
-        for arm, (r, p) in pick(rows, pA).items():
+        for arm, (r, p) in pick(rows, pA, pD).items():
             q = r['q']
             pnl = STAKE * per1(r['win'], q) if q == q else 0.0
             d.execute('INSERT OR REPLACE INTO fires VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
