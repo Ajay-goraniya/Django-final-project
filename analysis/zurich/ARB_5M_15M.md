@@ -180,3 +180,20 @@ Cross-check with V's `pair_bot.py` running in paper on this box: its one detecte
 and my scan has it riskless at sec 1 with best cost 0.9524. Two independent implementations agree.
 
 Files: `arb_windows_csv.py` (gated exporter), `arb_windows.csv` (10 rows, with `age15` and `gap` columns).
+
+### Fix verified, in two steps, because the first step was not enough
+
+```
+btc15 snapshot age, mean seconds by candle minute 11-14 (the last-5m window this scan uses)
+  pre-fix                      15.3   41.2   76.1  125.5     max to 349.5
+  per-market step, 45 s resync 10.9   23.8   23.9   20.1     max ~45
+  per-market step, 10 s resync  0.6    4.3    5.2    5.3     max 10.4, 0.0% above 15 s
+```
+
+The first fix removed the unbounded growth but left the mean above the 15 s quality threshold, because inside
+minutes 10-15 of a 15m candle there is no new 5m market to discover and therefore no resubscribe to deliver a
+fresh `book`: the REST period *is* the age distribution, mean ~period/2. So the period itself had to come
+down. At 10 s the whole window now sits inside the 0.71-0.79c error band measured against the probe.
+
+Data collected from 2026-09-28 05:47 UTC onward does not need the 15 s gate. Everything earlier does, and
+`arb_windows_csv.py` applies it by default either way.
