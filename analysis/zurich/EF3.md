@@ -232,6 +232,114 @@ rather than after seeing more tables.
 * **The one thing that changes the drawdown shape is firing more often on a thinner edge** — which is
   what v0 does — and that requires the thin edge to be real.
 
+## Follow-up (a)(b)(c) — is S0=60 a plateau or a spike? `ef3_fine.py`
+
+V, 14:1x: raw25 S0=60 is the first cell that looks like the owner's goal, so before anything else, does a
+finer grid support it? The loader asserts it reproduces the published `raw25 S≥0 = +107.3 / DD 98.4`
+before it prints a single new number.
+
+```
+  arm                               $tot    DD$   P/DD  f/day  fill%  days+  run|   per$1   win%
+  raw25 S>=30                     +170.9   65.5   2.61   61.4  42.0%    3/5    5|  +0.133  46.5%
+  raw25 S>=45                     +122.3   78.3   1.56   58.6  42.3%    3/5    6|  +0.099  45.2%
+  raw25 S>=60                     +187.1   58.1   3.22   56.0  43.2%    4/5    5|  +0.155  47.9%
+  raw25 S>=75                     +192.3   59.1   3.26   51.0  43.9%    3/5    5|  +0.172  49.1%
+  raw25 S>=90                     +119.4   78.7   1.52   47.6  45.4%    2/5    6|  +0.111  46.3%
+  raw25 S>=105                     +82.4   67.9   1.21   44.6  45.3%    2/5    6|  +0.082  45.5%
+  raw25 S>=120                     +54.1  102.1   0.53   40.0  49.0%    3/5    8|  +0.057  43.9%
+  fixed15 S>=30                    +49.9   96.3   0.52   38.0  42.6%    2/5    7|  +0.064  44.4%
+  fixed15 S>=45                    +45.1  106.7   0.42   36.6  44.8%    2/5    7|  +0.057  43.9%
+  fixed15 S>=60                    +85.5  100.6   0.85   35.4  44.1%    2/5    7|  +0.112  46.2%
+  fixed15 S>=75                    +70.0  110.9   0.63   34.2  45.6%    2/5    6|  +0.092  46.2%
+  fixed15 S>=90                    +31.2  110.9   0.28   32.8  43.9%    2/5    6|  +0.046  43.1%
+  fixed15 S>=105                   +42.9  108.0   0.40   31.6  44.3%    2/5    6|  +0.064  45.7%
+  fixed15 S>=120                   +75.5  111.6   0.68   29.0  44.8%    2/5    7|  +0.119  47.7%
+```
+
+**Neither answer is the clean one.** For raw25 it is not a flat plateau — 45 dips to +122 between 30
+(+171) and 60 (+187) — but it is not an isolated spike either: **every cell from 30 to 75 is positive at
+a ratio of 1.56–3.26, and the curve decays monotonically from 75 onward.** So the *regime* is real and
+**60 is not the special number; 75 is marginally better.** For fixed15 there is no structure at all: the
+band is +31 to +85 with no trend and 60 is a bump. Whatever the clock is doing, it does it to raw25 only.
+
+Each cell holds ~120 fills, so a $70 swing between neighbours is well inside noise — which is exactly why
+the neighbours, not the peak, are the thing to read.
+
+### raw25 S0=60 in full, and the paired test that explains it
+
+280 fires, 121 fills, 43.2% fill, 47.9% win, per $1 +0.155, mean ask 0.410, longest losing run 5,
+opposite-ask flip p = 0.040, costs +1c +0.126 / +2c +0.099.
+Per day: `09-24 +69.5 | 09-25 +109.8 | 09-26 +11.1 | 09-27 +14.8 | 09-28 −18.1`.
+
+The paired test against `raw25 S0=0` is the informative part:
+
+* 102 candles fire **and** fill under both rules. **88 of them are literally the same pass**, and the
+  outcomes are **discordant in zero** of them. So within a candle, the start-second bar never picks a
+  better trade — it picks the *same* trade.
+* The entire difference is composition. The bar drops **36 fills at mean second 36, winning 33.3%, worth
+  −$77.2** — which is essentially the whole of `+107.3 → +187.1`.
+
+**So S0=60 is not an entry improvement, it is a veto on the first minute.** That is the owner's "no early
+gambling", measured: fires before second ~36 win a third of the time and lose money. The rule is real;
+the number 60 is not, and the mechanism says any bar somewhere in 30–75 does the same job.
+
+`verify.py` on raw25 S0=60: **fails.** `sample` (no single day reaches 60 fills), **`both halves`
+(H1 +0.314 / H2 −0.000 — a sign flip)**, `sweep shape` (jagged). Permutation gate inapplicable for the
+same reason as §5. Passes grading, quote age, cost sensitivity, and `beats the null` (+0.155 vs +0.079).
+
+**The caution that matters:** **+179.3 of the +187.1 is 09-24 and 09-25.** The three days since are
++11.1, +14.8, −18.1 — **+7.8 combined**, which is what H2 ≈ 0 is saying. This arm is pre-registered as B
+in the forward shadow and I am not proposing a change to it; the forward days are the right instrument.
+
+## Independent check of V's public-data late rule — `ef3_spot.py`
+
+V's late rule looks strong on public data, but it prices with the **max taker print in the 3 s before the
+decision** while the model sees Binance at the end of the second. Replayed here against the real own-side
+ask at the pass with the +250 ms FAK simulator. Spot features only — `move_bps, ret5, ret30, ret60, rv60,
+mv_x_sec` — walk-forward by day, refitted per 15 s bucket. 1015 candles, 822,331 passes.
+
+Those features describe BTC, not a side: they are identical on the UP and DOWN rows of one pass. So the
+fit is P(UP resolves) on one row per pass, with `p_side = p_up` for UP and `1 − p_up` for DOWN. Pooled
+direction AUC **0.8121** — real skill, and still below the ask alone at 0.8611.
+
+```
+  cell                          $tot    DD$   P/DD  f/day  fill%  days+  run|   per$1   flipP
+  S0=150 m=0.00/.02/.05/.10   -478.8 -455.1 -482.1 -544.4   (DD 587-669, ratio -0.75..-0.81, 0/4 days)
+  S0=180 m=0.00/.02/.05/.10   -232.4 -243.6 -218.5 -213.2   (DD 417-467, ratio -0.49..-0.56)
+  S0=200 m=0.00/.02/.05/.10   -219.8 -239.7 -204.3 -147.7   (DD 328-436, ratio -0.45..-0.55)
+  S0=220 m=0.00               +215.7  237.0   0.91   70.0  82.5%    3/4    7|  +0.096   0.097
+  S0=220 m=0.10               +223.0  232.4   0.96   58.5  80.8%    3/4    9|  +0.121   0.160
+  S0=240 m=0.00/.02/.05/.10   -167.5 -165.8 -199.5 -218.2   (DD 268-287, ratio -0.62..-0.78)
+```
+
+**It does not replicate. 16 of 20 cells lose, most of them heavily.** The only positive band is S0=220,
+and it sits between S0=200 at −$220 and S0=240 at −$168. One positive cell between two losers is the
+overfit shape, not a regime. `m` barely moves anything because it rarely changes which side is taken.
+
+### The decision-lag measurement — and it decomposes in an unexpected way
+
+```
+  S0=180 m=0.00 lag0s         -232.4  417.2  -0.56  106.8  78.9%    2/4    7|  -0.069   0.330
+  S0=180 m=0.00 lag1s         -224.2  412.7  -0.54  108.2  79.4%    2/4    7|  -0.065   0.363
+  S0=180 m=0.00 lag3s         -244.0  424.6  -0.57  109.8  78.1%    2/4    7|  -0.071   0.370
+  S0=180 m=0.00 lag3s BOOKED +1447.4  299.9   4.83  109.8 100.0%    3/4    8|  +0.340   0.007
+  S0=220 m=0.00 lag0s         +215.7  237.0   0.91   70.0  82.5%    3/4    7|  +0.096   0.097
+  S0=220 m=0.00 lag3s         +231.3  206.9   1.12   75.2  80.7%    2/4    6|  +0.098   0.033
+  S0=220 m=0.00 lag3s BOOKED +1552.9  154.7  10.04   75.2 100.0%    3/4    7|  +0.530   0.000
+```
+
+* **Deciding on a stale quote but paying the true forward price costs almost nothing** — S0=220 goes
+  +215.7 → +231.3, inside noise. The selection effect that `quote_age` was written for is small *here*.
+* **Booking at the stale quote is worth +$1,322 on that one cell** — 6.7× the real money, and it
+  manufactures a **10.04 profit/drawdown with flip p = 0.000** out of a rule that truly makes +$231. At
+  S0=180 it turns a −$232 loser into **+$1,447**.
+* Look at the fill column: **BOOKED reads 100.0%**, because paying a price you saw 3 s ago also deletes
+  every no-fill. That is half the illusion, and it is invisible in any table without a `fill%` column.
+
+So the public-data result is fully consistent with **a rule that has no edge, plus a price you cannot
+trade at.** The lesson generalises past this rule: the dangerous half of a stale price source is not that
+it biases selection, it is that it lets the backtest transact at it.
+
 ## Correction — a free extra tick on the fixed15 arm (found 09-28 14:1x, after the first push)
 
 **Every `fixed15` number in this document was wrong on its first publication, by about one tick.** raw25

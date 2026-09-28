@@ -220,12 +220,14 @@ def report(d=None):
     d = d or db()
     import random
     print(f'\nEF-3 PRE-REGISTERED SHADOW - PAPER, no order path. Decision rule fixed 09-28 14:0x by V.')
-    hdr = f'  {"arm":16s}{"$tot":>8}{"DD$":>7}{"P/DD":>7}{"fires":>7}{"fills":>7}{"fill%":>7}{"days+":>7}{"run":>5}{"permP":>8}'
+    hdr = (f'  {"arm":16s}{"$tot":>8}{"DD$":>7}{"P/DD":>7}{"fires":>7}{"fills":>7}{"fill%":>7}'
+           f'{"win%":>7}{"days+":>7}{"run":>5}{"permP":>8}')
     print(hdr)
     S = {}
     for arm in ARMS:
         rs = d.execute('SELECT day,win,pnl,fill,opp_fill FROM fires WHERE arm=? ORDER BY ts_ms',
                        (arm,)).fetchall()
+        allday = sorted({r[0] for r in d.execute('SELECT day FROM fires')})
         fl = [r for r in rs if r[3] is not None]
         if not fl:
             print(f'  {arm:16s}    (no fills yet)'); continue
@@ -250,8 +252,12 @@ def report(d=None):
         S[arm] = dict(tot=cum, mdd=mdd, n=len(rs), nf=len(fl), fill=len(fl) / len(rs),
                       pos=sum(1 for v in byd.values() if v > 0), days=len(byd), run=worst, perm=pp,
                       byd=dict(byd))
+        wr = sum(r[1] for r in fl) / len(fl)
+        S[arm]['win'] = wr
         print(f'  {arm:16s}{cum:>+8.1f}{mdd:>7.1f}{(cum/mdd if mdd>0 else 99.9):>7.2f}{len(rs):>7}'
-              f'{len(fl):>7}{100*len(fl)/len(rs):>6.1f}%{f"{S[arm][chr(112)+chr(111)+chr(115)]}/{S[arm][chr(100)+chr(97)+chr(121)+chr(115)]}":>7}{worst:>5}{pp:>8.3f}')
+              f'{len(fl):>7}{100*len(fl)/len(rs):>6.1f}%{100*wr:>6.1f}%'
+              f'{f"{S[arm][chr(112)+chr(111)+chr(115)]}/{S[arm][chr(100)+chr(97)+chr(121)+chr(115)]}":>7}{worst:>5}{pp:>8.3f}')
+        print(f'      per day $:  ' + '  '.join(f'{x} {byd.get(x, 0.0):+7.1f}' for x in allday))
     C = S.get('C_fixed15')
     full = sorted({r[0] for r in d.execute('SELECT day FROM fires')})
     fwd = [x for x in full if x > PREREG_DAY]
