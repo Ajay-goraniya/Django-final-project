@@ -514,3 +514,74 @@ What EF-2 leaves behind, which is not nothing:
 
 `learner/v12_2/ef2/ef2_model_london.json` (london44) stays exported for London's own scoring of its 654
 attempts. It is a scorer, not a config, and it arms nothing.
+
+---
+
+# After second 200 — the owner's direct question, answered twice
+
+Owner, 09-28 12:5x: *"What's the profit and accuracy in trades taken after 200 s in the candle, and what's the
+worst drawdown?"* Two independent reads, and they disagree. Both are here because the disagreement is the
+answer.
+
+```
+A. stable_ef fire set: 543 fires, 10 days, venue-graded
+
+  --- A / FIXED ---
+  cut             n   win%|  paper$1   paper$    pDD$|   LON$1     LON$  lonDD$| lose-run  days+
+  ALL           248  55.6%|   +0.089   +228.4   233.4|  -0.065    -97.5   196.5|        7   6/10
+  sec < 200     206  52.9%|   +0.021    +44.7   212.9|  -0.124   -157.2   200.3|        8   5/10
+  sec >= 180     67  65.7%|   +0.313   +217.2    56.9|  +0.154    +61.6    58.5|        4   7/10
+  sec >= 200     42  69.0%|   +0.422   +183.6    46.9|  +0.260    +65.1    39.7|        4    9/9  *n<60
+  sec >= 220     19  57.9%|   +0.210    +41.5    30.0|  +0.054     +6.3    31.5|        3    7/8  *n<60
+
+  --- A / RAW ---
+  cut             n   win%|  paper$1   paper$    pDD$|   LON$1     LON$  lonDD$| lose-run  days+
+  ALL           295  49.2%|   +0.045   +137.0   258.4|  -0.116   -210.8   271.4|        7   5/10
+  sec < 200     254  46.9%|   -0.005    -12.2   216.5|  -0.166   -260.8   298.6|        7   5/10
+  sec >= 180     70  55.7%|   +0.192   +139.5    76.0|  +0.019     +8.0    74.0|        6   8/10
+  sec >= 200     41  63.4%|   +0.350   +149.2    60.0|  +0.183    +45.3    46.3|        6    8/9  *n<60
+  sec >= 220     16  56.2%|   +0.220    +36.6    40.0|  +0.049     +4.9    32.5|        4    6/8  *n<60
+
+B. EF_FIRE_TIME decide_log baseline (fixed15, ef_persist FAK): 195 fires, 5 days
+
+  --- B / fixed15, SIM FILLS ONLY (a no-fill is not a trade) ---
+  cut          fires fills   win%    per$1   total$     DD$ lose-run  days+
+  ALL            195    82  43.9%   +0.056    +47.8    85.3        7    2/5
+  sec < 200      176    78  44.9%   +0.078    +63.2    75.3        7    2/5
+  sec >= 180      36    13  38.5%   -0.135    -18.2    43.8        4    1/4  *n<60
+  sec >= 200      19     4  25.0%   -0.372    -15.4    30.0        3    1/3  *n<60
+  sec >= 220       8     2   0.0%   -0.968    -20.0    20.0        2    0/2  *n<60
+```
+
+## They disagree, and the reason is the FILL
+
+Read A says late fires are the good ones (FIXED sec ≥ 200: 69.0% win, +0.422/$1 paper, 9 of 9 days positive).
+Read B says they are the worst (sec ≥ 200: 25.0% win, −0.372/$1).
+
+The whole gap is **whether a late fire fills**. B simulates each fire's FAK explicitly and measures the fill
+rate collapsing with the second:
+
+```
+  fires -> fills     ALL 195->82 (42%)   sec<200 176->78 (44%)   sec>=180 36->13 (36%)
+                     sec>=200 19->4 (21%)   sec>=220 8->2 (25%)
+```
+
+A's London column applies P(fill|win) 54.1% / P(fill|lose) 65.0% — **flat, with no dependence on the second
+at all**. So A prices late fires as though they fill like early ones, and B's direct measurement says they do
+not: 21% against 44%.
+
+That makes A's London figure for sec ≥ 200 optimistic by construction, and it is the column the owner would
+be trading on.
+
+## What I would say plainly
+
+The paper numbers after 200 s are good and consistent — 69% right, +0.42 per $1, nine of nine days positive,
+worst drawdown $46.9 at a $10 stake, longest losing run 4. If those fills were real it would be the best
+thing on this box.
+
+They are 42 fires, under the 60 bar, and the one read that models the fill second-by-second says only about a
+fifth of them land, and that the ones that do lose. Two samples of 42 and 4, pointing opposite ways, on a
+question that turns on a fill model neither of them measures well.
+
+The honest state: **not established either way, and the cheap thing that would settle it is London reporting
+its real fill rate for attempts after second 200** — it has the only real fills anyone has.
