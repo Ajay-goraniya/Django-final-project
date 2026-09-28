@@ -629,3 +629,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   (the 13.0.4 per-pass logger already in its build: logging only, after the fire path, no restart, no trading setting) and archives each
   UTC day outside the engine DB (engine keeps 4 days, EF-6 trains on 21). This is the owner's confirmation of THAT change only.
   Nightly training is an automatic scheduled job (ef5_nightly.py at 00:05 UTC on Zurich) - no human and no session runs it.
+- **E3 lane PARITY reached (Zurich 4ca8ecb):** the engine-format trees had been emitted with STANDARDISED split points while the lane feeds
+  raw values; de-standardised at emit (exact: max abs diff 0.0 on 400 rows). 09-27, 230k passes: 134 candles in both, **130 identical on
+  side and second**, 0 side differences, 4 second differences, 2 shadow-only, 0 lane-only (was 14/136). Residual 6 cluster in 11:25-12:45 -
+  marginal thresholds, not a rule difference. Seed files are in SECONDS. The shadow's in-candle fix landed 16:53, DB rebuilt 16:50: no
+  forward-day hour ran old code. learner/v12_2/ef6_lane.py + the nightly ef6_<day>.json now reproduce registered arm E3.
