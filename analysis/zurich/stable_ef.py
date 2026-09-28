@@ -279,8 +279,11 @@ if __name__ == '__main__':
 
     # ------------------------------------------------------------------ 4. verify.py on the arm I'd recommend
     print(f'\n{"="*140}\n4. verify.py on the arm I would put forward: RAW, top 20% by edge per day\n{"="*140}')
-    import sys as _sys
-    _sys.path.insert(0, 'analysis/h1')
+    import sys as _sys, os as _os
+    # absolute, not 'analysis/h1': this is a STANDING re-run job, and a relative path made it work only
+    # when launched from the repo root - it died with ModuleNotFoundError on the 09-28 re-run from
+    # analysis/zurich, after every table above had already been computed.
+    _sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..', 'h1'))
     import verify as V
     R = top_per_day([r for r in rows if r['arm'] == 'RAW'], 0.20)
     # grading: the venue's resolution vs the engine's own label, on the epochs where both exist
