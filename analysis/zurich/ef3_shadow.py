@@ -30,6 +30,7 @@ import sys, os, json, time, sqlite3, hashlib, collections, datetime as dt, numpy
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ef2_model import ROWS, per1, cost, be
 from ef3 import platt, pad_cost, STAKE
+from london_z import london_z_at
 
 ARCH = '/home/ubuntu/pm_archive/zurich_research_archive.sqlite3'
 LIVE = '/home/ubuntu/pm_paper_zurich/polymarket_v12_zurich_live4.sqlite3'
@@ -42,7 +43,14 @@ SEC_LO, SEC_HI, TICK, DELAY_MS = 15, 240, 0.01, 250
 DYN = (1000, 5000, 30000)
 ARMS = ('A_v0_m02_S150', 'B_raw25_S60', 'C_fixed15', 'D_ef4gb_t000', 'D2_ef4gb_q95',
         'E1_nightly_q90', 'E2_nightly_q95', 'E3_trail_1h_q90',
-        'E4_trail_1h_q90_strict', 'E5_causal_q90_strict', 'S_fixed_top20', 'S_raw_top20')
+        'E4_trail_1h_q90_strict', 'E5_causal_q90_strict', 'S_fixed_top20', 'S_raw_top20',
+        'F_z50', 'F25_z25', 'F75_z75')
+# ---- ARM F, registered 09-28 21:4x, rule frozen before its first forward row (V, after EF-14).
+# fixed15's OWN fire, skipped when |z| < 0.50 with LONDON'S EXACT z (ef14.london_z_at). F25 and F75 are
+# REFERENCE arms: logged so the sweep's shape is watched forward rather than re-picked. The backfill sweep
+# is non-monotone - +48.6 / +64.7 / +2.4 / +16.6 at .25/.50/.75/1.00 - so a forward run that keeps only the
+# cell that won the backfill would be measuring my hindsight, not the rule.
+F_CUTS = {'F_z50': 0.50, 'F25_z25': 0.25, 'F75_z75': 0.75}
 # ---- ARM S, registered 09-28 18:5x, rule written BEFORE its first forward row (V, owner's NC-12
 # "stable version", STABLE_EF.md). Take the profile's OWN fire pass in a candle and keep it only when its
 # calibrated edge sits in the top 20% of the edges of that profile's fires over the TRAILING 24 h,
@@ -290,6 +298,14 @@ def pick(rows, pA, pD=None, thr_d2=None, pE=None, thrE=None, e3thr=None, e5thr=N
     return out
 
 
+def _ref_tape():
+    """Chainlink 1 s ref for London's z. tape1s only; the RTDS oracle capture will replace it once the
+    TWAP60 topic is known and a match check has been run."""
+    c = sqlite3.connect(f'file:{LIVE}?mode=ro', uri=True)
+    return {int(t): float(p) for t, p in
+            c.execute('SELECT ts, ref_px FROM tape1s WHERE ref_px IS NOT NULL')}
+
+
 def _edge_fixed(p, a): return platt(p) - be(a)
 
 
@@ -317,9 +333,10 @@ def db():
 
 
 def run_once():
-    global ALL52, STRICT
+    global ALL52, STRICT, REF
     M = freeze_model(); MD = load_D()
     ALL52 = [str(x) for x in np.load(ROWS, allow_pickle=True)['names']]
+    REF = _ref_tape()
     STRICT = json.load(open(STRICT_F)) if os.path.exists(STRICT_F) else {}
     d = db()
     done = {e for (e,) in d.execute('SELECT epoch FROM seen')}
@@ -410,6 +427,15 @@ def run_once():
             if len(hist) >= S_MIN and e0 >= float(np.quantile(np.asarray(hist), S_Q)):
                 sel[arm] = (r0, p0)
             d.execute('INSERT INTO sedges VALUES(?,?,?)', (r0['ts'], prof, float(e0)))
+        # ---- arm F: fixed15's own fire, kept only when |London z| clears the cut ----
+        cF = sel.get('C_fixed15')
+        if cF is not None:
+            r0, p0 = cF
+            zt = london_z_at(REF, ep, int(r0['ts'] // 1000))
+            if zt is not None:
+                zz = zt if r0['up'] else -zt          # sign to the side being bought
+                for arm, cut in F_CUTS.items():
+                    if abs(zz) >= cut: sel[arm] = (r0, p0)
         sel.pop('_RAW0', None)
         for arm, (r, p) in sel.items():
             q = r['q']

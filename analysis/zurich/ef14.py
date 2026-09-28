@@ -20,10 +20,11 @@ from ef2_model import per1, cost, be
 from ef3 import platt, pad_cost, STAKE
 from ef10 import build as build_rows
 from ef12 import segs, cell, show
+from london_z import london_z_at, S2 as _S2
 
 LIVE = '/home/ubuntu/pm_paper_zurich/polymarket_v12_zurich_live4.sqlite3'
 CUTS = (0.25, 0.50, 0.75, 1.00)
-S2 = int(sum(min(i, j) for i in range(60) for j in range(60)))
+S2 = _S2   # single definition lives in london_z.py
 CACHE = '/home/ubuntu/pm_ef3/ef14_z.npz'
 
 
