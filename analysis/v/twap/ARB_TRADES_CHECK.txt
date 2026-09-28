@@ -1,0 +1,23 @@
+binance 1 s closes: 82835
+windows scanned 91 (no market 0, no line 0)
+windows with a TRADED pair cost < 1 (both legs bought by takers within 3s): 19 of 91; of those with lines < $5 apart: 6
+payoff of the dominance pair on gamma, all windows: {1: 68, 2: 23}  (0 would break the structure)
+  09-27 11:45 gap    -0.73  cost 0.2337 at sec 203 (15m 0.100 + 5m 0.120)  trades 15m/5m 434/752  pay 1
+  09-27 07:00 gap   +11.65  cost 0.7214 at sec 179 (15m 0.390 + 5m 0.300)  trades 15m/5m 531/785  pay 2
+  09-27 06:45 gap    +5.68  cost 0.7566 at sec 233 (15m 0.160 + 5m 0.570)  trades 15m/5m 716/778  pay 1
+  09-27 08:15 gap   -21.84  cost 0.7595 at sec 246 (15m 0.220 + 5m 0.510)  trades 15m/5m 655/898  pay 1
+  09-27 21:15 gap    -7.21  cost 0.7703 at sec  44 (15m 0.240 + 5m 0.500)  trades 15m/5m 165/236  pay 1
+  09-27 14:00 gap   -12.83  cost 0.8109 at sec  53 (15m 0.520 + 5m 0.260)  trades 15m/5m 140/454  pay 1
+  09-27 03:30 gap   +24.38  cost 0.8136 at sec 170 (15m 0.660 + 5m 0.130)  trades 15m/5m 171/464  pay 1
+  09-27 18:30 gap    +1.77  cost 0.8953 at sec 141 (15m 0.810 + 5m 0.070)  trades 15m/5m 757/410  pay 1
+  09-27 09:15 gap   -15.93  cost 0.9044 at sec 200 (15m 0.430 + 5m 0.440)  trades 15m/5m 1017/874  pay 1
+  09-28 01:00 gap    -2.45  cost 0.9079 at sec 138 (15m 0.790 + 5m 0.100)  trades 15m/5m 208/316  pay 1
+  09-27 23:30 gap    +2.77  cost 0.9145 at sec  30 (15m 0.450 + 5m 0.430)  trades 15m/5m 73/484  pay 1
+  09-27 20:30 gap   -12.32  cost 0.9306 at sec   5 (15m 0.620 + 5m 0.280)  trades 15m/5m 218/629  pay 1
+  09-27 18:45 gap   -18.74  cost 0.9399 at sec   5 (15m 0.270 + 5m 0.640)  trades 15m/5m 468/1160  pay 1
+  09-27 18:00 gap    +0.94  cost 0.9399 at sec  33 (15m 0.640 + 5m 0.270)  trades 15m/5m 366/368  pay 1
+  09-28 01:45 gap   -36.21  cost 0.9447 at sec 140 (15m 0.460 + 5m 0.450)  trades 15m/5m 214/536  pay 1
+  09-27 10:00 gap   +47.52  cost 0.9497 at sec  80 (15m 0.650 + 5m 0.270)  trades 15m/5m 901/943  pay 1
+  09-27 19:15 gap   -38.81  cost 0.9559 at sec 126 (15m 0.930 + 5m 0.020)  trades 15m/5m 376/318  pay 1
+  09-27 11:15 gap    -4.60  cost 0.9832 at sec 194 (15m 0.153 + 5m 0.810)  trades 15m/5m 185/496  pay 1
+  09-27 20:00 gap   +31.89  cost 0.9992 at sec 245 (15m 0.998 + 5m 0.001)  trades 15m/5m 41/131  pay 1

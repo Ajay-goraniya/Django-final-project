@@ -302,3 +302,12 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
   n53, under 60). The per$1 grid is non-monotone (profit sits in 25-50 ms); it is not an activity or sec-in-candle artefact. Age is traced to poly_core.BookCache.quote.
 - **Drafts on the branch, OFF by default, NOT deployed:** dd774e9 poly_veto (meta ef_veto) and e6ccd97 fresh-book send (ev_settings.fire_book_age_ms:
   price an attempt only on our token's book no older than the limit; wait inside the budget; can never loosen quote_age). All suites pass.
+- **EF persistence (wait K passes): DEAD** (analysis/zurich/EF_PERSIST.md). Waiting doubles fills and destroys the edge (raw25 K1 +0.071, K2 -0.137).
+  The fills are ADVERSELY SELECTED by 10-29 pp (filled win 43.8% vs unfilled 54.8% at K1): makers leave the quote when content to sell us the loser.
+  On this book, raising the fill rate raises it on the losers. That closes the EF execution side.
+- **NEW STRUCTURAL LEAD - the 5m/15m dominance pair (TWAP rule, model-free):** the 15m market and the LAST 5m candle inside it settle on the SAME closing TWAP60.
+  If L15 < L5, 15m UP + 5m DOWN pays 1 or 2, never 0; mirror if L15 > L5. Zurich books (analysis/zurich/ARB_5M_15M.md, 22.8 h): cost incl. fees < 1 on
+  25/81 windows, median best cost 0.956 (4.4c/pair), p10 0.732; 0 zero-payoffs in 725 cells; both books tight (+1c). PUBLIC-TRADE cross-check (V,
+  analysis/v/twap/ARB_TRADES_CHECK.txt, independent source): takers actually bought both legs within 3 s at cost < 1 in 19/91 windows (13 with lines
+  >= $5 apart); dominance-pair payoff on gamma across all 91 windows {1: 68, 2: 23}, never 0. OPEN: simultaneous-fill (legging) risk - a ms probe of
+  both books runs on Zurich until 06:45 UTC (ARB_LEGGING_MS.md) - plus the 5m leg's size, and more days.
