@@ -40,7 +40,9 @@ MODEL = '/home/ubuntu/pm_ef3/ef3_model_A.json'
 MODEL_D = '/home/ubuntu/pm_ef3/ef4_model_D.json'
 SEC_LO, SEC_HI, TICK, DELAY_MS = 15, 240, 0.01, 250
 DYN = (1000, 5000, 30000)
-ARMS = ('A_v0_m02_S150', 'B_raw25_S60', 'C_fixed15', 'D_ef4gb_t000', 'D2_ef4gb_q95')
+ARMS = ('A_v0_m02_S150', 'B_raw25_S60', 'C_fixed15', 'D_ef4gb_t000', 'D2_ef4gb_q95',
+        'E1_nightly_q90', 'E2_nightly_q95')
+EDIR = '/home/ubuntu/pm_ef3'      # arm E: one model per day, written by ef5_nightly.py at 00:05 UTC
 Q_D2 = 0.95      # D2 = the SAME frozen model as D, only the threshold rule differs (EF-5, V 09-28 15:5x)
 ALL52 = None            # set in run_once from the frozen row table's name list
 
@@ -93,6 +95,31 @@ def load_D():
 
 def score_D(X, M):
     """X must be the 52-wide row; the level columns are dropped to match the frozen 46."""
+    idx = [ALL52.index(n) for n in M['names']]
+    Z = (X[:, idx] - np.array(M['mean'])) / np.array(M['sd'])
+    F = np.full(len(Z), M['base'])
+    for j, thr, vl, vr in M['trees']:
+        F += np.where(Z[:, int(j)] <= thr, vl, vr)
+    return F
+
+
+def load_E(day):
+    """Arm E, pre-registered by V 09-28 16:1x. Tonight's model scores today only - a day with no model
+    file simply does not fire, which is what every day before the first nightly run should do."""
+    p = f'{EDIR}/ef5_model_{day}.json'
+    if not p or not os.path.exists(p): return None
+    M = json.load(open(p))
+    body = {k: M[k] for k in M if k not in ('sha256', 'fitted_at')}
+    h = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()
+    if h != M['sha256']:
+        raise SystemExit(f'REFUSING TO RUN: {p} changed after it was written ({M["sha256"][:16]} -> '
+                         f'{h[:16]}). A nightly model must not be edited once the day has started.')
+    if M['for_day'] != day:
+        raise SystemExit(f'{p} says for_day={M["for_day"]} but was loaded for {day}')
+    return M
+
+
+def score_E(X, M):
     idx = [ALL52.index(n) for n in M['names']]
     Z = (X[:, idx] - np.array(M['mean'])) / np.array(M['sd'])
     F = np.full(len(Z), M['base'])
@@ -198,7 +225,7 @@ def score_A(X, M):
     return 1.0 / (1.0 + np.exp(-np.clip(z, -30, 30)))
 
 
-def pick(rows, pA, pD=None, thr_d2=None):
+def pick(rows, pA, pD=None, thr_d2=None, pE=None, thrE=None):
     """The three arms, each taking its FIRST qualifying row in the candle. One fire per candle, max."""
     out = {}
     for i, r in enumerate(rows):
@@ -216,6 +243,10 @@ def pick(rows, pA, pD=None, thr_d2=None):
         if pD is not None and thr_d2 is not None and 'D2_ef4gb_q95' not in out \
                 and r['pe'] >= 0.5 and pD[i] >= thr_d2:
             out['D2_ef4gb_q95'] = (r, r['pe'])
+        if pE is not None and r['pe'] >= 0.5:
+            for arm, key in (('E1_nightly_q90', 'q90'), ('E2_nightly_q95', 'q95')):
+                if arm not in out and pE[i] >= thrE[key]:
+                    out[arm] = (r, r['pe'])
     return out
 
 
@@ -246,7 +277,7 @@ def run_once():
     # forever and silently lose it. One hour of lookback costs nothing and makes the skip recoverable.
     cand, vo, nk = load_candles(min_epoch=(hi - 3600 if hi else None))
     todo = [e for e in cand if e not in done]
-    n = 0; qcache = {}
+    n = 0; qcache = {}; ecache = {}
     for ep in sorted(todo):
         rows = build_rows(cand[ep], ep, vo[ep], nk)
         if not rows: 
@@ -264,7 +295,11 @@ def run_once():
                 qcache[prev] = float(np.quantile(v, Q_D2)) if len(v) >= 1000 else None
             thr_d2 = qcache[prev]
         else: thr_d2 = None
-        for arm, (r, p) in pick(rows, pA, pD, thr_d2).items():
+        if day not in ecache: ecache[day] = load_E(day)
+        ME = ecache[day]
+        pE = score_E(X, ME) if ME is not None else None
+        thrE = ME['thr'] if ME is not None else None
+        for arm, (r, p) in pick(rows, pA, pD, thr_d2, pE, thrE).items():
             q = r['q']
             pnl = STAKE * per1(r['win'], q) if q == q else 0.0
             d.execute('INSERT OR REPLACE INTO fires VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',

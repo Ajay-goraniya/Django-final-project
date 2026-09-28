@@ -27,6 +27,7 @@ from ef3 import FITS, platt, pad_cost, STAKE, MIN_CELL
 from ef4 import gb_reg, gb_reg_pred, LEVEL
 
 QS = (0.70, 0.80, 0.90, 0.95)
+DETAIL = set()   # cells to expand, set per mode in __main__
 S0S = (0, 60)
 CACHE = '/home/ubuntu/pm_ef3/ef5_preds.npz'
 
@@ -60,6 +61,8 @@ def score(sel, nd):
             else: acc.append(c)
         if acc: sims.append(W(acc))
     return dict(tot=tot, mdd=mdd, ratio=(tot / mdd if mdd > 0 else 99.9), n=len(sel), nf=len(fl),
+                byd=dict(byd), win=float(np.mean([c['win'] for c in fl])),
+                nbyd={k: sum(1 for c in fl if c['day'] == k) for k in byd},
                 fill=len(fl) / len(sel), fpd=len(sel) / max(nd, 1),
                 pos=sum(1 for v in byd.values() if v > 0), days=len(byd), run=worst,
                 rest=sum(o[2:]), per1=W(fl), h1=W(fl[:h]), h2=W(fl[h:]),
@@ -74,6 +77,13 @@ def line(lab, sel, nd):
           f'{100*s["fill"]:>6.1f}%{f"{s[chr(112)+chr(111)+chr(115)]}/{s[chr(100)+chr(97)+chr(121)+chr(115)]}":>7}'
           f'{s["run"]:>5}{s["rest"]:>+9.1f}|{s["per1"]:>+8.3f}{s["h1"]:>+8.3f}{s["h2"]:>+8.3f}{s["perm"]:>7.3f}'
           + ('  *n<60' if s['nf'] < MIN_CELL else ''))
+    if DETAIL and lab in DETAIL:
+        dd = sorted(s['byd'])
+        print(f'      per day $:     ' + '  '.join(f'{k} {s["byd"][k]:+7.1f}' for k in dd))
+        print(f'      per day fills: ' + '  '.join(f'{k} {s["nbyd"][k]:7d}' for k in dd))
+        print(f'      fires {s["n"]}  fills {s["nf"]}  fill% {100*s["fill"]:.1f}  win% {100*s["win"]:.1f}  '
+              f'per$1 {s["per1"]:+.3f}  H1 {s["h1"]:+.3f}  H2 {s["h2"]:+.3f}  run {s["run"]}  '
+              f'flip p {s["perm"]:.3f}')
     return s
 
 
@@ -158,6 +168,7 @@ if __name__ == '__main__':
                 v = v[np.isfinite(v)]
                 if len(v): thr[dcur] = float(np.quantile(v, qq))
             pred = pfr if mode.startswith('FROZEN') else pwf
+            globals()['DETAIL'] = ({'q=0.90 S0=0', 'q=0.95 S0=0'} if mode.startswith('CAUSAL') else set())
             for S0 in S0S:
                 line(f'q={qq:.2f} S0={S0}', fire(build(pred, thr), S0), nd)
             print('  ' + '-' * 128)
