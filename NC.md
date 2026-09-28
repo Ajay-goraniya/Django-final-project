@@ -392,3 +392,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   monotonically as the threshold tightens (49.9 -> 35.7%); sweep peaks at the chosen value; positive 2 of 6 days; fire rate tracks the
   day's mean basis (42% one day, 1% another). Mechanism: a LEVEL condition on a drifting offset selects DAYS, not moments. De-meaned
   it fires 6 times in 135 h. Mirror fires twice. Consistent with London's 10 real fills at -0.30. Nothing for verify.py. Shadow stopped.
+- **V independent read, 7 days public data (2,304 candles, 09-20..27, walk-forward, venue labels, priced at what takers PAID within 3 s):
+  spot-only AUC 0.650/0.676/0.702/0.723 at S=20/30/45/60 vs the venue's traded price 0.670/0.698/0.724/0.742 - loses at every second, same
+  as Zurich's 5 days. 64 disagreement cells: every n>=60 cell is ~0 or negative except S30 P.60 ask<=.55 +0.092 (n102, perm 0.03, halves
+  +0.12/+0.03) and S60 P.60 ask<=.55 +0.069 (n158, perm 0.03, halves +0.15/-0.00): one-in-64 chance cells, 0.6-0.7 fires/candle... no.
+  Null (buy the venue favourite) -0.03..-0.05. Spot-only early model CLOSED on two independent datasets. (analysis/v/early/EARLY_SPOT_SIGNAL.txt)
