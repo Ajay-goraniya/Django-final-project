@@ -147,3 +147,12 @@ recorder btc15 book vs the independent probe
 - `arb_legging_ms.py` — the merged two-leg event walk and the +250 ms fill test
 - `pair_bot_report.py` — pair_bot's paper record and the three-way comparison
 - `arb_windows.csv` — 10 windows, gated
+
+## Where the raw probe data is
+
+`/home/ubuntu/pm_probe2/arb_ms.sqlite3.gz` — 7.28 GB of sqlite compressed to **597 MB** (12.2:1), `gzip -t`
+verified, and `PRAGMA integrity_check` was `ok` before compressing. It still holds everything: `top`
+(27,452,896 rows), `trades` (81,222, not yet used by any analysis), `markets`, `resolutions`, `health`.
+
+To re-analyse: `gunzip -k arb_ms.sqlite3.gz` — but check disk first, it expands back to 7.3 GB on a 30 GB
+volume the engine shares.
