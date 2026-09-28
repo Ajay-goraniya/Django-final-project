@@ -111,19 +111,22 @@ def build_rows(rs, ep, out, keys_n):
     return R
 
 
-def load_candles(eps=None):
+def load_candles(eps=None, min_epoch=None):
     a = sqlite3.connect(f'file:{LIVE}?mode=ro', uri=True)
     keys = json.loads(a.execute("SELECT v FROM meta WHERE k='decide_log_features'").fetchone()[0])
     nk = len(keys)
     vo = outcomes()
     cand = collections.defaultdict(list)
+    seen_ts = collections.defaultdict(set)
     for src in (ARCH, LIVE):
         try: c = sqlite3.connect(f'file:{src}?mode=ro', uri=True)
         except Exception: continue
-        try:
-            cur = c.execute('SELECT ts_ms,epoch,side,p,ask,up_ask,dn_ask,fire,feats FROM decide_log '
-                            'WHERE p IS NOT NULL AND side IS NOT NULL AND up_ask IS NOT NULL '
-                            'AND dn_ask IS NOT NULL ORDER BY ts_ms')
+        q = ('SELECT ts_ms,epoch,side,p,ask,up_ask,dn_ask,fire,feats FROM decide_log '
+             'WHERE p IS NOT NULL AND side IS NOT NULL AND up_ask IS NOT NULL AND dn_ask IS NOT NULL')
+        args = ()
+        if min_epoch is not None:            # incremental: only candles we have not already scored
+            q += ' AND epoch > ?'; args = (min_epoch,)
+        try: cur = c.execute(q + ' ORDER BY ts_ms', args)
         except Exception: continue
         for ts, ep, side, p, ask, ua, da, fire, fs in cur:
             if ep not in vo: continue
@@ -137,8 +140,11 @@ def load_candles(eps=None):
                     if len(raw) == nk: v = raw
                 except Exception: pass
             if v is None: continue
-            row = (ts, side, float(p), float(ua), float(da), int(fire or 0), v)
-            if row not in cand[ep]: cand[ep].append(row)
+            # dedup on ts alone: ARCH and LIVE overlap, and a pass is uniquely identified by its
+            # millisecond. `row not in cand[ep]` was O(n^2) on ~1500 rows a candle and dominated runtime.
+            if ts in seen_ts[ep]: continue
+            seen_ts[ep].add(ts)
+            cand[ep].append((ts, side, float(p), float(ua), float(da), int(fire or 0), v))
     return cand, vo, nk
 
 
@@ -179,7 +185,12 @@ def run_once():
     M = freeze_model()
     d = db()
     done = {e for (e,) in d.execute('SELECT epoch FROM seen')}
-    cand, vo, nk = load_candles()
+    hi = d.execute('SELECT max(epoch) FROM seen').fetchone()[0]
+    # A candle is only scorable once it has resolved, so the high-water mark lets us skip the bulk of the
+    # log. But `seen` only records RESOLVED candles, and a straggler can resolve after a later one does -
+    # a transient gap in one gamma mirror is enough. A bare `epoch > hi` would then skip that candle
+    # forever and silently lose it. One hour of lookback costs nothing and makes the skip recoverable.
+    cand, vo, nk = load_candles(min_epoch=(hi - 3600 if hi else None))
     todo = [e for e in cand if e not in done]
     n = 0
     for ep in sorted(todo):
