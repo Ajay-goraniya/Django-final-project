@@ -755,3 +755,11 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   rules as before; EF9V1_SEQ_V.txt): LOSES.** E4 phys -$57.7 (2/4 days), E5 phys -$66.6 (2/4), unpinned -$179/-$464; all -$199..-$907
   at +1c. Flow helps vs the no-flow GRU (-$248 -> -$58) but does not turn it positive. Caveats: 1 s fill model (harsher than +250 ms),
   pin = TWAP z (no engine p_side). Zurich running the same on its 6 days of tape1s.
+- **EF-10 raw PARAMETER grid (Zurich 0c54181, owner's "parameter adjustment", 1,944 cells, EF10_grid.csv, 5 days per-pass FAK):** raw
+  today +$107.3 / DD 98.4 / 65/day / fill 42% / 2 of 5 days. Cells: median +$60.6, 27% beat raw on $, only 70 of 727 at raw's frequency.
+  WALK-FORWARD selection (best on days < D, frequency floor): +$37.8 / DD 27.1 / 2 of 4 vs raw +$58.0 / DD 71.1 / 1 of 4 on the same
+  days; +1c: tuned -$22.5 vs raw +$27.9. The chosen cell changes every day. Verdict: raw's current settings are not improvable on this
+  evidence and are the most cost-robust. Closed.
+- London 20:33 (for the record): healthy; 4 RECONCILE_STUCK this hour, all 'OpenOrder response did not match expected shape' on rejected
+  attempt-1s, all resolved (possible venue API shape change - watch). ~+$19.4 of cash inflow beyond the engine's pnl on 3 wins
+  (venue_pnl > payout - spent - fee), unexplained; not a known deposit. London changed nothing. To check: rebates/rewards credit timing.
