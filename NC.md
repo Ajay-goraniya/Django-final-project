@@ -608,3 +608,11 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   FREQUENCY IS UNSTABLE: 4 fills one day, 188 the next; 74% of the money is 09-27. Yesterday's quantile is a VALUE and the day's score
   distribution shifts, so the same q lands at a different rank. Arm E1/E2 registered as briefed (21-day training cap for box safety - OK).
   Next: a causal AND rate-stable cut - trailing-window quantile (last 1 / 3 / 6 h of candidate scores), briefed as E3 candidates.
+- **EF-6 trailing-window quantile (Zurich b0018e1): the rate-stability problem is SOLVED.** Cells ($ / DD / fires-day / fill / days+ / flip p):
+  W1h q.90 +222.1 / 72.6 / 126 / 93.1% / 3of4 / 0.037 | W3h q.80 +267.4 / 99.7 / 147 / 93.0% / 4of4 / 0.007 | W3h q.90 +213.4 / 92.8 / 116 /
+  91.1% / 0.000 | W6h q.80 +161.2 / 85.8 / 129 / 92.1% / 4of4 / 0.027 | C +16.3 / 85.3 / 37 / 43.6% / 1of4 / 0.527. Daily-fills CV on the
+  3 full days 0.13-0.31 (C 0.48, arm E 0.94). W1h q.90 passes $, DD and CV and misses V's best-day-share bar at 52% vs <50%.
+  **V decision 16:3x, stated before any forward day and recorded as a CHANGE:** the <50% best-day share was an ENTRY bar for a paper
+  shadow and it is ill-posed on 3 days (floor 33%, unbounded when totals are small). V relaxes the ENTRY bar - not the forward decision
+  rule - and registers W1h q.90 as E3, marked "entered on a relaxed entry bar". The forward decision rule (NC-19: $ > C, DD <= C, >= 2/3
+  days, fill >= C, flip p < 0.05 after >= 3 full forward days) is unchanged and applies to E3 exactly as to every arm.
