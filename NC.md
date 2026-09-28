@@ -448,3 +448,11 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   (corr 0.147 vs 0.139 at k=1; 0.072 vs 0.018 at k=2) - and that hair is worth nothing at candle horizons: adding Coinbase features to the
   Binance-only model changes AUC by +0.005 / 0.000 / -0.006 / -0.005 at S=20/30/45/60; Coinbase-lead alone AUC 0.49-0.51; the venue price
   still beats both. No information the price lacks. (analysis/v/early/COINBASE_LEAD.txt)
+- **EF-2 rung v1 (HistGB, Zurich 11:50): worse than v0 on everything** - AUC 0.839 vs 0.861, worse than p_side alone; best margin +0.002/$1,
+  loses to fixed15 on both profit measures; execution 94% fill but slippage -0.16c. Trees are worse than linear here; capacity is not the limit.
+  **Correction (Zurich withdraws its v0 point 7):** permutation importance says ask dynamics contribute NOTHING (block -0.0008; move -0.0003);
+  the price +0.097 and the engine's p +0.053 carry the model. EF-2 does not lean on the record of being picked off.
+  **London final-test blocker found before it bit:** imputing the 8 features London lacks keeps AUC (0.861 -> 0.857) but inverts the DECISION
+  (win 65.9% -> 32.5%, per$1 +0.016 -> -0.076): 34% of coefficient mass in ref_open/ref_now/_price/bn_line_*/opp_ask - ranking transfers,
+  level does not (the ETH_SOL_DIAG failure via imputation). Fix: refit on London's 44 keys ('london44'); London told to HOLD until then.
+  v2 (ms ask dynamics) cancelled - nothing for it to find. 15m test next.
