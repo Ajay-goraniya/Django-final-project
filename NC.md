@@ -845,3 +845,7 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   unchanged 1 s later 51.7%). First candidate today to pass verify.py on independent data from a second box. Forward arm FAV briefed.
 - **OPERATIONAL: Zurich's gamma outcome mirror /tmp/poly froze 09-28 01:42 - the forward shadow has scored NOTHING since the 01:30 candle
   (all arms incl. F).** V authorised Zurich to fix it (read gamma directly) and backfill the missed rows.
+- **FAV improvements (V, pre-registered, 09-13..16; FAV_IMPROVE.txt):** base low-vol +$149.2 / DD 68.6 / 4 of 4 | + z>=0 +145.0 / 62.6 /
+  4 of 4 (the favourite already agrees with the TWAP) | + z>=0.5 +121.6 / 2 of 4 | + m60 0..5 bp +89.6 | both +69.1 | all-vol + z>=0.5
+  +118.6 / DD 136.5 | all-vol + z & m60 -2.6. Nothing beats the plain rule; FAV stays as registered. The remaining lever is execution
+  (entry price / fills), measurable only in the paper test and live.
