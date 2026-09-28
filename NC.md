@@ -810,3 +810,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   reference arms F25/F75; 15 arms. Backfill (in-sample, not the decision): F_z50 +$65.6 / DD 66.9 / 57 fills / 2 of 5; F25 +38.6; F75
   +21.0. London's z now has ONE implementation (london_z.py) shared by shadow and backtest. Zurich records the Chainlink oracle feed via
   RTDS (IPv4 forced); the exact TWAP60 is on PolyBolt and needs CLOB credentials - London recorder awaits the owner's yes.
+- **Zurich traded LIVE 19:40-20:12 UTC (reported by Zurich 21:41, found on a health check):** 11 EF orders lane LIVE, 3 filled ($5
+  each, all won), net +$19.41; master OFF before and after; no audit row names who armed it; Zurich touched nothing. The +$19.41 matches
+  London's +$19.42 inflow on the SAME wallet, which the owner claimed as his (20:5x) - so most likely the owner armed Zurich himself.
+  Asked the owner to confirm. Zurich told to change nothing, leave master false, exclude the 11 LIVE rows from all paper/shadow tables.
+  NOTE: Zurich and London trade from ONE wallet - any Zurich live fill moves London's cash/equity.
