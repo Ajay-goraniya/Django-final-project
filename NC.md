@@ -411,3 +411,7 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   sim so it learns that filled dips lose), inputs = the 44 engine features + own ask + ask dynamics (1/5/30 s change, the selected-dip
   detector) + sec. Decision = EV at the price we would pay > 0, nothing else. Walk-forward by day on Zurich; FINAL test on London's real
   attempts (fills AND rejects, venue outcomes). It ships nowhere without the owner's confirmation of that specific model.
+- **CORRECTION 11:1x (V's misread, owner's words: "Who told you to touch london?").** "Number 2" was NOT a pause order. The rule: recreate EF
+  and test it ON ZURICH; London keeps running fixed15 UNTOUCHED until a version BEATS FIXED IN PROFIT AND EXECUTION on Zurich - only then
+  does London stop. Pause order cancelled to London 11:13 (EF back ON if it was switched). EF-2 acceptance bar = beats fixed15 on the same
+  days on per$1 AND on execution (fill rate, slippage, rejects) in Zurich shadow, verify.py passed, then the owner's confirmation.
