@@ -676,3 +676,7 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   decision): E4 +20.2 / DD 54.1 / 323 fires / 92.3% fill / 3 of 4 / flip p 0.147; E5 +125.3 / DD 76.0 / 288 / 89.9% / 3 of 4 / flip p 0.020.
   Retired tie versions of the same cells: E3 +162.6, E1 +140.3. ef5_nightly now emits thr_strict. London asked (17:46) to replay E5
   walk-forward per day (ef6_D.json, strict q.90 of D-1 under D's model) on 09-25..28 vs real fixed15.
+- **E5 on London (17:48, day-D model, one strict q.90 cut from D-1 rows, diag ask, no fill model, $10, 09-25..28): FAILS.** n430, win 68%,
+  -$140.3, DD $229.6, 1/4 days (25 +23.4 n97 | 26 -4.7 n5 | 27 -36.9 n196 | 28 -122.0 n132). Control real fixed15: n122, 43%, -$97.5, DD $156.0,
+  1/4. Cuts 0.407 / 0.135 / -0.041 / 0.011: the scale drifts between the D-1 and D models, fires swing 5 -> 196 a day. Both EF-5/EF-6 cut rules
+  now fail on London's own data. The Zurich-trained stump family does not transfer; it stays in the forward shadow only as registered.
