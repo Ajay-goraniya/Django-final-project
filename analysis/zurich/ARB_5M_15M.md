@@ -96,3 +96,87 @@ position.
 5. What would make this decidable: several more days of the 15m recorder, per-level sizes on **both** legs,
    and a ms-resolution capture of the two books simultaneously — the probe already does BTC 5m and could be
    pointed at both.
+
+---
+
+# CORRECTION, 2026-09-28 05:3x — the riskless-second counts above are inflated by a stale 15m book
+
+Found while exporting `arb_windows.csv` for V. **The numbers in the sections above should not be used.** The
+structural conclusion (payoff is 1 or 2, never 0; only the `cost < 1` test is sound) stands; the *frequency*
+does not.
+
+## What was wrong
+
+The scan read the recorder's btc15 top-of-book without checking `up_snap_age_s` / `dn_snap_age_s`, which the
+recorder stores precisely so that this can be checked: a `price_change` delta does not resync the book, so
+snapshot age is the only measure of drift. The minimum pair cost reported above, **0.3873**, is a single
+frozen quote. Traced second by second (window 09-27 06:45):
+
+```
+ sec  a15(UP)  snap_age   a5(DOWN)    cost
+  25    0.350       0.2      0.780   1.1579
+  50    0.350      11.1      0.800   1.1771
+ 125    0.350      86.2      0.950   1.3193
+ 250    0.350     211.1      0.260   0.6394
+ 289    0.350     250.2      0.020   0.3873   <- 15m ask unchanged for 250 s while the 5m went 0.78 -> 0.02
+```
+
+The 15m UP ask never moved for the last four minutes of the candle. It was not a quote, it was a memory.
+
+## How stale is stale — measured against an independent witness
+
+The dual-market ms probe (`/home/ubuntu/pm_probe2`) holds its own WS subscription to the same btc15 tokens,
+so it is an independent read of the same book. Over **20,205** shared seconds, recorder vs probe:
+
+| recorder snap age | n | mean abs diff | >= 1c | >= 5c | p90 |
+|---|---|---|---|---|---|
+| <= 3 s | 13,569 | **0.71c** | 38.5% | 2.0% | 2c |
+| 3–15 s | 3,974 | **0.79c** | 34.1% | 3.2% | 3c |
+| 15–60 s | 971 | **8.81c** | 56.6% | 34.2% | 24c |
+| > 60 s | 1,691 | **15.62c** | 57.1% | 37.5% | 53c |
+
+Usable to ~15 s, unusable past it. And the recorder was routinely past 60 s in exactly the window this scan
+uses — the last 5 minutes of the 15m candle. Mean btc15 snap age by candle minute:
+
+```
+min  0-10: 1.9 2.3 2.3 2.3 2.7 2.7 4.1 2.8 3.5 4.2 4.9 s
+min 11-14: 15.3  41.2  76.1  125.5 s      <- the last-5m sub-window is minutes 10-15
+```
+
+**Cause, and it is a recorder bug of mine.** `resync_loop` refetched REST `/book` every 45 s for tokens of
+"live" candles, but tested `ep >= now // 300 * 300` — a 5-minute boundary. A 15-minute candle stops passing
+that test 5 minutes after it opens, so btc15 tokens were dropped from the resync for the whole second half of
+every candle. Fixed in `recorder.py` to `ep + MARKETS[m]['step'] > now`; recorder restarted 05:31:01 by the
+cron keep-alive. ETH and SOL were never affected (step 300, max snap age 52–62 s across the whole sample).
+
+**The engine's 5m leg is NOT affected.** `tape1s.up_ask`/`dn_ask` against the same probe over 16,387 shared
+second-sides: exact match 66.6%, mean **0.79c**, >= 5c on **3.0%**, and flat across candle minutes 0–3 (0.64,
+0.67, 0.68, 0.72c). The engine's book is fine; only my recorder's 15m leg was stale.
+
+## The corrected frequency
+
+Same code, same data, 105 windows with a btc15 book, gate = 15 s snapshot age on the 15m leg:
+
+| | windows | best cost in window |
+|---|---|---|
+| ungated (what the sections above did) | **27 of 105** | down to 0.3873 |
+| snap age <= 15 s | **10 of 105** | best 0.8010, p50 0.9774 |
+| and \|L15 − L5\| >= $5 | **5 of 105** | 0.9524 – 0.9934 |
+
+732 individual riskless seconds were dropped as stale. So the gate removes **63%** of the windows and most of
+the apparent size of the edge.
+
+The second filter is from the 09-28 `arb_trades_check` result (`analysis/v/twap/`): the single 0-payoff window
+in 763 had a line gap of $2.33, so the *sign* of L15 − L5 — which decides which two legs you buy — is not
+reliable inside the reference's own resolution. Five of the ten fresh windows are inside that band.
+
+What is left, per window: **1 to 9 riskless seconds** out of 300, costs 0.9638–0.9996 at first sight and
+0.9524–0.9934 at the best second, 15m touch size 43–997 shares. Every graded one paid 1. That is a real but
+**4c-or-less** edge on a handful of seconds a day, on one leg's touch size — before any legging risk, which
+EF_PERSIST-style fill behaviour says is the binding constraint.
+
+Cross-check with V's `pair_bot.py` running in paper on this box: its one detected pair, `T=1790570700 sec=106
+15m DOWN @0.640 + 5m UP @0.310 cost 0.9811`, is window 04:45 in `arb_windows.csv` — same legs, same window,
+and my scan has it riskless at sec 1 with best cost 0.9524. Two independent implementations agree.
+
+Files: `arb_windows_csv.py` (gated exporter), `arb_windows.csv` (10 rows, with `age15` and `gap` columns).

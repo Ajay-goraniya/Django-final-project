@@ -177,7 +177,12 @@ async def resync_loop(db):
         await asyncio.sleep(45)
         try:
             now = int(time.time())
-            live = {t for (ep, m), (u, d) in toks.items() if ep >= now // 300 * 300 for t in (u, d)}
+            # Each market's candle is live until ep + ITS OWN step. The old test (ep >= now//300*300)
+            # dropped btc15 tokens 5 minutes into a 15-minute candle, so they went un-resynced for the
+            # whole second half: measured against an independent probe, snapshot age past 15 s costs
+            # 8.8c of mean top-of-book error and past 60 s costs 15.6c (arb_windows.csv header).
+            live = {t for (ep, m), (u, d) in toks.items()
+                    if ep + MARKETS[m]['step'] > now for t in (u, d)}
             for tk in sorted(live):
                 try:
                     d = await asyncio.to_thread(get_json, BOOK.format(tk), 10)
