@@ -321,6 +321,15 @@ def run_once():
                 prior += [(int(a), float(b)) for a, b in d.execute(
                     'SELECT ts_ms, pr FROM epreds WHERE day=? ORDER BY ts_ms', (day,))]
                 e3buf[day] = sorted(prior)
+            # add THIS candle's rows before scoring it. A threshold at grid edge E still only uses rows
+            # with ts < E, so same-candle rows earlier than E are legitimately in the window and rows at
+            # or after E are excluded - no lookahead. Appending after the candle (the first version of
+            # this) made late-candle thresholds blind to the candle's own early rows, which matched
+            # neither ef6.py's backtest nor V's streaming lane. Found by the parity harness.
+            newp = [(int(r['ts']), day, float(v)) for r, v in zip(rows, pE)]
+            d.executemany('INSERT INTO epreds VALUES(?,?,?)', newp)
+            e3buf[day].extend((t_, p_) for t_, _, p_ in newp)
+            e3buf[day].sort()
             buf = e3buf[day]
 
             def e3thr(t, _b=buf):
@@ -346,11 +355,6 @@ def run_once():
                        (lambda v: None if v != v else float(v))(opp.get((r['ts'], r['up']), float('nan'))),
                        int(r['win']), pnl))
             n += 1
-        if pE is not None:
-            newp = [(int(r['ts']), day, float(v)) for r, v in zip(rows, pE)]
-            d.executemany('INSERT INTO epreds VALUES(?,?,?)', newp)
-            e3buf[day].extend((t_, p_) for t_, _, p_ in newp)
-            e3buf[day].sort()
         d.execute('INSERT OR REPLACE INTO seen VALUES(?,?)', (ep, int(time.time())))
     keepd = sorted({x for (x,) in d.execute('SELECT DISTINCT day FROM preds')})[-3:]
     if keepd:

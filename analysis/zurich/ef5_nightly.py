@@ -51,7 +51,12 @@ def build_all():
 
 if __name__ == '__main__':
     t0 = time.time()
-    today = dt.datetime.now(dt.timezone.utc).strftime('%m-%d')
+    # --day lets a PAST day's model be built for parity testing: trained on days < that day, exactly as
+    # the 00:05 run would have built it. It is not a way to re-fit today.
+    argday = None
+    for i, a in enumerate(sys.argv):
+        if a == '--day' and i + 1 < len(sys.argv): argday = sys.argv[i + 1]
+    today = argday or dt.datetime.now(dt.timezone.utc).strftime('%m-%d')
     out = f'{OUTDIR}/ef5_model_{today}.json'
     if os.path.exists(out) and '--force' not in sys.argv:
         sys.exit(f'{out} exists - tonight is already fitted, refusing to refit (use --force deliberately)')
@@ -94,6 +99,33 @@ if __name__ == '__main__':
     body['sha256'] = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()
     body['fitted_at'] = dt.datetime.now(dt.timezone.utc).isoformat(timespec='seconds')
     json.dump(body, open(out, 'w'))
+
+    # ---- the engine-side copy V's ef6_lane.py loads ------------------------------------------------
+    # Same trees, same base, names in the engine's key space. decide_log_features IS the engine key list,
+    # so no renaming is needed; the only names with no plain engine equivalent are the underscore-prefixed
+    # ones the logger adds, and they are reported rather than silently emitted as if they were features.
+    ENGINE_BUILT = {'own_ask', 'opp_ask', 'd_ask_1s', 'd_ask_5s', 'd_ask_30s', 'dip30', 'sec', 'p_side'}
+    odd = [n for n in fnames if n.startswith('_')]
+    used = sorted({int(t[0]) for t in body['trees']})
+    used_names = [fnames[j] for j in used]
+    edir = '/home/ubuntu/claude-work/repo/learner/v12_2/ef6'
+    os.makedirs(edir, exist_ok=True)
+    year = dt.datetime.now(dt.timezone.utc).strftime('%Y')
+    epath = f'{edir}/ef6_{year}-{today}.json'
+    json.dump(dict(names=fnames, base=body['base'], trees=body['trees']), open(epath, 'w'))
+    print(f'  engine copy -> {epath}')
+    print(f'    names {len(fnames)}: {len(fnames) - len(ENGINE_BUILT & set(fnames))} engine feature keys '
+          f'+ {sorted(ENGINE_BUILT & set(fnames))}')
+    print(f'    NO PLAIN ENGINE EQUIVALENT (logger-added, underscore-prefixed): {odd or "none"}')
+    print(f'    features actually SPLIT ON by the trees ({len(used_names)}): {used_names}')
+    missing = [n for n in used_names if n not in ENGINE_BUILT and n.startswith('_')]
+    if missing:
+        print(f'    *** WARNING: the trees split on {missing}, which ef6_lane cannot build -> predict() '
+              f'returns None on every row and THE LANE WILL NEVER FIRE ***')
+    if 'opp_ask' in used_names:
+        print(f'    *** WARNING: the trees split on opp_ask, which is NOT in ef6_lane\'s row -> '
+              f'predict() returns None on every row and THE LANE WILL NEVER FIRE ***')
+
     print(f'{today}: trained on {tr.sum():,} rows over {len(train_days)} days {train_days}')
     print(f'  thresholds from {prev} ({pv.sum():,} rows): '
           + '  '.join(f'{k} {v:+.4f}' for k, v in body["thr"].items()))
