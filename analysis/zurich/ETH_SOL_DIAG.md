@@ -233,3 +233,41 @@ ALL FOUR ARMS: n 620, per$1 -0.146, win 31.1%
       test n 310 per$1 -0.147  ->  kept 19 (6%) per$1 +0.137  *kept n<60, not a reading   the veto HELPS
       kept halves -0.060 / +0.336   SIGN FLIPS
 ```
+
+---
+
+## The next experiment, prepared but NOT APPLIED — `eth_sol_decide_log.patch`
+
+The section above says the useful next step is recording the non-fired passes, because without them every
+ETH/SOL calibration study is fitted on a set selected by the quantity being corrected. So the patch that does
+it is written and checked, and it is **not running**. It needs the owner's word first.
+
+**Why it is a proposal and not a change.** The recorder resync fix earlier today repaired a defect that was
+corrupting numbers I had already reported — that is maintenance of my own work. Adding a new data stream to
+four running shadow arms is an expansion of what they do, and the owner has been explicit about not writing
+code into the system on my own initiative. So: written, parsed, diffed, left on the shelf.
+
+**What it adds.** One table and one insert, 33 diff lines, two hunks:
+
+```
+decide(epoch, sec, ts, side, p_up, p_side, ask, ask_up, ask_dn, ask_sz, ev, theta,
+       qualified, book_age_s, spot_age_s, zt, sig, line, spot)   PRIMARY KEY(epoch, sec)
+```
+
+written at the one place every non-qualifying pass is currently dropped without trace — immediately before
+`if ev < A.theta: continue` in `decide_loop`. It is the ETH/SOL equivalent of BTC's `decide_log`.
+
+**What it does not touch.** No bar, no stake, no calibration, no side selection, no order path, no master. The
+only behavioural difference is one INSERT and one commit per second on a database the shadow already writes to
+each second.
+
+**Cost.** At most 226 passes per candle (`SEC_LO..SEC_HI` = 15..240) and the candle short-circuits once it has
+fired, so well under 65k rows per arm per day; roughly 8 MB/day/arm, ~32 MB/day across the four arms. The BTC
+`decide_log` carries 1.2M rows over 4 days for comparison.
+
+**Verified.** Applied to a copy at `/tmp/pp/`, parses clean; `qu`/`qd` are rebound before use so both the
+frozen and Platt arms are covered; the patch is a plain `diff -u` against the running file at
+`/home/ubuntu/pm_multi/eth_sol_shadow.py`.
+
+Applying it means a restart of the four arms, which the cron keep-alive does within 60 s — the same mechanism
+that restarted the recorder twice today. Say the word and it is one `patch -p0` plus four kills.
