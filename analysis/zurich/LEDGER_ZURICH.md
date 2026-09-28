@@ -131,7 +131,11 @@ produces, and it is the one most likely to be quoted back as evidence that the w
 **Every earlier entry in this file says some version of "all N orders ever written by this box are
 `lane = PAPER`". That is no longer true, and the claim is withdrawn.**
 
-Current lanes: **PAPER 1205, LIVE 11.**
+Lanes at the moment of this correction (09-28 21:4x): **PAPER 1205, LIVE 11.**
+
+*The PAPER count keeps growing — master is off, so the box writes a paper order every candle and it read
+1206 minutes later. The number that is frozen, and the one that matters, is **LIVE = 11**. If a later reader
+finds LIVE > 11, master was armed again after this entry.*
 
 On **09-28 19:40:22 → 20:12:19 UTC** the engine placed **11 EF orders with `lane='LIVE'`** — 3 FILLED, 8
 REJECTED, $5.00 staked per fill:
