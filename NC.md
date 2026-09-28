@@ -320,3 +320,9 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
   both arms fill, both are negative. All 13,295 qualifying passes fill 85% and pay -0.059. EF's apparent edge sits in the fires the book will not fill.
   So the fresh-book-send draft (e6ccd97) is NOT recommended either: more fills on this book are more losing fills. (analysis/zurich/EF_TRIGGER_SOURCE.md)
 
+- **RETRACT the pair frequency (V + Zurich, 05:3x-05:5x).** Zurich: its 25/81 was a stale 15m book (recorder resync bug, fixed); corrected
+  5 of 105 windows with a fresh book and |gap| >= $5, 1-9 riskless seconds each, best cost 0.95-0.99. Mine: the public-trades check took the MIN
+  of each leg independently over 3 s, and the legs move against each other, so it understated cost. 09-27 BTC, 87 windows with |gap| >= $5:
+  W3min 13 windows / 132 s; same-second min 13 / 32 s; same-second MAX (what a taker actually risked) **1 window / 1 s, cost 0.9998**.
+  The 7-day 153/672 (22.8%) used W3min and is inflated the same way. Structure (payoff never 0) stands; the edge is ~1-4c in a few
+  seconds of a few windows a day. Not a profit engine at our size. (analysis/v/twap/ARB_TRADES_STRICT.txt, arb_trades_strict.py)
