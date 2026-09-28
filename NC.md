@@ -527,3 +527,11 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   to land >=220: n19, win 58%, +$41.5 paper, 7/8 days) is SURVIVORSHIP - candles where the rule found nothing until 220, selected by its own
   silence and not tradeable. Forcing the wait brings in the candles the rule would have taken early, and those are worse; the FAK half that
   fills is the wrong half (paper +0.074 -> FAK -0.124). London's after-200 s real profit is the same survivor slice. Closed.
+- **EF-3 items 1/3/4 (Zurich 13:59, 5 days, per-pass FAK; $tot / DD / P/DD / fires-day / fill / days+):** fixed15 S0 curve 0 +73.8/75.8/0.97/
+  35.6/41%/2of5 | 60 +105.6/92.9 | 120 +130.0/81.6/1.59/26.2/3of5 | 150 -54.3 | 180 +13.3 | 200 -43.7 | 220 -34.5. **raw25 S0=60 +187.1 / DD
+  58.1 / 3.22 / 56 per day / 4 of 5 days** (S0 0 +107.3/98.4, 120 +54.1, 150 -45.8). Skip-60-120 no help/harmful. Ask band x S: 12/12
+  negative. Fine S0 curve 30..120 + verify for raw25 S0=60 briefed 14:00.
+- **EF-3 item 2, EF-2 v0 x start-second (4 wf days):** m=0.02 S0=150 +233.3 / DD 60.7 / 3.85 / 135 per day / 88% fill / 2 of 4 days; S0 0
+  +182.3/110.8/1.65/218/4of4; S0 230 +85.6/54.0/1.58/48/81%/3of4. Only family positive after 150 s, 75-77% win at mean ask 0.713 (+0.049/$1).
+  Caveats: 09-28 part day - effectively 3 days, 2 carry the profit; Zurich says the top cells do not clear the null (detail pending).
+  Zurich caught its own bug: without pinning to the model's side, late EV bars buy 5c long shots (-$2,024) - any late EF must be pinned.
