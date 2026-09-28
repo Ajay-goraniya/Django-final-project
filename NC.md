@@ -721,3 +721,5 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   itself - the drawdown is variance, not a regime change. Regime grid (4 families x 3 cells, cuts from H1): non-monotone (vol low+ mid-
   high+), only high-vol n68 positive in both halves - not a finding. So the owner's "small drawdown" needs a REAL edge; no gate or
   regime switch on fixed15 supplies one.
+- **Both-sides buy (V, polybook 278k live seconds 09-11..16): up+dn ask = 1.01 at p1..p95; fee-inclusive cost < $1 in ONE second
+  (min 0.9904).** The venue mint-matches; no in-book arbitrage. Closed.
