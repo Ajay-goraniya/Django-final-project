@@ -588,3 +588,10 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   prior on A is now strongly against it. ef2_late.py stays OFF and unwired.
 - Zurich independent lag read (15:10, 09-27 2 h, 1,591 unambiguous pairs + a 305k-pair cross-correlation vs a null): data-api - WS p50 +2.20 s
   (p10 +1.42, p90 +3.00), 98.8% >= 1 s - matches V's live +2.2 s. Public-tape prices are not usable at second resolution. Rule recorded.
+- **EF-4 (after-fill target, Zurich 3c1871a):** the target moves the model the right way (coefficient mass from price 0.230 -> 0.159,
+  onto ask dynamics 6x and the clock 70x). Linear best cell (+$417) was fitting the DATE via two collinear BTC price levels (corr
+  0.999886); without them +$116, 8/12 cells negative. Stumps: EF-4gb t=0 S0=0 +$164 / DD $75.5 / P/DD 2.17 / 90.8% fill / 4 of 4 days /
+  flip p=0.003 vs C +$16.3 / DD $85.3, and the non-top-two days summed POSITIVE - first arm today to do that. BUT frozen as arm D it
+  does not reproduce (-$138, DD $227, 1/5 days): the absolute cut 'pred >= 0' sits 0.76 sd into a tail whose position depends on each
+  fit's calibration offset. Lesson (3rd time): an absolute threshold on an uncalibrated score is not a rule. Next: the same stumps with
+  a CAUSAL QUANTILE cut (fire when pred is in the top q of the previous day's predictions), q in {0.70, 0.80, 0.90}. Briefed 15:4x.
