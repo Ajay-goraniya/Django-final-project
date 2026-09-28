@@ -501,3 +501,7 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
 - **Owner 13:0x: keep the current EF, add a SECOND trigger in the same candle that may fire only after the first, any time after it** (his
   "brain that knows the move is wrong and reverses"). Briefed to Zurich 13:03: variants A either side / B opposite only / C same side only,
   both arms, candle-total $, drawdown, per day, split by first-fire second. London untouched until the owner has seen it.
+- **London REAL fill rate by first-attempt second (13:25):** candle fill | per-attempt: <120 s 59% (179) | 32%; 120-180 60% (113) | 31%;
+  180-200 49% (39*) | 29%; >=200 54% (37*) | 39%; >=220 53% (17*) | 45%. **Late fires fill about as often as early ones** - Zurich read B's
+  21% sim collapse does not happen in real money; read A (flat fill) is the closer model. Unfilled >=200: n17*, 47% win, +0.066 (INSUF).
+  So the after-200 s profit on London's real fills is not a fill artefact. Still n24 real fills - under the bar.
