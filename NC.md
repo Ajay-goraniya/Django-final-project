@@ -311,3 +311,8 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
   analysis/v/twap/ARB_TRADES_CHECK.txt, independent source): takers actually bought both legs within 3 s at cost < 1 in 19/91 windows (13 with lines
   >= $5 apart); dominance-pair payoff on gamma across all 91 windows {1: 68, 2: 23}, never 0. OPEN: simultaneous-fill (legging) risk - a ms probe of
   both books runs on Zurich until 06:45 UTC (ARB_LEGGING_MS.md) - plus the 5m leg's size, and more days.
+- **Pair frequency, 7 BTC days on public trades (Zurich, analysis/v/twap/btc_day0..6.out):** traded cost<1 in 17/15/24/13/26/22/36 of 96 windows
+  (09-20..26, 153/672 = 22.8%), EVERY day. Payoff over 672: 1->469, 2->202, 0->1. The one 0 (09-22 15:15) had lines $2.33 apart on the Binance
+  proxy, inside its error, so the leg ORDER was wrong, not the rule. pair_bot now defaults to --min-gap 5 and uses the real Chainlink stream.
+  SOL 6/91, all with gaps <= $0.12 (proxy noise; do not lean on it). ETH 15/91, never 0.
+

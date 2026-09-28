@@ -289,7 +289,7 @@ def main():
     ap.add_argument('--db', default='pair_bot.sqlite3')
     ap.add_argument('--stake', type=float, default=5.0, help='max $ per pair (both legs)')
     ap.add_argument('--margin', type=float, default=0.01, help='required cost below 1 incl. fees')
-    ap.add_argument('--min-gap', dest='min_gap', type=float, default=1.0, help='$ between lines; closer is skipped')
+    ap.add_argument('--min-gap', dest='min_gap', type=float, default=5.0, help='$ between lines; closer is skipped (the one zero payoff in 763 windows was a $2.33 gap, 09-22 15:15)')
     ap.add_argument('--first-sec', dest='first_sec', type=int, default=0)
     ap.add_argument('--last-sec', dest='last_sec', type=int, default=290)
     ap.add_argument('--min-shares', dest='min_shares', type=int, default=5, help='venue minimum order size')
