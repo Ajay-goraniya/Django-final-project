@@ -1,0 +1,234 @@
+# EF2 — NC-17, the recreated EF. v0 (logistic walk-forward)
+
+Zurich, 2026-09-28. READ-ONLY. **Master OFF, nothing live, nothing deployed.** London keeps fixed15.
+
+EF-2 is ONE model of `P(win | buy THIS side at THIS ask at THIS second)` — no direction model plus a gate. So
+every pass contributes two candidate rows, one per side, and the model has to learn that buying the expensive
+side of a decided market is a bad trade rather than being told so by a separate rule.
+
+## The acceptance bar (V, owner, 09-28 11:2x)
+
+London is **not** paused and keeps fixed15 until EF-2 beats it on **profit AND execution**, same days,
+walk-forward. Every arm below goes through one scoring function with one set of columns on one candidate
+table, so the only thing differing between rows is the rule.
+
+## Answer up front: no version passes, and the comparison is not the one it looks like
+
+**1. No margin passes both columns.** Not one of the four.
+
+**2. Execution: EF-2 wins decisively.** 89.6% sim fill against fixed15's 42.4%; no-fill 10.4% against 57.6%.
+
+**3. Profit: it depends which "profit" means, and I am not going to pick for you.** Per $1, fixed15 wins
+(+0.050 vs +0.016). In total dollars, EF-2 wins by 5× (+128.0 vs +26.5) — on 6.7× the fires, 221/day against
+33/day, which is a different risk profile and a stake question, not only a model question.
+
+**4. But fixed15's +0.050 is not a measurement.** It rests on **56 fills**, its own halves are **+0.277 /
+−0.177** — they disagree in sign — and its permutation reads **0.448**. EF-2 at margin 0.02 rests on **791
+fills**, halves **+0.018 / +0.013**, and V's opposite-ask flip reads **p = 0.007**. Comparing +0.050 against
++0.016 as though both were established numbers is the error; the baseline is the noisier of the two.
+
+**5. The placebo beats the trained model.** The S=15 rule from EF_FIRE_TIME — model still picks the side, its
+confidence bar dropped entirely — pays **+0.067/$1** on 615 fills, both halves positive, and is the only arm
+on the board that passes cost sensitivity *and* beats the null. Fifty-two features and 1.6M training rows do
+not beat "buy the model's side at the first pass where the ask is under 0.60".
+
+**6. On V's question (5), the honest answer is "directionally yes, but it does not matter".** Ask dynamics
+carry **0.113** of standardised coefficient mass against the move's **0.084** — so yes, the model leans on
+the record of being picked off more than on `move_bps`. Both are dwarfed by the price itself at **1.443**.
+And `p_side` **alone** scores AUC 0.8580 against the full 52-feature model's 0.8608: **the whole apparatus
+adds +0.003 AUC over the p the engine already computes.**
+
+## 1. Rows
+
+1,606,978 candidate rows = 822,331 passes × both sides, 1,015 gamma-graded candles, 5 days, sec 15–240, 52
+features (all 44 engine features as logged + `own_ask`, `opp_ask`, `d_ask_1s/5s/30s`, `dip30`, `sec`,
+`p_side`). Every feature finite on 100.0% of rows. The other side's p is `1 − p`, forced by the outcome being
+binary and exhaustive.
+
+| | base rate P(this side wins) |
+|---|---|
+| all candidate rows | 0.4904 |
+| rows that FILL | **0.4881** |
+| rows that DO NOT fill | **0.5495** |
+
+**The rows that do not fill win 6.1 pp more often.** That is adverse selection measured on the whole
+candidate population rather than inferred from a fired subset. Sim fill over all candidates is 96.26%; over
+fixed15's actual fires it is 42.4%. The selection destroys the fill, not the market.
+
+## 2. Walk-forward
+
+Day k fitted on days < k, scaler on the training rows alone, first day never scored, one fire per candle.
+
+```
+  day 09-25: train   213,594  test 451,704   AUC logistic 0.8529   stumps 0.8527
+  day 09-26: train   665,298  test 472,299   AUC logistic 0.8540   stumps 0.8545
+  day 09-27: train 1,137,597  test 445,563   AUC logistic 0.8741   stumps 0.8728
+  day 09-28: train 1,583,160  test  23,818   AUC logistic 0.8962   stumps 0.8932
+  pooled: logistic 0.8608   stumps 0.8599   the ask alone 0.8611   p_side alone 0.8580
+```
+
+The pooled AUC looks impressive and is mostly mechanical — by second 240 the ask is nearly the answer:
+
+```
+    sec  15-29   n 101,738   model 0.7187   ask alone 0.7189   p_side alone 0.7147
+    sec  30-59   n 191,184   model 0.7467   ask alone 0.7469   p_side alone 0.7413
+    sec  60-119  n 406,132   model 0.8237   ask alone 0.8237   p_side alone 0.8236
+    sec 120-179  n 388,928   model 0.9007   ask alone 0.9018   p_side alone 0.8979
+    sec 180-240  n 305,402   model 0.9274   ask alone 0.9281   p_side alone 0.9241
+```
+
+At every horizon the model, the ask alone and the engine's existing p are within 0.005 of each other. A
+numpy gradient-boosted stump ensemble was run beside the logistic purely to check whether linearity was the
+limit: it is not (0.8599 vs 0.8608).
+
+## 3. The acceptance table
+
+```
+ACCEPTANCE TABLE - fixed15 vs EF-2, same candles, same fill simulator, same days
+==============================================================================================================================
+  arm                        fires  /day fills  fill% nofill%  slip c   win%    per$1   total$      H1      H2  permP
+  fixed15 (London, live)       132    33    56  42.4%   57.6%   -0.04  42.9%   +0.050    +26.5  +0.277  -0.177  0.448  *n<60
+  ----------------------------------------------------------------------------------------------------------------------------
+  EF-2 margin 0.00             883   221   817  92.5%    7.5%   -0.03  65.4%   +0.013   +103.8  -0.009  +0.034  0.015
+  EF-2 margin 0.02             883   221   791  89.6%   10.4%   -0.04  65.9%   +0.016   +128.0  +0.018  +0.013  0.007
+  EF-2 margin 0.05             874   218   734  84.0%   16.0%   -0.02  59.4%   -0.014    -94.0  -0.024  -0.004  0.090
+  EF-2 margin 0.10             791   198   715  90.4%    9.6%   -0.11  15.0%   -0.236  -1674.4  -0.213  -0.259  0.970
+  ----------------------------------------------------------------------------------------------------------------------------
+  S=15 placebo                 724   181   615  84.9%   15.1%   -0.27  58.0%   +0.067   +416.1  +0.078  +0.057  0.000
+  raw25 (EV>=0.25)             264    66   112  42.4%   57.6%   -0.09  42.9%   +0.053    +58.0  +0.183  -0.078  0.235
+
+  VERDICT against the owner's bar - a version must win PROFIT and EXECUTION, not one of them:
+    margin 0.00: profit lose (per$1 +0.013 vs +0.050, total +103.8 vs +26.5)   execution lose (fill 92.5% vs 42.4%, slip -0.03c vs -0.04c)   -> does not pass
+    margin 0.02: profit lose (per$1 +0.016 vs +0.050, total +128.0 vs +26.5)   execution WIN  (fill 89.6% vs 42.4%, slip -0.04c vs -0.04c)   -> does not pass
+    margin 0.05: profit lose (per$1 -0.014 vs +0.050, total -94.0 vs +26.5)   execution lose (fill 84.0% vs 42.4%, slip -0.02c vs -0.04c)   -> does not pass
+    margin 0.10: profit lose (per$1 -0.236 vs +0.050, total -1674.4 vs +26.5)   execution WIN  (fill 90.4% vs 42.4%, slip -0.11c vs -0.04c)   -> does not pass
+
+```
+
+`slip c` is the fill price minus the QUOTED ask, in cents. The decision is taken on the quoted ask; the
+economics are settled at the sim fill price (V, 09-28: "yes, exactly").
+
+```
+  LOOKAHEAD VARIANT (decision taken at the fill price) - to size that choice, not to be quoted:
+  arm                        fires  /day fills  fill% nofill%  slip c   win%    per$1   total$      H1      H2  permP
+  lookahead 0.00               883   221   883 100.0%    0.0%   -0.40  63.5%   -0.008    -65.7  -0.031  +0.015  0.040
+  lookahead 0.02               883   221   883 100.0%    0.0%   -0.74  63.0%   -0.020   -172.8  -0.025  -0.015  0.077
+  lookahead 0.05               883   221   883 100.0%    0.0%   -1.92  60.1%   +0.009    +71.5  +0.016  +0.002  0.077
+  lookahead 0.10               877   219   877 100.0%    0.0%   -5.65  44.0%   -0.152  -1319.3  -0.137  -0.168  0.757
+
+```
+
+The lookahead variant is reported only to size that choice. Deciding at the fill price buys a 100% fill by
+construction and −0.40c to −5.65c of slippage, and per $1 gets *worse*, so the sound version is not being
+handicapped by the honest reading.
+
+## 4. verify.py on the two cells that qualified
+
+Positive in both halves with n ≥ 60 fills: EF-2 at margin 0.02, and the S=15 placebo. **fixed15 itself does
+not qualify** — halves +0.277 / −0.177 — which is the first thing to say about any comparison against it.
+
+```
+
+### EF-2 margin 0.02: 883 fires, 791 fills, per$1 +0.0158, win 65.9%
+    V's control - flip priced at the OPPOSITE real ask: p = 0.007
+    sweep over the margin (0.0, 0.02, 0.05, 0.1) -> +0.013 +0.016 -0.014 -0.236
+==============================================================================
+FINDING: EF-2 margin 0.02   (+0.016/fire, n=791)
+==============================================================================
+  [PASS] grading provenance   gamma_btc5 vs gamma_btc5b disagree on 0/140 (0.0%)
+  [PASS] quote age            rule=at-or-after, max age 0.0s from decide_log own-side ask at >= t+250 ms; DECISION on the quoted ask
+  [PASS] sample size          all 2 cells >= 60
+  [FAIL] sample size          under the 60 bar: {'09-28': 17}
+  [PASS] both halves          h1 +0.018 / h2 +0.013
+  [FAIL] permutation control  real +0.016 vs permuted mean +0.020 (p95 +0.054), p=0.585 over 400 draws
+  [FAIL] sweep shape          NON-monotone: [ 0.013  0.016 -0.014 -0.236]  <- peaks at an interior point, classic overfit
+  [FAIL] cost sensitivity     +0c:+0.016 +0c:+0.008 +1c:+0.000 +2c:-0.015  <- dies once you pay realistically
+  [FAIL] beats the null       mine +0.016 vs fixed15 (the live London rule) +0.050
+  [FAIL] paired test          n=49, agree on 8, discordant 41 (24 vs 17), edge +0.143, exact McNemar p=0.349
+------------------------------------------------------------------------------
+  VERDICT: NOT A FINDING - failed: sample size, permutation control, sweep shape, cost sensitivity, beats the null, paired test
+
+
+### S=15 placebo: 724 fires, 615 fills, per$1 +0.0675, win 58.0%
+    V's control - flip priced at the OPPOSITE real ask: p = 0.000
+==============================================================================
+FINDING: S=15 placebo   (+0.067/fire, n=615)
+==============================================================================
+  [PASS] grading provenance   gamma_btc5 vs gamma_btc5b disagree on 0/140 (0.0%)
+  [PASS] quote age            rule=at-or-after, max age 0.0s from decide_log own-side ask at >= t+250 ms; DECISION on the quoted ask
+  [PASS] sample size          all 2 cells >= 60
+  [FAIL] sample size          under the 60 bar: {'09-28': 10}
+  [PASS] both halves          h1 +0.078 / h2 +0.057
+  [FAIL] permutation control  real +0.067 vs permuted mean +0.067 (p95 +0.067), p=1.000 over 400 draws
+  [PASS] cost sensitivity     +0c:+0.067 +0c:+0.058 +1c:+0.048 +2c:+0.029
+  [PASS] beats the null       mine +0.067 vs fixed15 (the live London rule) +0.050
+  [FAIL] paired test          n=49, agree on 39, discordant 10 (7 vs 3), edge +0.082, exact McNemar p=0.344
+------------------------------------------------------------------------------
+  VERDICT: NOT A FINDING - failed: sample size, permutation control, paired test
+
+```
+
+**Both NOT A FINDING.** EF-2 0.02 fails on permutation (p=0.585), a non-monotone margin sweep, cost
+sensitivity (dies by +2c), the null, and the paired test. The placebo fails on a degenerate permutation
+(p=1.000 — with no p bar there is no selection to shuffle) and the paired test, but passes cost sensitivity
+and beats the null.
+
+The paired numbers are worth reading directly. EF-2 and fixed15 share 49 candles and **agree on only 8 of
+them** — 41 discordant. They are not two settings of one rule, they are two different strategies, and a
+per-$1 comparison between them is closer to a comparison of two populations than of two methods.
+
+## 5. Feature importance
+
+```
+FEATURE IMPORTANCE - |standardised coefficient|, mean over the walk-forward fits
+==============================================================================================================================
+     1. own_ask          0.6678  <- the price
+     2. opp_ask          0.5924  <- the price
+     3. p_side           0.3674  <- the engine p
+     4. ref_open         0.2148
+     5. ref_now          0.1121
+     6. _price           0.1025
+     7. bn_line_now      0.1010
+     8. ref_inst         0.0918
+     9. bn_line_open     0.0621
+    10. _ask_dn          0.0615  <- the price
+    11. _ask_up          0.0571  <- the price
+    12. move_bps         0.0556  <- the move
+    13. d_ask_30s        0.0555  <- ASK DYNAMICS
+    14. ref_gap_bps      0.0470
+    15. lv               0.0405  <- the price
+    16. mv_x_sec         0.0281  <- the move
+    17. ref_move_bps     0.0273
+    18. lv_x_sec         0.0255
+
+  block totals - V's question is whether the first line beats the third:
+    ask dynamics (d1,d5,d30,dip30)     0.1128
+    the price (ask/lv/p_venue)         1.4430
+    the move (move_bps,mv_x_sec)       0.0837
+    the engine model p (p_side)        0.3674
+```
+
+## What I would put to the owner
+
+EF-2 does exactly what it was asked to do — one model, both sides, no separate gate — and it produces a
+lane that fires 6.7× as often, fills at 90% instead of 42%, and wins 66% of its fills instead of 43%. On
+execution it is not close. On profit per dollar it loses to a baseline whose own halves disagree.
+
+The finding underneath is not about EF-2's architecture. It is that **the price already contains the
+answer**: the ask alone scores 0.8611, the engine's existing p scores 0.8580, and 52 features and 1.6M rows
+score 0.8608. A model built on those inputs cannot do much more than restate the market, and the arm that
+does best on this board is the one that stops trying to — the placebo.
+
+That does not make EF-2 worthless. Firing 221 times a day at a 90% fill is a genuinely different machine
+from firing 33 times at 42%, and if the owner's objective is total dollars rather than return on deployed
+capital, the table already favours it. But it does not clear the bar as written, and I am not going to
+present a cell that fails five gates as though it did.
+
+## Files
+
+- `ef2_rows.py` — the candidate table
+- `ef2_fit.py` / `ef2_model.py` — the walk-forward fits, cached
+- `ef2_report.py` — the acceptance table, lookahead variant, importance
+- `ef2_verify.py` — verify.py on the qualifying cells
+- `ef2_london.py` — what the model loses on London's 35-key table
+- `ef2_export.py` → `learner/v12_2/ef2/` — the exported model and scorer
