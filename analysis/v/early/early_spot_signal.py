@@ -73,7 +73,14 @@ def collect(a, b):
             for i in (0, 1):
                 v = [p for k in range(e + S - W, e + S + 1) for p in last[i].get(k, [])]
                 pr[i] = max(v) if v else None            # what the unlucky taker paid, not the min
-            per_s[str(S)] = dict(f=f, ask_up=pr[0], ask_dn=pr[1])
+            # FORWARD price: what a taker actually paid AFTER the decision second (quote-age safe). First second in
+            # [S+1, S+4] with a trade on that side; max price within that second (conservative). None = no fill proxy.
+            fw = {}
+            for i in (0, 1):
+                fw[i] = None
+                for k in range(e + S + 1, e + S + 5):
+                    if last[i].get(k): fw[i] = max(last[i][k]); break
+            per_s[str(S)] = dict(f=f, ask_up=pr[0], ask_dn=pr[1], fwd_up=fw[0], fwd_dn=fw[1])
         if per_s:
             rows.append(dict(e=e, day=(e // 86400), up=up_win, s=per_s)); rep['ok'] += 1
         if rep['ok'] % 100 == 0: print(f'  {rep["ok"]} candles', flush=True)
