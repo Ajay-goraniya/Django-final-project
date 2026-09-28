@@ -345,3 +345,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   sec 20/30/45/60, disagreement cells). London: real fills by fire second and ask (read-only).
 - train_summary.json: logit btc_only logloss 0.5364 / acc 72.0% vs btc+venue 0.5146 / 73.3%. The venue price adds ~1.3 pp of accuracy;
   the spot-only signal carries nearly all the skill and is the part the crowd does not already price.
+- **London real fills by fire second (10:00, 205 settled, venue payout):** fire sec p10/50/90 = 48/126/203. Per $1: 15-30 n9* -0.03 | 30-60
+  n18* +0.09 | 60-120 n65 -0.11 | 120-180 n64 +0.05 | 180-240 n49* +0.09. By fill price: <0.45 n87 +0.08 | 0.45-0.55 n86 -0.09 | >0.55 n32* +0.08.
+  In the candles EF later bought, at sec 20-30 the CURRENT model gave our side p 0.40 (ask 0.36) - it did not favour that side yet; at the fire
+  p 0.57, ask 0.45. So firing the same model earlier is a different, weaker bet, not the same bet cheaper. The early question now rests on
+  the spot-only model (Zurich part 4), not on retiming v10.
