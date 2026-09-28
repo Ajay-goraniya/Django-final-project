@@ -837,3 +837,11 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   75 per day / fill 85% / 4 of 4 days / +1c +$113.1; 0.65-0.75: +$120.2 / DD 80.9 / 4 of 4 / +1c +$88.9. CAUTION: the vol pattern is
   non-monotone (low +, mid --, high ~) and EF-8's regime read had a different shape; 4 test days. CANDIDATE only - replication briefed to
   Zurich on 09-22..28 with the identical grid.
+- **FAV rule REPLICATED on Zurich (48cd84a, FAV_RULE_ZURICH.txt, 09-24..28, identical 36-cell grid, cuts from 09-22/23, no retune):**
+  LOW-vol positive 9/9 (V 8/9); low beats buy-every-favourite 9/9 (+0.030..+0.053/$1); vol permutation p 0.005/0.015/0.029; halves 8/9.
+  verify.py on 60-180 s, 0.65-0.85, low: n638, +0.100/fire, ALL SIX GATES PASS (grading 0/838 across two label sources, sweep monotone,
+  +2c +0.071, null +0.100 vs +0.051), 5 of 5 days positive. SHAPE differs: Zurich low > mid > high (monotone; mid + in 6/9, high - 9/9)
+  vs V non-monotone (mid - 9/9). Regime: on Zurich's days every favourite was profitable outright (+0.051/$1). Fill 80-95% (1 s ask
+  unchanged 1 s later 51.7%). First candidate today to pass verify.py on independent data from a second box. Forward arm FAV briefed.
+- **OPERATIONAL: Zurich's gamma outcome mirror /tmp/poly froze 09-28 01:42 - the forward shadow has scored NOTHING since the 01:30 candle
+  (all arms incl. F).** V authorised Zurich to fix it (read gamma directly) and backfill the missed rows.
