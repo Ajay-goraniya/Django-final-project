@@ -1000,6 +1000,11 @@ class Executor:
     POST_FLOOR_S=0.4
     def __init__(self,db,books,broker,age=.75,pad=1,budget_s=2.0,post_timeout_s=1.2,attempts=4,shadow=None):
         self.db=db; self.books=books; self.broker=broker; self.age=age; self.pad=pad; self.band=False
+        # 13.2.0 DRAFT (NC-15): the max age of OUR token's book when an attempt is priced. None = self.age (unchanged).
+        # London's own orders: first-try fill falls 27% -> 7% once the book is >=50 ms old and those fills lost in both
+        # halves. Waiting for a fresh book is not a veto - reassess() still decides on it - and a quiet book runs the
+        # budget out as DEADLINE, which re-arms the candle like any other unsent order.
+        self.fire_age=None
         # 12.21.0: with a shadow (paper) broker beside a live one, `master` picks the broker per
         # fire: OFF -> shadow, lane 'PAPER'; ON -> broker, lane = the journal's ('LIVE'). Owner,
         # 09-22: "if master off it's paper and if master on it's live it's that simple". Without a
@@ -1055,8 +1060,10 @@ class Executor:
             # is, sleeps 75 ms and fires again) got three shots inside a second.
             # Task 76 priced the difference at 31 venue rejects worth +0.25/$1.
             # `self.age` still applies: a stale book still waits.
+            lim=min(self.age,self.fire_age) if self.fire_age else self.age
+            if self.fire_age: timing['fire_age_limit_ms']=1000*lim
             while time.monotonic()<deadline:
-                q=self.books.quote(token,self.age)
+                q=self.books.quote(token,lim)
                 if q: break
                 await asyncio.sleep(.005)
             else: self.db.release(ep,'DEADLINE',kind); return

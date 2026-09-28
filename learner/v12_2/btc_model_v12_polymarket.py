@@ -1318,6 +1318,13 @@ class PolyRunner(Runner):
         self.executor.pad=self.pad_ticks()
         self.executor.band=(self.slippage_mode()=='band')
         self.executor.age=self.quote_age_s()
+        self.executor.fire_age=self.fire_book_age_s()
+    def fire_book_age_s(self):
+        """13.2.0 DRAFT: ev_settings.fire_book_age_ms - max age of OUR token's book when an order is priced. Unset = off."""
+        v=(self.db.get('ev_settings') or {}).get('fire_book_age_ms')
+        try: v=float(v)
+        except (TypeError,ValueError): return None
+        return max(0.005,min(2.0,v/1000)) if v>0 else None
     def quote_age_s(self):
         """Max book age we will price against. Live control, CLI flag seeds it."""
         v=(self.db.get('ev_settings') or {}).get('quote_age_ms')
