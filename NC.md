@@ -478,3 +478,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   bound) it is exactly break-even (+0.000, 2/4 days)**. fixed15 at +1c: +0.021 from one day (1/4). Calibration in aggregate 0.672 vs
   0.659; per-decile returns not monotone. Restricting v0 to later fires makes it negative. **EF-2 v0 does not beat fixed15.** Shadow
   stopped (the owner's early-fire ruling). London's real-attempt scoring left to finish as a diagnostic only.
+- **EF-2 london44 on London's REAL fills (12:32, 211 fills scored, 0% imputed): NO INFORMATION.** AUC p_win 0.530 vs quoted ask alone 0.529
+  (OOS 0.537 vs 0.533). Per$1 by p_win decile has no order; top deciles negative. The EF-2 rule would KEEP n32 at -0.161/$1 and SKIP n179
+  at +0.013 - it keeps the losers; KEEP beats SKIP on 1 of 6 days. p_win does not predict fills either. The 0.86 candidate-row AUC is a
+  mechanical artefact (late-candle rows where the ask is nearly the answer) and does not transfer to real fired-and-filled trades.
+  **EF-2 CLOSED on both counts: early-fire by construction (Zurich) and no information on real fills (London).** (analysis/london/EF2_LONDON_SCORE.md)
