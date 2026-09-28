@@ -387,3 +387,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   outcome is already in the price; the one input not in the price does not predict. Zurich offered venue print flow - DECLINED: that is
   "how everyone reacts", the owner's exclusion. Next: data the engine does not collect - cross-exchange lead (Coinbase/Kraken are Chainlink
   sources; the crowd watches Binance). Zurich: Chainlink vs Binance lead-lag on the 437k s. V: Coinbase ticks -> 1 s, public.
+- **Chainlink-basis DOWN candidate CLOSED (Zurich second read, 11:00, 1,352 candles / 135 h, gamma-graded).** div<=-3 -> DOWN: +0.016/$1
+  on 224 candles (London had +0.24 on 167); cheapness null -0.012; the fired set wins LESS than its null (48.2% vs 48.6%). Win rate falls
+  monotonically as the threshold tightens (49.9 -> 35.7%); sweep peaks at the chosen value; positive 2 of 6 days; fire rate tracks the
+  day's mean basis (42% one day, 1% another). Mechanism: a LEVEL condition on a drifting offset selects DAYS, not moments. De-meaned
+  it fires 6 times in 135 h. Mirror fires twice. Consistent with London's 10 real fills at -0.30. Nothing for verify.py. Shadow stopped.
