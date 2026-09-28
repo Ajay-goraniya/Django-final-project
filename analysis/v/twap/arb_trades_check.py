@@ -12,7 +12,8 @@ For every second of the last 5m candle: the latest taker BUY price of each leg w
 cost = p15 + fee + p5 + fee, fee = 0.07 p (1-p). A window "trades riskless" if some second has cost < 1.
 Also reports the realised payoff (gamma outcomePrices) so the zero-payoff check is repeated on public data.
 """
-import json, time, sys, urllib.request, datetime as dt, collections
+import json, time, sys, urllib.request, datetime as dt, collections, socket
+socket.setdefaulttimeout(30)   # a proxied TLS read can otherwise hang with no timeout
 
 GAMMA = 'https://gamma-api.polymarket.com/events?slug={}'
 TRADES = 'https://data-api.polymarket.com/trades?market={}&limit=500&offset={}&takerOnly=true'
