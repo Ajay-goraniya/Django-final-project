@@ -456,3 +456,7 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   (win 65.9% -> 32.5%, per$1 +0.016 -> -0.076): 34% of coefficient mass in ref_open/ref_now/_price/bn_line_*/opp_ask - ranking transfers,
   level does not (the ETH_SOL_DIAG failure via imputation). Fix: refit on London's 44 keys ('london44'); London told to HOLD until then.
   v2 (ms ask dynamics) cancelled - nothing for it to find. 15m test next.
+- **Owner 11:5x: "Our goal is BTC 5 minute candles, not 15."** 15m test cancelled. EF-2 v0 (logistic, margin 0.02) is THE btc5 candidate: on
+  the same 4 days it beat fixed15 on execution (89.6% vs 42.4% fill) and total $ (+128 vs +26.5 at $1), lost on per$1 (+0.016 vs +0.050,
+  the latter unmeasured at 56 fills). Bar to clear: positive per day at +1c cost (London's cap is ask+1 tick), fires NOT early, calibration
+  holds, then a 24 h paper shadow beside fixed15, then London's real-attempt scoring with the london44 refit. Briefed 11:53.
