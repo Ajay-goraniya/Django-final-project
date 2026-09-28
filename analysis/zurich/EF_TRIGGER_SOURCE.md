@@ -299,3 +299,19 @@ No deploy, no config change, master still OFF.
 
 - `ef_trigger_source.py` - the classifier and the grid; imports the fill simulator from `ef_persist.py`
 - `ef_trigger_verify.py` - verify.py on the one qualifying cell
+
+## Export for London — `ef_trigger_source_spec.json`
+
+The read above ends with "London should split its own real fills the same way", so here is the means to do it
+without re-deriving anything: `ef_trigger_source_spec.json` carries the classification rule, the exact per-pass
+columns it needs (`epoch`, `ts_ms`, `side`, `up_ask`, `dn_ask`, `p`), the thresholds, Zurich's per-class
+reference numbers, and three consistency checks that should reproduce on any correct implementation
+(BOOK-up = 0, NEITHER = 0, side flips ≈62% of fires).
+
+Two things the spec says loudly, because a JSON file outlives the conversation that produced it:
+
+- **`not_a_filter`.** It records the verdict and the four gates that failed. This is a measurement spec. The
+  filter version of it must not be deployed anywhere, and nothing here is a deploy request.
+- **The one thing only London can do.** Zurich has no quote-age column, so the class-by-book-age cross is not
+  available here. London has it. The prediction to test is that its 69% bucket *is* the book-triggered
+  population, which Zurich measures at −0.007/$1 against +0.234 for the 36%-fill model-triggered population.
