@@ -794,3 +794,9 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   fires are the ones not worth having. CONFLICTS with London's real-fill read (neutral n123 -0.110/$1): different instrument (real fills
   vs FAK sim over all passes) and z formula. London asked to push twapz.py so Zurich re-runs on the identical z. Arm E (P_twap +
   move strength replacing EF's p) pending.
+- **EF-13 (Zurich 188ec5b), owner's exact TWAP spec (variance of the AVERAGE: locked part, remaining sum-of-squares; move strength):**
+  A fixed15 +$41.1 / DD 85.3 / 39/day / +1c +18.7 | B |z| cuts 0.25/0.50/0.75/1.00: -24.5 / -64.1 / -33.0 / -14.9 | C fixed15 + P_twap +
+  move strength +$27.4 / DD 115.5 / 99/day / 3 of 4 / +1c -15.5 | E p replaced by P_twap -$1,584.7 (buys long shots: mean ask 0.332,
+  21% of fires < 0.15, win 30%). Better physics, same answer on the sim; move strength carries something bare z did not, but C still
+  trails fixed15 and dies at +1c. A direction-only probability dropped into an EV test against the ask becomes a long-shot buyer.
+  London-formula parity (fire passes only) still pending.
