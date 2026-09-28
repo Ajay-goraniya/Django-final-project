@@ -565,3 +565,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   lost $77.2 - the whole +107 -> +187. The owner's "no early gambling", measured. B at S0=60: 121 fills (43%), win 47.9%, +0.155/$1, mean ask
   0.41, flip p=0.040, +2c still +0.099. verify FAILS sample, HALVES (H1 +0.314 / H2 -0.000) and sweep. **+$179 of +$187 is 09-24/25; the
   last three days are +$7.8 combined.** B stays pre-registered unchanged; the forward shadow decides.
+- **V's late spot-model rule DOES NOT REPLICATE on Zurich's book (14:34, 822k passes, real ask, +250 ms FAK):** 16 of 20 cells lose (S0=150
+  -$479..-$544, 180 -$213..-$232, 200 -$148..-$220, 240 -$168..-$218); S0=220 +$216..+$223 is an ISLAND between losers. Decomposition: deciding
+  on a 3 s stale ask but paying the forward price changes ~nothing (+231 vs +216); BOOKING at the stale ask turns S0=220 into +$1,553 (ratio
+  10.04, 100% fill, p=0.000) and S0=180 from -$232 into +$1,447. The public-data v1 result was a price you cannot trade at plus deleted
+  no-fills. CLOSED as a candidate; the forward-price public rerun is kept only as a cross-check of this decomposition.
