@@ -634,3 +634,11 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   side and second**, 0 side differences, 4 second differences, 2 shadow-only, 0 lane-only (was 14/136). Residual 6 cluster in 11:25-12:45 -
   marginal thresholds, not a rule difference. Seed files are in SECONDS. The shadow's in-candle fix landed 16:53, DB rebuilt 16:50: no
   forward-day hour ran old code. learner/v12_2/ef6_lane.py + the nightly ef6_<day>.json now reproduce registered arm E3.
+- **E3 independent replay on London (17:04, ef6_lane + ef6_2026-09-27.json, 18,326 diag rows 09-22..26 at ~15 s, price = diag ask, no fill
+  model, 0% unscorable): FAILS.** n418, 84/day, win 69%, -$286.6, DD $352.9, 1/5 days (09-22 -16 | 09-23 -69 | 09-24 -173 | 09-25 -31 |
+  09-26 +2). OUT OF SAMPLE 09-22/23: n107, win 70%, -$84.8, 0/2 days. Even the IN-SAMPLE days lose. Control (real fixed15 fills, same days):
+  +$61.1, DD $99.6, 3/4 days. Same shape as arm A: a high win rate on expensive favourites that loses money.
+  CONFLICT with Zurich's +$222 on overlapping days. Candidate causes: decision cadence (15 s vs 250 ms), London's own feature values vs
+  Zurich's, price source (diag ask vs FAK sim). Asked Zurich to replay E3 on its own decide_log SUBSAMPLED to 15 s - if that also loses,
+  E3 depends on 250 ms timing or on the fill sim; if it still wins, the difference is London's features. E3 stays in the forward shadow
+  (pre-registered), but its prior is now against it.
