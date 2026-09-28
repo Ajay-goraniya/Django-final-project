@@ -23,7 +23,7 @@ P_LIST = (0.55, 0.60, 0.65, 0.70)
 A_LIST = (0.40, 0.45, 0.50, 0.55)
 W = 3
 fee = lambda p: 0.07 * p * (1 - p)
-OUT = os.path.join(os.path.dirname(__file__), 'early_rows_btc.json')
+OUT = os.path.join(os.path.dirname(__file__), os.environ.get('EARLY_OUT', 'early_rows_btc.json'))
 
 
 def feats(px, e, S, prev):
@@ -165,5 +165,11 @@ def analyse(rows):
 
 if __name__ == '__main__':
     a, b = int(sys.argv[1]), int(sys.argv[2])
-    rows = json.load(open(OUT)) if (len(sys.argv) > 3 and sys.argv[3] == 'cached' and os.path.exists(OUT)) else collect(a, b)
-    analyse(rows)
+    if len(sys.argv) > 3 and sys.argv[3] == 'cached':
+        import glob; rows = []
+        for fn in sorted(glob.glob(os.path.join(os.path.dirname(__file__), 'early_rows_btc*.json'))): rows += json.load(open(fn))
+        rows = sorted({r['e']: r for r in rows}.values(), key=lambda r: r['e'])
+        analyse(rows)
+    else:
+        rows = collect(a, b)
+        if os.environ.get('EARLY_OUT') is None: analyse(rows)
