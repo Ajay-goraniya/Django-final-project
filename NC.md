@@ -379,3 +379,11 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   (corr -0.03) - so no mechanism: a persistent basis cancels out of Binance-move-vs-Binance-line. REAL London DOWN fills at <=0.45 with
   div<=-3: n10, -0.30/$1 vs +0.13 for the rest (INSUF, but the only real-money read and it points the other way). Verdict: candidate, no
   mechanism, needs a shadow with real fill accounting before it is anything.
+- **Zurich part 5, flow-only (10:47): NO.** ofi60 correlates 0.64-0.69 with the venue mid (move_bps 0.717) - the venue already watches
+  flow. AUC flow-only 0.641-0.698 vs mid 0.714-0.768; mid+flow is WORSE than mid alone at every second (-0.006..-0.019). No cell meets
+  the precondition. Chainlink div on Zurich's 135 h / 437k s: de-meaned |corr| with mid 0.10-0.13 (the only independent input) and it
+  predicts nothing (AUC 0.47-0.51, corr with next-60 s return sign-flipping). Reference drifts -0.25 -> -2.21 bps below Binance over the
+  span (~$22 on BTC - the measured reason a Binance line proxy fails at small gaps). One sentence: every engine input that predicts the
+  outcome is already in the price; the one input not in the price does not predict. Zurich offered venue print flow - DECLINED: that is
+  "how everyone reacts", the owner's exclusion. Next: data the engine does not collect - cross-exchange lead (Coinbase/Kraken are Chainlink
+  sources; the crowd watches Binance). Zurich: Chainlink vs Binance lead-lag on the 437k s. V: Coinbase ticks -> 1 s, public.
