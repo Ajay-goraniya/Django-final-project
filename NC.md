@@ -415,3 +415,7 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   and test it ON ZURICH; London keeps running fixed15 UNTOUCHED until a version BEATS FIXED IN PROFIT AND EXECUTION on Zurich - only then
   does London stop. Pause order cancelled to London 11:13 (EF back ON if it was switched). EF-2 acceptance bar = beats fixed15 on the same
   days on per$1 AND on execution (fill rate, slippage, rejects) in Zurich shadow, verify.py passed, then the owner's confirmation.
+- **Owner 11:2x: "First make something work then stop old ones, at the moment train train train, and improve that new ef."** Standing
+  order: London untouched; all effort on EF-2 training and iteration on Zurich. Iteration ladder: v0 logistic walk-forward -> v1 gradient
+  boosting -> v2 ask dynamics at ms resolution from the probe archive (27.5 M btc5 book events = the richest record of being picked off)
+  -> v3 add any external input that survives (Coinbase lead test pending). Each version: same acceptance table vs fixed15.
