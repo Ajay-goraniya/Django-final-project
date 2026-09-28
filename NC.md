@@ -535,3 +535,11 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   +182.3/110.8/1.65/218/4of4; S0 230 +85.6/54.0/1.58/48/81%/3of4. Only family positive after 150 s, 75-77% win at mean ask 0.713 (+0.049/$1).
   Caveats: 09-28 part day - effectively 3 days, 2 carry the profit; Zurich says the top cells do not clear the null (detail pending).
   Zurich caught its own bug: without pinning to the model's side, late EV bars buy 5c long shots (-$2,024) - any late EF must be pinned.
+- **EF-3 item 5 (Zurich 14:02): no arm passes verify.py** - fails per-day sample (09-28 part day), jagged S sweep, and per$1 null (fixed15
+  +0.050 vs v0 +0.037..0.049). Permutation gate INAPPLICABLE (selection on pw>=0.5 fixes the set); V's opposite-ask flip p=0.000-0.003.
+  On the OWNER'S columns, same 4 days: **EF-2 v0 m=0.02 S0>=150 +$233 / DD $60.7 / ratio 3.85 / 88% fill / run 3 vs fixed15 +$26 / DD $75.8 /
+  0.35 / 42% / run 6.** Same edge per dollar, spread over 6x the fills, smaller drawdown. Failure is about EVIDENCE (3 real days), not edge.
+- **PRE-REGISTERED 14:0x (fixed before any more tables):** Zurich PAPER shadow, from now, same candles, per-pass FAK sim:
+  A = EF-2 v0 m=0.02 S0=150 (model's side pinned); B = raw25 S0=60; C = fixed15 as London runs it (control). Decision rule, fixed now:
+  after >= 3 FULL days, an arm qualifies only if $ total > C, worst DD <= C's, positive on >= 2 of 3 days, fill% >= C, and V's opposite-ask
+  flip p < 0.05. Then it goes to the owner; nothing reaches London without his confirmation of that exact arm.
