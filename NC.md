@@ -559,3 +559,9 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
 - **Pre-registered shadow running (ef3_shadow.py, paper, arm A frozen by sha256).** Backfill (in-sample for A, excluded from the decision):
   A v0 S0>=150 +$132.2 / DD $84.8 / 1.56 / fill 89.5% | **B raw25 S0>=60 +$187.1 / DD $58.1 / 3.22 / fill 43.2%** | C fixed15 +$54.5 / DD
   $85.3 / 0.64 / fill 42.3%. On backfill B beats C on every column of the decision rule. Forward days: 0 of 3.
+- **raw25 S0 fine curve + verify (Zurich 14:30):** S0 30 +170.9/65.5 | 45 +122.3/78.3 | 60 +187.1/58.1 | 75 +192.3/59.1 | 90 +119.4 | 105
+  +82.4 | 120 +54.1/102.1 - a regime (30-75 all positive, decays after 75), not a spike; fixed15's curve has no structure. S0=60 is a VETO,
+  not a better entry: 102 candles fire+fill under both, 88 the same pass, 0 differ; it only DROPS 36 fills at mean sec 36 that won 33.3% and
+  lost $77.2 - the whole +107 -> +187. The owner's "no early gambling", measured. B at S0=60: 121 fills (43%), win 47.9%, +0.155/$1, mean ask
+  0.41, flip p=0.040, +2c still +0.099. verify FAILS sample, HALVES (H1 +0.314 / H2 -0.000) and sweep. **+$179 of +$187 is 09-24/25; the
+  last three days are +$7.8 combined.** B stays pre-registered unchanged; the forward shadow decides.
