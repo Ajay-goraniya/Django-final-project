@@ -642,3 +642,9 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   Zurich's, price source (diag ask vs FAK sim). Asked Zurich to replay E3 on its own decide_log SUBSAMPLED to 15 s - if that also loses,
   E3 depends on 250 ms timing or on the fill sim; if it still wins, the difference is London's features. E3 stays in the forward shadow
   (pre-registered), but its prior is now against it.
+- **E3 decomposition (Zurich 912ba4c): EF-6's +$222 does not reproduce on Zurich's own data either.** Same json + lane on Zurich's
+  decide_log: 250 ms quoted ask +$21.0 (n938, win 64.5%, ask 0.63) | 15 s subsample +$37.9 | 15 s + FAK sim +$34.8 | 250 ms per-day
+  walk-forward (the refit axis) -$32.9 (09-25 +121 vs EF-6 +101; 09-26 -148 vs EF-6 +120 - a $270 sign flip). Not timing, not the fill sim.
+  The 130/136 parity was checked on 09-27, which carries only +$10 of the +$222 - the days that carry it were never parity-checked.
+  London (-$287) and Zurich's four regimes agree with each other; **ef6.py's backtest is the outlier. E3 = UNVALIDATED.** Next: Zurich
+  reconciles 09-26 fire by fire between ef6.py and the lane path to find the defect; if ef6.py is wrong, EF-5/EF-6 tables are re-run.
