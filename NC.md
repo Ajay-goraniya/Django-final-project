@@ -670,3 +670,9 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
 - **London decide_log ON (owner's yes in London's terminal, 17:4x).** Meta flag only, no restart (pid 91301, NRestarts 0), nothing else
   touched. ~4 rows/s, 44 feature keys, ~520 B/row (~180 MB/day). Daily read-only archive to /home/ubuntu/pm_london_archive/
   decide_log_YYYY-MM-DD.sqlite3 at 00:20 UTC (archive_decide_log.py); engine DB stays capped by its 4-day prune; ~290 days of disk headroom.
+- **E4/E5 LIVE in the forward shadow, E1/E3 retired (Zurich bc453be).** E4 strict parity lane vs shadow (identical side+second): 09-27 106/110,
+  09-26 80/112, 09-25 41/94 - degrades as the training set shrinks (09-25's model saw one day; threshold +0.589 vs -0.041 on 09-27);
+  hypothesis, not isolated. Rows exactly ON the plain q.90: 8,415 (09-27) / 3,193 (09-28) / 92 (09-25). Backfill (in-sample, not the
+  decision): E4 +20.2 / DD 54.1 / 323 fires / 92.3% fill / 3 of 4 / flip p 0.147; E5 +125.3 / DD 76.0 / 288 / 89.9% / 3 of 4 / flip p 0.020.
+  Retired tie versions of the same cells: E3 +162.6, E1 +140.3. ef5_nightly now emits thr_strict. London asked (17:46) to replay E5
+  walk-forward per day (ef6_D.json, strict q.90 of D-1 under D's model) on 09-25..28 vs real fixed15.
