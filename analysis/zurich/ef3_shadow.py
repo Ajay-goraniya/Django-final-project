@@ -42,7 +42,17 @@ SEC_LO, SEC_HI, TICK, DELAY_MS = 15, 240, 0.01, 250
 DYN = (1000, 5000, 30000)
 ARMS = ('A_v0_m02_S150', 'B_raw25_S60', 'C_fixed15', 'D_ef4gb_t000', 'D2_ef4gb_q95',
         'E1_nightly_q90', 'E2_nightly_q95', 'E3_trail_1h_q90',
-        'E4_trail_1h_q90_strict', 'E5_causal_q90_strict')
+        'E4_trail_1h_q90_strict', 'E5_causal_q90_strict', 'S_fixed_top20', 'S_raw_top20')
+# ---- ARM S, registered 09-28 18:5x, rule written BEFORE its first forward row (V, owner's NC-12
+# "stable version", STABLE_EF.md). Take the profile's OWN fire pass in a candle and keep it only when its
+# calibrated edge sits in the top 20% of the edges of that profile's fires over the TRAILING 24 h,
+# strictly before this fire. Fewer than 30 fires in that window -> no fire, so the rule never ranks
+# against a handful of points. This is the causal form of "top 20% per day": a day-bucket version would
+# need the day's later fires to rank the morning's.
+#   edge, FIXED  = platt(p_side) - be(own_ask)      (profile fixed15, ev >= 0.15 at ask+1 tick)
+#   edge, RAW    = p_side        - be(own_ask)      (profile raw_v10_live25, ev >= 0.25)
+# Both logged; FIXED is primary. Same FAK sim and the same forward decision rule as every other arm.
+S_WINDOW_MS, S_Q, S_MIN = 24 * 3600_000, 0.80, 30
 # RETIRED from the decision 09-28 17:3x (V, NC-19 c8a460d): E1 and E3 use a plain sample quantile as the
 # threshold, which for a stump model IS one of its ~545 distinct output values - so `pred >= thr` fires on
 # EQUALITY (8,415 of 09-27's rows sit exactly on it) and which pass wins is decided by ties. They keep
@@ -258,6 +268,8 @@ def pick(rows, pA, pD=None, thr_d2=None, pE=None, thrE=None, e3thr=None, e5thr=N
         if 'C_fixed15' not in out and r['pe'] >= 0.5 \
                 and (platt(r['pe']) / pad_cost(r['own']) - 1) >= 0.15:
             out['C_fixed15'] = (r, r['pe'])
+        if '_RAW0' not in out and r['pe'] >= 0.5 and (r['pe'] / be(r['own']) - 1) >= 0.25:
+            out['_RAW0'] = (r, r['pe'])
         if pD is not None and 'D_ef4gb_t000' not in out and r['pe'] >= 0.5 and pD[i] >= 0.0:
             out['D_ef4gb_t000'] = (r, r['pe'])
         if pD is not None and thr_d2 is not None and 'D2_ef4gb_q95' not in out \
@@ -278,6 +290,12 @@ def pick(rows, pA, pD=None, thr_d2=None, pE=None, thrE=None, e3thr=None, e5thr=N
     return out
 
 
+def _edge_fixed(p, a): return platt(p) - be(a)
+
+
+def _edge_raw(p, a): return p - be(a)
+
+
 def db():
     d = sqlite3.connect(DB)
     d.execute('CREATE TABLE IF NOT EXISTS fires(epoch INT, arm TEXT, ts_ms INT, day TEXT, sec INT, '
@@ -292,6 +310,9 @@ def db():
     # E3's trailing window needs the nightly model's predictions WITH timestamps.
     d.execute('CREATE TABLE IF NOT EXISTS epreds(ts_ms INT, day TEXT, pr REAL)')
     d.execute('CREATE INDEX IF NOT EXISTS epreds_ts ON epreds(ts_ms)')
+    # arm S: the trailing-24 h edge history of each profile's OWN fires
+    d.execute('CREATE TABLE IF NOT EXISTS sedges(ts_ms INTEGER, prof TEXT, edge REAL)')
+    d.execute('CREATE INDEX IF NOT EXISTS sedges_ts ON sedges(ts_ms)')
     return d
 
 
@@ -372,7 +393,25 @@ def run_once():
                         _g[k] = (float(np.quantile(sv, E3_Q)), strict_above(sv, E3_Q))
                     else: _g[k] = (None, None)
                 return _g[k]
-        for arm, (r, p) in pick(rows, pA, pD, thr_d2, pE, thrE, e3thr, e5thr).items():
+        sel = pick(rows, pA, pD, thr_d2, pE, thrE, e3thr, e5thr)
+        # ---- arm S: rank this candle's own fire against the profile's trailing 24 h, then append ----
+        for prof, key, arm, efn in (('FIXED', 'C_fixed15', 'S_fixed_top20', _edge_fixed),
+                                    ('RAW', '_RAW0', 'S_raw_top20', _edge_raw)):
+            # NOT `cand` - that is the outer candle dict in this same function, and shadowing it made
+            # the second candle crash on `cand[ep]` with NoneType.
+            c0 = sel.get(key)
+            if c0 is None: continue
+            r0, p0 = c0
+            e0 = efn(r0['pe'], r0['own'])
+            lo_ts = r0['ts'] - S_WINDOW_MS
+            hist = [x for (x,) in d.execute(
+                'SELECT edge FROM sedges WHERE prof=? AND ts_ms >= ? AND ts_ms < ?',
+                (prof, lo_ts, r0['ts']))]
+            if len(hist) >= S_MIN and e0 >= float(np.quantile(np.asarray(hist), S_Q)):
+                sel[arm] = (r0, p0)
+            d.execute('INSERT INTO sedges VALUES(?,?,?)', (r0['ts'], prof, float(e0)))
+        sel.pop('_RAW0', None)
+        for arm, (r, p) in sel.items():
             q = r['q']
             pnl = STAKE * per1(r['win'], q) if q == q else 0.0
             d.execute('INSERT OR REPLACE INTO fires VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
@@ -382,6 +421,7 @@ def run_once():
                        int(r['win']), pnl))
             n += 1
         d.execute('INSERT OR REPLACE INTO seen VALUES(?,?)', (ep, int(time.time())))
+    d.execute('DELETE FROM sedges WHERE ts_ms < ?', (int(time.time() * 1000) - 3 * S_WINDOW_MS,))
     keepd = sorted({x for (x,) in d.execute('SELECT DISTINCT day FROM preds')})[-3:]
     if keepd:
         d.execute(f"DELETE FROM preds WHERE day NOT IN ({','.join('?'*len(keepd))})", keepd)
