@@ -1,0 +1,138 @@
+ZURICH REPLICATION of V's favourite-buyer grid (NC-19, 1e58001, analysis/v/wallets/fav_rule_test.py)
+=====================================================================================================
+Identical 36-cell grid (3 windows x 3 ask bands x {low,mid,high,all} vol), no retune, no parameter
+changed. Script: analysis/zurich/fav_rule_zurich.py (+ fav_verify.py). Read-only. Master OFF.
+
+HEADLINE
+  LOW-vol REPLICATES, and more cleanly than on V's days: positive in 9 of 9 window x band cells
+  (V: 8 of 9), and per $1 the low bucket beats "buy every favourite" in 9 of 9 cells, +0.030..+0.053.
+  MID does NOT replicate: V had mid negative 9 of 9; here mid is positive in 6 of 9 (per$1 -0.026..+0.056).
+  HIGH is negative 9 of 9 here; V called high "mixed".
+  So the two samples agree on the LOW end and disagree on the SHAPE. V's pattern was non-monotone
+  (low +, mid --, high ~) and flagged as the main caution; mine is cleanly MONOTONE low > mid > high.
+  A monotone vol effect is the more credible of the two, but the disagreement is real and is not
+  resolved by these days - it is the thing a third sample should settle.
+
+REGIME DIFFERENCE WORTH SAYING FIRST
+  On 09-24..28 buying the favourite was profitable OUTRIGHT (+0.051/$1 with no vol filter); on V's
+  09-13..16 the same "all" cells were mostly negative. My dollar totals are therefore larger than V's
+  for reasons that have nothing to do with the rule. The low-vol filter still roughly DOUBLES per$1
+  over the unfiltered null and passes the null gate - but the gap between our headline $ figures is
+  regime, not edge, and should not be read as the rule being twice as good as V measured.
+
+SETUP AND DEVIATIONS (all forced by data, none is a retune)
+  Data      tape1s 1 s up_ask/dn_ask (the polybook equivalent) + decide_log 250 ms + gamma outcomes.
+  Days      cut 09-22, 09-23 (first two) -> vol cuts 0.281/0.418; test 09-24..09-28 (5 days).
+  DEV 1     09-22 tape starts 19:30, so the cut set is ~1.2 days, not 2. Cuts land at 0.281/0.418 vs
+            V's 0.260/0.506 - same ballpark, so the vol definition matches, but my high cut is lower.
+  DEV 2     decide_log begins 09-24 and covers 140 of 288 candles that day, all of 09-25..27, 278 of
+            09-28. The cut days have none, which is fine: they only supply vol, which comes from tape1s.
+  DEV 3     09-28 is partial (labels for ~140 candles) and is still today.
+  DEV 4     "our side" = the side with the strictly HIGHER ask. The rule is model-free - it buys what
+            the market calls the favourite - so own>opp is not a tautology: it drops the equal-ask
+            seconds where there is no favourite to buy.
+  DEV 5     3 candles this box traded LIVE on 09-28 are EXCLUDED (the other 2 have no outcome yet).
+  Labels    venue truth: gamma mirror, extended by the archive's own results.actual. The two agree on
+            838 of 838 overlapping candles (100.00%), re-measured every run, not trusted from memory.
+  Fill      V's spec: +250 ms FAK where decide_log exists, else same-side ask 1 s later, both filling
+            only if within one tick and AT that later ask. Applied PER FIRE, not per day.
+
+IS THE 80-95% FILL REAL? Yes. In the 1 s tape the ask is unchanged 1 s later 51.7% of the time and
+within one tick 74.7% (median hold 1 s) - a moving book, not a forward-filled one. London's real 31%
+is for EF fires, which by construction fire on a transient DIP and often have nothing to hit; buying a
+resting favourite is a different situation, so a much higher fill is expected rather than suspicious.
+
+LIMITS: 5 test days, one venue, one asset. Two of the five days are partial. The mid-vol disagreement
+with V is unexplained. CANDIDATE - nothing here is deployed, and nothing should be on 5 days.
+
+SEPARATE, OPERATIONAL, NOT PART OF THIS TASK: the gamma outcome mirror (/tmp/poly) froze at 09-28
+01:42, so the forward shadow has scored nothing since the 09-28 01:30 candle. Zurich does not own that
+collector. Until someone restarts it the registered arms (incl. F/F25/F75) accrue no forward rows.
+
+labels: gamma+archive agree 838/838 = 100.00% on overlap
+candles 1634 | cut days ['09-22', '09-23'] (n=340) -> vol cuts 0.281/0.418 | test days ['09-24', '09-25', '09-26', '09-27', '09-28'] (n=1294)
+excluded 3 candle(s) this box traded LIVE on: [1790624700, 1790625300, 1790625600]
+window   band        vol    fires /day fill%  win%  paid   $@10    DD   days+  +1c      per day
+ 30-60   0.65-0.75  low     425    85   87    70  0.658  +204.1   78.8  4/5  +147.0  +18 +7 -43 +188 +35
+ 30-60   0.65-0.75  mid     215    43   85    65  0.657   -49.6  107.4  2/5   -75.1  +3 +20 -7 -13 -51
+ 30-60   0.65-0.75  high    234    47   82    64  0.664  -110.3  163.9  1/5  -136.0  -65 -10 +17 -29 -23
+ 30-60   0.65-0.75  all     874   175   85    67  0.659   +44.1   99.4  2/5   -64.2  -45 +17 -34 +145 -39
+ 30-60   0.70-0.80  low     380    76   94    74  0.701  +161.2   74.5  3/5  +110.4  -25 +42 -33 +154 +24
+ 30-60   0.70-0.80  mid     181    36   89    70  0.705   -47.1  109.2  2/5   -68.1  +26 -11 +5 -28 -40
+ 30-60   0.70-0.80  high    187    37   89    71  0.712   -24.3   90.4  2/5   -46.1  -31 -2 +10 -19 +17
+ 30-60   0.70-0.80  all     748   150   91    72  0.704   +89.8   73.5  3/5    -3.9  -30 +29 -18 +107 +1
+ 30-60   0.65-0.85  low     498   100   95    73  0.684  +260.7   65.6  4/5  +190.6  +18 +7 -24 +225 +35
+ 30-60   0.65-0.85  mid     238    48   92    68  0.678   -38.6  104.0  2/5   -68.9  +5 +22 -10 -10 -45
+ 30-60   0.65-0.85  high    253    51   89    66  0.683  -123.1  178.8  1/5  -152.7  -93 -16 +17 -18 -13
+ 30-60   0.65-0.85  all     989   198   93    70  0.682   +99.0  128.2  2/5   -31.0  -70 +12 -17 +196 -23
+ 30-120  0.65-0.75  low     573   115   86    71  0.646  +382.6   63.6  5/5  +303.2  +52 +14 +40 +227 +49
+ 30-120  0.65-0.75  mid     274    55   85    68  0.650   +47.1   72.3  3/5   +12.5  +37 +43 +9 -4 -37
+ 30-120  0.65-0.75  high    284    57   83    63  0.657  -125.7  167.5  2/5  -157.9  -95 +6 +24 -28 -33
+ 30-120  0.65-0.75  all    1131   226   85    68  0.650  +304.0  101.0  3/5  +157.7  -6 +62 +74 +195 -21
+ 30-120  0.70-0.80  low     560   112   94    76  0.686  +453.0   53.6  5/5  +373.6  +12 +111 +97 +185 +48
+ 30-120  0.70-0.80  mid     271    54   91    72  0.693   +26.5   95.3  3/5    -7.4  +49 +35 +21 -16 -63
+ 30-120  0.70-0.80  high    272    54   90    70  0.700   -29.0  107.3  2/5   -61.8  -25 -13 +4 -6 +12
+ 30-120  0.70-0.80  all    1103   221   92    73  0.691  +450.5   83.3  4/5  +304.5  +36 +133 +122 +163 -4
+ 30-120  0.65-0.85  low     638   128   94    73  0.667  +467.8   71.3  5/5  +373.9  +59 +12 +65 +277 +55
+ 30-120  0.65-0.85  mid     289    58   93    70  0.667   +60.4   73.1  3/5   +21.0  +44 +45 +7 -4 -31
+ 30-120  0.65-0.85  high    295    59   90    66  0.674  -111.6  159.5  1/5  -147.5  -105 -1 +24 -17 -13
+ 30-120  0.65-0.85  all    1222   244   93    70  0.669  +416.6   94.2  4/5  +247.3  -3 +56 +96 +257 +11
+ 60-180  0.65-0.75  low     548   110   80    73  0.644  +552.5   76.2  5/5  +478.7  +72 +98 +70 +288 +24
+ 60-180  0.65-0.75  mid     257    51   79    70  0.652  +120.2   76.1  4/5   +88.8  +102 +30 +50 +5 -67
+ 60-180  0.65-0.75  high    271    54   81    62  0.657  -153.3  181.2  2/5  -183.0  -88 +3 +4 -22 -50
+ 60-180  0.65-0.75  all    1076   215   80    70  0.649  +519.4  138.3  4/5  +384.6  +87 +131 +125 +270 -93
+ 60-180  0.70-0.80  low     582   116   87    76  0.688  +457.4  102.0  5/5  +379.9  +34 +44 +126 +208 +46
+ 60-180  0.70-0.80  mid     270    54   85    73  0.696   +76.8   95.7  4/5   +44.6  +96 +30 +26 +7 -82
+ 60-180  0.70-0.80  high    277    55   86    69  0.699   -77.7  114.6  1/5  -108.8  -34 -16 +1 -9 -20
+ 60-180  0.70-0.80  all    1129   226   86    74  0.692  +456.5  120.1  4/5  +315.8  +96 +57 +153 +206 -56
+ 60-180  0.65-0.85  low     638   128   90    76  0.679  +634.9   77.2  5/5  +543.8  +84 +100 +126 +275 +50
+ 60-180  0.65-0.85  mid     284    57   87    74  0.681  +157.6   69.5  4/5  +120.7  +124 +22 +50 +21 -59
+ 60-180  0.65-0.85  high    292    58   90    65  0.684  -168.2  196.1  1/5  -202.7  -87 -2 +4 -28 -56
+ 60-180  0.65-0.85  all    1214   243   89    73  0.681  +624.4  114.5  4/5  +461.8  +121 +119 +180 +268 -64
+
+====================================================================================================
+CHECK 1 - does the VOL filter add anything, or is this just "buy the favourite"?
+  cell                      n_low  per$1 low | n_all  per$1 all |  lift   n_mid  n_high  per$1 mid/high
+   30-60  0.65-0.75     425  +0.048   |   874  +0.005   | +0.043    215    234  -0.023 -0.047
+   30-60  0.70-0.80     380  +0.042   |   748  +0.012   | +0.030    181    187  -0.026 -0.013
+   30-60  0.65-0.85     498  +0.052   |   989  +0.010   | +0.042    238    253  -0.016 -0.049
+   30-120 0.65-0.75     573  +0.067   |  1131  +0.027   | +0.040    274    284  +0.017 -0.044
+   30-120 0.70-0.80     560  +0.081   |  1103  +0.041   | +0.040    271    272  +0.010 -0.011
+   30-120 0.65-0.85     638  +0.073   |  1222  +0.034   | +0.039    289    295  +0.021 -0.038
+   60-180 0.65-0.75     548  +0.101   |  1076  +0.048   | +0.053    257    271  +0.047 -0.057
+   60-180 0.70-0.80     582  +0.079   |  1129  +0.040   | +0.038    270    277  +0.028 -0.028
+   60-180 0.65-0.85     638  +0.100   |  1214  +0.051   | +0.048    284    292  +0.056 -0.058
+
+CHECK 2 - PERMUTATION. Shuffle vol across candles, keeping every fire, price and outcome as it is,
+  and re-cut the terciles. If vol carries no information the real low-bucket lift is unremarkable.
+   60-180 0.65-0.85  real lift +0.0481  null mean +0.0002 sd 0.0169  p = 0.0050
+   30-120 0.70-0.80  real lift +0.0401  null mean -0.0001 sd 0.0187  p = 0.0150
+   30-60  0.65-0.75  real lift +0.0430  null mean -0.0004 sd 0.0221  p = 0.0290
+
+CHECK 3 - HALVES. Test candles split in two by time; a real effect survives both.
+  cell                      H1 n   H1 per$1 | H2 n   H2 per$1 | sign agrees
+   30-60  0.65-0.75 low   212   +0.002  |   213   +0.093  | yes
+   30-60  0.70-0.80 low   190   -0.001  |   190   +0.086  | NO
+   30-60  0.65-0.85 low   249   +0.005  |   249   +0.100  | yes
+   30-120 0.65-0.75 low   286   +0.040  |   287   +0.094  | yes
+   30-120 0.70-0.80 low   280   +0.076  |   280   +0.085  | yes
+   30-120 0.65-0.85 low   319   +0.046  |   319   +0.101  | yes
+   60-180 0.65-0.75 low   274   +0.067  |   274   +0.135  | yes
+   60-180 0.70-0.80 low   291   +0.049  |   291   +0.108  | yes
+   60-180 0.65-0.85 low   319   +0.074  |   319   +0.125  | yes
+headline cell 60-180s, fav ask 0.65-0.85, LOW vol   n=638  per$1 +0.100
+per-day:  09-24 n= 61 +0.138  09-25 n=106 +0.094  09-26 n=244 +0.052  09-27 n=194 +0.142  09-28 n= 33 +0.153
+
+(grading compared 838 candles present in BOTH sources)
+==============================================================================
+FINDING: Zurich replication: low-vol early favourites (60-180s, ask 0.65-0.85)   (+0.100/fire, n=638)
+==============================================================================
+  [PASS] grading provenance  gamma vs archive disagree on 0/838 (0.0%)
+  [PASS] sample size         all 3 cells >= 60
+  [PASS] both halves         h1 +0.074 / h2 +0.125
+  [PASS] sweep shape         monotone: [-0.058  0.056  0.1  ]
+  [PASS] cost sensitivity    +0c:+0.100 +1c:+0.085 +2c:+0.071
+  [PASS] beats the null      mine +0.100 vs buy every favourite (no vol filter) +0.051
+------------------------------------------------------------------------------
+  VERDICT: passes all checks. Report it WITH its sample size and limits.
+
