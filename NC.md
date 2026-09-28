@@ -397,3 +397,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   as Zurich's 5 days. 64 disagreement cells: every n>=60 cell is ~0 or negative except S30 P.60 ask<=.55 +0.092 (n102, perm 0.03, halves
   +0.12/+0.03) and S60 P.60 ask<=.55 +0.069 (n158, perm 0.03, halves +0.15/-0.00): one-in-64 chance cells, 0.6-0.7 fires/candle... no.
   Null (buy the venue favourite) -0.03..-0.05. Spot-only early model CLOSED on two independent datasets. (analysis/v/early/EARLY_SPOT_SIGNAL.txt)
+- **Zurich lead-lag (11:05, 438k s): BINANCE LEADS CHAINLINK by 2-3 s** (corr CL forward vs BIN past, k=3: 0.812; reverse 0.095).
+  Chainlink's own recent move carries nothing about its future that Binance does not (partial corr 0.424 vs raw 0.415; reverse 0.007).
+  The settlement reference is a lagged, smoothed copy of the exchange the model already watches. Candle moves correlate 0.98; sign
+  disagreement at S=20-60 is 6.5-7.0% but only where the move is ~0.1 bps (15x smaller than typical) - on-the-line candles. No
+  reference-based edge exists; mechanism now known. Operational: a Binance-derived line is untrustworthy exactly at small gaps (arb).
