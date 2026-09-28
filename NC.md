@@ -849,3 +849,9 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   4 of 4 (the favourite already agrees with the TWAP) | + z>=0.5 +121.6 / 2 of 4 | + m60 0..5 bp +89.6 | both +69.1 | all-vol + z>=0.5
   +118.6 / DD 136.5 | all-vol + z & m60 -2.6. Nothing beats the plain rule; FAV stays as registered. The remaining lever is execution
   (entry price / fills), measurable only in the paper test and live.
+- **FAV parity (Zurich ed70141, FAV_RULE_PARITY.txt): V's code on V's data reproduced byte for byte (md5 fdd0c761...); Zurich's data
+  through the SAME path: LOW-vol positive 8/9 (the negative cell is 0.70-0.80 on both boxes), MID negative 7/9, ALL negative 7/9, best
+  cell +0.043/$1 (NOT +0.100).** Zurich RETRACTS its first-pass numbers and the 'mid positive' shape: it compared a decide_log ask
+  against a tape1s ask (two independent reads, zero mean bias but a 2.3x selection bias in the fill test). Both boxes now agree on the
+  shape (low +, mid -). The verify.py pass quoted earlier was on the flawed path - to be re-run on the corrected one. Checks 1-7 all
+  passed (12/12 on both boxes). Trap noted: data.binance.vision daily archives are in MICROSECONDS for these dates.
