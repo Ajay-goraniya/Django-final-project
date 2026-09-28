@@ -68,7 +68,8 @@ lo = bot_start() // 900 * 900; hi = int(time.time()) // 900 * 900 - 900
 mw = {int(x['ep15']): x for x in mine if lo <= int(x['ep15']) <= hi}
 pw = {int(r['T']): r for r in rows}
 both = sorted(set(mw) & set(pw)); only_m = sorted(set(mw) - set(pw)); only_p = sorted(set(pw) - set(mw))
-print(f'    pair_bot window span {f(lo)} -> {f(hi)}; my scan has {len(mw)} riskless windows in it')
+print(f'    pair_bot running period {f(lo)} -> {f(hi)} = {(hi-lo)/3600:.1f} h = {(hi-lo)//900+1} '
+      f'15m windows; my scan flags {len(mw)} of them riskless')
 print(f'    BOTH {len(both)}: ' + ', '.join(f(e) for e in both))
 for e in both:
     print(f'      {f(e)}  pair_bot {pw[e]["leg15"]}+{pw[e]["leg5"]} cost {pw[e]["cost"]:.4f} at sec {pw[e]["sec"]}'
