@@ -505,3 +505,12 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   180-200 49% (39*) | 29%; >=200 54% (37*) | 39%; >=220 53% (17*) | 45%. **Late fires fill about as often as early ones** - Zurich read B's
   21% sim collapse does not happen in real money; read A (flat fill) is the closer model. Unfilled >=200: n17*, 47% win, +0.066 (INSUF).
   So the after-200 s profit on London's real fills is not a fill artefact. Still n24 real fills - under the bar.
+- **Owner's second trigger - both implementations CLOSED (Zurich 13:07 + 13:27, 5 decide_log days, per-pass fill sim).**
+  (a) Same EF rule on a later pass: the opposite side only qualifies when it is cheap = when it is LOSING; on first-fire losers a
+  qualifying opposite pass appears 1 in 20 and fills 0%; every raw25 variant turns +$107 into a loss (DD up to 4x); fixed15 +$7-14 of
+  second leg for ~2x drawdown, halves flip.
+  (b) Own condition, ref re-crosses the TWAP60 line: fires on 84-92% of candles (weather, not an event); opposite ask at the trigger is
+  already p50 0.56 and barely differs between first-leg losers (0.58) and winners (0.55) - the book absorbed the re-cross 2-3 s earlier
+  (Binance leads Chainlink). Buy-opposite negative at every K (raw25 -0.020..-0.039); sell-first-leg worse (-0.098..-0.137, second fee on
+  nearly every candle, losing run 5 -> 28). One corner (fixed15, first fire >=200 s, K=2, buy opposite) n15* +0.530 - reported, not a candidate.
+  The re-cross is real as an observation and empty as a trigger: the price carries it before the settlement ref confirms it.
