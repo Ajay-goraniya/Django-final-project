@@ -855,3 +855,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   against a tape1s ask (two independent reads, zero mean bias but a 2.3x selection bias in the fill test). Both boxes now agree on the
   shape (low +, mid -). The verify.py pass quoted earlier was on the flawed path - to be re-run on the corrected one. Checks 1-7 all
   passed (12/12 on both boxes). Trap noted: data.binance.vision daily archives are in MICROSECONDS for these dates.
+- **Zurich eac9a1c: outcome mirror FIXED** (gamma_outcomes.py, labels copied from fetch_poly.py, 0/19 disagreements), 282 candles
+  BACKFILLED past the 01:30 stall - no forward day lost. **FAV registered**; V decision 23:42: the vol series is BINANCE 1 s (the series
+  the rule was validated on), cut 0.304, live from bn_flow (no fire if < 240 of 300 s), recorded as a definition fix before any forward
+  row; ref_px version kept as reference arm FAV_ref (0.281); FAV_mid/FAV_all re-cut on Binance (0.304/0.466). Zurich also caught a
+  KeyError (opp not stored) that would have taken the whole shadow down on the first new candle.
