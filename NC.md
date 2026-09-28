@@ -732,3 +732,6 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
 - **EF-9 briefed to Zurich 18:07 (owner: new architecture).** Sequence model (1D-CNN/GRU) on the raw 250 ms stream (both books, Binance
   spot+perp price and flow, sec, line distance; no hand features), after-fill target with the +250 ms FAK sim, walk-forward by day,
   strict q.90 trailing-1h, pinned, anchors 0/15/30/45; reported with +1c/+2c, the favourite null and fixed15. Rules fixed before the run.
+- **EF-9 V-side: GRU sequence model on the raw 1 s stream (V, 09-11..16, EF9_SEQ_V.txt, walk-forward, rules fixed before the run): LOSES.**
+  30 s of both asks/bids/sizes/age + Binance line distance and its change, after-fill target. E5 none -$412.5 (0/4 days) | E5 phys -$279.5
+  (1/4) | E4 none -$536.0 (0/4) | E4 phys -$248.2 (1/4); all worse at +1c/+2c; favourite null -$88..-$311. Worse than the stump version.
