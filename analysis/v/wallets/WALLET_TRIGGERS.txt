@@ -1,0 +1,75 @@
+0x3048d653: taker buys 16806, win 51%, mean paid 0.475, per$1 +0.014
+    sec <60         n 5277 win  50% per$1 +0.000
+    sec 60-180      n 7574 win  50% per$1 +0.017
+    sec 180-240     n 3145 win  52% per$1 +0.044
+    sec >=240       n  810 win  52% per$1 -0.038
+    paid <0.35      n 4565 win  27% per$1 +0.022
+    paid 0.35-0.65  n 9013 win  53% per$1 +0.014
+    paid >0.65      n 3228 win  78% per$1 +0.011
+    |z|<0.5         n 8735 win  53% per$1 +0.022
+    |z| 0.5-1.5     n 6803 win  49% per$1 +0.007
+    |z|>=1.5        n 1268 win  46% per$1 -0.006
+0x41e2e1cc: taker buys 7698, win 52%, mean paid 0.502, per$1 +0.017
+    sec <60         n 1127 win  48% per$1 -0.001
+    sec 60-180      n 3684 win  53% per$1 +0.020
+    sec 180-240     n 2164 win  54% per$1 +0.030
+    sec >=240       n  723 win  52% per$1 -0.010
+    paid <0.35      n 2746 win  18% per$1 -0.022
+    paid 0.35-0.65  n 2124 win  53% per$1 +0.017
+    paid >0.65      n 2828 win  85% per$1 +0.025
+    |z|<0.5         n 2139 win  52% per$1 +0.031
+    |z| 0.5-1.5     n 3398 win  53% per$1 +0.004
+    |z|>=1.5        n 2161 win  51% per$1 +0.021
+0xc53375ff: taker buys 9227, win 51%, mean paid 0.485, per$1 +0.004
+    sec <60         n 2736 win  50% per$1 -0.003
+    sec 60-180      n 3994 win  50% per$1 -0.005
+    sec 180-240     n 1925 win  52% per$1 +0.019
+    sec >=240       n  572 win  55% per$1 +0.030
+    paid <0.35      n 2322 win  26% per$1 -0.026
+    paid 0.35-0.65  n 5025 win  53% per$1 +0.017
+    paid >0.65      n 1880 win  77% per$1 -0.006
+    |z|<0.5         n 4914 win  54% per$1 +0.025
+    |z| 0.5-1.5     n 3594 win  48% per$1 -0.022
+    |z|>=1.5        n  719 win  46% per$1 -0.024
+0x9e3ed7b6: taker buys 1880, win 54%, mean paid 0.536, per$1 +0.095
+    sec <60         n  674 win  47% per$1 +0.131
+    sec 60-180      n  725 win  51% per$1 +0.161
+    sec 180-240     n  348 win  67% per$1 -0.084
+    sec >=240       n  133 win  68% per$1 -0.112
+    paid <0.35      n  499 win  21% per$1 +0.098
+    paid 0.35-0.65  n  777 win  51% per$1 +0.137
+    paid >0.65      n  604 win  84% per$1 +0.029
+    |z|<0.5         n  495 win  52% per$1 +0.146
+    |z| 0.5-1.5     n  713 win  50% per$1 +0.119
+    |z|>=1.5        n  393 win  65% per$1 -0.119
+0xc4e21390: taker buys 1213, win 83%, mean paid 0.737, per$1 +0.123
+    sec <60         n  575 win  79% per$1 +0.069
+    sec 60-180      n  619 win  87% per$1 +0.155
+    sec 180-240     n   19 win 100% per$1 +0.225  INSUF
+    paid <0.35      n    4 win   0% per$1 -1.000  INSUF
+    paid 0.35-0.65  n  127 win  60% per$1 -0.155
+    paid >0.65      n 1082 win  86% per$1 +0.150
+    |z|<0.5         n  205 win  74% per$1 +0.071
+    |z| 0.5-1.5     n  846 win  85% per$1 +0.140
+    |z|>=1.5        n  162 win  87% per$1 +0.095
+0x9783f45c: taker buys 1301, win 70%, mean paid 0.475, per$1 +0.443
+    sec <60         n  222 win  68% per$1 +0.465
+    sec 60-180      n  718 win  66% per$1 +0.510
+    sec 180-240     n  290 win  97% per$1 +0.377
+    sec >=240       n   71 win   6% per$1 -0.468
+    paid <0.35      n  701 win  47% per$1 +1.446
+    paid 0.35-0.65  n  152 win  91% per$1 +0.690
+    paid >0.65      n  448 win 100% per$1 +0.072
+    |z|<0.5         n  203 win  66% per$1 +0.335
+    |z| 0.5-1.5     n  522 win  67% per$1 +0.454
+    |z|>=1.5        n  576 win  75% per$1 +0.459
+0xb7e35c5a: taker buys 123, win 83%, mean paid 0.515, per$1 +0.453
+    sec <60         n   26 win 100% per$1 +0.484  INSUF
+    sec 60-180      n   76 win 100% per$1 +0.669
+    sec 180-240     n   21 win   0% per$1 -1.000  INSUF
+    paid <0.35      n   21 win   0% per$1 -1.000  INSUF
+    paid 0.35-0.65  n   70 win 100% per$1 +0.700
+    paid >0.65      n   32 win 100% per$1 +0.437  INSUF
+    |z|<0.5         n   95 win 100% per$1 +0.638
+    |z| 0.5-1.5     n    7 win 100% per$1 +0.344  INSUF
+    |z|>=1.5        n   21 win   0% per$1 -1.000  INSUF

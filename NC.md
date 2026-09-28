@@ -823,3 +823,9 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   0% maker, buys favourites at 0.738, sec p50 63 (138 candles). Big losers are makers too (0xcc0d -$30.8k, 0x4b01 -$16.7k). Margins are
   ~1-3% of volume for the frequent winners. Next: per-trade context (sec, price, TWAP z, Binance move) for the top consistent takers.
 - OWNER 22:4x: "yes" - the Zurich live window 19:40-20:12 was the owner. Closed.
+- **What triggers the top TAKER winners (V, WALLET_TRIGGERS.txt, 48 h, taker BUY legs, fee-exact per $1, Binance-proxy z):** the
+  high-frequency ones earn a FLAT +0.4..+1.7% per $1 across every second, price and z bucket (0x3048 n16.8k +0.014; 0x41e2 n7.7k +0.017;
+  0xc533 n9.2k +0.004) - no visible trigger, i.e. scale + speed, not a signal we can copy. 0x9e3e (443 candles) +0.095, positive early
+  (< 180 s) and on NEUTRAL |z| (+0.146), negative late and on decided |z|>=1.5 (-0.119). 0xc4e2 (138 candles) buys favourites at ~0.74 in
+  the first 3 minutes, win 83-87%, +0.123 - selective favourite buying that works for them. 0x9783 (+0.44, 29 candles) and 0xb7e3 (1
+  candle) are too few candles to read. No single public pattern stands out; the reliable winners win by volume and latency.
