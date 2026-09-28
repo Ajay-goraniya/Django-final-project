@@ -800,3 +800,9 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   21% of fires < 0.15, win 30%). Better physics, same answer on the sim; move strength carries something bare z did not, but C still
   trails fixed15 and dies at +1c. A direction-only probability dropped into an EV test against the ask becomes a long-shot buyer.
   London-formula parity (fire passes only) still pending.
+- **EF-14 (Zurich 3ddf051): EF-12/EF-13 RETRACTED by Zurich - with London's exact z (relayed; five construction errors fixed) the
+  owner's TWAP filter WORKS on the sim, scored on fixed15's own fires (the order London's live fills measure).** A fixed15 +$54.5 / DD
+  85.3 / 39/day / +1c +31.6 / H2 -0.040 | B |z|>=0.25 +48.6 / DD 75.4 | **B |z|>=0.50 +$64.7 / DD 51.1 / 21/day / +1c +48.1 / H1 +0.254 H2
+  +0.010** | 0.75 +2.4 | 1.00 +16.6. Contrarian z <= -0.5: n97, 44 fills, +$73.7 (same sign as London's real fills). Two independent
+  sources now agree (London real fills + Zurich sim). LIMITS: ~50 fills in 5 days (< 60), 2 of 5 days positive, NON-MONOTONE sweep
+  (verify.py sweep flag) - not verified. Registered forward arm F (|z|>=0.50) with F25/F75 as reference arms (21:21).
