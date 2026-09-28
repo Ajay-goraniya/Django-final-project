@@ -14,7 +14,7 @@ import bisect, collections, json, math, os
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 ASK_LO, ASK_HI = 0.01, 0.99
-DEFAULT = dict(enabled=False, q=0.90, window_s=3600.0, grid_s=60.0, min_rows=500, model_dir=os.path.join(_HERE, 'ef6'))
+DEFAULT = dict(enabled=False, q=0.90, window_s=3600.0, grid_s=60.0, min_rows=500, anchor_s=0.0, model_dir=os.path.join(_HERE, 'ef6'))
 
 
 class StumpModel:
@@ -42,8 +42,8 @@ class StumpModel:
 
 class TrailingQuantile:
     """Causal rolling quantile over (t, value) pairs, refreshed on a fixed grid."""
-    def __init__(self, q, window_s, grid_s, min_rows):
-        self.q, self.w, self.g, self.min = q, window_s, grid_s, min_rows
+    def __init__(self, q, window_s, grid_s, min_rows, anchor_s=0.0):
+        self.q, self.w, self.g, self.min, self.a = q, window_s, grid_s, min_rows, anchor_s
         self.rows = collections.deque(); self.thr = None; self.next_at = None
 
     def add(self, t, v):
@@ -51,13 +51,17 @@ class TrailingQuantile:
 
     def threshold(self, now):
         """Threshold usable at `now`, computed from rows strictly before the current grid step."""
-        step = math.floor(now / self.g) * self.g
+        step = math.floor((now - self.a) / self.g) * self.g + self.a     # anchor offset: the robustness check runs 0/15/30/45 s
         if self.next_at is None or step >= self.next_at:
             while self.rows and self.rows[0][0] < step - self.w: self.rows.popleft()
             vals = sorted(v for t, v in self.rows if t < step)
             if len(vals) >= self.min:
                 k = self.q * (len(vals) - 1); lo = int(math.floor(k)); hi = min(lo + 1, len(vals) - 1)
-                self.thr = vals[lo] + (vals[hi] - vals[lo]) * (k - lo)
+                qv = vals[lo] + (vals[hi] - vals[lo]) * (k - lo)
+                # STRICT (NC-19, Zurich 548f04d): a stump ensemble emits few distinct values, so a plain quantile IS one of them and
+                # 'pred >= q' is decided by ties. Use the smallest distinct value strictly above q; none above -> no fire this step.
+                i = bisect.bisect_right(vals, qv)
+                self.thr = vals[i] if i < len(vals) else None
             else:
                 self.thr = None
             self.next_at = step + self.g
@@ -96,7 +100,7 @@ class EF6Lane:
     def __init__(self, cfg=None, model=None):
         self.cfg = dict(DEFAULT); self.cfg.update(cfg or {})
         self.model = model
-        self.tq = TrailingQuantile(self.cfg['q'], self.cfg['window_s'], self.cfg['grid_s'], self.cfg['min_rows'])
+        self.tq = TrailingQuantile(self.cfg['q'], self.cfg['window_s'], self.cfg['grid_s'], self.cfg['min_rows'], self.cfg['anchor_s'])
         self.asks = AskState(); self.candle = None; self.fired = set()
 
     def load_day_model(self, day):
@@ -104,7 +108,7 @@ class EF6Lane:
         THIS model (ef5_nightly.py, Zurich 16:40). Without it the first hour of a day would mix two models' scales in the window."""
         p = os.path.join(self.cfg['model_dir'], f'ef6_{day}.json')
         self.model = StumpModel.load(p) if os.path.exists(p) else None     # no model for the day -> the lane never fires
-        self.tq = TrailingQuantile(self.cfg['q'], self.cfg['window_s'], self.cfg['grid_s'], self.cfg['min_rows'])
+        self.tq = TrailingQuantile(self.cfg['q'], self.cfg['window_s'], self.cfg['grid_s'], self.cfg['min_rows'], self.cfg['anchor_s'])
         sp = os.path.join(self.cfg['model_dir'], f'ef6_{day}_seed.json')
         if self.model is not None and os.path.exists(sp):
             with open(sp) as f:

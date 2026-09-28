@@ -34,7 +34,7 @@ class Seed(unittest.TestCase):
         x.tq.add(-5.0, 999.0)                                   # a row from the old model must not survive the reload
         self.assertTrue(x.load_day_model('2026-09-29'))
         self.assertEqual(len(x.tq.rows), 10)
-        self.assertAlmostEqual(x.tq.threshold(60.0), 4.5)
+        self.assertAlmostEqual(x.tq.threshold(60.0), 5.0)
 
 
 class Quantile(unittest.TestCase):
@@ -43,11 +43,23 @@ class Quantile(unittest.TestCase):
         for t, v in ((10.0, 1.0), (20.0, 2.0), (30.0, 3.0)): tq.add(t, v)
         self.assertIsNone(tq.threshold(59.0))            # step 0: nothing strictly before it
         tq.add(61.0, 100.0)                               # arrives inside step 60 - must not count for step 60
-        self.assertAlmostEqual(tq.threshold(61.0), 2.0)
+        self.assertAlmostEqual(tq.threshold(61.0), 3.0)   # q.5 of (1,2,3) is 2 -> strict: smallest value above it
     def test_window_drops_old_rows(self):
         tq = L.TrailingQuantile(0.5, 100.0, 60.0, 1)
-        tq.add(0.0, 50.0); tq.add(200.0, 1.0)
-        self.assertAlmostEqual(tq.threshold(240.0), 1.0)
+        tq.add(0.0, 50.0); tq.add(200.0, 1.0); tq.add(210.0, 2.0)
+        self.assertAlmostEqual(tq.threshold(240.0), 2.0)
+    def test_ties_at_the_quantile_never_fire(self):
+        tq = L.TrailingQuantile(0.9, 3600.0, 60.0, 3)
+        for i in range(20): tq.add(float(i), 0.5)          # a stump model: one value dominates
+        self.assertIsNone(tq.threshold(60.0))              # nothing strictly above -> no threshold -> no fire
+        tq.add(30.0, 0.7)
+        self.assertIsNone(tq.threshold(61.0))              # same grid step: cached
+        self.assertAlmostEqual(tq.threshold(120.0), 0.7)
+    def test_anchor_offset_moves_the_grid(self):
+        for anchor, want in ((15.0, 3.0), (0.0, None)):
+            tq = L.TrailingQuantile(0.0, 3600.0, 60.0, 1, anchor_s=anchor)
+            tq.add(10.0, 1.0); tq.add(70.0, 3.0)
+            self.assertEqual(tq.threshold(80.0), want)      # anchor 15: step 75 sees the 70 s row; anchor 0: step 60 does not
     def test_too_few_rows_no_threshold(self):
         tq = L.TrailingQuantile(0.5, 3600.0, 60.0, 500); tq.add(1.0, 1.0)
         self.assertIsNone(tq.threshold(120.0))
