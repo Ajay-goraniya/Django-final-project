@@ -522,3 +522,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   fixed15 x ask band x S0; top-3 by profit/DD through verify.py.
 - V (public data, 7 days, 2,304 candles): late_rules.py - venue-favourite null, walk-forward spot model, and model-agrees-with-favourite
   arms at S0 120..260 on the same objective columns. Collection running (4 slices).
+- **"fixed only after 220 s" as a RULE (Zurich 13:44, 5 per-pass days): LOSES.** sec>=200 rule: 60 fires (12/day), 45% fill, win 44%,
+  -$34.6 (DD $74.1), 1/5 days; >=220: 33 fires, 52% fill, win 41%, -$41.2, 1/5 days; >=230 -$31.2. The SLICE (fixed15's own fires that happened
+  to land >=220: n19, win 58%, +$41.5 paper, 7/8 days) is SURVIVORSHIP - candles where the rule found nothing until 220, selected by its own
+  silence and not tradeable. Forcing the wait brings in the candles the rule would have taken early, and those are worse; the FAK half that
+  fills is the wrong half (paper +0.074 -> FAK -0.124). London's after-200 s real profit is the same survivor slice. Closed.
