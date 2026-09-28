@@ -466,3 +466,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   side before the outcome; the model does not lead. Only the S sweep is monotone (+0.057/+0.046/+0.023/+0.009). verify NOT A FINDING.
   **fixed15 itself is positive on 2 of 5 days** (+0.282/+0.324/-0.020/-0.229/-0.477): the baseline the owner's bar names is two good days.
   Zurich: five days cannot settle "beats fixed on profit"; the archive gains ~1 day/day. (analysis/zurich/EF2.md)
+- **london44 exported (Zurich 12:03):** learner/v12_2/ef2/ef2_model_london.json, walk-forward AUC 0.8609 on 44 features (0.8608 on 52), with a
+  do-not-use-the-52-feature-model clause. London told 12:04 to score its 654 real attempts (fills by p_win decile; EF-2 rule kept vs skipped).
+- 15m (ran before the cancel; owner ruled 5m only; for the record): the 15m ask is as good as the 5m ask past a third of the candle and
+  sits at 0.505 for the first minutes (no view, not softness); a 15m-fitted model does not beat it (7 deltas, none > 1.1 SE, one training
+  day). Not a softer venue. Closed. (analysis/zurich/EF2_15M.md)
