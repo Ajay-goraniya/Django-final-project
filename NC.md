@@ -680,3 +680,12 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   -$140.3, DD $229.6, 1/4 days (25 +23.4 n97 | 26 -4.7 n5 | 27 -36.9 n196 | 28 -122.0 n132). Control real fixed15: n122, 43%, -$97.5, DD $156.0,
   1/4. Cuts 0.407 / 0.135 / -0.041 / 0.011: the scale drifts between the D-1 and D models, fires swing 5 -> 196 a day. Both EF-5/EF-6 cut rules
   now fail on London's own data. The Zurich-trained stump family does not transfer; it stays in the forward shadow only as registered.
+- **EF-8 (V, independent period 09-11..16, analysis/v/ef8/, EF8_EVAL.txt): the METHOD does not generalise.** 1,182 venue-graded candles,
+  polybook 1 Hz book (both sides ask/bid/size/age) + Binance 1 s, TWAP60 proxy agrees with the venue 99.8% on |proj| >= 1 bp at 240 s.
+  After-fill target (fill = same-side ask 1 s later <= ask+1c, fee-exact), stump booster refit nightly on all earlier days, strict
+  thresholds, rules fixed before the run; test days 09-13..16. Unpinned cells buy 9-12c long shots and lose (-$267..-$1,013, DD up to
+  $1,425). Pinned (TWAP-projection z >= 0) cells are positive in total (+$96..+$186) but positive on only 1-2 of 4 days, 09-14 alone
+  carries +$332..+$341 in every pinned cell, H2 negative in every cell, flip p 0.058-0.153 (none < 0.05). Random matched null p 0.00-0.02
+  and FAV120 -$167, but "one good day" is the same failure as arm B and EF-6. Verdict: NOT A FINDING. With E4 and E5 failing on London,
+  the stump/after-fill/quantile family is closed as a route to the owner's goal unless London-trained data (decide_log, from 17:4x
+  09-28) shows otherwise.

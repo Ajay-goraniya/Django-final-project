@@ -1,0 +1,21 @@
+# fit for 09-13: trained on 101646 rows, test rows 126438, pred p50 -0.0418 p90 -0.0325 p99 +0.3697
+# fit for 09-14: trained on 228084 rows, test rows 114420, pred p50 -0.0190 p90 -0.0190 p99 +0.2220
+# fit for 09-15: trained on 342504 rows, test rows 99792, pred p50 -0.0360 p90 -0.0311 p99 +0.6445
+# fit for 09-16: trained on 442296 rows, test rows 87714, pred p50 -0.0421 p90 -0.0239 p99 +0.2093
+
+# cell                              fires, fires/day, fill%, win% of fills, mean paid, $ at $10, max DD, days+, halves | per day [np.str_('09-13'), np.str_('09-14'), np.str_('09-15'), np.str_('09-16')]
+E5 q0.80 pin=none                  n 790 /day 197.5 fill   73% win 47.7% paid 0.46 $   +63.4 DD  585.6 days+ 2/4 halves +203.0/-139.6 | -98 +301 -279 +139 | flip p 0.127
+E5 q0.80 pin=phys                  n 658 /day 164.5 fill   67% win 60.4% paid 0.60 $   +95.6 DD  209.9 days+ 1/4 halves +279.0/-183.4 | -58 +337 -180 -4 | flip p 0.075
+E5 q0.90 pin=none                  n 506 /day 126.5 fill   89% win 11.8% paid 0.11 $  -267.0 DD 1102.4 days+ 2/4 halves -286.2/+19.2 | -797 +511 +186 -167 | flip p 0.509
+E5 q0.90 pin=phys                  n 104 /day  26.0 fill   70% win 56.2% paid 0.52 $  +129.7 DD  158.6 days+ 1/4 halves +197.2/-67.5 | -140 +337 -46 -21 | flip p 0.132
+E5 q0.95 pin=none                  n 491 /day 122.8 fill   88% win 12.0% paid 0.11 $  -361.2 DD 1102.4 days+ 2/4 halves -286.2/-75.1 | -797 +511 +186 -261 | flip p 0.536
+E5 q0.95 pin=phys                  n 104 /day  26.0 fill   70% win 56.2% paid 0.52 $  +129.7 DD  158.6 days+ 1/4 halves +197.2/-67.5 | -140 +337 -46 -21 | flip p 0.138
+E4 q0.80 pin=none                  n 726 /day 181.5 fill   78% win 36.3% paid 0.35 $  -411.0 DD  974.8 days+ 2/4 halves -186.2/-224.9 | -547 +361 -272 +47 | flip p 0.489
+E4 q0.80 pin=phys                  n 467 /day 116.8 fill   68% win 63.0% paid 0.62 $  +185.6 DD  194.5 days+ 2/4 halves +331.4/-145.8 | -6 +337 -179 +33 | flip p 0.129
+E4 q0.90 pin=none                  n 550 /day 137.5 fill   87% win 12.1% paid 0.12 $ -1013.3 DD 1424.8 days+ 1/4 halves -599.7/-413.7 | -956 +356 -175 -238 | flip p 0.814
+E4 q0.90 pin=phys                  n 140 /day  35.0 fill   66% win 58.7% paid 0.55 $  +151.8 DD  177.6 days+ 1/4 halves +178.2/-26.5 | -154 +332 -1 -25 | flip p 0.153
+E4 q0.95 pin=none                  n 504 /day 126.0 fill   90% win  9.2% paid 0.09 $  -374.0 DD 1271.2 days+ 2/4 halves -438.4/+64.4 | -884 +446 +319 -255 | flip p 0.555
+E4 q0.95 pin=phys                  n  86 /day  21.5 fill   70% win 56.7% paid 0.47 $  +179.2 DD  155.1 days+ 1/4 halves +200.7/-21.5 | -140 +341 -2 -20 | flip p 0.058
+NULL FAV120                        n 930 /day 232.5 fill   87% win 76.3% paid 0.76 $  -166.7 DD  238.2 days+ 2/4 halves -114.7/-52.0 | -135 +21 -77 +25
+NULL RAND matched to E5 q0.90 pin=phys: mean $ +1.7 p95 +90.0  actual +129.7  p 0.000
+NULL RAND matched to E4 q0.90 pin=phys: mean $ -1.6 p95 +108.4  actual +151.8  p 0.020
