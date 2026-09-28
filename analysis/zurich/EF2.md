@@ -300,6 +300,93 @@ It still does not pass — per $1 is +0.020 against fixed15's +0.050 — but it 
 actually run, and it is exported as `learner/v12_2/ef2/ef2_model_london.json` with the reason written into
 the file so it cannot be confused with the 52-feature object.
 
+---
+
+# v0b — TIMING ONLY, the survivor
+
+V, 09-28: *"the ask alone matches any model at every horizon... The only survivor twice now is TIMING."*
+
+Fire at the **first** pass with `sec >= S`, on the **model's side**, buy at the quoted ask if `ask <= cap`.
+One fire per candle. Nothing is fitted, so no day has to be held out and all **5** days are used — fixed15
+included, which makes this comparison like-for-like on 5 days rather than 4. v0b is **not** model-free: the
+model still picks the side, and that is its entire remaining content.
+
+## The grid, 16 cells
+
+The full table is in the run output. The cell that stands out:
+
+| | fires/day | fill% | win% | per $1 | total $ | H1 / H2 | flipP | +1c | +2c | +3c |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **S=15 cap=0.60** | 168 | **85.0%** | 57.4% | **+0.057** | **+410.0** | +0.039 / +0.076 | **0.000** | +0.038 | +0.019 | +0.001 |
+| fixed15, same 5 days | 36 | 41.0% | 46.6% | +0.104 | +73.8 | +0.327 / **−0.113** | 0.350 | +0.075 | +0.048 | +0.023 |
+
+Execution is not close — 85% fill against 41%. Total dollars is 5.6× fixed15. Per $1 it loses, +0.057 against
++0.104. And it is the only cell in the grid that survives a **+3c** haircut while staying positive in both
+halves with a flip control at 0.000.
+
+## But it is not rain or sun, and neither is the baseline
+
+```
+  cell                     09-24       09-25       09-26       09-27       09-28  days +ve
+  S=15 cap=0.60           -0.006      +0.097      -0.011      +0.126      -0.116     2/5
+  S=15 cap=0.65           +0.016      -0.000      +0.014      +0.047      +0.170     4/5
+  S=25 cap=0.60           +0.032      +0.035      +0.043      +0.007      -0.338     4/5
+  fixed15                 +0.282      +0.324      -0.020      -0.229      -0.477     2/5
+```
+
+**The best cell is positive on 2 days of 5.** The cells that are positive on 4 of 5 pay +0.022 and +0.023 —
+a third of the headline. And fixed15 is *also* 2 of 5, with a +0.28/+0.32 pair carrying it. Both rules are
+carried by a couple of days, which is the more important fact about this table than either mean.
+
+## Does the venue catch up to the model? No.
+
+V's mechanism question, and the answer is the clearest thing in this document. For each candle, take the side
+the model favours at the first pass at sec >= 15 and follow **that same side's** ask forward:
+
+```
+             n   ask@15   ask@45   ask@120   d15->45   d15->120  % risen@45  % risen@120
+  all     1004    0.619    0.619     0.629     -0.05      +0.92       53.9%        58.7%
+  won      644    0.632    0.657     0.746     +2.56     +11.46       62.1%        76.2%
+  lost     360    0.597    0.550     0.418     -4.71     -17.92       39.2%        27.2%
+```
+
+Over all candles the model-side ask moves **+0.9c in 105 seconds** — flat. It rises 11.5c on the candles that
+win and falls 17.9c on the candles that lose, which is simply the price tracking the outcome; every price does
+that. **If the model led the crowd, the ask would rise on the losers too**, because the crowd would be moving
+toward the model's side before the outcome was known. It does not. There is no lead to harvest, and the rule
+is not buying ahead of the venue.
+
+## verify.py
+
+```
+  [PASS] grading provenance     gamma_btc5 vs gamma_btc5b disagree on 0/140
+  [PASS] quote age              at-or-after, decision on the quoted ask
+  [PASS] sample size            fires 839 / filled 713
+  [FAIL] sample size            under 60: {'09-28': 10}
+  [PASS] both halves            h1 +0.039 / h2 +0.076
+  [FAIL] permutation control    p=1.000 - degenerate, there is no p bar to shuffle
+  [FAIL] sweep shape            cap: [-0.041 +0.019 +0.057 +0.022] peaks at an interior point
+  [PASS] sweep shape            S: [+0.057 +0.046 +0.023 +0.009] MONOTONE
+  [PASS] cost sensitivity       +0c +0.057  +1c +0.038  +2c +0.019  +3c +0.001
+  [FAIL] beats the null         +0.057 vs fixed15 +0.104
+  [FAIL] paired test            n=64, agree 48, discordant 16, McNemar p=0.454
+  VERDICT: NOT A FINDING
+```
+
+**The one gate that passes and matters: the S sweep is monotone.** +0.057, +0.046, +0.023, +0.009 as S goes
+15 → 20 → 25 → 30. Earlier is smoothly better, which is exactly what a real timing effect looks like and is
+the strongest single piece of evidence any arm has produced in this document. The cap sweep is not monotone,
+it peaks at the value that was chosen.
+
+## Where v0b leaves it
+
+Timing is real as a **direction** — the monotone S sweep is hard to explain away. It is not established as a
+**level**: the headline cell is two good days out of five, the mechanism V proposed is measurably absent, and
+it loses the per-$1 comparison to a baseline that is itself two good days out of five.
+
+The comparison the owner's bar asks for cannot really be settled on 5 days when both sides of it are carried
+by two of them. What would settle it is more days of the same tape, not another model.
+
 ## Files
 
 - `ef2_rows.py` — the candidate table
