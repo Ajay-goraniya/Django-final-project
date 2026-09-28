@@ -763,3 +763,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
 - London 20:33 (for the record): healthy; 4 RECONCILE_STUCK this hour, all 'OpenOrder response did not match expected shape' on rejected
   attempt-1s, all resolved (possible venue API shape change - watch). ~+$19.4 of cash inflow beyond the engine's pnl on 3 wins
   (venue_pnl > payout - spent - fee), unexplained; not a known deposit. London changed nothing. To check: rebates/rewards credit timing.
+- **EF-11 (Zurich c118a2c): EF-9 v1 at 1 s on tape1s 09-22..28 (spot+perp signed flow were in tape1s all along), 5 test days, anchors
+  0/15/30/45: LOSES.** Mean -$121.9 [-188.8, +1.1], DD 383-456, 61/day, win 44-45% at ask 0.449, +1c -$92..-$259, 2-3/5 days, favourite
+  null -$155.6; per day +208 / -312 / -61 / +117 / +50. Differences vs v1: pin = model's own side (no engine p before 09-24), 1 s fill,
+  thin coverage (548 candles). With V's 09-11..16 loss, EF-9 v1's 3-day +$161.8 is NOT reproduced on 9 more days. It stays a
+  forward-shadow arm only as registered; no further isolation work (V decision, token cost vs value).
