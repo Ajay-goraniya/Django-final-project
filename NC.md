@@ -330,3 +330,16 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
   shorter than our 250 ms arrival; min touch p50 10 shares; 2 of 18 windows, and those were the two SMALLEST line gaps ($7-9 vs median $61),
   i.e. where the leg choice is least reliable. Fire-both simulation: both fill 54.5%, one leg only 9.1%, neither 36.4%. pair_bot paper: 1 pair,
   cost 0.9811, paid 1, +0.38 - the structure holds, the trade is not there at our speed. (analysis/zurich/ARB_LEGGING_MS.md)
+
+## NC-16 - 09-28 09:5x, owner's direction: EF acts like everyone else; make the signal early
+Owner (09:4x-09:5x): the venue's order hold is not the problem, it is the same for everyone. "Find the actual cause and fix... improve your
+signal, make it early and see something that not everyone sees... the model acts the same as everyone... check the EF method we used in
+the Predict.fun bots, it wasn't based on how everyone reacts."
+- Facts checked in code: London's EF lane runs the SAME v10 model (`from btc_model_v10 import Model`, model_v10.json) the Predict.fun bots
+  used. decide_v11 (Predict.fun) fired at ~20 s on the v11 path (NOTES_v12 11:23); London fires at the first pass EV clears the bar.
+- model_v10.json coefficients: move_bps +1.663, **lv (the VENUE's own logit) +1.551**, mv_x_sec -0.982, everything else < 0.14. The
+  model's second-largest input is Polymarket's own price - it agrees with the crowd by construction.
+- Zurich EF_TRIGGER_SOURCE already showed the split: fires where p moved and the book stood still earn +0.234/$1; fires that chase a book
+  dip pay -0.007; p chasing a rising ask -0.556. The edge is where the model disagrees with the market, not where it follows it.
+- Briefs out 09:55: Zurich EF_FIRE_TIME (fire-second grid S x P, full grid; then part 4: spot-only walk-forward model vs venue mid at
+  sec 20/30/45/60, disagreement cells). London: real fills by fire second and ask (read-only).
