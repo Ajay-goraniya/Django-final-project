@@ -514,3 +514,11 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   (Binance leads Chainlink). Buy-opposite negative at every K (raw25 -0.020..-0.039); sell-first-leg worse (-0.098..-0.137, second fee on
   nearly every candle, losing run 5 -> 28). One corner (fixed15, first fire >=200 s, K=2, buy opposite) n15* +0.530 - reported, not a candidate.
   The re-cross is real as an observation and empty as a trigger: the price carries it before the settlement ref confirms it.
+
+## NC-19 - 09-28 13:4x, OWNER GOAL (standing, /goal): EF with good profit, SMALL max drawdown, good frequency and fill rate. Do not stop.
+- Method change: every arm is judged FIRST on $ total at $10, worst drawdown $, profit/drawdown ratio, fires/day, fill%, % days positive,
+  longest losing run - then per$1/win%/halves/perm. Accuracy is not the target.
+- Zurich EF-3 grid (briefed 13:44): fixed15 start-second curve S0 {0..230}; EF-2 v0 with the same S0 curve; fixed15 skipping 60-120 s;
+  fixed15 x ask band x S0; top-3 by profit/DD through verify.py.
+- V (public data, 7 days, 2,304 candles): late_rules.py - venue-favourite null, walk-forward spot model, and model-agrees-with-favourite
+  arms at S0 120..260 on the same objective columns. Collection running (4 slices).
