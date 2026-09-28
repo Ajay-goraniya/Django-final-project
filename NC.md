@@ -806,3 +806,7 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   +0.010** | 0.75 +2.4 | 1.00 +16.6. Contrarian z <= -0.5: n97, 44 fills, +$73.7 (same sign as London's real fills). Two independent
   sources now agree (London real fills + Zurich sim). LIMITS: ~50 fills in 5 days (< 60), 2 of 5 days positive, NON-MONOTONE sweep
   (verify.py sweep flag) - not verified. Registered forward arm F (|z|>=0.50) with F25/F75 as reference arms (21:21).
+- **Arm F LIVE in the forward shadow (Zurich be3dc2f), rule frozen:** F_z50 (fixed15's own fires, skip |z| < 0.50, London z) plus
+  reference arms F25/F75; 15 arms. Backfill (in-sample, not the decision): F_z50 +$65.6 / DD 66.9 / 57 fills / 2 of 5; F25 +38.6; F75
+  +21.0. London's z now has ONE implementation (london_z.py) shared by shadow and backtest. Zurich records the Chainlink oracle feed via
+  RTDS (IPv4 forced); the exact TWAP60 is on PolyBolt and needs CLOB credentials - London recorder awaits the owner's yes.
