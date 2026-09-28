@@ -543,3 +543,12 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   A = EF-2 v0 m=0.02 S0=150 (model's side pinned); B = raw25 S0=60; C = fixed15 as London runs it (control). Decision rule, fixed now:
   after >= 3 FULL days, an arm qualifies only if $ total > C, worst DD <= C's, positive on >= 2 of 3 days, fill% >= C, and V's opposite-ask
   flip p < 0.05. Then it goes to the owner; nothing reaches London without his confirmation of that exact arm.
+- **V public-data late rules v1 (2,304 candles, 8 days) - SUSPECT, not a finding.** Favourite-buying null is negative at every S0/band
+  (-0.003..-0.113/$1). The walk-forward spot model looks strong late (S0 180 m 0.05: 677 fires, 97/day, +$674, DD $193, 7/7 days; S0 220
+  m 0.02 +$596, DD $114) and footprint+price similar (S0 220 m 0.05 +$471, DD $108, 7/7) - BUT the price used is the max taker price in the
+  3 s BEFORE the decision second, while the model sees Binance at the END of it: a stale quote (verify.py quote_age). Tell: footprint+spot+mid
+  ranks WORSE than the mid alone (AUC 0.830 vs 0.839 at S120 ... 0.938 vs 0.944 at S240) yet "trades" profitably - the edge is the model
+  knowing a Binance move the stale price has not absorbed. Recollecting with the FORWARD taker price (first second in [S+1, S+4] after the
+  decision); v1 tables kept as LATE_RULES.txt / FP_EVAL_v1.txt for the record.
+- Footprint (8 days, perp aggTrades: absorption, stacked imbalance, POC, acceptance vs line, big prints, CVD divergence): corr with the
+  venue mid 0.90-0.93; AUC alone 0.820-0.926 vs mid 0.839-0.944. **Already in the price, like every other flow input (NC-16).**
