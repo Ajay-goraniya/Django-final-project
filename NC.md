@@ -343,3 +343,5 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   dip pay -0.007; p chasing a rising ask -0.556. The edge is where the model disagrees with the market, not where it follows it.
 - Briefs out 09:55: Zurich EF_FIRE_TIME (fire-second grid S x P, full grid; then part 4: spot-only walk-forward model vs venue mid at
   sec 20/30/45/60, disagreement cells). London: real fills by fire second and ask (read-only).
+- train_summary.json: logit btc_only logloss 0.5364 / acc 72.0% vs btc+venue 0.5146 / 73.3%. The venue price adds ~1.3 pp of accuracy;
+  the spot-only signal carries nearly all the skill and is the part the crowd does not already price.
