@@ -77,6 +77,14 @@ F_CUTS = {'F_z50': 0.50, 'F25_z25': 0.25, 'F75_z75': 0.75}
 # mistake that inflated my first-pass replication 2.3x (a decide_log ask tested against a tape1s ask).
 # vol comes from the ref tape, but vol is a regime label and never a price comparison, so it cannot
 # reintroduce that selection.
+# ARRIVAL FILL (owner, 09-28: "be sure about fills at the time the order reaches Polymarket").
+# The decision instant is not the tradable instant: London's round trip is ~245 ms and the crypto taker
+# hold has been 150 ms since 09-04, so the book that matters is ~400 ms later. FAV is judged at
+# decision + FAV_LAG_MS on the next decide_log pass at or after that instant, NEVER an earlier one, and
+# only fills if the size at that level covers our shares. This is deliberately NOT the shared DELAY_MS
+# used by arms A-F: changing that global would silently re-grade every other registered arm.
+FAV_LAG_MS = 500
+FAV_BOOKS = '/home/ubuntu/pm_multi/multi_market.sqlite3'
 FAV_SEC = (60, 180)
 FAV_BAND = (0.65, 0.85)
 # The exact 09-22/23 terciles from _vol_open are 0.28105 / 0.41862. V registered 0.281, so 0.281 is what
@@ -92,6 +100,39 @@ def _vol_open(ref, ep):
     w = [ref[t] for t in range(ep - 300, ep) if t in ref]
     if len(w) < FAV_VOL_MIN_PTS: return None
     return float(np.std(np.diff(np.log(np.asarray(w, dtype=np.float64)))) * 1e4)
+
+
+def _fav_books():
+    """btc5 best ask + size at 1 s, for FAV's size gate. Empty dict if the recorder is not running."""
+    try:
+        c = sqlite3.connect(f'file:{FAV_BOOKS}?mode=ro', uri=True)
+        return {int(t): (ua, us, da, ds) for t, ua, us, da, ds in c.execute(
+            "SELECT ts, up_ask, up_ask_sz, dn_ask, dn_ask_sz FROM books WHERE market='btc5'")}
+    except Exception:
+        return {}
+
+
+def _fav_fill(rs, r0):
+    """FAK cap = decision ask + 1 tick. Fill only if the arrival ask is within the cap AND the size at
+    that level covers 10/paid shares; pay the arrival ask. NaN = no fill.
+
+    Shares are 10/paid, V's literal words, which is STRICTER than the fee-exact 10/be(paid) - a fill
+    gate should err toward not filling. Where the book recorder has no row for that second the size
+    cannot be checked and the fill is allowed on price alone; btc5 sizes begin 09-28 18:13, so every
+    FORWARD row has them and only pre-recorder history could ever be unchecked.
+    """
+    rs = sorted(rs, key=lambda r: r[0])
+    ts_a = np.array([r[0] for r in rs])
+    j = int(np.searchsorted(ts_a, r0['ts'] + FAV_LAG_MS, side='left'))
+    if j >= len(rs): return float('nan')
+    a = float(rs[j][3] if r0['up'] else rs[j][4])
+    if not (0.01 < a < 0.99) or a > r0['own'] + TICK + 1e-12: return float('nan')
+    b = FAV_BK.get(int(ts_a[j] // 1000))
+    if b is not None:
+        bask, bsz = (b[0], b[1]) if r0['up'] else (b[2], b[3])
+        if bask is not None and bsz is not None:
+            if not (bask <= a + 1e-12 and bsz >= STAKE / a): return float('nan')
+    return a
 
 # ---- ARM S, registered 09-28 18:5x, rule written BEFORE its first forward row (V, owner's NC-12
 # "stable version", STABLE_EF.md). Take the profile's OWN fire pass in a candle and keep it only when its
@@ -117,6 +158,7 @@ E3_W_MS, E3_Q, E3_GRID_MS = 3600_000, 0.90, 60_000
 EDIR = '/home/ubuntu/pm_ef3'      # arm E: one model per day, written by ef5_nightly.py at 00:05 UTC
 Q_D2 = 0.95      # D2 = the SAME frozen model as D, only the threshold rule differs (EF-5, V 09-28 15:5x)
 ALL52 = None            # set in run_once from the frozen row table's name list
+FAV_BK = {}             # btc5 ask sizes, set in run_once
 
 # The frozen arm-A model was trained on 09-24..09-27, so those days are IN-SAMPLE for it and 09-28 was
 # already on the table when V wrote the decision rule. The rule says "from now". Everything up to and
@@ -378,10 +420,11 @@ def db():
 
 
 def run_once():
-    global ALL52, STRICT, REF
+    global ALL52, STRICT, REF, FAV_BK
     M = freeze_model(); MD = load_D()
     ALL52 = [str(x) for x in np.load(ROWS, allow_pickle=True)['names']]
     REF = _ref_tape()
+    FAV_BK = _fav_books()
     STRICT = json.load(open(STRICT_F)) if os.path.exists(STRICT_F) else {}
     d = db()
     done = {e for (e,) in d.execute('SELECT epoch FROM seen')}
@@ -502,8 +545,11 @@ def run_once():
                          and FAV_BAND[0] <= r['own'] <= FAV_BAND[1]),
                         key=lambda r: r['ts'])
             if fv:
-                r0 = fv[0]                      # p column carries the candle's vol - there is no model here
-                sel['FAV_all'] = (r0, v0)
+                # COPY the row before replacing q: fv[0] is the same dict the other arms may hold, and
+                # mutating it in place would hand arms A-F FAV's arrival fill instead of their own.
+                r0 = dict(fv[0])
+                r0['q'] = _fav_fill(cand[ep], r0)
+                sel['FAV_all'] = (r0, v0)       # p column carries the candle's vol - no model here
                 if v0 < FAV_CUT_LOW: sel['FAV'] = (r0, v0)
                 elif v0 < FAV_CUT_MID: sel['FAV_mid'] = (r0, v0)
         sel.pop('_RAW0', None)

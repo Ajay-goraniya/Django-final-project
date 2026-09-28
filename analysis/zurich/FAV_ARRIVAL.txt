@@ -1,0 +1,73 @@
+FAV UNDER AN ARRIVAL-BASED FILL  (owner: "be sure about fills at the time the order reaches Polymarket")
+========================================================================================================
+Model, V's rule implemented literally: cap = decision ask + 1 tick; FILL only if the same-side ask at
+decision + LAG (the next decide_log pass at or AFTER that instant, never an earlier one) is <= cap AND
+the size at that level covers our shares; pay that arrival ask, fee-exact. Forward arm uses +500 ms.
+
+HEADLINE. Judging the fill at arrival rather than at decision roughly HALVES the edge:
+    1 s book model (the parity grid that validated the rule)   +0.043 / $1
+    arrival +500 ms, this model                                +0.019 / $1
+and the earlier +0.110 figure from a 250 ms in-sample replay should be ignored entirely.
+
+The SHAPE survives, which is the part that matters for the registration:
+    FAV (low vol)  +0.019      FAV_mid  +0.008      FAV_hi  -0.029      FAV_all  +0.005
+Low still beats mid, high is still the only clearly negative bucket, and low still beats the
+unfiltered null. So arrival pricing costs edge without inverting the finding.
+
+SENSITIVITY. fill% falls monotonically with lag - 88.4 / 84.8 / 78.9 - exactly as it should, because a
+later book has had more time to move away. But the DOLLARS are NOT monotone (+162.0 / +119.7 / +165.4)
+while win% of fills barely moves (75.6 / 74.9 / 75.2). That non-monotonicity is noise, not a signal
+about latency, and it is the reason to keep V's +500 ms rather than read +1000 as "better". Anyone
+picking the best-looking lag here would be fitting to 644 decisions of chop.
+
+THE SIZE GATE IS THE WEAK PART, and it is a data limit, not a modelling choice. Polymarket ask SIZES for
+the btc5 market exist only from 09-28 18:13, when the book recorder started: 67 candles, 5.5 h. So:
+  * the PRICE condition is measured across the whole FAV backfill (1,200 decisions);
+  * the SIZE condition is measurable on 30 FAV fires -> 24 pass, 6 rejected. INSUFFICIENT (n < 60).
+  * WORTH WATCHING: that is a 20% rejection rate, against only 3.8% of all btc5 book rows holding less
+    than the ~14 shares $10 buys at 0.72. If that holds up it means the book is thinner at the moments
+    FAV wants to trade than at random moments - i.e. the size gate bites where it hurts. On n=30 that
+    is a hypothesis, not a result, and forward rows will settle it. If it does hold, FAV's effective
+    fill drops from ~85% to ~68% and the +0.019 above is optimistic.
+
+Shares for the gate are 10/paid, V's literal words. This is STRICTER than the fee-exact 10/be(paid),
+since be(paid) > paid, so the gate demands more size than the order would actually consume. Left strict
+deliberately: a fill gate should err toward not filling.
+
+FORWARD WIRING. FAV/FAV_mid/FAV_all now use FAV_LAG_MS = 500 plus the size gate. This is deliberately
+NOT the shared DELAY_MS: that stays 250 ms for arms A-F, because changing it would silently re-grade
+ten already-registered arms. Verified rather than assumed - on 286 FAV decisions the arrival fill
+differs from the shared 250 ms fill in 88 of them (53 a different price, 31 no-fill where 250 ms filled,
+4 the reverse), so the new path is demonstrably live; and the shared row is mutated in 0 of 286, so
+arms A-F keep their own fill. ef3_shadow.py --selftest still row-for-row against ef2_rows.npz.
+
+Where the recorder has no book row for that second the size cannot be checked and the fill is allowed
+on price alone. btc5 sizes begin 09-28 18:13 and FAV's first forward row is 09-28 23:30, so every
+forward row has a real size check; only pre-recorder history could ever be unchecked.
+
+btc5 book/size rows: 20,269
+FAV decision rows: 1202  (candles with a qualifying favourite in 60-180 s)
+
+arm       lag     fires  fill%   win% of fills    paid      $@10    per$1
+-------------------------------------------------------------------------
+FAV       +250     646  88.4%   75.3%        0.720    +142.0  +0.022
+FAV       +500     646  84.8%   74.6%        0.718     +99.7  +0.015
+FAV       +1000    646  78.9%   74.9%        0.714    +145.4  +0.023
+-------------------------------------------------------------------------
+FAV_mid   +250     271  87.8%   72.7%        0.714      -1.6  -0.001
+FAV_mid   +500     271  82.7%   73.2%        0.712     +22.0  +0.008
+FAV_mid   +1000    271  78.2%   72.6%        0.711      +0.6  +0.000
+-------------------------------------------------------------------------
+FAV_hi    +250     285  86.3%   69.1%        0.711    -106.3  -0.037
+FAV_hi    +500     285  78.9%   69.3%        0.709     -82.3  -0.029
+FAV_hi    +1000    285  73.3%   68.4%        0.705     -93.2  -0.033
+-------------------------------------------------------------------------
+FAV_all   +250    1202  87.8%   73.3%        0.717     +34.1  +0.003
+FAV_all   +500    1202  82.9%   73.1%        0.715     +39.4  +0.003
+FAV_all   +1000   1202  77.5%   72.9%        0.711     +52.8  +0.004
+
+SIZE GATE, only where btc5 ask sizes exist (09-28 18:13+). Marked INSUFFICIENT under 60 fires.
+arm       lag   fires_with_size  size_ok  would_be_rejected
+FAV       +500          32          24        8   <- INSUFFICIENT
+FAV_mid   +500          14          11        3   <- INSUFFICIENT
+FAV_hi    +500          10           9        1   <- INSUFFICIENT
