@@ -570,3 +570,9 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   on a 3 s stale ask but paying the forward price changes ~nothing (+231 vs +216); BOOKING at the stale ask turns S0=220 into +$1,553 (ratio
   10.04, 100% fill, p=0.000) and S0=180 from -$232 into +$1,447. The public-data v1 result was a price you cannot trade at plus deleted
   no-fills. CLOSED as a candidate; the forward-price public rerun is kept only as a cross-check of this decomposition.
+- **B on 10 days (Zurich 14:37, stable_ef, slice = lower bound on the rule): COLLAPSES.** RAW sec>=60 +$125 paper over 10 days, 5/10 days;
+  best two days = 159% of the total, the other eight -$73. Start-second bar flat on 10 days (RAW 0/30/45/60/75: +142/+125/+156/+125/+76).
+  Zurich RETRACTS its veto mechanism: on 10 days the dropped sec<60 set is n36 w47% +$17 (5-day: 33%, -$77). "Early fires lose" was a 5-day
+  fact. **London-exec is negative in EVERY cell, both arms** (RAW -$207 / -$179 at sec>=60; FIXED -$95 / -$83): paper positive, real fills
+  negative - the adverse fill is the whole story. B stays pre-registered (forward days are the test) but the prior is now against it.
+  Arm A (EF-2 v0 S0>=150) is the one arm whose edge does not depend on getting a cheap fill - 89.5% sim fill, buys the favourite.
