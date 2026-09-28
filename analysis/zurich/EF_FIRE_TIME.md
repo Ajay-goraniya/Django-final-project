@@ -12,7 +12,7 @@ permutation is V's stricter one: a flipped draw is priced at the **opposite side
 through the identical FAK test, so the control answers "what if the model had picked the other side", fully
 priced, rather than "what if the payout flipped".
 
-## Answer in five parts
+## Answer in six parts
 
 **1. The owner is right that EF fires late.** Baseline fixed15 fire second: **p10 45, p50 126, p90 198**. Only
 **5.1%** of fires happen at or before second 30; **55.4%** happen at second 120 or later.
@@ -37,9 +37,15 @@ second tested, 0.687 vs 0.714 at second 20 widening to 0.703 vs 0.768 at second 
 cells do not pay. The reason is structural: `move_bps` alone correlates **+0.717** with the venue mid, so with
 these inputs there is very little the crowd is not already looking at.
 
+**6. And flow is not the answer either — the venue is already watching it (section 5).** `ofi60` correlates
+**0.64–0.69** with the venue mid, essentially where `move_bps` sits at 0.717. Flow-only loses to the mid at
+every second, and mid+flow is *worse* than mid alone at all four. The Chainlink-minus-Binance divergence is
+the one input tested that is genuinely independent of the price (|corr| 0.10–0.13) and it predicts nothing —
+AUC 0.470–0.512 against the venue's own outcome.
+
 **Every cell that met the standing precondition was put through verify.py and every one came back
-NOT A FINDING** — six from the grid, one from section 4. The honest summary is that the *pattern* across 28
-cells is strong and no individual cell survives its own gates.
+NOT A FINDING** — six from the grid, one from section 4, and section 5 produced no candidate at all. The
+honest summary is that the *pattern* across 28 cells is strong and no individual cell survives its own gates.
 
 ## 1. Baseline — the rule live on London today
 
@@ -308,6 +314,149 @@ finding underneath it is the +0.717 correlation between `move_bps` and the venue
 is very little the crowd is not already looking at. Finding something the crowd does not see needs an input
 the venue is not watching — an order-flow or cross-market signal — not a re-weighting of the move.
 
+## 5. A FLOW-ONLY model, and the Chainlink reference
+
+V, 09-28, agreeing with part 4: the input has to be something the venue is not watching. So: drop every price
+and move feature and keep only order flow, book shape and the perp basis.
+
+**Kept** (all that `decide_log` holds of the brief): `ofi5, ofi15, ofi60` (aggressor order-flow imbalance —
+the engine carries 5/15/60 s, not the 5/30/60 in the brief), `spot_imb15, spot_imb60`, `imb5, imb20` (book
+depth imbalance), `perp_n15`, `basis_bps`, `rv60`.
+**Excluded**: `move_bps`, `mv_x_sec`, all `ret*`, `prev1/2_bps`, `range_bps`, `pos_in_range`, `dist_hi/lo_bps`,
+`ref_move_bps`, `ref_open_bps` (price or move), `lv`, `lv_x_sec`, `p_venue` (the venue's own opinion),
+`micro_bps` (a book-derived *price* — the venue's view under another name), `hod_sin/cos` (clock, not flow).
+
+Same harness as part 4: walk-forward by day, scaler fitted on training rows only, first day never scored, one
+row per candle at exactly `sec == S`, label is the venue's resolution, model predicts P(UP).
+
+### (a) The premise does not survive the correlation table
+
+| feature | \|corr\| with venue mid, S=20 → 60 |
+|---|---|
+| `perp_n15` | 0.022 · 0.070 · 0.068 · 0.016 |
+| `rv60` | 0.053 · 0.063 · 0.082 · 0.068 |
+| `imb20` | 0.332 · 0.306 · 0.265 · 0.246 |
+| `imb5` | 0.345 · 0.332 · 0.288 · 0.278 |
+| `basis_bps` | 0.321 · 0.292 · 0.322 · 0.297 |
+| `ofi5` | 0.416 · 0.361 · 0.380 · 0.350 |
+| `spot_imb15` | 0.422 · 0.442 · 0.419 · 0.346 |
+| `ofi15` | 0.492 · 0.469 · 0.489 · 0.425 |
+| `spot_imb60` | 0.647 · 0.642 · 0.650 · 0.563 |
+| **`ofi60`** | **0.670 · 0.682 · 0.688 · 0.641** |
+| *for scale:* `move_bps` | *0.717* |
+| *for scale:* `lv` | *0.981* |
+
+**`ofi60` sits at 0.64–0.69 — essentially where `move_bps` sits.** The venue is already watching order flow,
+or flow and price move together tightly enough that there is no private information left in it. The two
+features that *are* genuinely uncorrelated with the price, `perp_n15` and `rv60`, are non-directional — a
+trade count and a volatility — so neither can pick a side on its own.
+
+### (b) Flow does not add to the price. It subtracts.
+
+| S | flow-only | venue mid alone | mid + flow | flow adds |
+|---|---|---|---|---|
+| 20 s | 0.641 | **0.714** | 0.695 | **−0.019** |
+| 30 s | 0.671 | **0.732** | 0.718 | **−0.014** |
+| 45 s | 0.687 | **0.744** | 0.738 | **−0.006** |
+| 60 s | 0.698 | **0.768** | 0.754 | **−0.014** |
+
+Flow-only loses to the mid at every second — that now makes **twelve comparisons across parts 4 and 5,
+twelve losses**. And the third column is the sharper result: bolting flow onto the price makes the combined
+model *worse* out-of-sample at all four seconds. The flow features are not adding a weak signal that a bigger
+sample would sharpen; they are adding variance to something already better than they are.
+
+### (c) Disagreement cells
+
+```
+--- S=20s ---
+      rule                    n cand fills  fill%   win%    per$1      H1      H2  permP    ask
+      p>=0.60 & ask<=0.50       94    90  95.7%  42.2%   -0.047  -0.025  -0.069  0.534  0.436
+      p>=0.65 & ask<=0.45       30    29  96.7%  37.9%   +0.046  +0.163  -0.062  0.432  0.383  *n<60
+--- S=30s ---
+      rule                    n cand fills  fill%   win%    per$1      H1      H2  permP    ask
+      p>=0.60 & ask<=0.50       80    78  97.5%  34.6%   -0.211  -0.171  -0.252  0.888  0.410
+      p>=0.65 & ask<=0.45       31    31 100.0%  41.9%   +0.022  +0.008  +0.036  0.334  0.367  *n<60
+--- S=45s ---
+      rule                    n cand fills  fill%   win%    per$1      H1      H2  permP    ask
+      p>=0.60 & ask<=0.50       76    74  97.4%  33.8%   -0.202  -0.021  -0.384  0.882  0.413
+      p>=0.65 & ask<=0.45       22    22 100.0%  40.9%   +0.078  +0.439  -0.283  0.354  0.378  *n<60
+--- S=60s ---
+      rule                    n cand fills  fill%   win%    per$1      H1      H2  permP    ask
+      p>=0.60 & ask<=0.50      137   130  94.9%  43.1%   +0.059  +0.154  -0.036  0.176  0.386
+      p>=0.65 & ask<=0.45       71    65  91.5%  33.8%   -0.075  +0.205  -0.347  0.584  0.361
+```
+
+**No cell meets the standing precondition.** Exactly one is positive in both halves — S=30 `p>=0.65`, at
++0.022 with H1 +0.008 / H2 +0.036 — and it carries 31 fills against the 60-fill bar. So unlike part 4 there
+was no verify.py candidate to run at all, which is a cleaner negative than having one and watching it fail.
+
+Simulated fill rates are 91–100% here, for the same reason as section 4 — the cells select cheap asks that
+barely move — and the same warning applies: the simulator was validated near London's real 31%.
+
+### The Chainlink angle
+
+`tape1s.ref_px` is the venue's own RTDS `crypto_prices_chainlink` topic (`poly_feeds.py:90-94`) — the
+Chainlink BTC/USD the market settles on — and `tape1s.spot_px` is Binance, both at 1 Hz over **135.2 hours**
+and **437,389** shared seconds.
+
+```
+  tape1s rows with BOTH the Chainlink RTDS reference and Binance spot: 437389 seconds = 135.2 h span
+  divergence (chainlink - binance), bps: mean -2.215  p10 -3.47  p50 -2.18  p90 -1.01  sd 1.17
+  the reference moves MORE often than the 1 s Binance tape: unchanged second-to-second on 23.0% of seconds vs 43.9% for Binance
+
+  NOTE the raw divergence is a drifting OFFSET, not a centred signal: it is negative on more than 90% of
+  seconds and its mean moved from -0.25 bps over the first 20k seconds to -2.21 bps over the whole span.
+  Testing the raw level would mostly test that offset, so everything below is reported BOTH raw and de-meaned
+  against the median divergence over the previous 600 s (past-only).
+
+  corr(divergence at sec s, the NEXT 60 s Binance return) - one observation per candle, so the observations
+  at a given s do not overlap:
+      sec  n candles  corr raw  corr demean  rank demean  fwd60 bps sd  div_z bps sd
+       20       1307    +0.011       +0.047       +0.033          4.98          0.77
+       30       1329    -0.108       -0.095       +0.006          4.76          0.81
+       45       1317    -0.029       +0.016       +0.073          4.80          0.77
+       60       1368    -0.077       -0.055       +0.034          4.71          0.82
+
+  and the question that actually matters - does the divergence predict the VENUE OUTCOME?
+        sec      n  AUC div raw  AUC div demean   AUC mid   div_z |corr| mid
+         20    900        0.494           0.470     0.715              0.127
+         30    919        0.494           0.497     0.723              0.119
+         45    906        0.503           0.512     0.747              0.101
+         60    918        0.482           0.481     0.763              0.126
+```
+
+**The divergence is the one input tested in parts 4 and 5 that is genuinely independent of the crowd** —
+de-meaned, it correlates only **0.101–0.127** with the venue mid, against 0.641 for `ofi60` and 0.717 for
+`move_bps`. And it predicts nothing: correlation with the next 60 s of Binance return is +0.047 / −0.095 /
++0.016 / −0.055 with the sign flipping between seconds, rank correlation ≈ 0 throughout, and AUC against the
+venue's own outcome is **0.470–0.512** — a coin.
+
+I tested it raw and de-meaned because the raw divergence is a drifting *offset*, not a centred signal: it is
+negative on more than 90% of seconds and its mean moved from −0.25 bps over the first 20k seconds to −2.21 bps
+across the full span. De-meaning against the past-only 600 s median does not rescue it.
+
+**One operational note that belongs with the arb work.** The settlement reference runs about **2 bps below**
+Binance spot and that offset *drifts*. On a $110k BTC that is roughly **$22** — nearly ten times the **$2.33**
+line gap that produced the single 0-payoff pair in `arb_trades_check`. That is the quantitative reason a
+Binance-derived line proxy cannot be trusted at small gaps, and it is now measured rather than inferred.
+
+### Answer to part 5
+
+**No.** Flow is not something the venue is not watching: `ofi60` is as correlated with the price as the move
+itself, flow-only loses to the mid at every second, and adding flow to the mid makes it worse. The Chainlink
+divergence *is* independent of the price — and it is noise.
+
+Put parts 4 and 5 together and there is a single sentence in them:
+
+> **Every input tested that predicts the outcome is already in the price, and the one input that is not in the
+> price does not predict the outcome.**
+
+That is a much stronger statement than "the model needs better features", and it is the thing to decide on.
+It does not say no such feature exists; it says none of the eighteen features this engine already computes is
+one, and that the search should move to data the engine does not currently collect at all — the venue's own
+trade prints being the obvious first candidate, since Zurich has 81,222 of them sitting unused in the ms probe
+archive and they are the one thing measured on the venue's clock rather than Binance's.
+
 ## verify.py on the grid cells (section 2)
 
 Standing rule: run verify.py on any cell positive in both halves with n ≥ 60. Six qualified — S ∈ {15, 20, 30}
@@ -468,8 +617,12 @@ through the candle. The useful number there is not the AUC, it is the **+0.717**
 `move_bps` and the venue mid: the venue is already a move-follower, so a move-based model has almost no
 private information to contribute, and re-weighting it cannot create any. If the owner wants something the
 crowd does not see, it has to be an input the venue is not watching — order flow, or another market —
-rather than a different treatment of the move. Zurich has one such input already collected and unused: the
-81,222 trade prints in the ms probe archive.
+rather than a different treatment of the move. Part 5 then tested exactly that and came back negative too, so
+the conclusion has hardened into one sentence: **every input tested that predicts the outcome is already in
+the price, and the one input that is not in the price does not predict the outcome.** The search has to move
+to data the engine does not currently collect — the venue's own trade prints being the obvious candidate,
+since Zurich holds 81,222 of them unused in the ms probe archive and they are the only thing measured on the
+venue's clock rather than Binance's.
 
 The next thing worth doing, if the owner wants it, is the one measurement Zurich cannot make: London firing a
 small number of real early orders and reporting the actual fill rate and slippage at second 15–30. Everything
@@ -481,3 +634,4 @@ in sections 2 and 4 turns on a simulated 82–100% fill that no live system has 
 - `ef_fire_time_verify.py` — verify.py on all six qualifying grid cells
 - `ef_spot_only.py` — section 4: the walk-forward spot-only model and the disagreement cells
 - `ef_spot_only_verify.py` — verify.py on the one qualifying section-4 cell
+- `ef_flow_only.py` — section 5: the flow-only model, mid+flow, and the Chainlink divergence
