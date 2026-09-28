@@ -350,3 +350,9 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   In the candles EF later bought, at sec 20-30 the CURRENT model gave our side p 0.40 (ask 0.36) - it did not favour that side yet; at the fire
   p 0.57, ask 0.45. So firing the same model earlier is a different, weaker bet, not the same bet cheaper. The early question now rests on
   the spot-only model (Zurich part 4), not on retiming v10.
+- **Zurich EF_FIRE_TIME (10:16, 1,015 candles, sim fills):** baseline fires p50 at sec 126; only 5% by sec 30. Grid S x P: all 16 cells with
+  S>=45 negative; 7 of 12 with S<=30 positive; P is ANTI-predictive down every column (S=15: P=0 +0.045, 0.55 +0.042, 0.70 -0.083).
+  PLACEBO (fire at S on the model's SIDE, no p bar): S=15 +0.045/$1 on 732 sim fills of 853 fires, halves +0.021/+0.068, win 58%, mean ask
+  0.54, fill 82-87%, ask reversion +0.6c (not selected dips). Baseline: 0.43 ask, 44% win, +7c reversion, 42% fill. The gain is WHEN, not the
+  p bar. Caveats: sim fill rate unvalidated above ~42%; verify.py NOT A FINDING on the P=0.55 cells (they lose to their own placebo);
+  the placebo is the candidate. Only London can measure real fills at sec 15. (analysis/zurich/EF_FIRE_TIME.md)
