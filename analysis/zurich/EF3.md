@@ -340,6 +340,28 @@ So the public-data result is fully consistent with **a rule that has no edge, pl
 trade at.** The lesson generalises past this rule: the dangerous half of a stale price source is not that
 it biases selection, it is that it lets the backtest transact at it.
 
+## Priors recorded BEFORE the forward days arrive (09-28 15:1x)
+
+Pre-registration only works if the prior is written down before the evidence. Two updates landed after
+A/B/C were fixed and before any forward day exists, so they go here rather than into the eventual reading
+of the result.
+
+**Arm A's prior is now strongly against it.** London replayed `v0 m=0.02 S≥150` on its own 7 days. Out of
+sample — 09-22 to 09-24, days the model never saw — it returns **−$214.6 with 0 of 3 days positive.** A's
+entire positive record is 09-26 and 09-27, which were inside its walk-forward span. This does not change
+the pre-registered definition of A and does not remove it from the shadow: changing an arm because a new
+number arrived is precisely what pre-registration exists to prevent. It does mean that **if A comes back
+positive on the forward days, two of three prior reads were negative**, and the honest reading of a
+positive A will be "one window in three", not "confirmed".
+
+**The data-api timestamp lag replicates independently.** V measured it on a different window (live, WS
+`last_trade_price` vs data-api, `market=`, 146 matches on price *and* size) and got p10 +1.5 / p50 +2.2 /
+p90 +3.0 s, 99% ≥ 1 s. Zurich's read on 09-27 05:30–07:30 with a different matching rule (unambiguous
+pairs, no size available) gave p10 +1.42 / p50 +2.20 / p90 +3.00, 98.8% ≥ 1 s. Two windows, two matching
+methods, the same median to 0.02 s. V's collectors were checked and all use `market=<conditionId>` with a
+further `asset == token` filter, so the `asset=` defect I found does not affect their tape. The late spot
+rule is closed on the lag plus Zurich's book replay.
+
 ## The 10-day read — `ef3_ten.py`. The start-second story does not survive it.
 
 V, 14:4x: (c) showed the start-second bar is pure composition, so the 10 `stable_ef` days can be read the
