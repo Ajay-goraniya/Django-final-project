@@ -292,3 +292,13 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
   trained on the delayed price works as a VETO on EF's own fires. Kept: n130, 58.5%, +0.201/+0.142/+0.106 at +250/500/1000 ms,
   halves +0.167/+0.236, perm p 0.001. Vetoed: n133, 45.1%, -0.081/-0.180/-0.212. The sweep is non-monotone but positive at every threshold.
   OPEN: fixed15 selection, the London-exec pass, and a test on London's real fills. (analysis/zurich/EF_DELAY_BRAIN.md)
+- **Veto on London's REAL fills (fixed15, 75 scored, 09-25..28): not shippable.** KEEP n41 -0.020/$1 vs VETO n34 -0.197; the total favours the veto by ~$57,
+  but the halves flip (on 09-25 the veto set won +55.9) and all cells are under 60. On Zurich, fixed15+veto fails (perm p 0.287); raw25+veto London-exec +0.035 on 4 days.
+  v2 (7 days, 1 s label) keeps KEEP > VETO (perm p 0.000), but v1 and v2 agree on only 58.7% of candles, so "the veto" is not one stable object yet.
+- **Mechanism found (Zurich v2, point 3):** EF fires at a transient DIP of the ask in its own read (+6c one row later vs +0.43c market drift) -
+  a winner's curse on the ask. This is the order-failure mechanism behind NC-10/NC-13.
+- **Book age at send, London REAL orders (analysis/london/BOOK_AGE_GRID.md): the one real-money split that separates.** Candle fill by book age
+  <10/10-25/25-50/50-100/100-250/250-750 ms = 91/71/64/46/37/19%, monotone. Fills on books >=50 ms old lost -74.8 (H1 -33.4 / H2 -41.4, 5/6 days <=0;
+  n53, under 60). The per$1 grid is non-monotone (profit sits in 25-50 ms); it is not an activity or sec-in-candle artefact. Age is traced to poly_core.BookCache.quote.
+- **Drafts on the branch, OFF by default, NOT deployed:** dd774e9 poly_veto (meta ef_veto) and e6ccd97 fresh-book send (ev_settings.fire_book_age_ms:
+  price an attempt only on our token's book no older than the limit; wait inside the budget; can never loosen quote_age). All suites pass.
