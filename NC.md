@@ -439,3 +439,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   information in the engine's inputs at any second. Ask dynamics do outweigh move_bps (0.113 vs 0.084 coefficient mass) but the price
   carries 1.443. The S=15 placebo (model's side, no p bar, fire at 15 s) is again the only arm that beats the null and passes costs
   (+0.067/$1, 615 fills, both halves positive) - the edge that exists is TIMING, not modelling. (analysis/zurich/EF2.md)
+- **Owner 11:5x: "Early fires are just guess and gambling and we don't wanna guess and gamble."** The S=15 timing arm is DROPPED (a 58%
+  call at 0.54 is a weighted coin). With rung v0's result (the ask alone = any model at every horizon), EF-2 as a PREDICTION model on btc5 is
+  closed: v0b/v1/v2 not run. Remaining, both on data already held: (1) does the model beat the price on the SLOWER 15m market (Zurich
+  btc15 books since 09-22) - briefed 11:47; (2) Coinbase lead (V, running). If both are empty, the honest answer is that this venue has no
+  non-gambling edge on obtainable data. London untouched throughout.
