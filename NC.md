@@ -709,3 +709,7 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   one on (first = 10-01 if the archive is complete). Decision after >= 3 scoring days, same rule as NC-19: $ > C, DD <= C, positive on
   >= 2 of 3 days, sim fill% >= C's real fill%, opposite-ask flip p < 0.05. Then the arm's REAL-fill check: London's real attempts on the
   candles where arm and fixed15 overlap (fills and rejects). Nothing else, no retuning; a failure is recorded as a failure.
+- **Nonlinear "price + everything" vs the price (V, 09-11..16, NONLIN_VS_MID.txt, walk-forward, venue labels): the price wins by a wide
+  margin.** Log loss 30-240 s: mid 0.4846 | trees on mid only 0.4923 | trees on mid + 15 inputs (line distance, TWAP projection, z, vol,
+  momentum 5/15/60, ask deltas, dip30, book sizes, age, spread) 0.5485 - worse in every window. The earlier linear "adds nothing" results
+  were not an artefact of linearity. Closed.
