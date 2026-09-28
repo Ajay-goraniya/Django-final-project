@@ -1,0 +1,8 @@
+# vol: tercile cuts (training days) 0.260 / 0.506; per-day mean |vol| over test rows: 09-13 0.201 09-14 0.447 09-15 0.468 09-16 0.439
+  E5_q0.90_pin=phys    low n22* win 20% $ -156 | mid n30* win 68% $ +300 | high n52* win 71% $ -15
+  E4_q0.90_pin=phys    low n49* win 34% $ -177 | mid n43* win 74% $ +328 | high n48* win 73% $ +1
+  E4_q0.80_pin=phys    low n179 win 64% $ -10 | mid n202 win 62% $ +238 | high n86 win 64% $ -42
+# mom60: tercile cuts (training days) 1.154 / 3.756; per-day mean |mom60| over test rows: 09-13 1.411 09-14 3.575 09-15 3.589 09-16 3.424
+  E5_q0.90_pin=phys    low n19* win 12% $ +89 | mid n13* win 45% $ +9 | high n72 win 74% $ +32
+  E4_q0.90_pin=phys    low n51* win 32% $ +64 | mid n23* win 59% $ +13 | high n66 win 80% $ +75
+  E4_q0.80_pin=phys    low n182 win 55% $ +106 | mid n150 win 67% $ +75 | high n135 win 68% $ +4

@@ -697,3 +697,6 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   walk-forward from London's own rows once >= 3 full days exist (10-01 night), grade on venue outcomes, check against London's REAL
   attempts (fills and rejects), judge on the owner's columns vs real fixed15. London asked (18:02) for fixed15's profit phase vs
   give-back phase and a pre-defined regime grid on its real fills (FIXED_PHASES.md).
+- **EF-8 regime read (V, EF8_REGIME.txt, terciles cut on the training days only): no rule.** Vol at the open: the money sits in the MIDDLE
+  tercile only (E4 q.80 pinned: low -$10 n179 | mid +$238 n202 | high -$42 n86) - non-monotone, i.e. not a regime you can name in advance;
+  q.90 cells all n<60. |mom60| at the fire: flat-to-falling across terciles. 09-14 is not explained by vol or trend. Not a finding.

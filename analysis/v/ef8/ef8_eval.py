@@ -121,3 +121,4 @@ for lab in ('E5 q0.90 pin=phys', 'E4 q0.90 pin=phys'):
         tots.append(10 * X[pick, c['pnl']].sum())
     tots = np.array(tots); act = 10 * X[res[lab], c['pnl']].sum()
     print(f'NULL RAND matched to {lab}: mean $ {tots.mean():+.1f} p95 {np.quantile(tots, .95):+.1f}  actual {act:+.1f}  p {np.mean(tots >= act):.3f}')
+np.savez_compressed(f'{S}/ef8_fired.npz', **{k.replace(' ', '_'): np.array(v) for k, v in res.items()})
