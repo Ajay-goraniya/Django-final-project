@@ -483,3 +483,7 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   at +0.013 - it keeps the losers; KEEP beats SKIP on 1 of 6 days. p_win does not predict fills either. The 0.86 candidate-row AUC is a
   mechanical artefact (late-candle rows where the ask is nearly the answer) and does not transfer to real fired-and-filled trades.
   **EF-2 CLOSED on both counts: early-fire by construction (Zurich) and no information on real fills (London).** (analysis/london/EF2_LONDON_SCORE.md)
+- **stable_ef weekly re-run (Zurich 12:45, 10 days, 543 fires): FAIL** - random same-count-per-day control p=0.075, tier sweep non-monotone;
+  six other gates pass. Context bucket sec 180-240 (late candle): FIXED n67 win 65.7% paper +0.313 London-exec +0.154, 70% of days positive.
+  NOT a finding: it is one cell of a 5-bucket sec grid, and it CONTRADICTS EF_FIRE_TIME's baseline (fixed15 180-240 -0.139, 13 sim fills)
+  while agreeing in sign with London's real fills (180-240 n49* +0.09). Two of three reads positive, one negative, none verified. Watch only.
