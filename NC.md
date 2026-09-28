@@ -603,3 +603,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   **V's read: the CAUSAL column IS an implementable production rule - retrain every night on all days so far, cut at the q-quantile of
   yesterday's scores.** q .90 and q .95 (adjacent) both beat C on $ AND DD. Pre-registering it as arm E (nightly refit), q .90 primary,
   q .95 secondary, in the forward shadow; asked Zurich for halves, per day, fill%, flip p on those two cells.
+- **EF-5 CAUSAL detail (Zurich 16:22):** q .90: 262 fills (90.3%), win 73.3%, +0.054/$1, halves +0.026/+0.082, run 4, flip p 0.020; per day
+  +24.1 / -6.3 / +103.8 / +18.7 with fills 56 / 4 / 188 / 14. q .95: 203 fills, flip p 0.020; per day -7.3 / +0.4 / +99.8 / -1.3.
+  FREQUENCY IS UNSTABLE: 4 fills one day, 188 the next; 74% of the money is 09-27. Yesterday's quantile is a VALUE and the day's score
+  distribution shifts, so the same q lands at a different rank. Arm E1/E2 registered as briefed (21-day training cap for box safety - OK).
+  Next: a causal AND rate-stable cut - trailing-window quantile (last 1 / 3 / 6 h of candidate scores), briefed as E3 candidates.
