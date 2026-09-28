@@ -860,3 +860,30 @@ the existing rule already makes and cannot be turned into a rule, and when the r
 imposed the result is negative on paper, more negative after fills, and positive on one day in five.
 
 Every cell in (1) and (2) is below the 60-fill bar and marked.
+
+---
+
+## 2026-09-28 14:2x — known-wrong numbers in this document (fixed15 only)
+
+**Every `fixed15` figure in this file was computed with a free extra tick and is wrong by roughly that
+much.** `raw25` and every EF-2 v0 / v1 / london44 figure is unaffected and stands as written.
+
+The cause, in full, is in [EF3.md](EF3.md) under "Correction — a free extra tick on the fixed15 arm":
+`ef2_rows.npz` stores the ask as float32, which defeats the `Decimal(str(x))` tick-grid guard that
+`pad_cost` relies on, so `ROUND_CEILING` adds one tick on 44.8% of rows. Only the padded profile
+(`fixed15`) uses that path.
+
+Fixed in `ef2_v0b.py`, `ef2_report.py`, `ef2_second.py`, `ef2_recross.py`, `ef2_v0_detail.py` and
+`ef2_compare.py`, each with an assert that `pad_cost(float32(a)) == pad_cost(a)`. **The scripts are
+correct now; the numbers written into this document were produced before the fix and have not been
+re-run.** For the direction of the change, the one arm that has been recomputed moved like this:
+
+| fixed15 S≥0, 5 days | as published | recomputed |
+|---|---|---|
+| $ total / worst DD / P/DD | +73.8 / 75.8 / 0.97 | +54.5 / 85.3 / 0.64 |
+| fires/day / per $1 | 35.6 / +0.104 | 39.2 / +0.068 |
+
+So fixed15 baselines here are **too flattering on per $1 and too kind on drawdown**, and every place this
+document uses fixed15 as the null or the control understates the bar. None of EF-2's conclusions turned
+on a fixed15 margin that small, so I have not re-run the document; I have marked it instead. If any
+fixed15 number here is about to be used for a decision, re-run its script first — the scripts are fixed.
