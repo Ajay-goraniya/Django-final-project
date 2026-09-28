@@ -689,3 +689,11 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   and FAV120 -$167, but "one good day" is the same failure as arm B and EF-6. Verdict: NOT A FINDING. With E4 and E5 failing on London,
   the stump/after-fill/quantile family is closed as a route to the owner's goal unless London-trained data (decide_log, from 17:4x
   09-28) shows otherwise.
+- **Polymarket book SIZE / quote age (V, 09-11..16, analysis/v/ef8/BOOK_SIZE_INFO.txt): NO information beyond the price.** Walk-forward
+  logistic, venue-graded, 9 seconds 15..240: adding log size own/opp, their ratio (and x price) and quote age makes log loss WORSE at every
+  second (e.g. 120 s 0.4884 -> 0.4913; 240 s 0.3059 -> 0.3143). Closed.
+- **Plan for the London-native EF (task W25):** London's decide_log has the SAME schema as Zurich's (poly_core.py:407, 44 features,
+  both asks, ~4 rows/s), so Zurich's trainer (ef4/ef5_nightly) runs on London's archive unchanged - no Zurich-to-London transfer. Train
+  walk-forward from London's own rows once >= 3 full days exist (10-01 night), grade on venue outcomes, check against London's REAL
+  attempts (fills and rejects), judge on the owner's columns vs real fixed15. London asked (18:02) for fixed15's profit phase vs
+  give-back phase and a pre-defined regime grid on its real fills (FIXED_PHASES.md).
