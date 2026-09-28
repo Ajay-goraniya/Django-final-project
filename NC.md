@@ -402,3 +402,12 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   The settlement reference is a lagged, smoothed copy of the exchange the model already watches. Candle moves correlate 0.98; sign
   disagreement at S=20-60 is 6.5-7.0% but only where the move is ~0.1 bps (15x smaller than typical) - on-the-line candles. No
   reference-based edge exists; mechanism now known. Operational: a Binance-derived line is untrustworthy exactly at small gaps (arb).
+
+## NC-17 - 09-28 11:1x, OWNER: "Number 2 recreate ef" - EF PAUSED on London; EF is to be rebuilt
+- Owner order relayed to London 11:11: EF lane OFF, master/main/rev untouched, open position settles normally. Awaiting confirmation.
+- Coinbase lead test still running (the last open public-input line). Everything else in NC-16 is closed with a mechanism.
+- EF-2 design (what "recreate" means here, given NC-13..16): NOT a direction model plus a gate. One trained model of
+  P(win | buy THIS side at THIS ask at THIS second), trained per 250 ms pass on Zurich's decide_log (5+ days, venue labels, ef_persist fill
+  sim so it learns that filled dips lose), inputs = the 44 engine features + own ask + ask dynamics (1/5/30 s change, the selected-dip
+  detector) + sec. Decision = EV at the price we would pay > 0, nothing else. Walk-forward by day on Zurich; FINAL test on London's real
+  attempts (fills AND rejects, venue outcomes). It ships nowhere without the owner's confirmation of that specific model.
