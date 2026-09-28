@@ -56,18 +56,22 @@ def stream(token, t0_ns, t1_ns):
     return pc.execute('SELECT rx_ns,ask,ask_sz FROM top WHERE token=? AND rx_ns BETWEEN ? AND ? ORDER BY rx_ns',
                       (token, t0_ns, t1_ns)).fetchall()
 
-W, per_window = [], []
+W, per_window, audit = [], [], []
 for ep15 in eps:
     ep5 = ep15 + 600
-    if ('btc5', ep5) not in tk: continue
+    if ('btc5', ep5) not in tk:
+        audit.append((ep15, None, 'no btc5 market for the last 5m candle')); continue
     L15, L5 = line(ep15), line(ep5)
-    if L15 is None or L5 is None or abs(L15 - L5) < 1e-9: continue
+    if L15 is None or L5 is None or abs(L15 - L5) < 1e-9:
+        audit.append((ep15, None, 'no usable line')); continue
     leg15, leg5 = ('UP', 'DOWN') if L15 < L5 else ('DOWN', 'UP')
     t15 = tk[('btc15', ep15)][0 if leg15 == 'UP' else 1]
     t5 = tk[('btc5', ep5)][0 if leg5 == 'UP' else 1]
     a, b = ep5 * 10**9, (ep5 + 300) * 10**9
     s15, s5 = stream(t15, a, b), stream(t5, a, b)
-    if not s15 or not s5: continue
+    if not s15 or not s5:
+        audit.append((ep15, L15 - L5, 'no events on one leg')); continue
+    audit.append((ep15, L15 - L5, f'scanned, {len(s15)} + {len(s5)} events'))
     ev = sorted([(r[0], 0, r[1], r[2]) for r in s15] + [(r[0], 1, r[1], r[2]) for r in s5])
     cur = [None, None]; sz = [None, None]
     ivals = []              # (t_start_ns, t_end_ns, a15, a5, min_sz)
@@ -112,8 +116,22 @@ for ep15 in eps:
                            best=min(a15 + fee(a15) + a5 + fee(a5) for _, _, a15, a5, _ in ivals)))
 
 f = lambda x: dt.datetime.fromtimestamp(x, dt.timezone.utc).strftime('%m-%d %H:%M')
-print(f'btc15 windows in the probe: {len(eps)} ({f(eps[0])} -> {f(eps[-1])}); '
+sc = [a for a in audit if a[2].startswith('scanned')]
+print(f'btc15 windows in the probe: {len(eps)} ({f(eps[0])} -> {f(eps[-1])}); scannable {len(sc)}; '
       f'windows with a riskless interval: {len(per_window)}')
+print('\n(0) EVERY WINDOW, so the denominator is visible and the riskless ones are not cherry-picked')
+riskless = {w['ep15'] for w in per_window}
+for ep, gap, note in audit:
+    print(f'    {f(ep)}  gap {("%+8.2f" % gap) if gap is not None else "       -"}  {note}'
+          + ('   <- RISKLESS' if ep in riskless else ''))
+gp = [abs(g) for e, g, n in audit if g is not None and n.startswith("scanned")]
+gr = [abs(g) for e, g, n in audit if g is not None and e in riskless]
+if gp:
+    print(f'    |gap| over the {len(gp)} scanned windows: min {min(gp):.2f} median '
+          f'{sorted(gp)[len(gp)//2]:.2f} max {max(gp):.2f}; the riskless ones are at '
+          + ', '.join(f'{x:.2f}' for x in sorted(gr))
+          + '  - the pair only goes riskless where the two lines are CLOSE, which is also where the sign of '
+            'the gap, and therefore the choice of legs, is least reliable')
 if not W: print('no riskless interval in the probe window'); sys.exit(0)
 ms = np.array([w['ms'] for w in W])
 print(f'\n(1) HOW LONG BOTH LEGS STAY AT OR UNDER cost 1, on our receive clock')
