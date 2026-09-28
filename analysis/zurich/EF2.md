@@ -481,3 +481,36 @@ count was a **silent `str.replace` no-op** with the wrong indentation — the se
 replaced with a count of candidates *skipped* for missing features, which is the informative number anyway
 since a missing feature skips the candidate before scoring, and every replacement in that patch now asserts
 its target was found.
+
+---
+
+# VERDICT — EF-2 is out
+
+V, 09-28 12:4x, relaying the owner: the 11:5x ruling stands — early fires are gambling — so **EF-2 v0 is
+OUT**. Recorded in NC-17. The shadow and its keep-alive are stopped.
+
+It is out on the owner's judgement about *what kind of trade he is willing to make*, not because the numbers
+were bad. Both facts belong in the record:
+
+- v0 at margin 0.02 was the only arm in this entire document positive on **4 of 4 days**, at 89.6% sim fill
+  against fixed15's 42.4%, with calibration right to 1.3 pp.
+- **89.6% of its fires are at second 15**, and every later second bucket is negative. It is an early-fire
+  strategy whatever else it is, and the owner has ruled that out.
+
+The measurement that made the call possible was section (3) of the acceptance detail — the fire-second
+distribution — which V asked for precisely because it decides this. Without it the 4-of-4 per-day stability
+would have read as a candidate worth arming.
+
+What EF-2 leaves behind, which is not nothing:
+
+| result | where |
+|---|---|
+| the ask alone scores AUC 0.8611, the engine's p 0.8580, a 52-feature model 0.8608 | v0 |
+| trees are worse than linear, so capacity was never the constraint | v1 |
+| ask dynamics contribute **−0.0008** by permutation importance — the record of being picked off is not information | v1 |
+| imputing 34% of coefficient mass keeps AUC and **inverts** the money | london44 |
+| the 15m market is not softer — the same market on a longer clock | EF2_15M |
+| the rows that do not fill win **6.1 pp more often** than the rows that do | ef2_rows |
+
+`learner/v12_2/ef2/ef2_model_london.json` (london44) stays exported for London's own scoring of its 654
+attempts. It is a scorer, not a config, and it arms nothing.
