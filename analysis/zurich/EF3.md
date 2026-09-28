@@ -402,6 +402,56 @@ a model score is not a rule unless the score is calibrated.** EF-2 v0 used `p/be
 scale-free and survived freezing. EF-4 used `pred ≥ t` on an uncalibrated regression output, and did not.
 A quantile cut ("fire on the top 20% of predictions") would have been the portable form.
 
+## EF-5 — the causal quantile cut. Half my closing line was right. `ef5.py`
+
+I claimed EF-4 died because `pred >= t` is an absolute cut on an uncalibrated score, and that a quantile
+cut would be the portable form. V had me test it. **The quantile fixes the causality problem and does not
+fix the portability problem**, which means the diagnosis was half right and the prescription was wrong.
+
+Three readings, because two of them are easy to conflate and the gaps between them are the answer.
+`IN-DAY` takes the threshold from the test day itself (not implementable — it needs the whole day before
+it can fire on the first candle; it is the upper bound). `CAUSAL` takes it from day k−1 under the same
+model. `FROZEN` is one model fitted on days < last, threshold still from day k−1 — what the shadow runs.
+
+```
+                        IN-DAY              CAUSAL              FROZEN
+  q=0.70 S0=0       +276.2 / 104.9      +251.2 / 115.7       -64.2 / 223.0
+  q=0.80 S0=0       +156.9 /  87.1      +169.1 / 105.6       -47.8 / 117.1
+  q=0.90 S0=0        +29.0 /  66.4      +140.3 /  68.6       -98.5 / 133.6
+  q=0.95 S0=0        +25.2 /  49.6       +91.5 /  68.6       +25.5 /  68.8
+  C fixed15, same test days:  +16.3 / 85.3 / P/DD 0.19 / 43.6% fill / 1-of-4
+```
+
+**CAUSAL ≈ IN-DAY, and at q=0.90 causal is far better (+140.3 vs +29.0).** So the threshold was never
+peeking: a quantile cut is causal-safe, and that part of the claim holds. Taking the threshold from
+yesterday costs nothing.
+
+**FROZEN collapses anyway.** `q=0.70 S0=0` goes +251.2 → −64.2. Six of eight frozen cells are negative.
+So the thing that does not transfer is **the model**, not the threshold — refitting nightly on a growing
+window is doing the work, and freezing removes it. EF-4's failure was over-attributed by me to the cut.
+
+### The controlled comparison worth keeping
+
+D and D2 use the **same frozen model**; only the decision rule differs. Absolute `pred ≥ 0` gives
+**−$138.1 / DD 226.7**; the 0.95 quantile of the previous day gives **+$25.5 / DD 68.8**. So the quantile
+cut is worth about **$164 and two thirds of the drawdown on an identical model** — a real effect,
+cleanly isolated, and still not enough to make the model portable.
+
+### D2 registered, with the objection on record
+
+Exactly one frozen cell clears C on both columns: `q=0.95 S0=0`, +$25.5 vs C's +$16.3, DD $68.8 vs $85.3.
+V pre-committed to registering that, so it is registered as **D2** rather than overruled after the fact —
+declining a pre-agreed rule because the number came out small is the same error as accepting one because
+it came out large. The objections, stated now and not after the forward days:
+
+* it is an **isolated cell** — its neighbours are `q=0.90 S0=0` at −$98.5 and `q=0.95 S0=60` at −$48.0
+* **flip p = 0.137**, which fails the p < 0.05 bar in V's own A/B/C decision rule
+* the margin over C is **$9 across four days**, on 135 fills
+* 09-24 is +0.0 by construction: no previous day exists, so no threshold, so no fires. Correct, not a bug.
+
+On the evidence I would call it noise. It is in the shadow because the rule said so, with a negative
+prior recorded, and the forward days will settle it.
+
 ## Priors recorded BEFORE the forward days arrive (09-28 15:1x)
 
 Pre-registration only works if the prior is written down before the evidence. Two updates landed after

@@ -28,6 +28,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ef2_model import ROWS, per1, cost, be
 from ef3 import FITS, platt, pad_cost, STAKE, MIN_CELL, score, HDR, line
 
+# Absolute BTC price columns (~$84,000). ref_open and bn_line_open correlate at +0.999886, and ridge put
+# -2.6881 / +2.4082 on them - amplifying the difference between two copies of the same number by ~10^4 and
+# using the price level as a per-day offset. Module scope so ef5 and anything later import the SAME list
+# rather than keeping a second copy that can drift.
+LEVEL = ['_price', 'ref_open', 'ref_now', 'ref_inst', 'bn_line_open', 'bn_line_now']
+
 TS = (0.0, 0.01, 0.02, 0.05)
 S0S = (0, 60, 150)
 LAM = 30.0
@@ -101,7 +107,6 @@ if __name__ == '__main__':
     # That is not a tradeable feature, it is a per-day offset with no forward meaning, and it would
     # extrapolate wildly the moment BTC leaves the training range. --nolevel drops the six absolute
     # price columns and re-runs; if the result survives, EF-4 is real, and if it collapses it was this.
-    LEVEL = ['_price', 'ref_open', 'ref_now', 'ref_inst', 'bn_line_open', 'bn_line_now']
     if '--nolevel' in sys.argv:
         drop = [names.index(k) for k in LEVEL if k in names]
         keepc = [i for i in range(len(names)) if i not in drop]

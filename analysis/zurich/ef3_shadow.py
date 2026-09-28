@@ -40,7 +40,8 @@ MODEL = '/home/ubuntu/pm_ef3/ef3_model_A.json'
 MODEL_D = '/home/ubuntu/pm_ef3/ef4_model_D.json'
 SEC_LO, SEC_HI, TICK, DELAY_MS = 15, 240, 0.01, 250
 DYN = (1000, 5000, 30000)
-ARMS = ('A_v0_m02_S150', 'B_raw25_S60', 'C_fixed15', 'D_ef4gb_t000')
+ARMS = ('A_v0_m02_S150', 'B_raw25_S60', 'C_fixed15', 'D_ef4gb_t000', 'D2_ef4gb_q95')
+Q_D2 = 0.95      # D2 = the SAME frozen model as D, only the threshold rule differs (EF-5, V 09-28 15:5x)
 ALL52 = None            # set in run_once from the frozen row table's name list
 
 # The frozen arm-A model was trained on 09-24..09-27, so those days are IN-SAMPLE for it and 09-28 was
@@ -197,7 +198,7 @@ def score_A(X, M):
     return 1.0 / (1.0 + np.exp(-np.clip(z, -30, 30)))
 
 
-def pick(rows, pA, pD=None):
+def pick(rows, pA, pD=None, thr_d2=None):
     """The three arms, each taking its FIRST qualifying row in the candle. One fire per candle, max."""
     out = {}
     for i, r in enumerate(rows):
@@ -212,6 +213,9 @@ def pick(rows, pA, pD=None):
             out['C_fixed15'] = (r, r['pe'])
         if pD is not None and 'D_ef4gb_t000' not in out and r['pe'] >= 0.5 and pD[i] >= 0.0:
             out['D_ef4gb_t000'] = (r, r['pe'])
+        if pD is not None and thr_d2 is not None and 'D2_ef4gb_q95' not in out \
+                and r['pe'] >= 0.5 and pD[i] >= thr_d2:
+            out['D2_ef4gb_q95'] = (r, r['pe'])
     return out
 
 
@@ -221,6 +225,11 @@ def db():
               'up INT, p REAL, ask REAL, fill REAL, opp_fill REAL, win INT, pnl REAL, '
               'PRIMARY KEY(epoch, arm))')
     d.execute('CREATE TABLE IF NOT EXISTS seen(epoch INT PRIMARY KEY, at INT)')
+    # D2's threshold is the q-quantile of the frozen model's predictions on the PREVIOUS day, so the
+    # day's predictions have to be kept. ~330k floats a day; the prune keeps three days, which is all
+    # the rule needs (day k reads day k-1).
+    d.execute('CREATE TABLE IF NOT EXISTS preds(day TEXT, pr REAL)')
+    d.execute('CREATE INDEX IF NOT EXISTS preds_day ON preds(day)')
     return d
 
 
@@ -237,7 +246,7 @@ def run_once():
     # forever and silently lose it. One hour of lookback costs nothing and makes the skip recoverable.
     cand, vo, nk = load_candles(min_epoch=(hi - 3600 if hi else None))
     todo = [e for e in cand if e not in done]
-    n = 0
+    n = 0; qcache = {}
     for ep in sorted(todo):
         rows = build_rows(cand[ep], ep, vo[ep], nk)
         if not rows: 
@@ -247,7 +256,15 @@ def run_once():
         pD = score_D(X, MD) if MD is not None else None
         opp = {(r['ts'], 1 - r['up']): r['q'] for r in rows}
         day = dt.datetime.fromtimestamp(ep, dt.timezone.utc).strftime('%m-%d')
-        for arm, (r, p) in pick(rows, pA, pD).items():
+        if pD is not None:
+            d.executemany('INSERT INTO preds VALUES(?,?)', [(day, float(v)) for v in pD])
+            prev = (dt.datetime.fromtimestamp(ep, dt.timezone.utc) - dt.timedelta(days=1)).strftime('%m-%d')
+            if prev not in qcache:
+                v = [x for (x,) in d.execute('SELECT pr FROM preds WHERE day=?', (prev,))]
+                qcache[prev] = float(np.quantile(v, Q_D2)) if len(v) >= 1000 else None
+            thr_d2 = qcache[prev]
+        else: thr_d2 = None
+        for arm, (r, p) in pick(rows, pA, pD, thr_d2).items():
             q = r['q']
             pnl = STAKE * per1(r['win'], q) if q == q else 0.0
             d.execute('INSERT OR REPLACE INTO fires VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
@@ -257,6 +274,8 @@ def run_once():
                        int(r['win']), pnl))
             n += 1
         d.execute('INSERT OR REPLACE INTO seen VALUES(?,?)', (ep, int(time.time())))
+    keepd = sorted({x for (x,) in d.execute('SELECT DISTINCT day FROM preds')})[-3:]
+    if keepd: d.execute(f"DELETE FROM preds WHERE day NOT IN ({','.join('?'*len(keepd))})", keepd)
     d.commit()
     print(f'{dt.datetime.now(dt.timezone.utc):%H:%M:%S} evaluated {len(todo)} new candles, {n} fires recorded')
     return d
