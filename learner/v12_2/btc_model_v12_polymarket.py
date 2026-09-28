@@ -3,7 +3,7 @@
 import argparse, asyncio, datetime, hashlib, json, math, os, pathlib, threading, time
 from btc_model_v10 import Model, FeatureState, FEATURES
 from btc_model_v10_runner import Runner, http_json, GAMMA, CLOB, POLY_WS, US
-import poly_feeds, poly_lanes
+import poly_feeds, poly_lanes, poly_veto
 from poly_core import BookCache, Journal, Executor, PaperBroker, order_plan
 from poly_live import LiveBroker
 import predict_venue
@@ -437,7 +437,23 @@ class PolyRunner(Runner):
         # the model cannot back. Off unless the operator turns it on.
         d=self._calibrate(d)
         if d.get('fire'): d=self._gate_on_padded_ev(ep,d)
+        # 13.2.0 DRAFT: the delay brain may only REMOVE a fire, after every other gate, and only when meta ef_veto is enabled.
+        if d.get('fire'): d=self._veto(ep,d,now)
         return d
+    def veto_cfg(self):
+        cfg=dict(poly_veto.DEFAULT); cfg.update(self.db.get('ef_veto') or {}); return cfg
+    def _veto(self,ep,d,now):
+        """13.2.0 DRAFT (NC-15): poly_veto on EF's own fire. OFF by default; enabling it is the owner's call (CLAUDE.md).
+        A model that fails to load never blocks trading - the fire goes through and the error is shown."""
+        cfg=self.veto_cfg()
+        if not cfg.get('enabled'): return d
+        m=self.__dict__.get('_veto_model')
+        if m is None:
+            try: m=self._veto_model=poly_veto.load(str(pathlib.Path(__file__).with_name('ef_veto_brain.json')))
+            except Exception as e:
+                self.error='veto model: '+type(e).__name__
+                return dict(d,veto='skipped: model not loaded')
+        return poly_veto.apply(d,m,cfg,ep,now)
     CALIBRATION_DEFAULT=dict(enabled=False,cut=0.80,to=0.784,mode='cut',a=1.0,b=0.0)
     def calibration(self):
         cfg=dict(self.CALIBRATION_DEFAULT); cfg.update(self.db.get('calibration') or {})
