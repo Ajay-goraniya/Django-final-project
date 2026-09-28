@@ -13,6 +13,7 @@ confirmation of this exact arm (CLAUDE.md), and the forward shadow must pass fir
 import bisect, collections, json, math, os
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
+ASK_LO, ASK_HI = 0.01, 0.99
 DEFAULT = dict(enabled=False, q=0.90, window_s=3600.0, grid_s=60.0, min_rows=500, model_dir=os.path.join(_HERE, 'ef6'))
 
 
@@ -118,9 +119,10 @@ class EF6Lane:
         p_up = p if side == 'UP' else 1.0 - p
         thr = self.tq.threshold(now)
         best = None
-        for s, a, ps in (('UP', up_ask, p_up), ('DOWN', dn_ask, 1.0 - p_up)):
-            if a is None or not (0.0 < a < 1.0): continue
-            row = dict(feats); row.update(self.asks.feats(s, now)); row.update(own_ask=a, sec=float(sec), p_side=ps)
+        for s, a, o, ps in (('UP', up_ask, dn_ask, p_up), ('DOWN', dn_ask, up_ask, 1.0 - p_up)):
+            if a is None or not (ASK_LO < a < ASK_HI): continue            # same bounds as ef6.py / the shadow (Zurich parity 17:0x)
+            row = dict(feats); row.update(self.asks.feats(s, now))
+            row.update(own_ask=a, opp_ask=o, _ask_up=up_ask, _ask_dn=dn_ask, sec=float(sec), p_side=ps)
             pred = self.model.predict(row)
             if pred is None: continue
             self.tq.add(now, pred)

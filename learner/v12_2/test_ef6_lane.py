@@ -74,6 +74,18 @@ class Rule(unittest.TestCase):
         self.assertIsNone(x.decide(900, 121.0, 40, {}, 0.4, 0.6, 'UP', float('nan')))
 
 
+class Parity(unittest.TestCase):
+    def test_extreme_asks_are_not_candidates_and_never_enter_the_window(self):
+        x = lane()
+        x.decide(900, 10.0, 30, {}, 0.005, 0.995, 'UP', 0.9)
+        self.assertEqual(len(x.tq.rows), 0)
+    def test_models_that_split_on_raw_asks_or_opp_ask_can_score(self):
+        m = L.StumpModel(dict(names=['_ask_up', 'opp_ask'], base=0.0, trees=[[0, 0.5, 0.1, -0.1], [1, 0.5, 0.1, -0.1]]))
+        x = L.EF6Lane(dict(enabled=True, min_rows=1, q=0.0), model=m)
+        x.decide(900, 1.0, 30, {}, 0.4, 0.6, 'UP', 0.9)
+        self.assertEqual(len(x.tq.rows), 2)
+
+
 class Asks(unittest.TestCase):
     def test_deltas_and_dip30(self):
         a = L.AskState()
