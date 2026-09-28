@@ -581,3 +581,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   decision. Lag test agrees: the same rule paying 20-30 s later loses as much as it "made" (S0 220 m .02: +$617 -> -$613). The late spot
   rule's public-data profit is a stale price; Zurich's book result (-$232) stands. CLOSED. Rule for all public-tape work: shift data-api
   timestamps by -2.2 s (or use WS/book data) before any second-resolution fill question. (analysis/v/early/ts_lag_probe.py)
+- **Arm A replayed on London's own history (14:54, 1,633 candles 09-22..28, 15 s diag cadence, price = diag ask, no fill model): FAILS.**
+  n943, 135/day, win 74%, -$136.7, DD $310.6, 3/7 days. OUT OF SAMPLE only (09-22..24, before london44's training days): n390, win 71%,
+  -$214.6, 0/3 days - its only positive days are the model's own training days. Control (real fixed15 fills, same universe): -$26.6, DD $156.
+  A buys favourites at 74% and still loses; worse than fixed15 on every column. The forward shadow continues as pre-registered, but the
+  prior on A is now strongly against it. ef2_late.py stays OFF and unwired.
