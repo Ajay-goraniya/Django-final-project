@@ -860,3 +860,9 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   the rule was validated on), cut 0.304, live from bn_flow (no fire if < 240 of 300 s), recorded as a definition fix before any forward
   row; ref_px version kept as reference arm FAV_ref (0.281); FAV_mid/FAV_all re-cut on Binance (0.304/0.466). Zurich also caught a
   KeyError (opp not stored) that would have taken the whole shadow down on the first new candle.
+- **FAV at ARRIVAL (Zurich 18228c6, FAV_ARRIVAL.txt; owner's "fills at the time the order reaches Polymarket"):** pricing the fill at
+  decision + 500 ms (245 ms round trip + 150 ms taker hold) HALVES the edge: +0.043 -> +0.019/$1, fill 84.8%, win of fills 74.9%,
+  +$119.7 on 644 decisions (~$24/day at $10). Shape survives: FAV +0.019 > FAV_mid +0.008 > FAV_hi -0.029; null FAV_all +0.005.
+  Sensitivity +250/+500/+1000 ms: fill 88.4/84.8/78.9%, win flat, $ non-monotone (noise). SIZE gate (ask size >= our shares) only
+  measurable since 09-28 18:13: 30 fires, 6 rejected (20%, INSUF) - if it holds, effective fill ~68% and +0.019 is optimistic. Forward
+  arm uses +500 ms + size gate; shared DELAY_MS for arms A-F left at 250 ms (not silently re-graded).
