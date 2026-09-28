@@ -471,3 +471,10 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
 - 15m (ran before the cancel; owner ruled 5m only; for the record): the 15m ask is as good as the 5m ask past a third of the candle and
   sits at 0.505 for the first minutes (no view, not softness); a 15m-fitted model does not beat it (7 deltas, none > 1.1 SE, one training
   day). Not a softer venue. Closed. (analysis/zurich/EF2_15M.md)
+- **EF-2 v0 acceptance detail (Zurich 12:32): v0 IS AN EARLY-FIRE ARM - OUT under the owner's 11:5x ruling.** m=0.02 fires at sec 15 on
+  89.6% of candles (sec p10/50/90 15/15/31). Its money is all in 15-30 s (+0.031, 713 fills); every later bucket is negative (-0.066 /
+  -0.247 / -0.466). It buys the favourite (ask p50 0.62); fixed15 buys the underdog (0.43) - opposite trades, 8 of 49 shared candles agree.
+  Per day m=0.02 is positive 4/4 (+0.008/+0.019/+0.007/+0.233 partial) - the most stable arm seen - but **at +1c (London's ask+1 tick
+  bound) it is exactly break-even (+0.000, 2/4 days)**. fixed15 at +1c: +0.021 from one day (1/4). Calibration in aggregate 0.672 vs
+  0.659; per-decile returns not monotone. Restricting v0 to later fires makes it negative. **EF-2 v0 does not beat fixed15.** Shadow
+  stopped (the owner's early-fire ruling). London's real-attempt scoring left to finish as a diagnostic only.
