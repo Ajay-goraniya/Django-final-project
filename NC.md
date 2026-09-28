@@ -326,3 +326,7 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
   W3min 13 windows / 132 s; same-second min 13 / 32 s; same-second MAX (what a taker actually risked) **1 window / 1 s, cost 0.9998**.
   The 7-day 153/672 (22.8%) used W3min and is inflated the same way. Structure (payoff never 0) stands; the edge is ~1-4c in a few
   seconds of a few windows a day. Not a profit engine at our size. (analysis/v/twap/ARB_TRADES_STRICT.txt, arb_trades_strict.py)
+- **Pair CLOSED (Zurich ARB_LEGGING_MS, ms probe 02:15-06:45, 27.5 M book events).** Both legs <= cost for median **43 ms**; 9 of 11 intervals
+  shorter than our 250 ms arrival; min touch p50 10 shares; 2 of 18 windows, and those were the two SMALLEST line gaps ($7-9 vs median $61),
+  i.e. where the leg choice is least reliable. Fire-both simulation: both fill 54.5%, one leg only 9.1%, neither 36.4%. pair_bot paper: 1 pair,
+  cost 0.9811, paid 1, +0.38 - the structure holds, the trade is not there at our speed. (analysis/zurich/ARB_LEGGING_MS.md)

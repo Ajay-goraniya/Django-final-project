@@ -15,6 +15,7 @@ The 15m market and its last 5m candle settle on the same Chainlink TWAP, so the 
 But the "under $1" frequency was overstated twice:
 - Zurich's books had a stale 15m quote (recorder bug, fixed). With fresh books: **5 of 105** windows, 1-9 seconds each, 1-4c profit.
 - My public-trade check mixed prices up to 3 s apart. Buying both legs in the same second at what takers really paid: **1 of 87** windows (09-27).
+Zurich's millisecond probe: when it is under $1 it lasts ~43 ms, shorter than our order takes to arrive, on ~10 shares.
 So it is a few cents a few times a day. Not a profit engine at our size. The paper bot and code stay on the branch; no live test proposed.
 
 ## 3. Also closed overnight
