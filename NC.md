@@ -773,3 +773,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   those fills win 10-26% (per$1 -0.47..-0.71): panic sells below a rung happen precisely on the candles where the projection is WRONG.
   The seller knows (Chainlink) what the Binance proxy does not. Caveat: PolyBot projects on the real Chainlink stream - on London's
   real ref the fills would move to other candles; that re-test needs London's tape (not briefed; INSUF n anyway). Closed on public data.
+- **Retrain cadence (owner: every 2 days / every week; V, EF-8 09-11..16, EF8_EVAL_REFIT2.txt):** 2-day refit vs nightly, pinned cells:
+  E4 q.80 +$125.2 vs +$185.6 | E4 q.90 +$72.9 vs +$151.8 | E4 q.95 +$76.4 vs +$179.2 | E5 q.90 +$106.7 vs +$129.7; days+ 1-2/4 either
+  way, H2 negative in every cell, 09-14 carries all of it. Slower retraining is WORSE, not better, and fixes none of the one-day problem.
+  WEEKLY cannot be tested: it needs >= 2 weeks of history at the same resolution (a train week + a test week); first possible ~10-08 on
+  the Zurich/London decide_log archives. Recorded, not a finding.

@@ -60,12 +60,14 @@ def flip_p(fired, twin):
 key = {(X[i, c['ep']], X[i, c['sec']], X[i, c['side']]): i for i in range(len(X))}
 twin = {i: key.get((X[i, c['ep']], X[i, c['sec']], -X[i, c['side']])) for i in range(len(X))}
 pred = np.full(len(X), np.nan); yday_pred = {}
-for d in TEST:
-    m = fit(np.isin(day, [x for x in days if x < d]))
+import os
+EVERY = int(os.environ.get('REFIT_EVERY', '1')); m = None
+for j, d in enumerate(TEST):
+    if m is None or j % EVERY == 0: m = fit(np.isin(day, [x for x in days if x < d])); fitted_for = d
     te = day == d; pred[te] = m.predict(X[te][:, [c[k] for k in FEATS]])
     py = days[days.index(d) - 1]; yv = day == py
     yday_pred[d] = (t_abs[yv], m.predict(X[yv][:, [c[k] for k in FEATS]]))
-    print(f'# fit for {d}: trained on {sum(np.isin(day, [x for x in days if x < d]))} rows, test rows {te.sum()}, '
+    print(f'# {d}: model fitted for {fitted_for}; trained on {sum(np.isin(day, [x for x in days if x < d]))} rows, test rows {te.sum()}, '
           f'pred p50 {np.median(pred[te]):+.4f} p90 {np.quantile(pred[te], .9):+.4f} p99 {np.quantile(pred[te], .99):+.4f}')
 
 order = np.lexsort((X[:, c['side']], t_abs)); order = order[np.isin(day[order], TEST)]
