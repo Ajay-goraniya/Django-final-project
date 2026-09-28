@@ -346,7 +346,19 @@ def run_once():
     # a transient gap in one gamma mirror is enough. A bare `epoch > hi` would then skip that candle
     # forever and silently lose it. One hour of lookback costs nothing and makes the skip recoverable.
     cand, vo, nk = load_candles(min_epoch=(hi - 3600 if hi else None))
-    todo = [e for e in cand if e not in done]
+    # EXCLUDE CANDLES THIS BOX TRADED LIVE ON. On 09-28 19:40-20:12 master was armed by someone other
+    # than me and 11 real orders went out (3 filled). Every arm here is a counterfactual priced off the
+    # book in those candles, and in those five candles the book is not exogenous - we were in it. The
+    # shadow had not reached them yet when this was written; it would have on the next incremental run.
+    try:
+        _lv = sqlite3.connect(f'file:{LIVE}?mode=ro', uri=True)
+        LIVE_EPOCHS = {int(e) for (e,) in _lv.execute("SELECT DISTINCT epoch FROM orders WHERE lane='LIVE'")}
+    except Exception:
+        LIVE_EPOCHS = set()
+    todo = [e for e in cand if e not in done and e not in LIVE_EPOCHS]
+    if LIVE_EPOCHS:
+        skipped = sorted(e for e in cand if e in LIVE_EPOCHS and e not in done)
+        if skipped: print(f'  excluded {len(skipped)} candle(s) with LIVE orders: {skipped}')
     n = 0; qcache = {}; ecache = {}; e3buf = {}
     for ep in sorted(todo):
         rows = build_rows(cand[ep], ep, vo[ep], nk)

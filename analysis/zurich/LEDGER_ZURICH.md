@@ -123,3 +123,56 @@ produces, and it is the one most likely to be quoted back as evidence that the w
 * ETH/SOL 48 h report due 09-29 03:35.
 * REV brain re-run when the archive holds 14 days (10-08).
 * EF-3 delivered and pushed (`f5a3539`): five items, no arm meets the goal, none passes verify.py.
+
+---
+
+## 2026-09-28 21:4x UTC — CORRECTION: this box traded LIVE money today
+
+**Every earlier entry in this file says some version of "all N orders ever written by this box are
+`lane = PAPER`". That is no longer true, and the claim is withdrawn.**
+
+Current lanes: **PAPER 1205, LIVE 11.**
+
+On **09-28 19:40:22 → 20:12:19 UTC** the engine placed **11 EF orders with `lane='LIVE'`** — 3 FILLED, 8
+REJECTED, $5.00 staked per fill:
+
+```
+  19:48:01  epoch 1790624700  DOWN / settled DOWN   won   staked 5.00   +9.06
+  19:58:07  epoch 1790625300  UP   / settled UP     won   staked 5.00   +4.66
+  20:03:10  epoch 1790625600  UP   / settled UP     won   staked 5.00   +5.69
+  $15.00 staked, 34.41 shares, $0.575 fees                        NET  +19.41
+```
+
+There were **zero PAPER orders in that window**, so the box was genuinely in LIVE mode rather than
+dual-writing. `diagnostics` logs `MASTER_OFF` at 18:48:45 (off 95 h, 164 fires gated); the first LIVE order
+is 19:40:22; `meta.master` reads `false` again now. So master was armed between 18:48 and 19:40 and
+disarmed by roughly 20:12.
+
+**I did not arm it, did not disarm it, and have not touched `master` at any point.** V reports the net
+matches a +$19.42 cash inflow London saw on the same wallet over 19:39→20:11, which the owner has said is
+his — so the most likely explanation is that the owner armed and disarmed it himself. V is confirming.
+Recorded here as the probable cause, not the established one.
+
+**Master was left exactly as found (`false`).** Flipping it is not mine to do on my own initiative, and
+that rule cuts both ways — "helpfully" locking it down would be the same violation as arming it.
+
+### What was excluded, and why it is not only bookkeeping
+
+* `ledger_ef.py` now filters `lane != 'LIVE'` out of every paper line and reports the live orders
+  separately. Real money has no business inside a paper ledger line.
+* `ef3_shadow.py` now **skips every candle that carries a LIVE order** — all five epochs, not just the
+  three that filled. The reason is not tidiness: each arm is a counterfactual priced off the book in those
+  candles, and in those candles *we were in the book*. Our own fills are in the ask series the FAK
+  simulator reads, so the counterfactual is no longer counterfactual.
+* Checked rather than assumed: the shadow holds **0 fires on any LIVE epoch** today, because its data
+  stops before them. Their 5,532 `decide_log` rows are already in the archive and are waiting only on a
+  venue outcome — so the shadow *would* have swallowed them on the next incremental run. The exclusion is
+  armed ahead of that, and the run that meets them will print `excluded N candle(s) with LIVE orders`.
+
+### The process failure worth recording
+
+I repeated "all orders ever are PAPER" in ledgers and status lines for hours. It was true each time I first
+derived it and I then carried it as a standing fact, re-asserting it from memory rather than re-deriving
+it. The only reason it surfaced was a lane-breakdown query run for an unrelated health check. **An
+invariant worth stating is worth re-measuring every time it is stated** — a safety claim repeated from
+cache is not a safety claim.

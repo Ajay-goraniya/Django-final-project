@@ -13,9 +13,15 @@ for s in c.execute("SELECT epoch,decision FROM signals WHERE kind='EF' AND decis
     try: eng[s['epoch']] = (json.loads(s['decision']) or {}).get('engine') or 'v10'
     except Exception: eng[s['epoch']] = 'v10'
 V10_RESTORE = 1790115479.0   # 22:17:59 UTC 09-22, audited ef_engine build11 -> v10
+# LANE EXCLUSION, 09-28 21:4x. On 09-28 19:40:22-20:12:19 this box placed 11 orders with lane='LIVE'
+# (3 filled, $15.00 staked) - master was armed by someone other than me and disarmed again. Those are REAL
+# money and must not sit inside a paper ledger line, so they are filtered here and reported on their own.
+LIVE_ROWS = c.execute("""SELECT o.epoch,o.ts,o.status,sum(f.shares),sum(f.spent),sum(f.fees)
+                         FROM orders o LEFT JOIN fills f ON f.order_id=o.id
+                         WHERE o.lane='LIVE' GROUP BY o.id""").fetchall()
 rows = c.execute("""SELECT o.epoch,o.kind,o.lane,o.plan,o.ts,sum(f.shares) sh,sum(f.spent) sp,sum(f.fees) fe
                     FROM orders o JOIN fills f ON f.order_id=o.id
-                    WHERE o.status='FILLED' GROUP BY o.id""").fetchall()
+                    WHERE o.status='FILLED' AND o.lane!='LIVE' GROUP BY o.id""").fetchall()
 lines = {}
 for r in rows:
     a = res.get(r['epoch'])
