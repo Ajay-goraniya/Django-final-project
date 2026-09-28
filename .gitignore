@@ -38,3 +38,4 @@ week_replay/runs/
 analysis/v/early/coinbase_1s_btc.json
 analysis/v/early/binance_1s_btc.json
 analysis/v/early/early_late_btc_*.json
+analysis/v/early/footprint_rows.json
