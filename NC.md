@@ -713,3 +713,11 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   margin.** Log loss 30-240 s: mid 0.4846 | trees on mid only 0.4923 | trees on mid + 15 inputs (line distance, TWAP projection, z, vol,
   momentum 5/15/60, ask deltas, dip30, book sizes, age, spread) 0.5485 - worse in every window. The earlier linear "adds nothing" results
   were not an artefact of linearity. Closed.
+- **Why fixed gave it back (London FIXED_PHASES, 17:57, real settled EF trades, venue truth).** Settled high 09-25 22:03. Profit phase n148:
+  fill 30%/attempt, 59%/candle, win 54%, paid 0.470, +0.106/$1, +$113.4, sec p50 117, book age 41 ms. Give-back n84: fill 36%/58%, win 39%,
+  paid 0.459, -0.174/$1, -$140.7, sec p50 123, book age 39 ms. EXECUTION IDENTICAL; only the win rate moved, at the same price.
+  V's read: the split is AT the curve's maximum, which maximises the difference by construction (z ~2.2 before that selection). Whole
+  period n232 ~ -0.012/$1: fixed15 is about break-even on real fills, and a break-even strategy's curve rises and gives back by
+  itself - the drawdown is variance, not a regime change. Regime grid (4 families x 3 cells, cuts from H1): non-monotone (vol low+ mid-
+  high+), only high-vol n68 positive in both halves - not a finding. So the owner's "small drawdown" needs a REAL edge; no gate or
+  regime switch on fixed15 supplies one.
