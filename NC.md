@@ -740,3 +740,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   +$13.4 / DD $96.3. Beats the null by ~$64 but twice C's DD and dead at one tick - the same favourite-buyer shape. Recorders LIVE (btc5
   bid/ask/sizes; Binance spot aggTrades 250 ms signed; perp unreachable from Zurich). Arm S (Stable EF, top-20% trailing 24 h, FIXED
   primary + RAW) LIVE in the forward shadow (d98f8e6), 12 arms. EF-9 v1 with Binance aggTrades history briefed 18:48.
+- **Pre-open buying (owner idea 18:5x; V, public taker prints, lag-corrected, gamma outcomes; analysis/v/preopen/): NOT A FINDING.**
+  Rules confirmed from Polymarket's own text: resolves on the Chainlink BTC/USD TWAP-60s stream, line = TWAP at the start. 10 h (120
+  candles) showed the last-60 s cheap side (<0.45) at +0.169/$1, both halves positive. On 48 h (576 candles) the same cell is -0.083
+  (H1 -0.232 / H2 +0.092; 76/215 and 93/216 candles positive) - the 10 h slice was the recent half. Buying both sides costs >= $1.01
+  before fees (books mirror). Other pre-open cells ~0 at ~0.50 (coin-flip noise). Closed.
