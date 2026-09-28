@@ -52,7 +52,11 @@ def cb_feats(bn, cb, e, S):
 def main(a, b):
     rows = load_rows()
     print(f'candles with labels {len(rows)}')
-    bn = A.closes(a - 700, b + 300); cb_raw = {int(k): v for k, v in json.load(open(os.path.join(HERE, 'coinbase_1s_btc.json'))).items()}
+    bnf = os.path.join(HERE, 'binance_1s_btc.json')
+    if os.path.exists(bnf): bn = {int(k): v for k, v in json.load(open(bnf)).items()}
+    else:
+        bn = A.closes(a - 700, b + 300); json.dump(bn, open(bnf, 'w'))
+    cb_raw = {int(k): v for k, v in json.load(open(os.path.join(HERE, 'coinbase_1s_btc.json'))).items()}
     cb = ffill(cb_raw, a - 700, b + 300)
     print(f'binance 1 s {len(bn)}, coinbase raw {len(cb_raw)} ffilled {len(cb)}')
     lead_lag(bn, cb_raw, a, b)
