@@ -277,3 +277,18 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
   (0.40-0.50: -0.04..-0.10; 0.20-0.30: -0.05..-0.21; 0.02-0.10: -0.05..-0.44 per $1). Cause: the taker fee is 0.07(1-p) per $1 and the
   1-tick spread is a bigger share of a cheap price. **EF buys cheap shares (ask <= 0.60), so it starts about 5-10% per $1 in the hole on
   every fire before any model edge.** No single cell is a finding (the best, 0-60 s at 0.90-0.98, is +0.03 on n95, one standard error).
+
+## NC-15 - Overnight 09-28 (owner: "don't stop till you find a profitable version") - running log
+- **Why speed cannot win (fact, not theory):** the BTC 5m market has Polymarket's taker-order delay ON (`itode: true`,
+  learner/AWS_TASKS.md:419). A taker order is held (250 ms per the docs, reportedly 50 ms on crypto) and re-validated, and makers
+  cancel inside the hold. The venue's own design protects makers from our strategy. That is the 69% "no orders found".
+- **TWAP lock-in on the REAL Chainlink feed (London, 922 candles, alignment 99.57%): DEAD.** The market beats exact TWAP math in
+  every window (270-296 s Brier 0.040 vs 0.063); every grid cell is negative at t-1, +1 s and +2 s. (analysis/london/TWAP_LOCK_REF_LONDON.txt, London box)
+- **EV-bounded chase (fills + retries, London's own orders): not a finding.** It adds 25-55 fills (all n<60), pessimistic totals are about 0,
+  and H2 is weak. The runaway winners run past even an EV=0 cap. (analysis/london/EV_CAP_CHASE.md, London box)
+- **Regime grid (Zurich, fixed15 under London exec, 129 fires / 7 days): no bucket is robust.** All fires -0.021/$1. Weekdays n113 +0.065
+  fail the cost test (+2c +0.018, +5c -0.036); weekends n16 -0.555 over 2 days, directionally the owner's point, but too thin. (analysis/zurich/EF_REGIME_GRID.md)
+- **Delay brain (Zurich decide_log, 35,855 passes, 622 candles, gamma):** EF's edge is +0.059 at +250 ms and -0.055 at +1 s. A ridge
+  trained on the delayed price works as a VETO on EF's own fires. Kept: n130, 58.5%, +0.201/+0.142/+0.106 at +250/500/1000 ms,
+  halves +0.167/+0.236, perm p 0.001. Vetoed: n133, 45.1%, -0.081/-0.180/-0.212. The sweep is non-monotone but positive at every threshold.
+  OPEN: fixed15 selection, the London-exec pass, and a test on London's real fills. (analysis/zurich/EF_DELAY_BRAIN.md)
