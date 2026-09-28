@@ -655,3 +655,10 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   times were an artifact. V ACCEPTS Zurich's proposed fix (stated before any re-run): threshold = smallest distinct prediction strictly
   above the sample quantile (causal, deterministic, no boundary ties). Re-run EF-5 CAUSAL and EF-6 under it, AND at grid anchors 0/15/30/45 s:
   a result that moves materially with the anchor is noise, whatever its mean.
+- **EF-7 strict threshold + anchor jitter (Zurich 5c9162e): the old EF-6 headline was ~82% tie artifact.** EF-5 CAUSAL strict (no grid, one
+  threshold per day): q.70 +153.4/DD 115.7 | q.80 +164.7/95.6 | **q.90 +111.0/76.0** | q.95 +104.6/52.1. EF-6 strict, mean over anchors
+  0/15/30/45 [min, max]: **W1h q.90 +40.3 [+22.9, +74.2] DD 51.3** | W1h q.80 +76.4 [+61.7, +83.7] DD 83.6 | W1h q.95 +51.2 [+39.6, +73.3]
+  DD 47.3 | W6h q.90 +32.4 [+29.2, +37.3] DD 60.3 - these four clear the bar (all anchors > C, mean DD <= C); W3h and W6h q.95 fail.
+  C same days +16.3 / DD 85.3. Margins now $30-60 over C on 4 days; anchor spread still up to 3.2x.
+  **V's registration, chosen by the rule already registered, NOT by the new table:** E4 = E3's own cell (W1h q.90) with the strict rule;
+  E5 = E1's own cell (EF-5 causal q.90) with the strict rule. E3/E1 retired from the decision (kept as logged history). Same forward rule.
