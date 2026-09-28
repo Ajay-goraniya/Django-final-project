@@ -8,7 +8,7 @@
 - Tested tonight and CLOSED (numbers in NC-13..15): Predict.fun-style wide caps, EV-bounded chase + retries, waiting for the price to
   hold (persistence), last-minute TWAP lock-in (the market beats exact TWAP math even on the real Chainlink feed), regime switches.
 - Two drafts are on the branch, OFF, not deployed: a delay-brain VETO (helps Raw on Zurich, fails on Fixed and on London's real fills)
-  and FRESH-BOOK SEND (London's real orders: fills on a book >=50 ms old lost ~$75 over 5 days, both halves; n53, under the 60 bar).
+  and FRESH-BOOK SEND. Zurich's trigger-source test (785k passes) then showed every extra fill on this book is a losing fill, so NEITHER is recommended.
 
 ## 2. The new lead: the 5m/15m TWAP pair (model-free)
 The 15m market and the last 5m candle inside it settle on the **same Chainlink TWAP at the same second**, only against different

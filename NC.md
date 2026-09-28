@@ -315,4 +315,8 @@ the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
   (09-20..26, 153/672 = 22.8%), EVERY day. Payoff over 672: 1->469, 2->202, 0->1. The one 0 (09-22 15:15) had lines $2.33 apart on the Binance
   proxy, inside its error, so the leg ORDER was wrong, not the rule. pair_bot now defaults to --min-gap 5 and uses the real Chainlink stream.
   SOL 6/91, all with gaps <= $0.12 (proxy noise; do not lean on it). ETH 15/91, never 0.
+- **EF trigger source (Zurich, 785,924 passes, 1,015 candles): the fill-rate side is closed for good.** Book-triggered fires fill 82% but pay -0.007;
+  model-triggered fill 36% and hold all the edge (+0.234). "Fire only on book moves" LOSES (raw25 +0.071 -> -0.021, fixed15 +0.061 -> -0.158); on candles
+  both arms fill, both are negative. All 13,295 qualifying passes fill 85% and pay -0.059. EF's apparent edge sits in the fires the book will not fill.
+  So the fresh-book-send draft (e6ccd97) is NOT recommended either: more fills on this book are more losing fills. (analysis/zurich/EF_TRIGGER_SOURCE.md)
 
