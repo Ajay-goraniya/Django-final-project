@@ -366,3 +366,10 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   IS a move-follower, so a spot-move model carries no private information. What the crowd does not see must be an input the venue is not
   watching. Next tests: (a) Chainlink-reference vs Binance divergence early in the candle (settlement is Chainlink, the crowd prices Binance);
   (b) Binance flow-only model (perp aggressor flow, imbalance) vs venue mid. (analysis/zurich/EF_FIRE_TIME.md s.4)
+- **London EF_CHAINLINK_DIV (10:38, 922 candles, 1 s ref_px + spot_px, venue labels).** Chainlink sits BELOW Binance in 98% of seconds
+  (mean -2.25 bps, |div| p50 2.2 / p90 3.4, autocorr 30 s +0.49..0.61). Raw div carries no direction information (AUC 0.47; adding it to
+  move_bps HURTS: 0.633 -> 0.592 at S20). The live cell is basis WIDENING -> buy DOWN at the 1 s tape ask: S45 X2.5 n323 +0.08 (H1 +0.05 /
+  H2 +0.11), X3 n167 +0.26 (+0.09/+0.42), X3.5 n83 +0.41, X4 n54* +0.47, monotone in X; S60 X3 n166 +0.23 but H1 negative at X3.5-4.
+  Perm p=0.00/0.01. Null always-DOWN -0.03. Win% FLAT ~50%: the money is cheap DOWN asks, no fill model, threshold on a de-meaned basis.
+  CANDIDATE ONLY. Mechanism if real: the venue prices Binance, settles on Chainlink; when Binance runs above Chainlink the crowd overrates UP.
+  Next (briefed 10:4x): rolling no-lookahead basis, cheapness-matched null, symmetric UP side, per day, div persistence to the close.
