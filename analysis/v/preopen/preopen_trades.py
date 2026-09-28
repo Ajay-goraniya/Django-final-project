@@ -9,8 +9,8 @@ def g(u):
     for a in range(6):
         try:
             time.sleep(0.15); return json.load(urllib.request.urlopen(urllib.request.Request(u, headers={'User-Agent': 'v'}), timeout=20))
-        except urllib.error.HTTPError as x:
-            if x.code != 429 or a == 5: raise
+        except Exception as x:
+            if a == 5: raise
             time.sleep(2 ** a)
 H = float(sys.argv[1]) if len(sys.argv) > 1 else 8
 now = int(time.time()); e0 = now // 300 * 300
