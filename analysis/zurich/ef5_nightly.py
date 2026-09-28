@@ -112,7 +112,16 @@ if __name__ == '__main__':
     os.makedirs(edir, exist_ok=True)
     year = dt.datetime.now(dt.timezone.utc).strftime('%Y')
     epath = f'{edir}/ef6_{year}-{today}.json'
-    json.dump(dict(names=fnames, base=body['base'], trees=body['trees']), open(epath, 'w'))
+    # DE-STANDARDISE THE SPLIT THRESHOLDS. The stumps are fitted on z = (x - mu) / sd, so a split
+    # `z_j <= t` is exactly `x_j <= t*sd_j + mu_j` in raw feature space. V's format carries names/base/
+    # trees and no mu/sd, and ef6_lane feeds RAW engine values, so emitting the standardised thresholds
+    # silently scores every row on the wrong scale. That is what broke the first parity run: the lane and
+    # the shadow agreed exactly while the window held only my precomputed seed, and diverged the moment
+    # the lane's own predictions entered (threshold -0.048 vs +0.161 an hour in). Leaf values are
+    # unchanged - only the split point moves - so this is an exact re-expression, not an approximation.
+    raw_trees = [[int(j), float(t) * float(sd[j]) + float(mu[j]), float(vl), float(vr)]
+                 for j, t, vl, vr in body['trees']]
+    json.dump(dict(names=fnames, base=body['base'], trees=raw_trees), open(epath, 'w'))
     print(f'  engine copy -> {epath}')
     print(f'    names {len(fnames)}: {len(fnames) - len(ENGINE_BUILT & set(fnames))} engine feature keys '
           f'+ {sorted(ENGINE_BUILT & set(fnames))}')

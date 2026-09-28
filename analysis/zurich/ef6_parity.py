@@ -24,7 +24,10 @@ EDIR = '/home/ubuntu/claude-work/repo/learner/v12_2/ef6'
 def replay(day, year, shim):
     mp = f'{EDIR}/ef6_{year}-{day}.json'
     if not os.path.exists(mp): sys.exit(f'no engine model at {mp}')
-    lane = EF6Lane(cfg=dict(enabled=True, model_dir=EDIR), model=StumpModel.load(mp))
+    lane = EF6Lane(cfg=dict(enabled=True, model_dir=EDIR))
+    # load THROUGH load_day_model so the seed file is picked up the way the engine would do it
+    if not lane.load_day_model(f'{year}-{day}'): sys.exit(f'load_day_model failed for {year}-{day}')
+    print(f'    seed rows loaded into the trailing window: {len(lane.tq.rows):,}')
     L = sqlite3.connect(f'file:{LIVE}?mode=ro', uri=True)
     keys = json.loads(L.execute("SELECT v FROM meta WHERE k='decide_log_features'").fetchone()[0])
     c = sqlite3.connect(f'file:{ARCH}?mode=ro', uri=True)
