@@ -822,3 +822,4 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   maker, 572 candles), 0x41e2 +$3.5k (23% maker, 568), 0xc533 +$2.2k (35%, 565), 0x9e3e +$3.0k (7%, 443); 0xc4e2 +$4.1k on $38k,
   0% maker, buys favourites at 0.738, sec p50 63 (138 candles). Big losers are makers too (0xcc0d -$30.8k, 0x4b01 -$16.7k). Margins are
   ~1-3% of volume for the frequent winners. Next: per-trade context (sec, price, TWAP z, Binance move) for the top consistent takers.
+- OWNER 22:4x: "yes" - the Zurich live window 19:40-20:12 was the owner. Closed.
