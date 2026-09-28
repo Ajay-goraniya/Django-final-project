@@ -595,3 +595,11 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   does not reproduce (-$138, DD $227, 1/5 days): the absolute cut 'pred >= 0' sits 0.76 sd into a tail whose position depends on each
   fit's calibration offset. Lesson (3rd time): an absolute threshold on an uncalibrated score is not a rule. Next: the same stumps with
   a CAUSAL QUANTILE cut (fire when pred is in the top q of the previous day's predictions), q in {0.70, 0.80, 0.90}. Briefed 15:4x.
+- **EF-5 quantile cut (Zurich 39bec9f), $ / DD:** q .70 S0 0: in-day +276/105, CAUSAL +251/116, FROZEN -64/223 | q .80: +157/87, +169/106,
+  -48/117 | q .90: +29/66, **+140/69**, -99/134 | q .95: +25/50, **+92/69**, +26/69. C same days +16.3/85.3. The quantile cut is causal-safe
+  (yesterday's threshold costs nothing) and worth ~$164 and 2/3 of the DD vs the absolute cut on an identical model. What fails to transfer
+  is the FROZEN MODEL: "refitting nightly on a growing window was doing the work". D2 (frozen, q .95) registered per the rule, flagged as
+  noise (isolated cell, flip p 0.137, +$9 over C).
+  **V's read: the CAUSAL column IS an implementable production rule - retrain every night on all days so far, cut at the q-quantile of
+  yesterday's scores.** q .90 and q .95 (adjacent) both beat C on $ AND DD. Pre-registering it as arm E (nightly refit), q .90 primary,
+  q .95 secondary, in the forward shadow; asked Zurich for halves, per day, fill%, flip p on those two cells.
