@@ -14,6 +14,7 @@ import numpy as np
 import early_spot_signal as E
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+MODE = os.environ.get('LATE_PRICE', 'fwd')   # fwd: decide on the quote seen by S, PAY the first taker price after S; no forward trade = no fill
 KEYS = ['move', 'ret5', 'ret30', 'ret60', 'rv60', 'pos', 'prev1', 'prev2', 'hs', 'hc', 'mv_sec']
 fee = lambda p: 0.07 * p * (1 - p)
 
@@ -84,7 +85,9 @@ def main():
                     if au is None or ad is None: continue
                     up = au >= ad; a = au if up else ad
                     if lo <= a <= hi:
-                        fires.append((r['e'], r['day'], a, r['up'] == up)); break
+                        pay = a if MODE != 'fwd' else (q.get('fwd_up') if up else q.get('fwd_dn'))
+                        if pay is not None: fires.append((r['e'], r['day'], pay, r['up'] == up))
+                        break
             print(line(f'S0 {S0:3d} ask {lo:.2f}-{hi:.2f}', stats(fires, nd_all)))
     for arm in ('MODEL', 'AGREE'):
         print(f'\n=== {arm}: walk-forward spot model, fire at first S >= S0 with p_side/cost >= 1+m' + (' and model side = venue favourite' if arm == 'AGREE' else ''))
@@ -99,11 +102,15 @@ def main():
                         q = r['s'][str(S)]; p = P[(r['e'], S)]; up = p >= 0.5; ps = p if up else 1 - p
                         a = q['ask_up'] if up else q['ask_dn']
                         if a is None or not (0.02 < a < 0.98): continue
+                        pay = a
+                        if MODE == 'fwd':
+                            pay = q.get('fwd_up') if up else q.get('fwd_dn')
                         if arm == 'AGREE':
                             o = q['ask_dn'] if up else q['ask_up']
                             if o is None or a < o: continue
                         if ps / (a + fee(a)) >= 1 + m:
-                            fires.append((r['e'], r['day'], a, r['up'] == up)); break
+                            if pay is None: break                        # decided, no taker filled after us: no fill, candle done
+                            fires.append((r['e'], r['day'], pay, r['up'] == up)); break
                 print(line(f'S0 {S0:3d} m {m:.2f}', stats(fires, nd_wf)))
 
 

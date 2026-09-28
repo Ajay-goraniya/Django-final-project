@@ -55,7 +55,9 @@ def main():
                     a = q['ask_up'] if up else q['ask_dn']
                     if a is None or not (0.02 < a < 0.98): continue
                     if ps / (a + LR.fee(a)) >= 1 + m:
-                        fires.append((r['e'], r['day'], a, r['up'] == up)); break
+                        pay = a if LR.MODE != 'fwd' else (q.get('fwd_up') if up else q.get('fwd_dn'))
+                        if pay is not None: fires.append((r['e'], r['day'], pay, r['up'] == up))
+                        break
             print(LR.line(f'S0 {S0:3d} m {m:.2f}', LR.stats(fires, nd)))
 
 
