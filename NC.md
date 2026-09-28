@@ -576,3 +576,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   fact. **London-exec is negative in EVERY cell, both arms** (RAW -$207 / -$179 at sec>=60; FIXED -$95 / -$83): paper positive, real fills
   negative - the adverse fill is the whole story. B stays pre-registered (forward days are the test) but the prior is now against it.
   Arm A (EF-2 v0 S0>=150) is the one arm whose edge does not depend on getting a cheap fill - 89.5% sim fill, buys the favourite.
+- **Public trade timestamps are LATE (V live probe 14:5x, 146 prints matched WS vs data-api): data-api ts - WS ts p10 +1.5 s, p50 +2.2 s,
+  p90 +3.0 s; 99% >= 1 s.** So "first taker price in [S+1, S+4]" by data-api time was matched at about [S-1, S+2] - at or before the
+  decision. Lag test agrees: the same rule paying 20-30 s later loses as much as it "made" (S0 220 m .02: +$617 -> -$613). The late spot
+  rule's public-data profit is a stale price; Zurich's book result (-$232) stands. CLOSED. Rule for all public-tape work: shift data-api
+  timestamps by -2.2 s (or use WS/book data) before any second-resolution fill question. (analysis/v/early/ts_lag_probe.py)
