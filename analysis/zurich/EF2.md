@@ -802,3 +802,61 @@ the way to the sample bar. It is here because the grid is reported in full, not 
 The owner's mechanism is real as an observation and empty as a trigger. The reference does re-cross — almost
 always — and by the time it does, the price has already moved. Acting on it loses money in both directions,
 and the exit version is the more expensive of the two.
+
+---
+
+# fixed15 after 220 s — the slice and the rule give opposite answers
+
+Owner, 09-28 13:3x: *"test fixed on the 10 days data and see the fires only after 220 s."* Two different
+things, and the difference is the answer.
+
+```
+(1) SLICE - stable_ef FIXED fires, 249 fires over 10 days ['09-15', '09-16', '09-21', '09-22', '09-23', '09-24', '09-25', '09-26', '09-27', '09-28']
+  cut             n  lost   win%  paper$1   paper$   pDD$   LON$1    LON$  lonDD$  run  days+
+  ALL           249   110  55.8%   +0.093   +240.3  233.4  -0.057   -86.3   194.0    7   6/10
+  sec >= 200     42    13  69.0%   +0.422   +183.6   46.9  +0.260   +65.1    40.5    4    9/9  *n<60
+  sec >= 220     19     8  57.9%   +0.210    +41.5   30.0  +0.054    +6.3    31.2    3    7/8  *n<60
+  sec >= 230      7     3  57.1%   +0.298    +21.7   11.0  +0.127    +5.5    13.8    1    2/4  *n<60
+  per day at sec >= 220: 09-15 n1 +9$  09-16 n2 +1$  09-21 n4 +4$  09-22 n5 -17$  09-23 n2 +1$  09-24 n3 +20$  09-26 n1 +10$  09-28 n1 +13$
+
+(2) RULE - fixed15 may only fire at the first qualifying pass with sec >= S. 1015 candles, 5 days ['09-24', '09-25', '09-26', '09-27', '09-28']
+  rule           fires  /day fills  fill%  lost   win%   FAK$1    FAK$    DD$  paper$1   LON$1    LON$  run  days+
+  sec >= 200        60  12.0    27  45.0%    15  44.4%  -0.124   -34.6   74.1   +0.074  -0.089   -32.8    5    1/5  *n<60
+      per day (FAK $): 09-24 +39  09-25 -38  09-26 -25  09-27 -1  09-28 -10
+  sec >= 220        33   6.6    17  51.5%    10  41.2%  -0.234   -41.2   44.3   -0.070  -0.206   -42.0    3    1/5  *n<60
+      per day (FAK $): 09-24 -4  09-25 +2  09-26 -20  09-27 -9  09-28 -10
+  sec >= 230        19   3.8    13  68.4%     8  38.5%  -0.232   -31.2   35.4   -0.147  -0.295   -35.4    3    1/4  *n<60
+      per day (FAK $): 09-24 -7  09-25 +5  09-26 -20  09-27 -9  09-28 +0
+```
+
+## The slice wins; the rule loses
+
+| | n | win% | paper $ | London $ | days + |
+|---|---|---|---|---|---|
+| **(1) slice**, fires that landed at ≥220 | 19 | **57.9%** | **+41.5** | +6.3 | 7/8 |
+| **(2) rule**, may only fire at ≥220 | 33 fires / 17 fills | **41.2%** | −0.070/$1 | −42.0 | **1/5** |
+
+**This is survivorship, and it is the whole explanation.** The slice's 19 fires are the candles where the
+normal rule *found nothing until second 220* — a set selected after the fact by the rule's own silence. You
+cannot trade it, because at second 20 you do not know the rule will stay quiet.
+
+The rule version forces a fire at 220+ on every candle, including the ones the normal rule would have taken
+early. Those are different candles and they are worse: win rate falls from 57.9% to **41.2%**, and only **1
+of 5 days** is positive against 7 of 8.
+
+The same reversal holds at every cut. At ≥200 the slice is 69.0% and +$183.6; the rule is 44.4% and −$34.6.
+
+## And the fill finishes it
+
+The rule's paper column is +0.074 at ≥200 — marginally positive if every fire filled at the quoted ask. Under
+the per-pass FAK simulator it is **−0.124**, on a **45.0%** fill rate. Half the fires do not land, and the
+half that do are the wrong half. That is the same adverse selection measured everywhere else on this box:
+the rows that fail to fill win more often than the rows that fill.
+
+## Answer
+
+Restricting fixed15 to fire only after 220 s does not work. The attractive after-220 numbers describe fires
+the existing rule already makes and cannot be turned into a rule, and when the restriction is actually
+imposed the result is negative on paper, more negative after fills, and positive on one day in five.
+
+Every cell in (1) and (2) is below the 60-fill bar and marked.
