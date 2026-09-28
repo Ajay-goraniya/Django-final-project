@@ -12,7 +12,7 @@ permutation is V's stricter one: a flipped draw is priced at the **opposite side
 through the identical FAK test, so the control answers "what if the model had picked the other side", fully
 priced, rather than "what if the payout flipped".
 
-## Answer in four parts
+## Answer in five parts
 
 **1. The owner is right that EF fires late.** Baseline fixed15 fire second: **p10 45, p50 126, p90 198**. Only
 **5.1%** of fires happen at or before second 30; **55.4%** happen at second 120 or later.
@@ -31,9 +31,15 @@ better. Raising the bar makes it worse at every S: **P=0.70 is negative at all s
 side call does carry the result (V's opposite-ask flip: p = 0.002–0.018 on the early cells), but its
 confidence number earns nothing.
 
+**5. And a spot-only model does not find what the crowd misses — the crowd is better (section 4).** A
+walk-forward logistic on spot features with `lv` and `p_venue` removed loses to the venue's own mid at every
+second tested, 0.687 vs 0.714 at second 20 widening to 0.703 vs 0.768 at second 60, and its disagreement
+cells do not pay. The reason is structural: `move_bps` alone correlates **+0.717** with the venue mid, so with
+these inputs there is very little the crowd is not already looking at.
+
 **Every cell that met the standing precondition was put through verify.py and every one came back
-NOT A FINDING.** Details at the end — the honest summary is that the *pattern* across 28 cells is strong and
-no individual cell survives its own gates.
+NOT A FINDING** — six from the grid, one from section 4. The honest summary is that the *pattern* across 28
+cells is strong and no individual cell survives its own gates.
 
 ## 1. Baseline — the rule live on London today
 
@@ -136,7 +142,173 @@ The ask × second table is reported in full for completeness and **is not readab
 fills against a 60-fill bar, and several are 2–6 fills. It is in the file so the grid is not selectively
 quoted, not because it supports anything.
 
-## verify.py on every qualifying cell
+## 4. Can a SPOT-ONLY model see what the crowd does not?
+
+V, 09-28: `model_v10.json`'s two largest inputs are `move_bps` **+1.663** and `lv` **+1.551** — `lv` being the
+venue's own logit. The model half-copies the price, so it agrees with the crowd by construction. So: fit a
+model that cannot see the price at all, and look only where it *disagrees* with the venue.
+
+**Design.** Features `move_bps, mv_x_sec, imb20, ret5, ret30, ret60, rv60, basis_bps` — no `lv`, no
+`p_venue`. Label is the venue's own resolution. The model predicts P(UP), so `p_side` is symmetric by
+construction (p_DOWN = 1 − p_UP), unlike the engine's own p — which is what lets a disagreement cell pick
+**either** side instead of inheriting the engine's choice. Walk-forward: day *k* is fitted on days < *k* only,
+standardisation included and fitted on the training rows alone; the first day is never scored. One row per
+candle per second — the first pass at exactly `sec == S`. Ridge logistic, Newton steps, intercept unpenalised.
+
+`sec_left` is in the brief but is not usable: `ef_persist`'s loader drops it, and each model is fitted at one
+fixed second where it is constant. Dropping a constant changes nothing.
+
+### (a) AUC — the venue mid wins at every second, in both specifications
+
+| S | AUC spot-only | AUC spot-only, no imb20 | AUC **venue mid alone** | gap (briefed − venue) |
+|---|---|---|---|---|
+| 20 s | 0.687 | 0.684 | **0.714** | −0.027 |
+| 30 s | 0.691 | 0.695 | **0.732** | −0.040 |
+| 45 s | 0.709 | 0.713 | **0.744** | −0.036 |
+| 60 s | 0.703 | 0.703 | **0.768** | −0.065 |
+
+Eight comparisons, eight losses. And the **gap widens with time**: the venue's price improves faster through
+the candle (0.714 → 0.768) than the spot model does (0.687 → 0.703). By second 60 the crowd is a
+quarter-of-an-AUC-point better and pulling away.
+
+### A correction, and the structural reason this was always going to be hard
+
+I flagged `imb20` in the script as a likely *venue* book feature rather than a spot one, and ran every row
+twice because of it. **The data refutes that**: correlation with the venue mid is **+0.200** for `imb20`,
+against **+0.448** for the explicitly-spot `spot_imb60` and **+0.981** for `lv`. `imb20` belongs in the
+spot-only set. The no-imb20 rows below are therefore a second *specification*, not a principled correction —
+which matters, because the only cell that qualifies for verify.py lives in that second specification.
+
+The structural point is more important. **`move_bps` itself correlates +0.717 with the venue mid.** The crowd
+is mostly pricing the move, so a "spot-only" model built on the move cannot be decorrelated from the crowd —
+what it sees that the venue does not is a small residual *by construction*, and the AUC table is what that
+residual is worth. Getting genuinely independent information means a feature the venue is not already
+watching, not a re-weighting of the one it is.
+
+### (b) The disagreement cells — full table, `*` marks under 60 fills
+
+The rule: the spot model likes a side at `p_side >= P` while the venue prices that same side at `ask <= A`.
+
+```
+spot-only (as briefed)
+
+  S=20s   scored rows 882 of 1014   train n by day {'09-25': 132, '09-26': 419, '09-27': 707, '09-28': 995}
+    (a) AUC spot-only 0.687   vs   AUC venue mid alone 0.714   gap -0.027  -> the VENUE MID discriminates better
+    (b) DISAGREEMENT cells - the spot model likes a side the venue prices cheap
+        rule                     n cand fills  fill%   win%    per$1      H1      H2  permP    ask
+        p>=0.60 & ask<=0.50        28    26  92.9%  34.6%   -0.297  -0.233  -0.360  0.904  0.471  *n<60
+        p>=0.65 & ask<=0.45      0      -      -      -        -       -       -      -      -
+
+  S=30s   scored rows 881 of 1013   train n by day {'09-25': 132, '09-26': 419, '09-27': 706, '09-28': 994}
+    (a) AUC spot-only 0.691   vs   AUC venue mid alone 0.732   gap -0.040  -> the VENUE MID discriminates better
+    (b) DISAGREEMENT cells - the spot model likes a side the venue prices cheap
+        rule                     n cand fills  fill%   win%    per$1      H1      H2  permP    ask
+        p>=0.60 & ask<=0.50        63    59  93.7%  44.1%   +0.024  +0.098  -0.048  0.312  0.411  *n<60
+        p>=0.65 & ask<=0.45        18    18 100.0%  44.4%   +0.079  +0.081  +0.076  0.348  0.388  *n<60
+
+  S=45s   scored rows 883 of 1015   train n by day {'09-25': 132, '09-26': 420, '09-27': 708, '09-28': 996}
+    (a) AUC spot-only 0.709   vs   AUC venue mid alone 0.744   gap -0.036  -> the VENUE MID discriminates better
+    (b) DISAGREEMENT cells - the spot model likes a side the venue prices cheap
+        rule                     n cand fills  fill%   win%    per$1      H1      H2  permP    ask
+        p>=0.60 & ask<=0.50        50    50 100.0%  40.0%   -0.049  -0.092  -0.006  0.488  0.400  *n<60
+        p>=0.65 & ask<=0.45        11    11 100.0%  27.3%   -0.158  -0.204  -0.120  0.658  0.327  *n<60
+
+  S=60s   scored rows 882 of 1014   train n by day {'09-25': 132, '09-26': 420, '09-27': 707, '09-28': 995}
+    (a) AUC spot-only 0.703   vs   AUC venue mid alone 0.768   gap -0.065  -> the VENUE MID discriminates better
+    (b) DISAGREEMENT cells - the spot model likes a side the venue prices cheap
+        rule                     n cand fills  fill%   win%    per$1      H1      H2  permP    ask
+        p>=0.60 & ask<=0.50       105   100  95.2%  38.0%   -0.020  -0.173  +0.133  0.524  0.376
+        p>=0.65 & ask<=0.45        46    41  89.1%  41.5%   +0.209  -0.041  +0.448  0.204  0.345  *n<60
+
+spot-only WITHOUT imb20
+
+  S=20s   scored rows 882 of 1014   train n by day {'09-25': 132, '09-26': 419, '09-27': 707, '09-28': 995}
+    (a) AUC spot-only 0.684   vs   AUC venue mid alone 0.714   gap -0.030  -> the VENUE MID discriminates better
+    (b) DISAGREEMENT cells - the spot model likes a side the venue prices cheap
+        rule                     n cand fills  fill%   win%    per$1      H1      H2  permP    ask
+        p>=0.60 & ask<=0.50        19    19 100.0%  42.1%   -0.134  -0.067  -0.194  0.690  0.472  *n<60
+        p>=0.65 & ask<=0.45         1     1 100.0%   0.0%   -1.000  +0.000  -1.000  1.000  0.450  *n<60
+
+  S=30s   scored rows 881 of 1013   train n by day {'09-25': 132, '09-26': 419, '09-27': 706, '09-28': 994}
+    (a) AUC spot-only 0.695   vs   AUC venue mid alone 0.732   gap -0.037  -> the VENUE MID discriminates better
+    (b) DISAGREEMENT cells - the spot model likes a side the venue prices cheap
+        rule                     n cand fills  fill%   win%    per$1      H1      H2  permP    ask
+        p>=0.60 & ask<=0.50        55    54  98.2%  46.3%   +0.040  +0.087  -0.007  0.236  0.427  *n<60
+        p>=0.65 & ask<=0.45        13    13 100.0%  61.5%   +0.428  +0.191  +0.631  0.082  0.408  *n<60
+
+  S=45s   scored rows 883 of 1015   train n by day {'09-25': 132, '09-26': 420, '09-27': 708, '09-28': 996}
+    (a) AUC spot-only 0.713   vs   AUC venue mid alone 0.744   gap -0.031  -> the VENUE MID discriminates better
+    (b) DISAGREEMENT cells - the spot model likes a side the venue prices cheap
+        rule                     n cand fills  fill%   win%    per$1      H1      H2  permP    ask
+        p>=0.60 & ask<=0.50        51    51 100.0%  49.0%   +0.179  +0.049  +0.303  0.100  0.407  *n<60
+        p>=0.65 & ask<=0.45        13    13 100.0%  46.2%   +0.328  +0.176  +0.459  0.224  0.348  *n<60
+
+  S=60s   scored rows 882 of 1014   train n by day {'09-25': 132, '09-26': 420, '09-27': 707, '09-28': 995}
+    (a) AUC spot-only 0.703   vs   AUC venue mid alone 0.768   gap -0.065  -> the VENUE MID discriminates better
+    (b) DISAGREEMENT cells - the spot model likes a side the venue prices cheap
+        rule                     n cand fills  fill%   win%    per$1      H1      H2  permP    ask
+        p>=0.60 & ask<=0.50       104    99  95.2%  42.4%   +0.091  +0.061  +0.120  0.178  0.375
+        p>=0.65 & ask<=0.45        43    38  88.4%  36.8%   -0.026  -0.305  +0.252  0.464  0.352  *n<60
+```
+
+**Of the 16 cells, exactly one clears 60 fills and is positive in both halves**: the no-imb20 specification at
+S=60, `p>=0.60 & ask<=0.50` — 104 candidates, 99 fills, +0.091, H1 +0.061 / H2 +0.120. The **briefed**
+version of that same cell is **−0.020 with a sign flip**. Every other cell is between 1 and 63 fills.
+
+Two things visible in the table that are worth saying out loud:
+
+- **Removing imb20 flips the sign of three cells** (S=45 `p>=0.60`: −0.049 → +0.179; S=60 `p>=0.60`: −0.020 →
+  +0.091; S=30 `p>=0.65`: +0.079 → +0.428). A one-feature change moving results that much on 11–51 candidates
+  is the signature of noise, not of a better feature set.
+- **Simulated fill rates are 88–100%.** The simulator was validated near London's real 31% per attempt and
+  reproduces ~42% on the fixed15 baseline. These cells are further outside its validated range than anything
+  else in this document, because they select cheap asks that barely move. Treat every per $1 here as
+  optimistic.
+
+### verify.py on the one qualifying cell
+
+```
+cell: spot-only WITHOUT imb20, S=60, p>=0.6 & ask<=0.5  ->  104 candidates, 99 sim fills, per$1 +0.0907, win 42.4%
+  V's control - sign flip priced at the OPPOSITE real ask: p = 0.178, flipped mean -0.000
+  simulated fill rate 95.2% - the simulator was validated near London's REAL 31% per attempt and gives ~42% on the fixed15 baseline, so this is far outside where it was checked
+  sweep over the p bar 0.55/0.60/0.65/0.70 -> +0.033 +0.091 -0.040 +0.471
+==============================================================================
+FINDING: spot-only (no imb20) S=60 disagreement p>=0.6 ask<=0.5   (+0.091/fire, n=99)
+==============================================================================
+  [PASS] grading provenance   gamma_btc5 vs gamma_btc5b disagree on 0/140 (0.0%)
+  [PASS] quote age            rule=at-or-after, max age 0.0s from decide_log own-side ask at >= t+250 ms
+  [PASS] sample size          all 2 cells >= 60
+  [FAIL] sample size          under the 60 bar: {'09-25': 50, '09-26': 34, '09-27': 15}
+  [PASS] both halves          h1 +0.061 / h2 +0.120
+  [FAIL] permutation control  real +0.091 vs permuted mean +0.091 (p95 +0.091), p=1.000 over 500 draws
+  [FAIL] sweep shape          NON-monotone: [ 0.033  0.091 -0.04   0.471]
+  [PASS] cost sensitivity     +0c:+0.091 +0c:+0.076 +1c:+0.062 +2c:+0.034
+  [PASS] beats the null       mine +0.091 vs the BRIEFED specification, imb20 included -0.020
+------------------------------------------------------------------------------
+  VERDICT: NOT A FINDING - failed: sample size, permutation control, sweep shape
+
+```
+
+**NOT A FINDING**, and the provenance is the first thing to say about it: this cell exists in a specification
+I ran on a hypothesis the data then refuted, while the briefed specification of the same cell is negative.
+Beyond that, the p-bar sweep is wildly non-monotone (+0.033, +0.091, −0.040, **+0.471**, the last on a handful
+of rows), the permutation is degenerate for the same reason as in section 2 — the bar re-selects the same set
+— and the per-day counts **decay to nothing**: 50 fills on 09-25, 34 on 09-26, 15 on 09-27, **0 on 09-28**. A
+cell whose candidates disappear over the sample is not a cell to build on.
+
+### Answer to part 4
+
+**No.** On five days of Zurich data a spot-only model is worse than the venue's own mid at every second
+tested, by a margin that grows through the candle, and the cells where it disagrees with the venue do not pay
+— the single positive one is a specification artefact that fails verification and is empty on the most recent
+day.
+
+That is not an argument that the owner's instinct is wrong; it is a measurement of *this* feature set. The
+finding underneath it is the +0.717 correlation between `move_bps` and the venue mid: with these inputs there
+is very little the crowd is not already looking at. Finding something the crowd does not see needs an input
+the venue is not watching — an order-flow or cross-market signal — not a re-weighting of the move.
+
+## verify.py on the grid cells (section 2)
 
 Standing rule: run verify.py on any cell positive in both halves with n ≥ 60. Six qualified — S ∈ {15, 20, 30}
 at P=0.55, the S=15 and S=20 placebos, and the baseline with the ask cap.
@@ -290,11 +462,22 @@ with a real mechanism behind it, and it is not yet a validated rule: nothing her
 is being run far outside where it was checked, and the strongest single number in the study is a *placebo*
 matching the model.
 
+On part 4 the answer is cleaner and more negative. Taking the price out of the model does not reveal
+something the price was hiding — it just makes the model worse, at every second, by a margin that grows
+through the candle. The useful number there is not the AUC, it is the **+0.717** correlation between
+`move_bps` and the venue mid: the venue is already a move-follower, so a move-based model has almost no
+private information to contribute, and re-weighting it cannot create any. If the owner wants something the
+crowd does not see, it has to be an input the venue is not watching — order flow, or another market —
+rather than a different treatment of the move. Zurich has one such input already collected and unused: the
+81,222 trade prints in the ms probe archive.
+
 The next thing worth doing, if the owner wants it, is the one measurement Zurich cannot make: London firing a
 small number of real early orders and reporting the actual fill rate and slippage at second 15–30. Everything
-above turns on a simulated 82–87% fill that no live system has demonstrated.
+in sections 2 and 4 turns on a simulated 82–100% fill that no live system has demonstrated.
 
 ## Files
 
 - `ef_fire_time.py` — baseline, the 28-cell grid, the placebo row, the crowd measure
-- `ef_fire_time_verify.py` — verify.py on all six qualifying cells
+- `ef_fire_time_verify.py` — verify.py on all six qualifying grid cells
+- `ef_spot_only.py` — section 4: the walk-forward spot-only model and the disagreement cells
+- `ef_spot_only_verify.py` — verify.py on the one qualifying section-4 cell
