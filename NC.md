@@ -782,3 +782,9 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   since 12.8.11, poly_live.py:220), all REJECTED, nothing stuck - no update needed, 'API change' watch retracted. The 19.42 is logged as a
   deposit (health.py; deposits total 70.42); trading-only settled then sits below the start, so the 20:33 mood 'well' is corrected to
   'in the red'.
+- **EF vs TWAP60 on London's REAL fills (owner's observation 20:5x; London EF_VS_TWAP60.md, 240 settled fills, Chainlink ref, line rule
+  = venue 99.6%).** Owner is right on FREQUENCY: 111/240 (46%) of fills were against the projection (z < -0.5). But those MADE money:
+  z -1.5..-0.5 n102 win 49% paid 0.405 +0.125/$1 +$184 (H1 +149 / H2 +35); z < -1.5 n9 INSUF +$53; all 'against' +$142.1 vs -$10.4 for
+  all fills. The loss is the NEUTRAL bucket (z -0.5..+0.5): n123 win 49% paid 0.510 -0.110/$1 -$111 (H1 -21 / H2 -91), worst < 120 s
+  (n62 -$142). By sec: < 120 s -$117 (both halves negative), 120-200 +$120, > 200 n25 INSUF +$76. EF is a cheap contrarian; blocking
+  'against' fills would remove the profitable part. Not acted on (grid only, cells INSUF); the neutral/early loss is the lead to watch.
