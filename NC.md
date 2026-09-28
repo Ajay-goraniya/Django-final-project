@@ -662,3 +662,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   C same days +16.3 / DD 85.3. Margins now $30-60 over C on 4 days; anchor spread still up to 3.2x.
   **V's registration, chosen by the rule already registered, NOT by the new table:** E4 = E3's own cell (W1h q.90) with the strict rule;
   E5 = E1's own cell (EF-5 causal q.90) with the strict rule. E3/E1 retired from the decision (kept as logged history). Same forward rule.
+- **E3/E4 cell STRICT on London (17:34, ef6_lane 754e6a5, ef6_2026-09-27.json, diag ask, no fill model, anchors 0/15/30/45): FAILS at every
+  anchor.** OOS 09-22/23: -$72.5 mean [-84.8, -60.2], n98-99, win 72-73%, DD 96-116 vs real fixed15 n55 58% +$50.0 DD 18.4. In-sample
+  09-24..26: -$167.2 [-176.2, -159.7], n257-260, DD 222-243 vs fixed15 +$11.1 DD 99.6. The tie fix trims fires, changes nothing. E4 stays in
+  the forward shadow as registered; its prior is now strongly against it. V is testing the METHOD on an independent period (EF-8, 09-11..16
+  polybook 1 Hz book + venue outcomes + Binance 1 s, nightly walk-forward, rules fixed before the run; analysis/v/ef8/).
