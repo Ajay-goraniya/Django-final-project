@@ -373,3 +373,9 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   Perm p=0.00/0.01. Null always-DOWN -0.03. Win% FLAT ~50%: the money is cheap DOWN asks, no fill model, threshold on a de-meaned basis.
   CANDIDATE ONLY. Mechanism if real: the venue prices Binance, settles on Chainlink; when Binance runs above Chainlink the crowd overrates UP.
   Next (briefed 10:4x): rolling no-lookahead basis, cheapness-matched null, symmetric UP side, per day, div persistence to the close.
+- **London Chainlink div part 2 (10:46, 975 candles):** rolling no-lookahead basis KILLS the sample (n<=52*, negative) - the raw cell is a
+  slow basis REGIME (wide for >5 min), not a fresh divergence. It beats the cheapness-matched null (S45 X3 +0.242 vs -0.115; S60 +0.205 vs
+  -0.092) and is positive 5/6 days (n 16/57/33/2/37/34). Basis persists to the close (corr +0.56) but does NOT act through settlement flips
+  (corr -0.03) - so no mechanism: a persistent basis cancels out of Binance-move-vs-Binance-line. REAL London DOWN fills at <=0.45 with
+  div<=-3: n10, -0.30/$1 vs +0.13 for the rest (INSUF, but the only real-money read and it points the other way). Verdict: candidate, no
+  mechanism, needs a shadow with real fill accounting before it is anything.
