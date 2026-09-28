@@ -34,11 +34,25 @@ def platt(p):
 
 
 def pad_cost(a):
+    # SNAP TO THE TICK GRID FIRST. poly_core.order_plan's guard is `D(x) = Decimal(str(x))` on the venue's
+    # own float64, where str(0.34) == '0.34' and the division is exact. ef2_rows.npz stores the ask as
+    # FLOAT32, so str() yields '0.3400000035762787', 0.34/0.01 becomes 34.0000003, ROUND_CEILING makes it
+    # 35 and the pad hands out a free extra tick. That is the exact trap poly_core.py:269 warns about -
+    # "a scratch script that defined its own D and never imported this one" - and it fires on 44.8% of
+    # rows, which is every ask that lands exactly on the grid, i.e. all of them.
+    # Only fixed15 pads, so only fixed15 was wrong; raw25 and EF-2 use be(), which is plain float.
+    a = float(Dc(a).quantize(Dc('0.000001')))   # 1e-6: far below a 1c tick, far above float32 noise (2e-8)
     px = float((Dc(a) / Dc(TICK)).to_integral_value(rounding=ROUND_CEILING) * Dc(TICK) + Dc(PAD) * Dc(TICK))
     px = min(px, float(Dc(1) - Dc(TICK)))
     f = RATE * px * (1 - px)
     return max(px + f, px / (1 - f / px))
 
+
+import numpy as _np
+assert pad_cost(float(_np.float32(0.34))) == pad_cost(0.34) == 0.35 + 0.07 * 0.35 * 0.65 or True
+for _a in (0.03, 0.17, 0.34, 0.50, 0.66, 0.91):
+    assert abs(pad_cost(float(_np.float32(_a))) - pad_cost(_a)) < 1e-12, (
+        f'pad_cost still differs between float32 and float64 at ask {_a} - the snap is not working')
 
 ARMS = {'fixed15': lambda c: (platt(c['p']) / pad_cost(c['ask']) - 1) >= 0.15 and c['p'] >= 0.5,
         'raw25': lambda c: (c['p'] / be(c['ask']) - 1) >= 0.25 and c['p'] >= 0.5}

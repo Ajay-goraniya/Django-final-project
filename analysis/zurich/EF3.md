@@ -17,13 +17,13 @@ Every table below is in that order. Nothing here is deployed. Master is OFF, Lon
 |---|---|---|---|---|---|---|---|---|
 | raw25 S≥60 (rule, 5 d) | +187.1 | 58.1 | 3.22 | 56.0 | 43.2% | 4/5 | 5 | +0.155 |
 | EF-2 v0 m=0.02 S≥150 (model, 4 d) | +233.3 | 60.7 | 3.85 | 135.0 | 88.1% | 2/4 | 3 | +0.049 |
-| fixed15 S≥0 — the live London rule (5 d) | +73.8 | 75.8 | 0.97 | 35.6 | 41.0% | 2/5 | 6 | +0.104 |
+| fixed15 S≥0 — the live London rule (5 d) | +54.5 | 85.3 | 0.64 | 39.2 | 42.3% | 2/5 | 7 | +0.068 |
 
 * **raw25 S≥60** is one day. On the 4 days where every arm exists it is +117.5, of which **+109.8 is
   09-25 alone**; the other three days are +11.1, +14.8, −18.1.
-* **EF-2 v0 m=0.02 S≥150** has the best drawdown shape on the page and fails verify.py on **beats the
-  null**: fixed15 on the same candles earns **+0.050 per $1** against v0's **+0.049**. Its S-sweep is a
-  jagged line with a spike at 150, not a plateau. Two of its three full days carry all the profit.
+* **EF-2 v0 m=0.02 S≥150** has the best drawdown shape on the page. It now **passes** beats-the-null
+  (see the correction below) and still fails verify.py on the **sweep shape**: its S-sweep is a jagged
+  line with a spike at 150, not a plateau. Two of its three full days carry all the profit.
 
 ## Method
 
@@ -44,14 +44,14 @@ Every table below is in that order. Nothing here is deployed. Master is OFF, Lon
 5-day set. `$tot / DD$ / P/DD / fires-day / fill% / days+ / run`:
 
 ```
-  fixed15 S>=0                     +73.8   75.8   0.97   35.6  41.0%    2/5    6|  +0.104  46.6%
-  fixed15 S>=60                   +105.6   92.9   1.14   32.8  41.5%    2/5    6|  +0.158  48.5%
-  fixed15 S>=120                  +130.0   81.6   1.59   26.2  41.2%    3/5    5|  +0.244  53.7%  *n<60
-  fixed15 S>=150                   -54.3   89.0  -0.61   21.8  38.5%    1/5    5|  -0.130  45.2%  *n<60
-  fixed15 S>=180                   +13.3   67.6   0.20   15.8  48.1%    2/4    5|  +0.037  52.6%  *n<60
-  fixed15 S>=200                   -43.7   67.3  -0.65   11.4  47.4%    1/5    5|  -0.162  44.4%  *n<60
-  fixed15 S>=220                   -34.5   48.6  -0.71    6.2  58.1%    1/5    3|  -0.193  44.4%  *n<60
-  fixed15 S>=230                   -24.5   30.0  -0.82    4.0  70.0%    1/4    3|  -0.175  42.9%  *n<60
+  fixed15 S>=0                     +54.5   85.3   0.64   39.2  42.3%    2/5    7|  +0.068  44.6%
+  fixed15 S>=60                    +85.5  100.6   0.85   35.4  44.1%    2/5    7|  +0.112  46.2%
+  fixed15 S>=120                   +75.5  111.6   0.68   29.0  44.8%    2/5    7|  +0.119  47.7%
+  fixed15 S>=150                   -68.9  109.0  -0.63   23.8  41.2%    1/5    7|  -0.141  42.9%  *n<60
+  fixed15 S>=180                    +1.4   67.6   0.02   17.0  49.4%    2/5    4|  +0.005  50.0%  *n<60
+  fixed15 S>=200                   -27.8   67.3  -0.41   12.4  45.2%    1/5    5|  -0.099  46.4%  *n<60
+  fixed15 S>=220                   -34.5   39.7  -0.87    7.0  51.4%    1/5    3|  -0.193  44.4%  *n<60
+  fixed15 S>=230                   -24.5   30.0  -0.82    4.2  66.7%    1/4    3|  -0.175  42.9%  *n<60
   raw25   S>=0                    +107.3   98.4   1.09   65.2  42.3%    2/5    5|  +0.079  44.2%
   raw25   S>=60                   +187.1   58.1   3.22   56.0  43.2%    4/5    5|  +0.155  47.9%
   raw25   S>=120                   +54.1  102.1   0.53   40.0  49.0%    3/5    8|  +0.057  43.9%
@@ -75,8 +75,8 @@ already absorbed the move, so the EV bar is only cleared when the quote is stale
 ## (3) Skip-window — fire normally but never in 60–120 s
 
 ```
-  fixed15 normal                   +73.8   75.8   0.97   35.6  41.0%    2/5    6|  +0.104  46.6%
-  fixed15 skip 60-120              +81.0   90.3   0.90   29.6  41.2%    2/5    6|  +0.136  47.5%
+  fixed15 normal                   +54.5   85.3   0.64   39.2  42.3%    2/5    7|  +0.068  44.6%
+  fixed15 skip 60-120              +51.3  107.3   0.48   33.4  43.1%    2/5    7|  +0.074  44.4%
   raw25   normal                  +107.3   98.4   1.09   65.2  42.3%    2/5    5|  +0.079  44.2%
   raw25   skip 60-120              +25.0  156.0   0.16   52.4  49.2%    2/5    8|  +0.021  41.9%
 ```
@@ -93,12 +93,12 @@ the winners attached to them, and it removes them unevenly, which is why the dra
 ## (4) Drawdown-shaped rule — ask band × start second
 
 ```
-  fixed15 ask0.30-0.70 S>=150      -27.6   85.4  -0.32   20.6  35.9%    2/5    5|  -0.075  45.9%  *n<60
-  fixed15 ask0.30-0.70 S>=200      -46.7   70.1  -0.67   11.0  47.3%    1/5    5|  -0.179  42.3%  *n<60
-  fixed15 ask0.40-0.70 S>=150      -62.9   82.9  -0.76   18.4  43.5%    2/5    4|  -0.158  45.0%  *n<60
-  fixed15 ask0.40-0.70 S>=200      -20.8   47.7  -0.44   10.0  50.0%    1/5    4|  -0.081  48.0%  *n<60
-  fixed15 ask0.50-0.80 S>=150     -107.7  107.7  -1.00   16.6  50.6%    1/5    4|  -0.258  45.2%  *n<60
-  fixed15 ask0.50-0.80 S>=200      -52.8   75.5  -0.70    8.6  55.8%    1/5    4|  -0.220  45.8%  *n<60
+  fixed15 ask0.30-0.70 S>=150      -42.1  105.4  -0.40   22.6  38.9%    1/5    7|  -0.095  43.2%  *n<60
+  fixed15 ask0.30-0.70 S>=200      -30.8   67.3  -0.46   12.0  45.0%    1/5    5|  -0.113  44.4%  *n<60
+  fixed15 ask0.40-0.70 S>=150      -92.9  122.9  -0.76   19.8  43.4%    0/5    6|  -0.217  41.9%  *n<60
+  fixed15 ask0.40-0.70 S>=200      -20.8   51.8  -0.40   10.6  47.2%    2/5    4|  -0.081  48.0%  *n<60
+  fixed15 ask0.50-0.80 S>=150     -137.7  137.7  -1.00   18.2  49.5%    0/5    4|  -0.307  42.2%  *n<60
+  fixed15 ask0.50-0.80 S>=200      -62.8   85.5  -0.73    9.2  54.3%    1/5    4|  -0.251  44.0%  *n<60
   raw25   ask0.30-0.70 S>=150      -30.7  110.4  -0.28   30.0  42.7%    2/5    6|  -0.048  42.2%
   raw25   ask0.30-0.70 S>=200      -54.5   91.0  -0.60   17.0  49.4%    1/5    4|  -0.130  40.5%  *n<60
   raw25   ask0.40-0.70 S>=150      -77.8   92.8  -0.84   26.4  44.7%    0/5    4|  -0.132  42.4%  *n<60
@@ -181,7 +181,8 @@ the 4-day set than any of these. Full output in `ef3_verify.py`.
 | v0 m=0.00 S≥150 | +206.5 | 88.4 | 2.33 | 565 | 155.2 | 2/4 | −2.4 | +81.9 | +132.3 | −5.3 |
 | v0 m=0.05 S≥120 | +162.0 | 71.2 | 2.28 | 402 | 123.0 | 3/4 | +58.1 | +28.3 | +88.7 | −13.1 |
 
-**None passes.** Gate by gate:
+**None passes** — but after the correction below the reason has narrowed to the sweep and the day count,
+not the edge. Gate by gate:
 
 * **grading** — PASS, all three. The two venue mirrors agree on 0/140 candles.
 * **quote age** — PASS. `at-or-after`; the decision is made on the quoted ask.
@@ -198,8 +199,9 @@ the 4-day set than any of these. Full output in `ef3_verify.py`.
   whose fire rule is the same quantity being shuffled.
 * **sweep shape** — FAIL on S for all three (jagged, spikes at the chosen cell). The m-sweep is monotone
   for `m=0.05 S≥120` only.
-* **beats the null** — **FAIL on all three, and this is the one that matters.** fixed15, the live London
-  rule, earns **+0.050 per $1** on the same candles. The arms earn +0.049, +0.037, +0.040.
+* **beats the null** — **PASS on all three, after the correction below.** fixed15 on the same candles
+  earns **+0.028 per $1**; the arms earn +0.049, +0.037, +0.040. Before the fix the null read +0.050 and
+  all three failed this gate. That claim was wrong and is retracted.
 * **paired (McNemar)** — PASS for the two S≥150 arms (p = 0.031 and 0.004) but on only 41 and 43 shared
   candles; FAIL for `m=0.05 S≥120` (p = 1.000).
 
@@ -229,6 +231,92 @@ rather than after seeing more tables.
   same candles that produce its wins. Cutting by time or by price removes both.
 * **The one thing that changes the drawdown shape is firing more often on a thinner edge** — which is
   what v0 does — and that requires the thin edge to be real.
+
+## Correction — a free extra tick on the fixed15 arm (found 09-28 14:1x, after the first push)
+
+**Every `fixed15` number in this document was wrong on its first publication, by about one tick.** raw25
+and every EF-2 v0 number were unaffected. The corrected tables are the ones above; the first-push values
+are listed at the end of this section so the change is auditable.
+
+### What happened
+
+`fixed15` judges EV at **ask + 1 tick**, and that pad is computed on the tick grid with `Decimal`:
+
+```python
+px = float((Dc(a) / Dc(TICK)).to_integral_value(rounding=ROUND_CEILING) * Dc(TICK) + Dc(PAD) * Dc(TICK))
+```
+
+`Dc` is `Decimal(str(x))`, and that is deliberate — `poly_core.order_plan` uses the same idiom and says
+why in a comment that turns out to describe this incident in advance:
+
+> Do NOT "fix" this by reaching for `Decimal` directly: `Decimal(0.28)/Decimal(0.01)` is `28.000...2` and
+> `ROUND_CEILING` turns that into 29. I shipped exactly that non-fix as 12.3.1 after reproducing the
+> "bug" in a scratch script that defined its own `D` and never imported this one.
+
+The guard works because the venue's ask arrives as a float64 whose `str()` is `'0.34'`. **`ef2_rows.npz`
+stores features as float32.** Round-tripped, `0.34` becomes `0.3400000035762787`, `str()` preserves the
+noise, `0.34 / 0.01` evaluates to `34.0000003`, `ROUND_CEILING` returns **35**, and the fire price becomes
+`0.36` instead of `0.35`. A free extra tick, on **44.8% of rows** — i.e. on every ask that lands exactly
+on the cent grid, which is all of them. It only bites the padded profile, so `raw25` and EF-2 v0, which
+use `be()` (plain float, no ceiling), are bit-identical before and after.
+
+I did not reach for `Decimal` directly, so the comment's literal warning was satisfied. I defeated the
+same guard from the other end, by feeding it a value that had already lost its decimal identity.
+
+### How it was caught
+
+Not by review — by a disagreement between two implementations. `ef3_shadow.py` reads asks straight from
+sqlite as float64 and reported **196** fixed15 candles where `ef3.py`, reading the npz, reported **178**.
+B (`raw25 S≥60`) matched to the cent, which localised it to the padded arm immediately. The shadow's
+number was the correct one all along.
+
+### Fix
+
+Snap the ask back to the grid before the ceiling, in `pad_cost`, with a tolerance far below a tick and
+far above float32 noise:
+
+```python
+a = float(Dc(a).quantize(Dc('0.000001')))   # 1e-6 vs a 1c tick vs float32 noise of ~2e-8
+```
+
+Applied to `ef3.py`, `ef2_v0b.py`, `ef2_report.py`, `ef2_second.py`, `ef2_recross.py`, `ef2_v0_detail.py`
+and `ef2_compare.py`, each with an assert that `pad_cost(float32(a)) == pad_cost(a)` across the price
+range. `ef_fixed220.py`, `ef_persist.py` and `ef_regime_grid.py` read their asks from sqlite as float64
+and were never affected — **so the "fires only after 220 s" answer already given to the owner stands.**
+The live engine reads the venue's float64 and is not affected either; this is an analysis-side defect
+only, and nothing about it touches London or the master switch.
+
+### What the correction changes
+
+| | first push | corrected |
+|---|---|---|
+| fixed15 S≥0, $ total / DD / P/DD | +73.8 / 75.8 / 0.97 | **+54.5 / 85.3 / 0.64** |
+| fixed15 S≥0, fires/day / per $1 | 35.6 / +0.104 | **39.2 / +0.068** |
+| fixed15 S≥120, $ total / P/DD | +130.0 / 1.59 | **+75.5 / 0.68** |
+| the null in §5, fixed15 per $1 (4 d) | +0.050 | **+0.028** |
+| §5 `beats the null` verdict | FAIL ×3 | **PASS ×3** |
+
+The direction is what the mechanism predicts: with the extra tick removed, fixed15 clears its EV bar more
+often (39.2 fires/day, up from 35.6) and each fire is judged against a cheaper reference, so the marginal
+fires it now takes are worse ones — more trades, less money, a larger drawdown.
+
+**The conclusions of this document do not change.** Items (1), (3) and (4) all still fail, and (4) gets
+slightly worse. What changes is §5: the three v0 arms now clear `beats the null`, so their remaining
+failures are the **jagged sweep** and the **09-28 part day** — which is the "evidence, not edge" reading,
+now with the per-dollar comparison on its side rather than against it. It also strengthens the argument
+for V's pre-registered shadow: the arms are worth measuring forward.
+
+**A retraction I owe explicitly:** I told V at 14:02 that all three arms failed on the per-$1 null and
+that "fixed15 +0.050 vs v0 +0.037..0.049" was the decisive gate. That was wrong. The decisive gates are
+the sweep shape and the sample.
+
+### First-push values, for audit
+
+fixed15 §1 5-day: S≥0 +73.8/75.8/0.97/35.6/41.0%/2of5/6; S≥60 +105.6/92.9/1.14/32.8/41.5%/2of5/6;
+S≥120 +130.0/81.6/1.59/26.2/41.2%/3of5/5; S≥150 −54.3/89.0/−0.61; S≥180 +13.3/67.6/0.20;
+S≥200 −43.7/67.3/−0.65; S≥220 −34.5/48.6/−0.71; S≥230 −24.5/30.0/−0.82.
+§3 fixed15 normal +73.8/75.8/0.97, skip +81.0/90.3/0.90.
+§4 fixed15: −27.6, −46.7, −62.9, −20.8, −107.7, −52.8 (all still negative, all still failing).
 
 ## What I did not do
 

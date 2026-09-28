@@ -35,6 +35,10 @@ def platt(p):
 
 
 def pad_cost(ask):
+    # float32 asks out of ef2_rows.npz defeat the `Decimal(str(x))` guard: str() yields
+    # '0.3400000035762787', ROUND_CEILING adds a free tick on 44.8% of rows, and only the padded
+    # (fixed15) profile is affected. See ef3.py for the full write-up. Snap to the grid first.
+    ask = float(Dc(ask).quantize(Dc('0.000001')))
     px = float((Dc(ask) / Dc(TICK)).to_integral_value(rounding=ROUND_CEILING) * Dc(TICK) + Dc(PAD) * Dc(TICK))
     px = min(px, float(Dc(1) - Dc(TICK)))
     f = RATE * px * (1 - px)
