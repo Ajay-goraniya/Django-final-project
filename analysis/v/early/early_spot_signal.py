@@ -18,7 +18,7 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'twap'))
 import arb_trades_check as A
 
-S_LIST = (20, 30, 45, 60)
+S_LIST = tuple(int(x) for x in os.environ.get('EARLY_S', '20,30,45,60').split(','))
 P_LIST = (0.55, 0.60, 0.65, 0.70)
 A_LIST = (0.40, 0.45, 0.50, 0.55)
 W = 3
