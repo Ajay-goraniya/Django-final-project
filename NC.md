@@ -444,3 +444,7 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   closed: v0b/v1/v2 not run. Remaining, both on data already held: (1) does the model beat the price on the SLOWER 15m market (Zurich
   btc15 books since 09-22) - briefed 11:47; (2) Coinbase lead (V, running). If both are empty, the honest answer is that this venue has no
   non-gambling edge on obtainable data. London untouched throughout.
+- **Coinbase lead test (V, 7 days public data, 2,304 candles, 692k shared seconds): CLOSED.** Coinbase does lead Binance by a hair at 1-2 s
+  (corr 0.147 vs 0.139 at k=1; 0.072 vs 0.018 at k=2) - and that hair is worth nothing at candle horizons: adding Coinbase features to the
+  Binance-only model changes AUC by +0.005 / 0.000 / -0.006 / -0.005 at S=20/30/45/60; Coinbase-lead alone AUC 0.49-0.51; the venue price
+  still beats both. No information the price lacks. (analysis/v/early/COINBASE_LEAD.txt)
