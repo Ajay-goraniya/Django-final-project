@@ -41,7 +41,12 @@ MODEL_D = '/home/ubuntu/pm_ef3/ef4_model_D.json'
 SEC_LO, SEC_HI, TICK, DELAY_MS = 15, 240, 0.01, 250
 DYN = (1000, 5000, 30000)
 ARMS = ('A_v0_m02_S150', 'B_raw25_S60', 'C_fixed15', 'D_ef4gb_t000', 'D2_ef4gb_q95',
-        'E1_nightly_q90', 'E2_nightly_q95')
+        'E1_nightly_q90', 'E2_nightly_q95', 'E3_trail_1h_q90')
+# E3, registered by V 09-28 16:4x ON A RELAXED ENTRY BAR: the best-day-share <50% entry test was ill-posed
+# on three days (unbounded when the total is small; its floor moves with the day count). V relaxed the
+# ENTRY bar only and said so on the record. The FORWARD decision rule is unchanged and binds E3 exactly
+# like every other arm. Entry was relaxed; nothing about how it will be judged was.
+E3_W_MS, E3_Q, E3_GRID_MS = 3600_000, 0.90, 60_000
 EDIR = '/home/ubuntu/pm_ef3'      # arm E: one model per day, written by ef5_nightly.py at 00:05 UTC
 Q_D2 = 0.95      # D2 = the SAME frozen model as D, only the threshold rule differs (EF-5, V 09-28 15:5x)
 ALL52 = None            # set in run_once from the frozen row table's name list
@@ -225,7 +230,7 @@ def score_A(X, M):
     return 1.0 / (1.0 + np.exp(-np.clip(z, -30, 30)))
 
 
-def pick(rows, pA, pD=None, thr_d2=None, pE=None, thrE=None):
+def pick(rows, pA, pD=None, thr_d2=None, pE=None, thrE=None, e3thr=None):
     """The three arms, each taking its FIRST qualifying row in the candle. One fire per candle, max."""
     out = {}
     for i, r in enumerate(rows):
@@ -247,6 +252,10 @@ def pick(rows, pA, pD=None, thr_d2=None, pE=None, thrE=None):
             for arm, key in (('E1_nightly_q90', 'q90'), ('E2_nightly_q95', 'q95')):
                 if arm not in out and pE[i] >= thrE[key]:
                     out[arm] = (r, r['pe'])
+            if e3thr is not None and 'E3_trail_1h_q90' not in out:
+                t = e3thr(r['ts'])
+                if t is not None and pE[i] >= t:
+                    out['E3_trail_1h_q90'] = (r, r['pe'])
     return out
 
 
@@ -261,6 +270,9 @@ def db():
     # the rule needs (day k reads day k-1).
     d.execute('CREATE TABLE IF NOT EXISTS preds(day TEXT, pr REAL)')
     d.execute('CREATE INDEX IF NOT EXISTS preds_day ON preds(day)')
+    # E3's trailing window needs the nightly model's predictions WITH timestamps.
+    d.execute('CREATE TABLE IF NOT EXISTS epreds(ts_ms INT, day TEXT, pr REAL)')
+    d.execute('CREATE INDEX IF NOT EXISTS epreds_ts ON epreds(ts_ms)')
     return d
 
 
@@ -277,7 +289,7 @@ def run_once():
     # forever and silently lose it. One hour of lookback costs nothing and makes the skip recoverable.
     cand, vo, nk = load_candles(min_epoch=(hi - 3600 if hi else None))
     todo = [e for e in cand if e not in done]
-    n = 0; qcache = {}; ecache = {}
+    n = 0; qcache = {}; ecache = {}; e3buf = {}
     for ep in sorted(todo):
         rows = build_rows(cand[ep], ep, vo[ep], nk)
         if not rows: 
@@ -299,7 +311,33 @@ def run_once():
         ME = ecache[day]
         pE = score_E(X, ME) if ME is not None else None
         thrE = ME['thr'] if ME is not None else None
-        for arm, (r, p) in pick(rows, pA, pD, thr_d2, pE, thrE).items():
+        e3thr = None
+        if ME is not None:
+            if day not in e3buf:
+                # cross-boundary seed: the previous day's last hour re-scored under TODAY's model, so the
+                # window matches what EF-6 measured instead of mixing two models at the day boundary.
+                seed = ME.get('seed') or []
+                prior = [(int(a), float(b)) for a, b in seed]
+                prior += [(int(a), float(b)) for a, b in d.execute(
+                    'SELECT ts_ms, pr FROM epreds WHERE day=? ORDER BY ts_ms', (day,))]
+                e3buf[day] = sorted(prior)
+            buf = e3buf[day]
+
+            def e3thr(t, _b=buf):
+                lo = t - E3_W_MS
+                v = [p for (x, p) in _b if lo <= x < t]
+                return float(np.quantile(v, E3_Q)) if len(v) >= 500 else None
+            # 60 s grid: one threshold per minute, not one per row
+            gcache = {}
+
+            def e3thr(t, _b=buf, _g=gcache):
+                k = t // E3_GRID_MS
+                if k not in _g:
+                    edge = k * E3_GRID_MS
+                    v = [p for (x, p) in _b if edge - E3_W_MS <= x < edge]
+                    _g[k] = float(np.quantile(v, E3_Q)) if len(v) >= 500 else None
+                return _g[k]
+        for arm, (r, p) in pick(rows, pA, pD, thr_d2, pE, thrE, e3thr).items():
             q = r['q']
             pnl = STAKE * per1(r['win'], q) if q == q else 0.0
             d.execute('INSERT OR REPLACE INTO fires VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
@@ -308,9 +346,16 @@ def run_once():
                        (lambda v: None if v != v else float(v))(opp.get((r['ts'], r['up']), float('nan'))),
                        int(r['win']), pnl))
             n += 1
+        if pE is not None:
+            newp = [(int(r['ts']), day, float(v)) for r, v in zip(rows, pE)]
+            d.executemany('INSERT INTO epreds VALUES(?,?,?)', newp)
+            e3buf[day].extend((t_, p_) for t_, _, p_ in newp)
+            e3buf[day].sort()
         d.execute('INSERT OR REPLACE INTO seen VALUES(?,?)', (ep, int(time.time())))
     keepd = sorted({x for (x,) in d.execute('SELECT DISTINCT day FROM preds')})[-3:]
-    if keepd: d.execute(f"DELETE FROM preds WHERE day NOT IN ({','.join('?'*len(keepd))})", keepd)
+    if keepd:
+        d.execute(f"DELETE FROM preds WHERE day NOT IN ({','.join('?'*len(keepd))})", keepd)
+        d.execute(f"DELETE FROM epreds WHERE day NOT IN ({','.join('?'*len(keepd))})", keepd)
     d.commit()
     print(f'{dt.datetime.now(dt.timezone.utc):%H:%M:%S} evaluated {len(todo)} new candles, {n} fires recorded')
     return d

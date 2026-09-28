@@ -38,14 +38,15 @@ def build_all():
     a_ = __import__('sqlite3').connect(f'file:{S.LIVE}?mode=ro', uri=True)
     keys = json.loads(a_.execute("SELECT v FROM meta WHERE k='decide_log_features'").fetchone()[0])
     cand, vo, nk = S.load_candles()
-    X, tgt, day = [], [], []
+    X, tgt, day, tss = [], [], [], []
     for ep, lst in cand.items():
         rows = S.build_rows(lst, ep, vo[ep], nk)
         d = dt.datetime.fromtimestamp(ep, dt.timezone.utc).strftime('%m-%d')
         for r in rows:
-            X.append(r['x']); day.append(d)
+            X.append(r['x']); day.append(d); tss.append(r['ts'])
             tgt.append(per1(r['win'], r['q']) if r['q'] == r['q'] else 0.0)
-    return (np.stack(X).astype(np.float64) if X else np.zeros((0, 52))), np.array(tgt), np.array(day), keys
+    return ((np.stack(X).astype(np.float64) if X else np.zeros((0, 52))), np.array(tgt),
+            np.array(day), np.array(tss, dtype=np.int64), keys)
 
 
 if __name__ == '__main__':
@@ -54,7 +55,7 @@ if __name__ == '__main__':
     out = f'{OUTDIR}/ef5_model_{today}.json'
     if os.path.exists(out) and '--force' not in sys.argv:
         sys.exit(f'{out} exists - tonight is already fitted, refusing to refit (use --force deliberately)')
-    X, tgt, day, keys = build_all()
+    X, tgt, day, tsall, keys = build_all()
     if not len(X): sys.exit('no rows')
     names = list(keys) + ['own_ask', 'opp_ask', 'd_ask_1s', 'd_ask_5s', 'd_ask_30s', 'dip30', 'sec', 'p_side']
     assert X.shape[1] == len(names), f'{X.shape[1]} cols vs {len(names)} names'
@@ -70,9 +71,21 @@ if __name__ == '__main__':
     g = gb_reg((X[tr] - mu) / sd, tgt[tr])
     pv = day == prev
     pp = gb_reg_pred(g, (X[pv] - mu) / sd)
+    # E3's trailing window reaches back across the day boundary, and EF-6 scored those rows under TODAY's
+    # model. A live shadow cannot do that on its own - yesterday's rows were scored last night, under
+    # last night's model. So tonight's job emits the seed: the previous day's final hour, re-scored under
+    # the new model. Without it E3's first hour each day would silently use a different model from the
+    # one its backtest used.
+    ts_prev = tsall[pv]
+    if len(ts_prev):
+        cut = ts_prev.max() - 3600_000
+        m = ts_prev >= cut
+        seed = [[int(a), float(b)] for a, b in zip(ts_prev[m], pp[m])]
+    else: seed = []
     body = dict(trees=[[int(j), float(t), float(vl), float(vr)] for j, t, vl, vr in g['trees']],
                 base=float(g['base']), mean=mu.tolist(), sd=sd.tolist(), names=fnames,
                 thr={k: float(np.quantile(pp, q)) for k, q in QS.items()},
+                seed=seed, seed_n=len(seed),
                 qs=QS, for_day=today, prev_day=prev, train_days=train_days,
                 n_train=int(tr.sum()), n_prev=int(pv.sum()), sec_floor=0,
                 note='Arm E nightly refit. Target = realised $ per $1 as executed by the +250 ms FAK sim. '
