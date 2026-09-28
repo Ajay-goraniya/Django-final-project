@@ -487,3 +487,17 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   six other gates pass. Context bucket sec 180-240 (late candle): FIXED n67 win 65.7% paper +0.313 London-exec +0.154, 70% of days positive.
   NOT a finding: it is one cell of a 5-bucket sec grid, and it CONTRADICTS EF_FIRE_TIME's baseline (fixed15 180-240 -0.139, 13 sim fills)
   while agreeing in sign with London's real fills (180-240 n49* +0.09). Two of three reads positive, one negative, none verified. Watch only.
+
+## NC-18 - 09-28 12:5x-13:0x, the late-candle read and the owner's two-trigger EF
+- **London real fills (213 settled):** before 200 s n189 w47% -$71.14 (DD $179.64); from 200 s n24* w62% +$45.23 (DD $44.60, 4/6 days);
+  from 180 s n49* +$32.02; from 220 s n10* +$42.22. By band: 60-120 s n65 w42% -$55.80 is the loss centre.
+- **Why 60-120 s loses (London WHY_60_120.md, n68 vs 116):** not price (fill p50 0.45 vs 0.48), not move size (|ref-line| p50 2.0 vs 1.6 bps),
+  not execution (slippage p50 +1c both). REVERSALS: the Chainlink ref re-crosses the line after our fire in 65% (win 25%) vs 53% later;
+  not re-crossed wins 67% vs 69%. V's first explanation (small move, near-0.50 price) was wrong on both counts.
+- **Zurich 10 days, after 200 s (stable_ef):** FIXED n42* w69% paper +0.422 (+$183.6, DD $46.9, 9/9 days) London-exec +0.260 (+$65.1);
+  RAW n41* w63% paper +0.350. Below 200 s both arms negative under London exec. BUT the counter-read (decide_log, explicit per-second
+  fill sim) has the fill collapsing with the second: 44% below 200 s, 21% at 200+ - read A applies a flat fill model. London's REAL fill
+  rate by second is the deciding number (asked 13:00).
+- **Owner 13:0x: keep the current EF, add a SECOND trigger in the same candle that may fire only after the first, any time after it** (his
+  "brain that knows the move is wrong and reverses"). Briefed to Zurich 13:03: variants A either side / B opposite only / C same side only,
+  both arms, candle-total $, drawdown, per day, split by first-fire second. London untouched until the owner has seen it.
