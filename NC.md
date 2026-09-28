@@ -359,3 +359,10 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   verify.py on the S=15 placebo: NOT A FINDING - cost sensitivity +0c +0.045 / +1c +0.026 / +2c +0.007; sweep over S non-monotone
   (15 +0.045, 45 -0.044, 60 +0.008); does not beat fixed15 unfiltered (+0.061 sim); paired vs fixed15 McNemar p=0.21 (23 discordant).
   Reading: early timing is a real direction with the SAME order of edge as the current rule, not more, and 2c of slippage removes it.
+- **Zurich part 4, spot-only walk-forward model vs the venue price (10:29): CLEAN NO on this feature set.** AUC spot-only vs venue mid alone:
+  20s 0.687/0.714, 30s 0.691/0.732, 45s 0.709/0.744, 60s 0.703/0.768 - eight of eight lost, gap widens through the candle. Disagreement
+  cells: one positive both-halves cell (S=60 p>=0.60 ask<=0.50, +0.091, 99 sim fills) is a specification artefact (flips sign with one
+  feature; fills decay 50/34/15/0 by day). verify NOT A FINDING. Structural: move_bps alone correlates +0.717 with the venue mid - the crowd
+  IS a move-follower, so a spot-move model carries no private information. What the crowd does not see must be an input the venue is not
+  watching. Next tests: (a) Chainlink-reference vs Binance divergence early in the candle (settlement is Chainlink, the crowd prices Binance);
+  (b) Binance flow-only model (perp aggressor flow, imbalance) vs venue mid. (analysis/zurich/EF_FIRE_TIME.md s.4)
