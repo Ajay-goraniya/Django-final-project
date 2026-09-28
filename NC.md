@@ -723,3 +723,7 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   regime switch on fixed15 supplies one.
 - **Both-sides buy (V, polybook 278k live seconds 09-11..16): up+dn ask = 1.01 at p1..p95; fee-inclusive cost < $1 in ONE second
   (min 0.9904).** The venue mint-matches; no in-book arbitrage. Closed.
+- **London-native EF (London LONDON_NATIVE_EF.md, 18:01-18:04, diag rows 09-22..28, walk-forward, rules fixed before the run): NO EDGE.**
+  Paper at diag ask, no fill model: L4 +$65.4 [58.8, 71.2] DD 112.9, L5 +$20.3 DD 98.4, both positive 2 of 4 days, win ~80% on expensive
+  favourites. Follow-up (costs / favourite null / flip): it UNDERPERFORMS the buy-the-favourite baseline at the same seconds. Closed. The
+  pre-registered decide_log run (10-01) stays on record, but the London-trained version of this family has already failed its first read.
