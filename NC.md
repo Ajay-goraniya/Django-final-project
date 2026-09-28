@@ -667,3 +667,6 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   09-24..26: -$167.2 [-176.2, -159.7], n257-260, DD 222-243 vs fixed15 +$11.1 DD 99.6. The tie fix trims fires, changes nothing. E4 stays in
   the forward shadow as registered; its prior is now strongly against it. V is testing the METHOD on an independent period (EF-8, 09-11..16
   polybook 1 Hz book + venue outcomes + Binance 1 s, nightly walk-forward, rules fixed before the run; analysis/v/ef8/).
+- **London decide_log ON (owner's yes in London's terminal, 17:4x).** Meta flag only, no restart (pid 91301, NRestarts 0), nothing else
+  touched. ~4 rows/s, 44 feature keys, ~520 B/row (~180 MB/day). Daily read-only archive to /home/ubuntu/pm_london_archive/
+  decide_log_YYYY-MM-DD.sqlite3 at 00:20 UTC (archive_decide_log.py); engine DB stays capped by its 4-day prune; ~290 days of disk headroom.
