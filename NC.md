@@ -729,3 +729,6 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   pre-registered decide_log run (10-01) stays on record, but the London-trained version of this family has already failed its first read.
   Detail (London 18:04): L5 paid 0.814, +0.004/$1, +1c -$35.5, +2c -$82.5, favourite null +$33.2 (picked the favourite in 95% of fires);
   L4 paid 0.782, +0.011/$1, +1c -$8.1, +2c -$70.4, favourite null +$131.7 (92% favourite). It is a favourite-buyer that dies at +1c.
+- **EF-9 briefed to Zurich 18:07 (owner: new architecture).** Sequence model (1D-CNN/GRU) on the raw 250 ms stream (both books, Binance
+  spot+perp price and flow, sec, line distance; no hand features), after-fill target with the +250 ms FAK sim, walk-forward by day,
+  strict q.90 trailing-1h, pinned, anchors 0/15/30/45; reported with +1c/+2c, the favourite null and fixed15. Rules fixed before the run.
