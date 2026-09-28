@@ -751,3 +751,7 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   survive one tick. BUT ~all of the gain vs the INSUF version is 09-26 (-100.2 -> +111.1), overall correlations unchanged (the gain is in
   the top-decile ranking), 3 test days only, DD 1.5x C. Candidate, NOT a finding. Zurich fixed a p_side str-vs-int bug first (assert
   added). Live perp flow is unreachable from Zurich (fstream), so a forward arm needs spot-only or another perp route.
+- **EF-9 v1 on MORE history (V, 09-11..16 polybook 1 s + Binance spot/perp aggTrades signed flow 1 s, GRU, walk-forward, 4 test days,
+  rules as before; EF9V1_SEQ_V.txt): LOSES.** E4 phys -$57.7 (2/4 days), E5 phys -$66.6 (2/4), unpinned -$179/-$464; all -$199..-$907
+  at +1c. Flow helps vs the no-flow GRU (-$248 -> -$58) but does not turn it positive. Caveats: 1 s fill model (harsher than +250 ms),
+  pin = TWAP z (no engine p_side). Zurich running the same on its 6 days of tape1s.
