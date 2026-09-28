@@ -419,3 +419,12 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   order: London untouched; all effort on EF-2 training and iteration on Zurich. Iteration ladder: v0 logistic walk-forward -> v1 gradient
   boosting -> v2 ask dynamics at ms resolution from the probe archive (27.5 M btc5 book events = the richest record of being picked off)
   -> v3 add any external input that survives (Coinbase lead test pending). Each version: same acceptance table vs fixed15.
+- **EF-2 milestone 1 (Zurich 11:24):** 1,606,978 candidate rows (822k passes x both sides, 1,015 candles, 5 days), 52 features (44 engine
+  + own/opp ask, d_ask 1/5/30 s, dip30, sec, p_side). Base rate 0.490. **Sim fill over ALL candidate rows 96.3%** vs 42% on fixed15's fires:
+  the selection destroys the fill, not the market. **Filled rows win 48.8%, unfilled 54.9%** - adverse selection measured on the whole
+  population. dip30 mean +7.6c (p90 +20c). Tooling: numpy only on Zurich (no sklearn) -> ridge logistic + a numpy boosted-stump ensemble
+  as capacity check. Decision on the QUOTED ask, economics at the sim fill price (V confirmed - no lookahead). Walk-forward running.
+- **London EF-2 final-test table (11:20):** ef2_london_attempts.csv - 654 real attempts, 361 candles, 209 fills all settled, 35 feature keys;
+  features decision-time for 415, diag-within-3 s for 66, none for 173 (refused candles store no decision). Ready to score.
+- Chainlink cell footnote (Zurich 11:15): reading the same div one second earlier flips per$1 by 0.16 and win% by 8.7 pp - a coin whose
+  sign depends on the clock. Close confirmed. Shadow stopped 11:24.
