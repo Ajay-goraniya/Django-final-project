@@ -250,6 +250,16 @@ FINDING: fixed15 EF fires only on a book-still pass (Zurich shadow, simulated fi
   the model's p and re-applying the same fixed15 bar at each row's own ask does *better* than the real p.
   The edge is not in p; it is in the ask the bar happens to select. This is the same result as REV_BRAIN
   (31 live features AUC 0.431 against venue-ask-only 0.725) arriving by a different route.
+
+  One caveat on how that control is built, because it is worth auditing. Once the trade set is fixed, per $1
+  does not depend on p at all — so shuffling p inside a fixed set cannot move the number, and re-selection is
+  the only permutation that carries any information. The price of that is unequal n: the real arm is all-true
+  under its own bar by construction (86 of 86), while a shuffled p qualifies a smaller, differently composed
+  subset. So the *distribution* of permuted values is not directly comparable in variance to the real one.
+  What is not explained by that asymmetry is the direction and size: the permuted arms average +0.319, a
+  higher return than the real selection, which says the bar evaluated against each row's own ask is doing the
+  selecting and p is along for the ride. The paired McNemar (66 of 67 candles identical) and the non-monotone
+  |dask| sweep reach the same conclusion without any permutation at all.
 - **Paired: 67 candles filled in both arms, they agree on 66, one discordant pair, McNemar p=1.000.** The
   filter is not choosing better trades; 96 dropped candles are doing the work. This is precisely the trap
   `verify.paired` was written for after 09-11.
