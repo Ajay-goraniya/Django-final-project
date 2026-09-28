@@ -768,3 +768,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   null -$155.6; per day +208 / -312 / -61 / +117 / +50. Differences vs v1: pin = model's own side (no engine p before 09-24), 1 s fill,
   thin coverage (548 candles). With V's 09-11..16 loss, EF-9 v1's 3-day +$161.8 is NOT reproduced on 9 more days. It stays a
   forward-shadow arm only as registered; no further isolation work (V decision, token cost vs value).
+- **PolyBot-style late maker ladder (V, 48 h, 576 candles, LATE_LADDER.txt): LOSES, and shows the adverse-selection mechanism exactly.**
+  The Binance-proxy TWAP projection at 275 s agrees with the venue 97.0% (559/576), but the rungs FILL on only 19-23 candles (3-4%) and
+  those fills win 10-26% (per$1 -0.47..-0.71): panic sells below a rung happen precisely on the candles where the projection is WRONG.
+  The seller knows (Chainlink) what the Binance proxy does not. Caveat: PolyBot projects on the real Chainlink stream - on London's
+  real ref the fills would move to other candles; that re-test needs London's tape (not briefed; INSUF n anyway). Closed on public data.
