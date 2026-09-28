@@ -395,3 +395,89 @@ by two of them. What would settle it is more days of the same tape, not another 
 - `ef2_verify.py` — verify.py on the qualifying cells
 - `ef2_london.py` — what the model loses on London's 35-key table
 - `ef2_export.py` → `learner/v12_2/ef2/` — the exported model and scorer
+
+---
+
+# v0 ACCEPTANCE DETAIL — and the conflict it exposes
+
+V, 09-28 12:2x, relaying the owner: 5m only, EF-2 v0 is the candidate, give it the detail the bar needs.
+
+## The conflict, first, because it may decide the whole thing
+
+**v0 is the early-fire arm.** At margin 0.02 it fires at **second 15 on 89.6% of candles** — fire-second
+p10/p50/p90 = 15/15/31. At margin 0.00 it is 96.4% at or before second 30. fixed15 fires at p50 second **123**
+and is early on 3.8%.
+
+And that is where its money is:
+
+```
+  arm       sec p10  p50  p90   <=30s        15-30s          30-60s         60-120s        120-180s
+  m=0.02        15   15   31    89.6%   +0.031 (713)    -0.066 (59)    -0.247 (16)     -0.466 (3)
+  fixed15       45  123  202     3.8%   -0.300 (3)      -0.147 (9)     -0.043 (13)     +0.272 (24)
+```
+
+Positive in the 15–30s bucket on 713 fills, **negative in every later bucket**. The owner ruled early fires
+out at 11:5x as "guess and gambling", and v0b was dropped on that basis. v0 at margin 0.02 is the same thing
+reached by a different route. The 24 h shadow is running as instructed, but whether v0 survives the owner's
+own ruling is his call and should be made before anything is read into it.
+
+## (1) Per day — the one genuinely good result
+
+| arm | 09-25 | 09-26 | 09-27 | 09-28 | days +ve |
+|---|---|---|---|---|---|
+| m=0.00 | −0.011 | −0.025 | +0.060 | +0.207 | 2/4 |
+| **m=0.02** | **+0.008** | **+0.019** | **+0.007** | **+0.233** | **4/4** |
+| m=0.03 | −0.009 | −0.012 | +0.056 | +0.180 | 2/4 |
+| m=0.05 | −0.070 | +0.066 | −0.043 | +0.027 | 2/4 |
+| fixed15 | +0.324 | −0.020 | −0.229 | −0.477 | **1/4** |
+
+m=0.02 is the only arm positive on every day. fixed15's entire +0.050 is one day. The caveat that belongs
+next to it: 09-28 is a partial day (17 fills, +0.233); the three full days are +0.008 / +0.019 / +0.007.
+
+## (2) Cost sensitivity at London's real bound
+
+London caps at ask + 1 tick, so **+1c is the bound that matters**.
+
+| arm | +0.5c | +1.0c | +1.5c |
+|---|---|---|---|
+| m=0.02 | +0.008 (3/4 days) | **+0.000 (2/4)** | −0.007 (1/4) |
+| m=0.00 | +0.005 | −0.003 | −0.010 |
+| m=0.03 | +0.008 | −0.000 | −0.008 |
+| m=0.05 | −0.026 | −0.038 | −0.049 |
+| fixed15 | +0.035 (1/4) | **+0.021 (1/4)** | +0.008 (1/4) |
+
+**At +1c, v0 m=0.02 is exactly break-even.** fixed15 is +0.021 but on one day of four. Neither arm is money
+anyone should bet on at the realistic cost.
+
+## (4) They are opposite trades
+
+v0 buys at ask p50 **0.62** and earns in the 0.55–0.70 bucket (+0.039 on 518 fills). fixed15 buys at p50
+**0.43**. v0 buys the favourite, fixed15 buys the underdog — which is why they share 49 candles and agree on
+8 of them.
+
+## (5) Calibration — the healthiest number in the document
+
+Mean p_win **0.672** against a realised **0.659**: over-confident by **1.3 pp**. After ETH/SOL's 17 pp and
+the London imputation's inversion, a level that is right to within a point and a half is worth noting.
+
+But the deciles do not order returns: gaps run −0.138 to +0.113, and per $1 by decile is −0.186, +0.274,
++0.021, +0.044, −0.092, +0.091, +0.054, −0.103, +0.093, −0.036. The level is right in aggregate; the ranking
+inside it does not convert into ordered money.
+
+## The shadow
+
+`/home/ubuntu/pm_ef2shadow/ef2_shadow.py`, started 12:32:01, PAPER only, own sqlite, flock keep-alive, **all
+four margins** so no cell is chosen in advance. It tails the engine's `decide_log` read-only, so it and the
+offline replay see byte-identical inputs. No order path: standard library only, no `poly_live`, no
+credentials, master never read or written.
+
+First live candles reproduce the replay exactly — m=0.02 firing at mean second **16.0** at mean ask **0.637**,
+against the replay's second 15 and ask p50 0.62.
+
+Two of my own defects showed up in it and are recorded rather than quietly fixed: the London imputation change
+made `Scorer.score` return `(p, info)` while the shadow was written against the old float signature, which its
+guard loop caught and logged instead of dying; and the follow-up patch that was meant to log an imputed-feature
+count was a **silent `str.replace` no-op** with the wrong indentation — the second one today. It has been
+replaced with a count of candidates *skipped* for missing features, which is the informative number anyway
+since a missing feature skips the candidate before scoring, and every replacement in that patch now asserts
+its target was found.
