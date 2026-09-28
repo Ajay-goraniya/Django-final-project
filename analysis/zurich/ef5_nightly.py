@@ -90,6 +90,12 @@ if __name__ == '__main__':
     body = dict(trees=[[int(j), float(t), float(vl), float(vr)] for j, t, vl, vr in g['trees']],
                 base=float(g['base']), mean=mu.tolist(), sd=sd.tolist(), names=fnames,
                 thr={k: float(np.quantile(pp, q)) for k, q in QS.items()},
+                # STRICT thresholds for E5: smallest DISTINCT prediction strictly above the quantile.
+                # A plain quantile of a stump model's ~545 distinct values IS one of them, so `pred >= thr`
+                # fires on equality and which pass wins is decided by ties (NC-19, 09-26 reconciliation).
+                thr_strict={k: (lambda v, q: (lambda sv, qv: float(sv[np.searchsorted(sv, qv, 'right')])
+                                              if np.searchsorted(sv, qv, 'right') < len(sv) else float('inf'))
+                                (np.sort(v), np.quantile(v, q)))(pp, q) for k, q in QS.items()},
                 seed=seed, seed_n=len(seed),
                 qs=QS, for_day=today, prev_day=prev, train_days=train_days,
                 n_train=int(tr.sum()), n_prev=int(pv.sum()), sec_floor=0,

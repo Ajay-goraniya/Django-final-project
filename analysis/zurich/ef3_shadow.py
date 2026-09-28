@@ -41,7 +41,14 @@ MODEL_D = '/home/ubuntu/pm_ef3/ef4_model_D.json'
 SEC_LO, SEC_HI, TICK, DELAY_MS = 15, 240, 0.01, 250
 DYN = (1000, 5000, 30000)
 ARMS = ('A_v0_m02_S150', 'B_raw25_S60', 'C_fixed15', 'D_ef4gb_t000', 'D2_ef4gb_q95',
-        'E1_nightly_q90', 'E2_nightly_q95', 'E3_trail_1h_q90')
+        'E1_nightly_q90', 'E2_nightly_q95', 'E3_trail_1h_q90',
+        'E4_trail_1h_q90_strict', 'E5_causal_q90_strict')
+# RETIRED from the decision 09-28 17:3x (V, NC-19 c8a460d): E1 and E3 use a plain sample quantile as the
+# threshold, which for a stump model IS one of its ~545 distinct output values - so `pred >= thr` fires on
+# EQUALITY (8,415 of 09-27's rows sit exactly on it) and which pass wins is decided by ties. They keep
+# logging as history; they are not candidates. E4/E5 are the SAME two cells under the strict threshold.
+RETIRED = {'E1_nightly_q90', 'E3_trail_1h_q90'}
+STRICT_F = '/home/ubuntu/pm_ef3/ef5_thr_strict.json'
 # E3, registered by V 09-28 16:4x ON A RELAXED ENTRY BAR: the best-day-share <50% entry test was ill-posed
 # on three days (unbounded when the total is small; its floor moves with the day count). V relaxed the
 # ENTRY bar only and said so on the record. The FORWARD decision rule is unchanged and binds E3 exactly
@@ -106,6 +113,14 @@ def score_D(X, M):
     for j, thr, vl, vr in M['trees']:
         F += np.where(Z[:, int(j)] <= thr, vl, vr)
     return F
+
+
+def strict_above(sorted_v, qq):
+    """smallest DISTINCT value strictly greater than the sample quantile; inf if none."""
+    if len(sorted_v) < 500: return float('inf')
+    qv = float(np.quantile(sorted_v, qq))
+    i = int(np.searchsorted(sorted_v, qv, side='right'))
+    return float(sorted_v[i]) if i < len(sorted_v) else float('inf')
 
 
 def load_E(day):
@@ -230,7 +245,7 @@ def score_A(X, M):
     return 1.0 / (1.0 + np.exp(-np.clip(z, -30, 30)))
 
 
-def pick(rows, pA, pD=None, thr_d2=None, pE=None, thrE=None, e3thr=None):
+def pick(rows, pA, pD=None, thr_d2=None, pE=None, thrE=None, e3thr=None, e5thr=None):
     """The three arms, each taking its FIRST qualifying row in the candle. One fire per candle, max."""
     out = {}
     for i, r in enumerate(rows):
@@ -252,10 +267,14 @@ def pick(rows, pA, pD=None, thr_d2=None, pE=None, thrE=None, e3thr=None):
             for arm, key in (('E1_nightly_q90', 'q90'), ('E2_nightly_q95', 'q95')):
                 if arm not in out and pE[i] >= thrE[key]:
                     out[arm] = (r, r['pe'])
-            if e3thr is not None and 'E3_trail_1h_q90' not in out:
-                t = e3thr(r['ts'])
-                if t is not None and pE[i] >= t:
+            if e3thr is not None:
+                tp, tsx = e3thr(r['ts'])
+                if 'E3_trail_1h_q90' not in out and tp is not None and pE[i] >= tp:
                     out['E3_trail_1h_q90'] = (r, r['pe'])
+                if 'E4_trail_1h_q90_strict' not in out and tsx is not None and pE[i] >= tsx:
+                    out['E4_trail_1h_q90_strict'] = (r, r['pe'])
+            if e5thr is not None and 'E5_causal_q90_strict' not in out and pE[i] >= e5thr:
+                out['E5_causal_q90_strict'] = (r, r['pe'])
     return out
 
 
@@ -277,9 +296,10 @@ def db():
 
 
 def run_once():
-    global ALL52
+    global ALL52, STRICT
     M = freeze_model(); MD = load_D()
     ALL52 = [str(x) for x in np.load(ROWS, allow_pickle=True)['names']]
+    STRICT = json.load(open(STRICT_F)) if os.path.exists(STRICT_F) else {}
     d = db()
     done = {e for (e,) in d.execute('SELECT epoch FROM seen')}
     hi = d.execute('SELECT max(epoch) FROM seen').fetchone()[0]
@@ -312,6 +332,9 @@ def run_once():
         pE = score_E(X, ME) if ME is not None else None
         thrE = ME['thr'] if ME is not None else None
         e3thr = None
+        e5thr = (ME.get('thr_strict', {}) or {}).get('q90') if ME else None
+        if e5thr is None and ME is not None:
+            e5thr = STRICT.get(day)
         if ME is not None:
             if day not in e3buf:
                 # cross-boundary seed: the previous day's last hour re-scored under TODAY's model, so the
@@ -344,9 +367,12 @@ def run_once():
                 if k not in _g:
                     edge = k * E3_GRID_MS
                     v = [p for (x, p) in _b if edge - E3_W_MS <= x < edge]
-                    _g[k] = float(np.quantile(v, E3_Q)) if len(v) >= 500 else None
+                    if len(v) >= 500:
+                        sv = np.sort(np.asarray(v))
+                        _g[k] = (float(np.quantile(sv, E3_Q)), strict_above(sv, E3_Q))
+                    else: _g[k] = (None, None)
                 return _g[k]
-        for arm, (r, p) in pick(rows, pA, pD, thr_d2, pE, thrE, e3thr).items():
+        for arm, (r, p) in pick(rows, pA, pD, thr_d2, pE, thrE, e3thr, e5thr).items():
             q = r['q']
             pnl = STAKE * per1(r['win'], q) if q == q else 0.0
             d.execute('INSERT OR REPLACE INTO fires VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
@@ -369,7 +395,7 @@ def report(d=None):
     d = d or db()
     import random
     print(f'\nEF-3 PRE-REGISTERED SHADOW - PAPER, no order path. Decision rule fixed 09-28 14:0x by V.')
-    hdr = (f'  {"arm":16s}{"$tot":>8}{"DD$":>7}{"P/DD":>7}{"fires":>7}{"fills":>7}{"fill%":>7}'
+    hdr = (f'  {"arm":24s}{"$tot":>8}{"DD$":>7}{"P/DD":>7}{"fires":>7}{"fills":>7}{"fill%":>7}'
            f'{"win%":>7}{"days+":>7}{"run":>5}{"permP":>8}')
     print(hdr)
     S = {}
@@ -378,8 +404,9 @@ def report(d=None):
                        (arm,)).fetchall()
         allday = sorted({r[0] for r in d.execute('SELECT day FROM fires')})
         fl = [r for r in rs if r[3] is not None]
+        tagr = ' [RETIRED - tie-degenerate rule, history only]' if arm in RETIRED else ''
         if not fl:
-            print(f'  {arm:16s}    (no fills yet)'); continue
+            print(f'  {arm:24s}    (no fills yet){tagr}'); continue
         cum = peak = mdd = 0.; run = worst = 0; byd = collections.defaultdict(float)
         for day, win, pnl, q, oq in fl:
             cum += pnl; peak = max(peak, cum); mdd = max(mdd, peak - cum)
@@ -403,9 +430,10 @@ def report(d=None):
                       byd=dict(byd))
         wr = sum(r[1] for r in fl) / len(fl)
         S[arm]['win'] = wr
-        print(f'  {arm:16s}{cum:>+8.1f}{mdd:>7.1f}{(cum/mdd if mdd>0 else 99.9):>7.2f}{len(rs):>7}'
+        tagr = ' [RETIRED]' if arm in RETIRED else ''
+        print(f'  {arm:24s}{cum:>+8.1f}{mdd:>7.1f}{(cum/mdd if mdd>0 else 99.9):>7.2f}{len(rs):>7}'
               f'{len(fl):>7}{100*len(fl)/len(rs):>6.1f}%{100*wr:>6.1f}%'
-              f'{f"{S[arm][chr(112)+chr(111)+chr(115)]}/{S[arm][chr(100)+chr(97)+chr(121)+chr(115)]}":>7}{worst:>5}{pp:>8.3f}')
+              f'{f"{S[arm][chr(112)+chr(111)+chr(115)]}/{S[arm][chr(100)+chr(97)+chr(121)+chr(115)]}":>7}{worst:>5}{pp:>8.3f}' + tagr)
         print(f'      per day $:  ' + '  '.join(f'{x} {byd.get(x, 0.0):+7.1f}' for x in allday))
     C = S.get('C_fixed15')
     full = sorted({r[0] for r in d.execute('SELECT day FROM fires')})

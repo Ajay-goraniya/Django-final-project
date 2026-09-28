@@ -58,7 +58,7 @@ if __name__ == '__main__':
     year = '2026'
     s = sqlite3.connect(f'file:{SHADOW}?mode=ro', uri=True)
     mine = {int(e): ('UP' if u else 'DOWN', int(sc)) for e, u, sc in s.execute(
-        "SELECT epoch, up, sec FROM fires WHERE arm='E3_trail_1h_q90' AND day=?", (day,))}
+        "SELECT epoch, up, sec FROM fires WHERE arm='E4_trail_1h_q90_strict' AND day=?", (day,))}
     print(f'day {day}: ef3_shadow E3 fired in {len(mine)} candles')
 
     for shim in (False, True):
