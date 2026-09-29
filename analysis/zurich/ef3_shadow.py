@@ -191,7 +191,12 @@ def _fav_fill(rs, r0):
         pnl   got * (win - be(vwap))    - money scales with the shares actually filled
         aon   the OLD all-or-nothing price, kept as a reference column so both are visible
 
-    DEPTH LIMIT, and it is the reason this is a lower bound rather than V's exact model. V's rule counts
+    DEPTH LIMIT - SETTLED BY V 09-29 01:4x: leave the truncation at level 1 and keep labelling filled
+    shares a FLOOR. With 0 genuine size shortfalls in 15 decisions it does not warrant an owner
+    decision; revisit ONLY if forward rows show depth actually binding (the `cap` count in
+    fav_status.py is the trip-wire). Do not quietly drop the FLOOR label while this stands.
+
+    Why it is a lower bound rather than V's exact model. V's rule counts
     every level at price <= cap, and cap = ask + 1c reaches the NEXT level. The book recorder persists
     only the TOP level - it holds the whole book in memory but writes one level - so no historical or
     current row can answer "how much sits at the second level". Extending it was denied (shared
