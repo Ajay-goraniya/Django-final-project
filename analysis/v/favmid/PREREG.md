@@ -22,3 +22,10 @@ A change is a candidate only if ALL hold:
  (d) monotone across the buckets (no lone peak);
  (e) P/DD of the kept trades beats the base rule; frequency loss reported.
 No new vol cut, no band sweep, no stake modifier. Paper only (Zurich shadow) - never London without the owner.
+
+## VERDICT 09-29 18:4x - nothing passes
+- V independent 09-13..16: FAV_mid itself -187.10 on 309 fills (-0.61/fill, DD 227, H1 -160 / H2 -27).
+- Zurich 09-24..29: +34.44 on 302 fills (+0.11/fill, DD 135, halves flip).
+- The two sets DISAGREE on every feature: ask .65-.70 (V -1.35 vs Z +0.23/fill), z 0-0.5 (V -1.21 vs Z +0.50).
+  F4 mom15<0 is less bad on both, but the kept bucket is still negative on V (-30.29, both halves) -> (a) fails.
+- No filter adopted, no arm added. FAV_mid stays a plain forward-shadow arm; its live +73 (1 day) is not evidence.
