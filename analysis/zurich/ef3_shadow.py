@@ -119,9 +119,12 @@ def _bn_1s():
     """Binance spot at 1 s: the last trade in each second from bn_flow's 250 ms buckets, then FORWARD
     FILLED across trade-less seconds, capped at FAV_BN_FF_MAX_S.
 
-    WHY THE FORWARD FILL, which is the one judgement call in this arm. V specified the series two ways:
-    by DEFINITION ("Binance 1 s closes", the series the 0.304 cut was taken from) and by MECHANIC ("last
-    trade per 1 s"). Those two disagree on seconds with no trade: a real Binance 1 s kline still exists
+    WHY THE FORWARD FILL. CONFIRMED BY V 09-29 00:1x - this is settled, not an open question, and it is
+    not to be "simplified" back to raw last-trade later. V's ruling: the rule's definition IS the 1 s
+    KLINE CLOSE series it was validated on, and "last trade per 1 s" was shorthand for that series rather
+    than a different definition. V specified it two ways: by DEFINITION ("Binance 1 s closes", the series
+    the 0.304 cut was taken from) and by MECHANIC ("last trade per 1 s"). Those disagree on trade-less
+    seconds: a real Binance 1 s kline still exists
     for such a second and carries close = previous close, whereas the raw last-trade mechanic leaves a
     hole. Measured against official 1 s klines over the recorder's whole span: forward-filled is 99.80%
     identical (mean |diff| $0.02), and on the trade-LESS seconds alone 98.61% identical. So the fill
