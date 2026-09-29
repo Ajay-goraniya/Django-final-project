@@ -1,0 +1,29 @@
+HEALTH 09-29 17:05 UTC | engine pid-alive ['bn_flow.py', 'btc_model_v12_polymarket', 'recorder.py', 'rtds.py'] | shadow last candle 09-29 16:45 (20 min) | feeds age s: decide_log=4 tape1s=2 books=0 bn_flow=2 rtds=3 gamma=605 | errors ['recorder.log:0err/11reconnect'] | master=false lanes={'LIVE': 11, 'PAPER': 1360}
+
+ALL FORWARD-SHADOW ARMS, 09-29 01:20 .. 09-29 16:45 UTC  (all arms on the same window)
+arm                      decisions  fills  wins    $@10    maxDD   flag
+A_v0_m02_S150                  131    112    78   -98.29   113.65   
+B_raw25_S60                     76     36    15   -13.34    96.33   INSUFFICIENT (<60 fills)
+C_fixed15                       57     29    16   +44.46    37.20   INSUFFICIENT (<60 fills)
+D_ef4gb_t000                   126    109    73    -9.88   105.91   
+D2_ef4gb_q95                    40     34    24   -56.45    76.18   INSUFFICIENT (<60 fills)
+E1_nightly_q90                  63     49    34   -40.91    90.83   INSUFFICIENT (<60 fills)
+E2_nightly_q95                  37     33    22   -45.71    77.52   INSUFFICIENT (<60 fills)
+E3_trail_1h_q90                 76     64    47    -1.50    71.57   
+E4_trail_1h_q90_strict          68     56    39   -41.58   102.15   INSUFFICIENT (<60 fills)
+E5_causal_q90_strict            63     49    34   -40.91    90.83   INSUFFICIENT (<60 fills)
+S_fixed_top20                    8      3     3   +25.49     0.00   INSUFFICIENT (<60 fills)
+S_raw_top20                     20      8     3    -5.60    31.04   INSUFFICIENT (<60 fills)
+F_z50                           36     17     8   +13.34    42.84   INSUFFICIENT (<60 fills)
+F25_z25                         50     25    12   +13.38    60.95   INSUFFICIENT (<60 fills)
+F75_z75                         28     13     6   +14.67    56.20   INSUFFICIENT (<60 fills)
+FAV                             48     41    29   -11.38    46.03   INSUFFICIENT (<60 fills)
+FAV_mid                         67     54    42   +69.30    30.00   INSUFFICIENT (<60 fills)
+FAV_all                        179    148   107    +9.84    89.31   
+FAV_ref                         51     42    30    +0.14    46.03   INSUFFICIENT (<60 fills)
+
+15 of 19 arms are under the 60-fill bar and flagged INSUFFICIENT.
+Only 4 clear it on this window: A_v0_m02_S150, D_ef4gb_t000, E3_trail_1h_q90, FAV_all - and 15.4 h of one day is still not
+a basis for any decision about any arm. The forward rule needs >= 3 full days; it has 1.
+EF-9 is NOT a forward-shadow arm - it was never registered as one; 19 arms are registered and
+all 19 are listed. EF-9 exists only as the offline studies ef9.py / ef9v1.py / ef11.py.
