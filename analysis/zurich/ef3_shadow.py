@@ -181,26 +181,65 @@ def _fav_books():
 
 
 def _fav_fill(rs, r0):
-    """FAK cap = decision ask + 1 tick. Fill only if the arrival ask is within the cap AND the size at
-    that level covers 10/paid shares; pay the arrival ask. NaN = no fill.
+    """PARTIAL-FILL model (V, 09-29): a FAK does not reject when the top level is short - it takes every
+    share at price <= cap and cancels the rest. Returns a dict; NaN px means no fill at all.
 
-    Shares are 10/paid, V's literal words, which is STRICTER than the fee-exact 10/be(paid) - a fill
-    gate should err toward not filling. Where the book recorder has no row for that second the size
-    cannot be checked and the fill is allowed on price alone; btc5 sizes begin 09-28 18:13, so every
-    FORWARD row has them and only pre-recorder history could ever be unchecked.
+        px    the arrival ask (decision + FAV_LAG_MS, next pass at or after, never earlier)
+        want  shares $10 actually buys at that price, fee-exact: STAKE / be(px)
+        got   min(want, size available at levels <= cap)
+        vwap  level-weighted price paid
+        pnl   got * (win - be(vwap))    - money scales with the shares actually filled
+        aon   the OLD all-or-nothing price, kept as a reference column so both are visible
+
+    DEPTH LIMIT, and it is the reason this is a lower bound rather than V's exact model. V's rule counts
+    every level at price <= cap, and cap = ask + 1c reaches the NEXT level. The book recorder persists
+    only the TOP level - it holds the whole book in memory but writes one level - so no historical or
+    current row can answer "how much sits at the second level". Extending it was denied (shared
+    resource), so `got` is truncated at level 1. That UNDERSTATES fills: real depth at <= cap is at
+    least what level 1 shows. Reported as a floor, not as V's model.
+
+    TWO SHARE COUNTS, deliberately. `want` uses the fee-exact STAKE / be(px), which is what $10 really
+    buys, so a complete fill reproduces STAKE * per1(win, px) exactly. The `aon` reference keeps V's
+    literal STAKE / px from the registered gate, which is stricter. They are not interchangeable and the
+    difference is why the two columns can disagree.
+
+    Where the recorder has no row for that second, depth is unknown and the fill is allowed in full on
+    price alone - absent, not zero.
     """
+    out = dict(px=float('nan'), want=0.0, got=0.0, vwap=float('nan'), aon=float('nan'), capped=False)
     rs = sorted(rs, key=lambda r: r[0])
     ts_a = np.array([r[0] for r in rs])
     j = int(np.searchsorted(ts_a, r0['ts'] + FAV_LAG_MS, side='left'))
-    if j >= len(rs): return float('nan')
+    if j >= len(rs): return out
     a = float(rs[j][3] if r0['up'] else rs[j][4])
-    if not (0.01 < a < 0.99) or a > r0['own'] + TICK + 1e-12: return float('nan')
+    if not (0.01 < a < 0.99) or a > r0['own'] + TICK + 1e-12: return out
+    want = STAKE / be(a)
+    out.update(px=a, want=want, got=want, vwap=a, aon=a)
     b = FAV_BK.get(int(ts_a[j] // 1000))
     if b is not None:
         bask, bsz = (b[0], b[1]) if r0['up'] else (b[2], b[3])
         if bask is not None and bsz is not None:
-            if not (bask <= a + 1e-12 and bsz >= STAKE / a): return float('nan')
-    return a
+            # bask > a means the BOOKS RECORDER and decide_log disagree about the best ask - two
+            # different feeds, measured mean +0.0027 with p10 -0.010 / p90 +0.020. It does NOT mean
+            # there is no liquidity at our price. Treating it as a rejection was a cross-source
+            # comparison, the same error retracted on 09-28, and it manufactured 4 fake "size
+            # rejections" out of 15 decisions with ZERO genuine shortfalls behind them. When the feeds
+            # disagree, depth at our price is UNKNOWN from this source, so the fill is allowed on price
+            # alone - absent, not zero, exactly as for a missing book row.
+            if bask <= a + 1e-12:
+                out['got'] = min(want, float(bsz))
+                out['capped'] = float(bsz) < want
+                if float(bsz) < STAKE / a:  # V's registered all-or-nothing gate, literal 10/px
+                    out['aon'] = float('nan')
+    return out
+
+
+def _fav_pnl(d, win):
+    """$ on the partial fill: shares actually filled x (payout - fee-exact cost). A complete fill
+    reproduces STAKE * per1(win, px) exactly, so the two models agree wherever depth is sufficient."""
+    if d['got'] <= 0 or d['vwap'] != d['vwap']: return 0.0
+    return float(d['got']) * (float(win) - be(float(d['vwap'])))
+
 
 # ---- ARM S, registered 09-28 18:5x, rule written BEFORE its first forward row (V, owner's NC-12
 # "stable version", STABLE_EF.md). Take the profile's OWN fire pass in a candle and keep it only when its
@@ -472,7 +511,12 @@ def db():
     d = sqlite3.connect(DB)
     d.execute('CREATE TABLE IF NOT EXISTS fires(epoch INT, arm TEXT, ts_ms INT, day TEXT, sec INT, '
               'up INT, p REAL, ask REAL, fill REAL, opp_fill REAL, win INT, pnl REAL, '
-              'PRIMARY KEY(epoch, arm))')
+              'sh REAL, vwap REAL, pnl_part REAL, PRIMARY KEY(epoch, arm))')
+    # additive migration for a db created before the partial-fill model; NULL on every pre-existing row,
+    # which is correct - those rows were never scored under it and must not be back-filled as if they were.
+    have = {r[1] for r in d.execute('PRAGMA table_info(fires)')}
+    for col in ('sh', 'vwap', 'pnl_part'):
+        if col not in have: d.execute(f'ALTER TABLE fires ADD COLUMN {col} REAL')
     d.execute('CREATE TABLE IF NOT EXISTS seen(epoch INT PRIMARY KEY, at INT)')
     # D2's threshold is the q-quantile of the frozen model's predictions on the PREVIOUS day, so the
     # day's predictions have to be kept. ~330k floats a day; the prune keeps three days, which is all
@@ -616,7 +660,12 @@ def run_once():
             # COPY the row before replacing q: fv[0] is the same dict the other arms may hold, and
             # mutating it in place would hand arms A-F FAV's arrival fill instead of their own.
             r0 = dict(fv[0])
-            r0['q'] = _fav_fill(cand[ep], r0)
+            _fd = _fav_fill(cand[ep], r0)
+            # q stays the ALL-OR-NOTHING price, so the fill/pnl columns keep the meaning every other
+            # arm's columns have; the partial model is written to its own columns beside them.
+            r0['q'] = _fd['aon']
+            r0['sh'], r0['vwap'] = _fd['got'], _fd['vwap']
+            r0['pnl_part'] = _fav_pnl(_fd, r0['win'])
             v_bn = _vol_bn(FAV_BN1, ep)                 # the registered series
             v_ref = _vol_open(REF, ep)                  # settlement series, reference arm only
             if v_bn is not None:
@@ -631,11 +680,13 @@ def run_once():
         for arm, (r, p) in sel.items():
             q = r['q']
             pnl = STAKE * per1(r['win'], q) if q == q else 0.0
-            d.execute('INSERT OR REPLACE INTO fires VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
+            _nn = lambda v: None if v is None or v != v else float(v)
+            d.execute('INSERT OR REPLACE INTO fires VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                       (ep, arm, r['ts'], day, r['sec'], r['up'], float(p), r['own'],
                        (None if q != q else float(q)),
-                       (lambda v: None if v != v else float(v))(opp.get((r['ts'], r['up']), float('nan'))),
-                       int(r['win']), pnl))
+                       _nn(opp.get((r['ts'], r['up']), float('nan'))),
+                       int(r['win']), pnl,
+                       _nn(r.get('sh')), _nn(r.get('vwap')), _nn(r.get('pnl_part'))))
             n += 1
         d.execute('INSERT OR REPLACE INTO seen VALUES(?,?)', (ep, int(time.time())))
     d.execute('DELETE FROM sedges WHERE ts_ms < ?', (int(time.time() * 1000) - 3 * S_WINDOW_MS,))
