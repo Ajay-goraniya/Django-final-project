@@ -49,7 +49,7 @@ DYN = (1000, 5000, 30000)
 ARMS = ('A_v0_m02_S150', 'B_raw25_S60', 'C_fixed15', 'D_ef4gb_t000', 'D2_ef4gb_q95',
         'E1_nightly_q90', 'E2_nightly_q95', 'E3_trail_1h_q90',
         'E4_trail_1h_q90_strict', 'E5_causal_q90_strict', 'S_fixed_top20', 'S_raw_top20',
-        'F_z50', 'F25_z25', 'F75_z75', 'FAV', 'FAV_mid', 'FAV_all')
+        'F_z50', 'F25_z25', 'F75_z75', 'FAV', 'FAV_mid', 'FAV_all', 'FAV_ref')
 # ---- ARM F, registered 09-28 21:4x, rule frozen before its first forward row (V, after EF-14).
 # fixed15's OWN fire, skipped when |z| < 0.50 with LONDON'S EXACT z (ef14.london_z_at). F25 and F75 are
 # REFERENCE arms: logged so the sweep's shape is watched forward rather than re-picked. The backfill sweep
@@ -87,18 +87,83 @@ FAV_LAG_MS = 500
 FAV_BOOKS = '/home/ubuntu/pm_multi/multi_market.sqlite3'
 FAV_SEC = (60, 180)
 FAV_BAND = (0.65, 0.85)
-# The exact 09-22/23 terciles from _vol_open are 0.28105 / 0.41862. V registered 0.281, so 0.281 is what
-# runs - a rule frozen to three decimals is still the frozen rule, and silently substituting the longer
-# number would change which candles are 'low' without anyone registering that change. Do NOT 'correct'
-# these to the exact values. Recomputing them forward would also drift: 09-22/23 held 340 candles when the
-# cut was taken and 341 an hour later, which is precisely why the cut is frozen rather than derived.
-FAV_CUT_LOW, FAV_CUT_MID, FAV_VOL_MIN_PTS = 0.281, 0.418, 60
+# RE-FROZEN 09-29 00:0x (V): the rule is defined on the series it was VALIDATED on - BINANCE 1 s closes,
+# not the Chainlink reference. This is a DEFINITION FIX, not a retune: no forward row existed under the
+# old definition when the change was made, and the single backfill row written at 09-28 23:30 was deleted
+# rather than carried across (see --refreeze-fav). Nothing was re-picked from a result.
+#   FAV      Binance vol <  0.304                  the registered rule
+#   FAV_mid  0.304 <= Binance vol < 0.466          REFERENCE
+#   FAV_all  every favourite, no vol cut           REFERENCE, the null FAV must beat
+#   FAV_ref  ref_px  vol <  0.281                  REFERENCE, kept to learn whether the SETTLEMENT series
+#                                                  works as well as the one the rule was validated on
+# The Binance terciles were taken from 09-22/23 archive kline closes (0.3028/0.4679 -> V froze
+# 0.304/0.466). tape1s.spot_px gives 0.3198/0.4916 on the same days - about 5% higher - so the cut IS
+# source-dependent and the source matters. bn_flow's last-trade-per-second is the right one: measured
+# 99.99% IDENTICAL to official 1 s kline closes over 17,549 overlapping seconds, mean |diff| $0.0004.
+# So the live feed is the same construction the cut came from, which is why 0.304 transfers.
+FAV_CUT_LOW, FAV_CUT_MID = 0.304, 0.466
+FAV_REF_CUT, FAV_VOL_MIN_PTS = 0.281, 60
+FAV_BN = '/home/ubuntu/pm_multi/bn_flow.sqlite3'
+FAV_BN_MIN_PTS = 240        # of the 300 s before the open; under this the candle gets NO FAV fire
+FAV_BN_FF_MAX_S = 60        # longest trade-less run the 1 s series will bridge (see _bn_1s)
 
 
 def _vol_open(ref, ep):
     """Trailing-5-min vol at the open: 1 s log-return std over [ep-300, ep), x1e4. STRICTLY pre-open."""
     w = [ref[t] for t in range(ep - 300, ep) if t in ref]
     if len(w) < FAV_VOL_MIN_PTS: return None
+    return float(np.std(np.diff(np.log(np.asarray(w, dtype=np.float64)))) * 1e4)
+
+
+def _bn_1s():
+    """Binance spot at 1 s: the last trade in each second from bn_flow's 250 ms buckets, then FORWARD
+    FILLED across trade-less seconds, capped at FAV_BN_FF_MAX_S.
+
+    WHY THE FORWARD FILL, which is the one judgement call in this arm. V specified the series two ways:
+    by DEFINITION ("Binance 1 s closes", the series the 0.304 cut was taken from) and by MECHANIC ("last
+    trade per 1 s"). Those two disagree on seconds with no trade: a real Binance 1 s kline still exists
+    for such a second and carries close = previous close, whereas the raw last-trade mechanic leaves a
+    hole. Measured against official 1 s klines over the recorder's whole span: forward-filled is 99.80%
+    identical (mean |diff| $0.02), and on the trade-LESS seconds alone 98.61% identical. So the fill
+    reproduces the kline series rather than approximating it.
+    Following the mechanic literally instead put FAV on a DIFFERENT series from its own cut, which is the
+    exact mistake V had just corrected by moving off ref_px - and it was not harmless: with holes, the
+    240 s gate blocked 34% of LOW-vol candles against only 7% of the rest (corr(coverage, vol) = +0.451),
+    because trade-less seconds and low realised vol have the same cause - a quiet market. The gate was
+    stripping precisely the bucket FAV trades.
+
+    THE CAP MATTERS. Filling across a genuine recorder outage would invent a long run of identical
+    prices, i.e. an artificially ZERO-vol candle, which would land straight in FAV's low bucket and look
+    like the rule's best case. So the fill only bridges gaps up to FAV_BN_FF_MAX_S; anything longer stays
+    a hole, and V's 240 s gate then does what a coverage gate is for - it refuses the candle. Observed
+    gap runs are median 1 s, p90 2 s, max 41 s, so 60 s bridges the market and not an outage.
+    """
+    try:
+        c = sqlite3.connect(f'file:{FAV_BN}?mode=ro', uri=True)
+        raw = {}
+        for tms, px in c.execute("SELECT ts_ms, px FROM flow WHERE stream='spot' AND px IS NOT NULL "
+                                 "ORDER BY ts_ms"):
+            raw[int(tms) // 1000] = float(px)
+    except Exception:
+        return {}
+    if not raw: return {}
+    out, last, held = {}, None, 0
+    for t in range(min(raw), max(raw) + 1):
+        if t in raw:
+            last, held = raw[t], 0
+        else:
+            held += 1
+            if held > FAV_BN_FF_MAX_S: continue      # real outage: leave the hole for the 240 s gate
+        if last is not None: out[t] = last
+    return out
+
+
+def _vol_bn(bn, ep):
+    """FAV's vol: Binance 1 s log-return std over [ep-300, ep), x1e4. Returns None - meaning NO FIRE -
+    when fewer than 240 of those 300 s are present. V was explicit: never fall back to ref_px, because a
+    silent fallback would grade some candles on a series the cut was not taken from."""
+    w = [bn[t] for t in range(ep - 300, ep) if t in bn]
+    if len(w) < FAV_BN_MIN_PTS: return None
     return float(np.std(np.diff(np.log(np.asarray(w, dtype=np.float64)))) * 1e4)
 
 
@@ -159,6 +224,7 @@ EDIR = '/home/ubuntu/pm_ef3'      # arm E: one model per day, written by ef5_nig
 Q_D2 = 0.95      # D2 = the SAME frozen model as D, only the threshold rule differs (EF-5, V 09-28 15:5x)
 ALL52 = None            # set in run_once from the frozen row table's name list
 FAV_BK = {}             # btc5 ask sizes, set in run_once
+FAV_BN1 = {}            # Binance 1 s last-trade series, set in run_once
 
 # The frozen arm-A model was trained on 09-24..09-27, so those days are IN-SAMPLE for it and 09-28 was
 # already on the table when V wrote the decision rule. The rule says "from now". Everything up to and
@@ -420,11 +486,12 @@ def db():
 
 
 def run_once():
-    global ALL52, STRICT, REF, FAV_BK
+    global ALL52, STRICT, REF, FAV_BK, FAV_BN1
     M = freeze_model(); MD = load_D()
     ALL52 = [str(x) for x in np.load(ROWS, allow_pickle=True)['names']]
     REF = _ref_tape()
     FAV_BK = _fav_books()
+    FAV_BN1 = _bn_1s()
     STRICT = json.load(open(STRICT_F)) if os.path.exists(STRICT_F) else {}
     d = db()
     done = {e for (e,) in d.execute('SELECT epoch FROM seen')}
@@ -536,22 +603,27 @@ def run_once():
                 zz = zt if r0['up'] else -zt          # sign to the side being bought
                 for arm, cut in F_CUTS.items():
                     if abs(zz) >= cut: sel[arm] = (r0, p0)
-        # ---- arms FAV / FAV_mid / FAV_all: first favourite in 60-180 s, split by frozen vol terciles ----
-        v0 = _vol_open(REF, ep)
-        if v0 is not None:
-            fv = sorted((r for r in rows
-                         if FAV_SEC[0] <= r['sec'] <= FAV_SEC[1]
-                         and r['own'] > r['opp']
-                         and FAV_BAND[0] <= r['own'] <= FAV_BAND[1]),
-                        key=lambda r: r['ts'])
-            if fv:
-                # COPY the row before replacing q: fv[0] is the same dict the other arms may hold, and
-                # mutating it in place would hand arms A-F FAV's arrival fill instead of their own.
-                r0 = dict(fv[0])
-                r0['q'] = _fav_fill(cand[ep], r0)
-                sel['FAV_all'] = (r0, v0)       # p column carries the candle's vol - no model here
-                if v0 < FAV_CUT_LOW: sel['FAV'] = (r0, v0)
-                elif v0 < FAV_CUT_MID: sel['FAV_mid'] = (r0, v0)
+        # ---- arms FAV / FAV_mid / FAV_all / FAV_ref: first favourite in 60-180 s, split by frozen cuts ----
+        fv = sorted((r for r in rows
+                     if FAV_SEC[0] <= r['sec'] <= FAV_SEC[1]
+                     and r['own'] > r['opp']
+                     and FAV_BAND[0] <= r['own'] <= FAV_BAND[1]),
+                    key=lambda r: r['ts'])
+        if fv:
+            # COPY the row before replacing q: fv[0] is the same dict the other arms may hold, and
+            # mutating it in place would hand arms A-F FAV's arrival fill instead of their own.
+            r0 = dict(fv[0])
+            r0['q'] = _fav_fill(cand[ep], r0)
+            v_bn = _vol_bn(FAV_BN1, ep)                 # the registered series
+            v_ref = _vol_open(REF, ep)                  # settlement series, reference arm only
+            if v_bn is not None:
+                # FAV_all carries the SAME coverage gate as FAV on purpose. It is the null FAV has to
+                # beat, and a null measured on a wider candle set than the rule is not a fair null.
+                sel['FAV_all'] = (r0, v_bn)             # p column carries the vol - no model here
+                if v_bn < FAV_CUT_LOW: sel['FAV'] = (r0, v_bn)
+                elif v_bn < FAV_CUT_MID: sel['FAV_mid'] = (r0, v_bn)
+            if v_ref is not None and v_ref < FAV_REF_CUT:
+                sel['FAV_ref'] = (r0, v_ref)
         sel.pop('_RAW0', None)
         for arm, (r, p) in sel.items():
             q = r['q']
