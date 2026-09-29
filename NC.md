@@ -869,3 +869,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
 - **FAV LIVE in the forward shadow (Zurich bc1184d), first row 09-28 23:55:** FAV (Binance 1 s, cut 0.304, bn_flow forward-filled to the
   kline series, 60 s cap; 99.80% identical to official klines, low/high split agrees 100%), FAV_mid, FAV_all, FAV_ref (ref_px 0.281);
   +500 ms arrival fill + size gate. V confirmed the forward fill (holes would have blocked 34% of low-vol candles vs 7% of the rest).
+- **FAV first forward hour + fill-sim correction (Zurich 70cd89e, 1df478e):** the '40% size rejection' was the books recorder's best ask
+  vs decide_log's ask (two feeds disagreeing), NOT thin depth - 0 genuine size shortfalls in 15 decisions; 11/15 (73%) clear the price
+  cap. Partial fills now modelled like a real FAK (min(want, depth <= cap), level-weighted; all-or-nothing kept as reference); depth is
+  truncated at level 1, labelled a FLOOR (V: leave it). 34 FAV rows scored by the buggy simulator deleted; arms re-accrue from 01:30.
+  First daily FAV ledger ~00:00 UTC 09-30.
