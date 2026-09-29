@@ -1,0 +1,27 @@
+window: 09-28 23:55 .. 09-29 01:00  (1.1 h)   candles seen 14
+  bn_flow vol computable on 14/14 candles (240 s gate) | LOW(<0.304) 8  MID 6  HIGH 0
+
+arm        decisions  fills  fill%  size-rej  wins  win% of fills     $@10      DD
+----------------------------------------------------------------------------------
+FAV                6      3    50%         2     2        67%      -0.39   10.00
+FAV_mid            6      3    50%         1     3       100%      +8.27    0.00
+FAV_all           12      6    50%         3     5        83%      +7.88   10.00
+FAV_ref            6      3    50%         2     2        67%      -3.77   10.00
+C_fixed15          5      3    60%         0     3       100%     +35.70    0.00
+
+bn_flow: 09-28 18:13 .. 09-29 01:14, 100.0% of seconds present after the 60 s-capped fill
+  candles refused by the 240 s gate: 0
+  FAV decisions with no book row for the size check: 0
+
+READ: n=6 on FAV. Every cell here is INSUFFICIENT (the standing bar is 60 graded fires).
+None of these numbers is evidence about the rule. They are a wiring check, and the wiring is sound:
+the vol gate refused 0 of 14 candles, bn_flow is 100% present after the 60 s-capped fill, and every
+FAV decision had a book row for the size check.
+
+THE ONE THING WORTH READING, and it is the hypothesis I flagged on 09-28 coming true:
+  FAV 6 decisions -> 5 cleared the PRICE test (83%, in line with the 84.8% backfill) -> the SIZE
+  gate then rejected 2 of those 5, leaving 3 fills (50%).
+So the size gate, not the arrival price, is the binding constraint - exactly as flagged when the
+backfill slice showed 6 of 30 rejected. It is now rejecting 40% of price-passing fires, above the
+~20% that slice suggested. At n=5 that is still a hypothesis; forward days settle it. If it holds,
+FAV's realistic fill is ~50-65%, not 85%, and the +0.019/$1 arrival estimate is optimistic.
