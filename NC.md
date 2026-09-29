@@ -866,3 +866,6 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   Sensitivity +250/+500/+1000 ms: fill 88.4/84.8/78.9%, win flat, $ non-monotone (noise). SIZE gate (ask size >= our shares) only
   measurable since 09-28 18:13: 30 fires, 6 rejected (20%, INSUF) - if it holds, effective fill ~68% and +0.019 is optimistic. Forward
   arm uses +500 ms + size gate; shared DELAY_MS for arms A-F left at 250 ms (not silently re-graded).
+- **FAV LIVE in the forward shadow (Zurich bc1184d), first row 09-28 23:55:** FAV (Binance 1 s, cut 0.304, bn_flow forward-filled to the
+  kline series, 60 s cap; 99.80% identical to official klines, low/high split agrees 100%), FAV_mid, FAV_all, FAV_ref (ref_px 0.281);
+  +500 ms arrival fill + size gate. V confirmed the forward fill (holes would have blocked 34% of low-vol candles vs 7% of the rest).
