@@ -31,3 +31,9 @@ THE COMPARISON THE OWNER WILL WANT, stated with its caveat
    leaving ~$0.44 of genuine execution cost across five fav_mid trades.
    Live fav_mid is now 22 fills - still under the 60-fill bar, and the rule's own registered evidence
    (halves flip, P/DD 0.74, one day carrying the all-time total) has not changed.
+
+RE-CHECKED 07:54:21 UTC on a second request: EVERY NUMBER ABOVE IS UNCHANGED.
+  shadow evaluated 0 new candles (last scored still 09-30 07:30); no new LIVE orders (last 07:42:17);
+  master still false. This is a genuine no-change, not a stale copy - the two reads are 90 s apart and
+  nothing moved in between. With master off nothing further can trade, so the live numbers are final
+  until it is armed again; the paper arms keep accruing as the shadow catches up on outcome lag.
