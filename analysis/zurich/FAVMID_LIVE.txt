@@ -1,0 +1,39 @@
+FAV_MID LIVE - Zurich 8787. READ-ONLY, nothing changed.
+
+CONFIRMED FROM THE RUNNING PROCESS (pid 301067, its own /api/state + meta), 09-30 02:4x UTC
+  master        = true        (/api/state master_enabled True, lane label "LIVE")
+  ef_engine     = "fav_mid"
+  ef_enabled    = true        main_enabled = false        reversal_enabled = false
+  stake         = $5.00 fixed (next_stake 5.0)
+  sl            = 40.0        tp = 0.0
+  daily window  104 trades, pnl -1.3934 of -40.00, halted false, resets 30 Sep 12:00 London
+  NOTHING DIFFERS from what the owner ordered. EF only, master on, $5, sl 40.
+  (Note on method: /api/state's controls block does not carry main_enabled/reversal_enabled/ef_enabled,
+   so those three are read from the engine's meta, which is the same store the dashboard writes.)
+
+FIRST LIVE FAV_MID ORDER
+  time      09-30 02:42:54 UTC          candle  02:40 (epoch 1790736000)      sec 174
+  vol       0.4084  -> inside the registered mid band [0.304, 0.466)
+  side      UP      fav ask 0.85, opp ask 0.15
+  order     FAK, quote 0.85, cap 0.851, status FILLED
+  filled    5.824496 shares, spent $4.939173, fees $0.05255
+  reason    FAV_MID:MID UP fav ask 0.85 opp 0.15 vol 0.408 in [0.304, 0.466) sec 174
+  settled   OPEN at the time of writing (that candle closes 02:45 UTC; result appended when it lands)
+  Verified against the frozen rule: replaying that candle's decide_log gives UP sec 174 ask 0.85
+  vol 0.4084 - identical to what the engine did. In-window (60-180) and in-band, both satisfied.
+
+TWO OBSERVATIONS, neither a rule breach
+1. The cap came out 0.851, not ask+1c = 0.86. FAV passes max_ask = BAND_HI = 0.85 and the lane_cap
+   rule clamps the padded price to it, so at the TOP of the band the order is effectively held to the
+   ask itself rather than ask+1c. That is stricter, not looser - it cannot overpay - but "FAK at
+   ask+1c" is only exactly true below 0.85. The realised price was ~0.848.
+2. This trade sits in the band's worst corner. At 0.85 a win returns about +$0.60 and a loss costs the
+   full ~$4.94, so it needs roughly an 89% hit rate to break even. In the pre-registered FAV_mid
+   anatomy the 0.80-0.85 ask bucket was the ONE negative cell (-0.56 per fill on 57 fills) while the
+   edge sat at the 0.65-0.75 end. The rule is frozen and this is a legitimate fire; it is flagged
+   because a first-trade result at this price says little about the rule either way.
+
+ALERTS ARMED (a one-line Routine goes to V immediately if any fires)
+  - any order from a non-EF lane                      (none since the baseline)
+  - an order outside 60-180 s or outside the mid band  (none; this one was sec 174, vol 0.4084)
+  - the $40 daily stop triggering                      (headroom -38.61 of -40.00)
