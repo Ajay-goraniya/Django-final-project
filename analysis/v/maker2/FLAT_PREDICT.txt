@@ -1,0 +1,43 @@
+M15: 5602 candles; train 2871 (09-11..20), test 2731 (09-21..30); flat = |move| < 2.66 bps (bottom third on train)
+COMBINED model AUC for "flat": train 0.689  TEST 0.645   (0.5 = coin flip)
+single features, TEST AUC (lower value -> flatter):
+   prev12 range     0.642
+   trades5m         0.641
+   vol60m           0.640
+   vol15m           0.638
+   prev12 move      0.638
+   vol5m            0.637
+   prev3 range      0.634
+   prev1 range      0.627
+   volume60m        0.621
+   volume5m         0.615
+   volume15m        0.615
+   vol1m            0.611
+   prev3 move       0.610
+   prev1 move       0.575
+   volume 5m/60m    0.536
+   taker-buy share  0.483
+   hour cos         0.488
+   hour sin         0.501
+   test candles predicted CALM (flat likely)  : actually flat 43%, median |move| 3.3 bps
+   test candles middle                        : actually flat 27%, median |move| 5.8 bps
+   test candles predicted ACTIVE              : actually flat 20%, median |move| 7.9 bps
+
+London real fixed15 fills scored: 296; baseline PnL +48.82, $ lost 1280.04
+   predicted CALM     n  99  win 48.5%  $    +9.29
+   middle             n  98  win 49.0%  $    +2.94
+   predicted ACTIVE   n  99  win 52.5%  $   +36.59
+   skip top 10% predicted-flat: PnL   +59.60 (vs +48.82), $ lost 1122.17 (vs 1280.04, +12.3% cut), skipped 30 fires net -10.78
+   skip top 20% predicted-flat: PnL   +85.15 (vs +48.82), $ lost  989.23 (vs 1280.04, +22.7% cut), skipped 60 fires net -36.33
+   skip top 30% predicted-flat: PnL   +64.43 (vs +48.82), $ lost  880.00 (vs 1280.04, +31.3% cut), skipped 89 fires net -15.61
+
+CHECKS (null + halves) on the London skip rule:
+   skip top 10%: skipped 30 fires net -10.78; random skips of 30 fires: median +5.64, P(random <= ours) = 0.368; skipped net by half +40.03 / -50.81
+   skip top 20%: skipped 60 fires net -36.33; random skips of 60 fires: median +8.73, P(random <= ours) = 0.246; skipped net by half +34.09 / -70.42
+   skip top 30%: skipped 89 fires net -15.61; random skips of 89 fires: median +15.15, P(random <= ours) = 0.347; skipped net by half +35.67 / -51.28
+
+VERDICT (V, 09-30): flat candles ARE partly predictable before the open (AUC 0.645 sealed; predicted-calm third is flat 43% vs 20%
+for predicted-active) - best inputs: range of the last 12 candles, trade count, 15-60 min volatility. But it does NOT carry into
+London's P&L reliably: skipping the predicted-flat fires removes wins with the losses (the "% of losses cut" is mostly mechanical),
+the skipped fires are no worse than random skips (p 0.25-0.37) and their sign flips between halves (+34 / -70). Not a rule.
+Depth/order-book history not available for these days. Fire-time features (move still going vs stalling) = M14, with London.
