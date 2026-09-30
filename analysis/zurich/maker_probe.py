@@ -41,6 +41,7 @@ DAY_STOP         = -10.0         # realised $ in a UTC day -> off for the day
 LIFE_STOP        = -20.0         # realised $ lifetime     -> off for good
 POST_ONLY        = True
 MAX_POSTS_PER_CANDLE = 3   # 09-30: the 17:00 candle took 34 posts and got 0 fills. Hard ceiling.
+FILL_CHECK_S     = 1.0     # how often a resting order is checked against the venue tape
 TICK             = 0.01
 
 HOME        = '/home/ubuntu/maker_probe'
@@ -301,6 +302,8 @@ class Probe:
         self.posts_per_epoch = collections.Counter()   # hard ceiling per candle
         self.stale_book_token = None                   # set by a post-only reject
         self.stale_book_ts = None
+        self.reject_lock_s = None                      # (b) integer second of the last post-only reject
+        self._last_fill_check = 0.0
         self.broker = None
         self.logfile = LOGFILE   # per-instance so tests never write the committed report
         self.counts = collections.Counter()
@@ -381,6 +384,10 @@ class Probe:
                 # (3) do not fire again off the same book read that just produced a crossing price.
                 self.stale_book_token = token
                 self.stale_book_ts = (self.books.get(token) or {}).get('ts')
+                # (b) V: "do not re-post in the same second". The book-freshness test alone is not
+                # enough - these books publish many events a second, so it clears instantly. Live
+                # proof: two rejects at 21:06:05, same second, same price 0.70.
+                self.reject_lock_s = int(time.time())
                 self.counts['postonly_reject'] += 1
             log(self.logfile, f'[{time.strftime("%F %T", time.gmtime())}] REJECTED epoch {epoch} {side} {price} :: {msg[:200]}')
             return None, row
@@ -520,8 +527,22 @@ class Probe:
         # covered only by tests that skip whenever the wall clock sits outside 60-180 s.
         now = time.time() if now is None else now
         ep = int(now // 300) * 300; sec = int(now - ep)
+        # (a) SEE EVERY FILL. Both hard stops are computed FROM the fills table, so a fill that is
+        # never recorded does not merely lose a row - it disables the stops. check_fill used to run
+        # only on a 'hold', which meant a fill followed by a cancel on the same pass vanished.
+        # Checked here, before any decision is acted on, and again unconditionally before a cancel.
+        # Throttled to FILL_CHECK_S while resting because check_fill is a venue REST call and the
+        # loop runs 5x a second; the pre-cancel check ignores the throttle, so no cancel can ever
+        # discard a fill however recently we last looked.
+        if self.resting and not self.dry_run and (now - self._last_fill_check) >= FILL_CHECK_S:
+            self._last_fill_check = now
+            if await self.check_fill(ep):
+                self.record_decision(ep, sec, 'fill', None, None, 'fill seen on routine check',
+                                     None, None, None, None, None, None)
+                return
         # A resting order never survives its own candle.
         if self.resting and self.resting['epoch'] != ep:
+            if not self.dry_run and await self.check_fill(ep): return
             await self.cancel('candle_end')
         tok_up, tok_dn = tokens_for(ep, self.gamma_db)
         if not tok_up or not tok_dn: return
@@ -542,12 +563,20 @@ class Probe:
                 dbid = self.resting['price'] if dbid is None else max(dbid, self.resting['price'])
         fav_side, _ = Quoter.favourite(ub, dbid)
         fresh = self.book_fresh(tok_up if fav_side == 'UP' else tok_dn) if fav_side else True
+        if self.reject_lock_s is not None:
+            if int(now) <= self.reject_lock_s: fresh = False        # (b) same-second lockout
+            else: self.reject_lock_s = None
         act, side, price, reason = self.quoter.decide(
             sec=sec, up_bid=ub, dn_bid=dbid, up_ask=ua, dn_ask=da, vol=vol,
             resting=self.resting, adverse=adv, filled_this_candle=(ep in self.filled_epochs),
             posts_this_candle=self.posts_per_epoch[ep], book_fresh=fresh)
         self.funnel[NUM.sub('N', reason)] += 1
         if act == 'cancel':
+            # Unconditional, throttle or no throttle: a cancel must never be able to discard a fill.
+            if not self.dry_run and await self.check_fill(ep):
+                self.record_decision(ep, sec, 'fill', side, price,
+                                     f'filled before cancel ({reason})', vol, ub, dbid, ua, da, adv)
+                return
             self.record_decision(ep, sec, act, side, price, reason, vol, ub, dbid, ua, da, adv)
             await self.cancel(reason); return
         if act == 'post':
@@ -585,7 +614,8 @@ class Probe:
                 self.resting = dict(epoch=ep, side=side, price=price, token=tok,
                                     order_id=oid, post_ts_ms=int(now * 1000), row=row)
             return
-        if act == 'hold':
+        if act == 'hold' and not self.dry_run and (now - self._last_fill_check) >= FILL_CHECK_S:
+            self._last_fill_check = now
             if await self.check_fill(ep): return
         if self.counts['pass'] % 50 == 0:
             self.record_decision(ep, sec, act, side, price, reason, vol, ub, dbid, ua, da, adv)

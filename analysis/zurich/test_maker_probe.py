@@ -576,3 +576,203 @@ class DryRunRests(unittest.TestCase):
             self.loop.run_until_complete(self.p.one_pass(now=self.ep + t))
         self.assertIsNotNone(self.p.resting, 'must still be resting: live we would be the best bid')
         self.assertEqual(self.p.posts_per_epoch[self.ep], 1)
+
+
+class FillsFeedTheStops(unittest.TestCase):
+    """SPEC FIX (a), V 09-30. Both hard stops are computed FROM the fills table, so a fill that is
+    never recorded does not just lose a row - it disables the stops. That is the one failure here
+    that loses money quietly, so it gets tested from every angle a fill can arrive."""
+
+    def setUp(self):
+        import asyncio
+        self.loop = asyncio.new_event_loop()
+        self.p = M.Probe(dry_run=False, db=mem())
+        self.p.logfile = tempfile.mktemp(suffix='.log')
+        self.ep = int(time.time() // 300) * 300
+        self.now = self.ep + 120
+        self._orig = M.tokens_for
+        M.tokens_for = lambda e, gamma_db=None: ('TOKUP', 'TOKDN') if e == self.ep else (None, None)
+        self.p.fav.vol_before_open = lambda epoch, px=None: 0.20
+        self.p.guard.flag_on = lambda: True
+        self.p.mover.add(int(self.now * 1000) - 900, 100000.0)
+        self.p.mover.add(int(self.now * 1000), 100000.0)
+        self.p.db.execute("insert into orders(id,epoch,side,token,price,shares,status,dry) "
+                          "values(1,?,'UP','TOKUP',0.70,5,'OPEN',0)", (self.ep,))
+        self.p.db.commit()
+        self.p.resting = dict(epoch=self.ep, side='UP', price=0.70, token='TOKUP',
+                              order_id='OID1', post_ts_ms=int(self.now * 1000), row=1)
+        self.calls = []
+        self.will_fill = True
+        async def fake_check(epoch):
+            self.calls.append(epoch)
+            if not self.will_fill: return False
+            self.p.db.execute("insert into fills(order_row,epoch,utc_day,side,fill_ts_ms,price,"
+                              "shares,spent) values(1,?,?,'UP',0,0.70,5,3.5)",
+                              (epoch, time.strftime('%Y-%m-%d', time.gmtime())))
+            self.p.db.commit(); self.p.filled_epochs.add(epoch); self.p.resting = None
+            return True
+        self.p.check_fill = fake_check
+
+    def tearDown(self): M.tokens_for = self._orig; self.loop.close()
+
+    def book(self, up_bid, up_ask=0.72):
+        self.p.books = {'TOKUP': dict(bids=[(up_bid, 9.0)], asks=[(up_ask, 9.0)], ts=time.time()),
+                        'TOKDN': dict(bids=[(0.28, 9.0)], asks=[(0.30, 9.0)], ts=time.time())}
+
+    def fills(self): return self.p.db.execute('select count(*) from fills').fetchone()[0]
+
+    def test_a_fill_survives_a_pass_that_wanted_to_cancel(self):
+        """The exact hole: rule 3 wants a cancel, the order has in fact filled."""
+        self.book(0.69)                        # our 0.70 is above the best bid -> cancel wanted
+        self.p._last_fill_check = self.now     # defeat the routine check, so only the pre-cancel one can save it
+        self.loop.run_until_complete(self.p.one_pass(now=self.now))
+        self.assertEqual(self.fills(), 1, 'the fill must be recorded, not thrown away by the cancel')
+        self.assertEqual(self.p.db.execute("select status from orders where id=1").fetchone()[0],
+                         'OPEN', 'a filled order must not be stamped CANCELLED')
+
+    def test_a_fill_is_seen_on_a_routine_pass_with_no_cancel(self):
+        self.book(0.70)                        # nothing wrong -> hold
+        self.loop.run_until_complete(self.p.one_pass(now=self.now))
+        self.assertEqual(self.fills(), 1)
+
+    def test_a_fill_is_seen_at_the_candle_roll(self):
+        """A resting order that filled as the candle ended must not be cancelled into oblivion."""
+        self.book(0.70)
+        self.loop.run_until_complete(self.p.one_pass(now=self.ep + 305))
+        self.assertEqual(self.fills(), 1)
+
+    def test_no_fill_means_the_cancel_still_happens(self):
+        self.will_fill = False
+        self.book(0.69)
+        self.loop.run_until_complete(self.p.one_pass(now=self.now))
+        self.assertEqual(self.fills(), 0)
+        self.assertEqual(self.p.db.execute("select status from orders where id=1").fetchone()[0],
+                         'CANCELLED')
+        self.assertIsNone(self.p.resting)
+
+    def test_the_pre_cancel_check_ignores_the_throttle(self):
+        """Throttling the routine check must never be able to delay the pre-cancel one."""
+        self.will_fill = False
+        self.book(0.69)
+        self.p._last_fill_check = self.now          # routine check throttled out
+        self.loop.run_until_complete(self.p.one_pass(now=self.now))
+        self.assertEqual(len(self.calls), 1, 'the pre-cancel check must still have run')
+
+    def test_the_routine_check_IS_throttled(self):
+        """5 passes a second must not mean 5 venue calls a second."""
+        self.will_fill = False
+        self.book(0.70)
+        for i in range(10):
+            self.loop.run_until_complete(self.p.one_pass(now=self.now + i * 0.2))
+        self.assertLessEqual(len(self.calls), 3, f'{len(self.calls)} venue calls in 2 s is too many')
+        self.assertGreaterEqual(len(self.calls), 2, 'but it must still be checking')
+
+    def test_a_fill_recorded_this_way_actually_trips_the_day_stop(self):
+        """End to end: the fill lands, the loss is realised, may_trade() refuses. This is the whole
+        point of fix (a) - a stop that cannot see a fill is not a stop."""
+        self.book(0.69)
+        self.p._last_fill_check = self.now
+        self.loop.run_until_complete(self.p.one_pass(now=self.now))
+        self.p.db.execute("update fills set pnl=-10.0"); self.p.db.commit()
+        ok, why = self.p.guard.may_trade()
+        self.assertFalse(ok); self.assertIn('DAY STOP', why)
+
+    def test_a_fill_recorded_this_way_trips_the_lifetime_stop(self):
+        self.book(0.69)
+        self.p._last_fill_check = self.now
+        self.loop.run_until_complete(self.p.one_pass(now=self.now))
+        self.p.db.execute("update fills set pnl=-20.0, utc_day='2020-01-01'"); self.p.db.commit()
+        ok, why = self.p.guard.may_trade()
+        self.assertFalse(ok); self.assertIn('LIFETIME', why)
+
+    def test_a_dry_run_never_calls_the_venue_fill_check(self):
+        p = M.Probe(dry_run=True, db=mem()); p.logfile = tempfile.mktemp(suffix='.log')
+        calls = []
+        async def spy(e): calls.append(e); return False
+        p.check_fill = spy
+        p.fav.vol_before_open = lambda epoch, px=None: 0.20
+        p.books = {'TOKUP': dict(bids=[(0.70, 9.0)], asks=[(0.72, 9.0)], ts=time.time()),
+                   'TOKDN': dict(bids=[(0.28, 9.0)], asks=[(0.30, 9.0)], ts=time.time())}
+        p.resting = dict(epoch=self.ep, side='UP', price=0.70, token='TOKUP',
+                         order_id=None, post_ts_ms=0, row=1)
+        self.loop.run_until_complete(p.one_pass(now=self.now))
+        self.assertEqual(calls, [], 'a dry run must not reach the venue')
+
+
+class SameSecondLockout(unittest.TestCase):
+    """SPEC FIX (b), V 09-30: "do not re-post in the same second" after a post-only reject.
+    The book-freshness test alone was not enough - these books publish many events a second, so it
+    cleared instantly. Live proof: two rejects at 21:06:05, same second, same price 0.70."""
+
+    def setUp(self):
+        import asyncio
+        self.loop = asyncio.new_event_loop()
+        self.p = M.Probe(dry_run=False, db=mem())
+        self.p.logfile = tempfile.mktemp(suffix='.log')
+        self.ep = int(time.time() // 300) * 300
+        self.now = self.ep + 120
+        self._orig = M.tokens_for
+        M.tokens_for = lambda e, gamma_db=None: ('TOKUP', 'TOKDN') if e == self.ep else (None, None)
+        self.p.fav.vol_before_open = lambda epoch, px=None: 0.20
+        self.p.guard.flag_on = lambda: True
+        self.p.mover.add(int(self.now * 1000) - 900, 100000.0)
+        self.p.mover.add(int(self.now * 1000), 100000.0)
+        self.p.books = {'TOKUP': dict(bids=[(0.70, 9.0)], asks=[(0.72, 9.0)], ts=1000.0),
+                        'TOKDN': dict(bids=[(0.28, 9.0)], asks=[(0.30, 9.0)], ts=1000.0)}
+        class Rejecter:
+            async def create_limit_order(s, **k):
+                return type('S', (), dict(maker_amount=3_500_000.0, taker_amount=5_000_000.0))()
+            async def post_order(s, signed):
+                raise RuntimeError('invalid post-only order: order crosses book')
+        self.p.broker = type('B', (), {'client': Rejecter()})()
+
+    def tearDown(self): M.tokens_for = self._orig; self.loop.close()
+
+    def posts(self): return self.p.db.execute('select count(*) from orders').fetchone()[0]
+
+    def test_a_reject_sets_the_second_level_lock(self):
+        self.loop.run_until_complete(self.p.one_pass(now=self.now))
+        self.assertEqual(self.p.reject_lock_s, int(time.time()))
+
+    def test_no_second_post_in_the_same_second_even_if_the_book_moves(self):
+        """The regression: a fresh book event used to clear the block instantly."""
+        self.loop.run_until_complete(self.p.one_pass(now=self.now))
+        first = self.posts()
+        self.p.reject_lock_s = int(self.now)             # pin the lock to our injected clock
+        for frac in (0.2, 0.4, 0.6, 0.8):
+            self.p.books['TOKUP']['ts'] = 2000.0 + frac  # a brand new book each time
+            self.loop.run_until_complete(self.p.one_pass(now=self.now + frac))
+        self.assertEqual(self.posts(), first, 'no re-post is allowed inside the rejecting second')
+
+    def test_the_next_second_is_allowed_again(self):
+        self.loop.run_until_complete(self.p.one_pass(now=self.now))
+        first = self.posts()
+        self.p.reject_lock_s = int(self.now)
+        self.p.books['TOKUP']['ts'] = 3000.0
+        self.loop.run_until_complete(self.p.one_pass(now=self.now + 1.0))
+        self.assertGreater(self.posts(), first, 'the lock must expire with the second')
+        # That new post is rejected too (the stub always rejects), so a NEW lock is set for the
+        # current second. The old one being gone is what matters, not the field being None.
+        self.assertNotEqual(self.p.reject_lock_s, int(self.now),
+                            'the expired lock must not still be the one we pinned')
+
+    def test_the_lock_clears_when_a_later_post_is_accepted(self):
+        class Accepter:
+            async def create_limit_order(s, **k):
+                return type('S', (), dict(maker_amount=3_500_000.0, taker_amount=5_000_000.0))()
+            async def post_order(s, signed):
+                return type('R', (), dict(ok=True, order_id='OID9'))()
+        self.loop.run_until_complete(self.p.one_pass(now=self.now))
+        self.p.reject_lock_s = int(self.now)
+        self.p.broker = type('B', (), {'client': Accepter()})()
+        self.p.books['TOKUP']['ts'] = 4000.0
+        self.loop.run_until_complete(self.p.one_pass(now=self.now + 1.0))
+        self.assertIsNone(self.p.reject_lock_s)
+        self.assertIsNotNone(self.p.resting)
+
+    def test_the_reject_is_still_recorded_as_REJECTED(self):
+        self.loop.run_until_complete(self.p.one_pass(now=self.now))
+        r = self.p.db.execute('select status, note from orders order by id desc limit 1').fetchone()
+        self.assertEqual(r['status'], 'REJECTED'); self.assertIn('post-only', r['note'])
+        self.assertEqual(self.p.db.execute(
+            "select count(*) from orders where status='PENDING'").fetchone()[0], 0)

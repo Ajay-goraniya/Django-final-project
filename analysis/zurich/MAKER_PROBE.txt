@@ -206,3 +206,46 @@ DRY RUNS AFTER THE FIX
   the resting-life figure rests on the 17:00 replay, which is real recorded book data.
 
 STILL OFF. ENABLED absent, no process running. No restart without a fresh yes from the owner.
+[2026-09-30 21:02:15] REJECTED epoch 1790802000 UP 0.79 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-09-30 21:06:05] REJECTED epoch 1790802300 DOWN 0.7 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-09-30 21:06:05] REJECTED epoch 1790802300 DOWN 0.7 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-09-30 21:11:21] REJECTED epoch 1790802600 UP 0.62 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-09-30 21:26:02] REJECTED epoch 1790803500 DOWN 0.76 :: RequestRejectedError: invalid post-only order: order crosses book
+
+================================================================================================
+PAUSED 21:30:42 UTC ON V'S SAFETY CALL, THEN THE TWO SPEC FIXES INSTALLED. STILL OFF.
+
+PAUSE, verified three ways: ENABLED removed, pid 350254 SIGTERM'd, and the VENUE queried - 0 open
+orders on the wallet, 0 account trades matching any of the 52 probe order ids. Local ledger agrees:
+0 fills, $0 realised, 0 non-terminal order rows. Nothing was left resting and nothing was missed.
+
+WHY V PAUSED IT: both hard stops are computed FROM the fills table, so a fill that is never recorded
+does not merely lose a row - it disables the stops. That is the one failure mode here that loses
+money quietly, and it was open in the build that was running.
+
+FIX (a) EVERY FILL IS SEEN, AND FEEDS BOTH STOPS
+  check_fill now runs:
+    - on every pass while an order rests, throttled to 1.0 s (it is a venue REST call and the loop
+      runs 5x a second);
+    - UNCONDITIONALLY before any cancel, throttle ignored, so no cancel can discard a fill however
+      recently we last looked;
+    - at the candle roll, before the candle_end cancel.
+  A dry run never calls it, so the venue is never touched from a paper run.
+  Tested from every angle a fill can arrive (9 tests), including the two that matter most: a fill on
+  a pass whose decision was CANCEL survives and the order is NOT stamped CANCELLED; and a fill
+  recorded this way actually trips the day stop and the lifetime stop end to end. A stop that cannot
+  see a fill is not a stop, so that is asserted rather than assumed.
+
+FIX (b) SAME-SECOND LOCKOUT AFTER A POST-ONLY REJECT
+  V asked for "do not re-post in the same second; re-read the book first". I had built only the book
+  re-read, and it was useless on its own: these books publish many events a second, so a fresh event
+  cleared the block instantly. Live proof from the 21:00 run - two rejects at 21:06:05, same second,
+  same price 0.70. Now the integer second of the reject is recorded and no post is permitted until
+  that second has passed, in addition to the book re-read. 5 tests, including the regression
+  (a brand-new book event inside the rejecting second must NOT unlock it).
+
+NOT TOUCHED, AS INSTRUCTED: the 2-tick tolerance and rule 4 stay exactly as they are. V is asking
+the owner. Nothing else about the rule changed.
+
+90 tests pass. A 5-minute dry run confirms the loop still runs clean. ENABLED absent, no process.
+NO RESTART until V/the owner says so.
