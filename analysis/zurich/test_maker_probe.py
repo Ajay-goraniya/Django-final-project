@@ -130,13 +130,11 @@ class OneOrderOneFill(unittest.TestCase):
         rest = dict(side='UP', price=0.69)
         self.assertEqual(self.q.decide(**{**OK, 'resting': rest})[0], 'hold')
 
-    def test_a_flipped_favourite_still_cancels_now_via_the_price_test(self):
-        """There is no longer a 'favourite flipped' branch; it is subsumed. If the favourite flips,
-        our side's bid collapses, so our resting price is above it and rule 3 (we would be the
-        crosser) fires. Same outcome, one fewer special case."""
+    def test_a_flipped_favourite_does_NOT_pull_a_resting_order(self):
+        """OWNER option A: only 2 bps or 180 s pull it. A favourite that flips against us shows up
+        as a Binance move, which is the faster signal anyway - that is the control, not the book."""
         rest = dict(side='DOWN', price=0.70)
-        act, _, _, why = self.q.decide(**{**OK, 'resting': rest})
-        self.assertEqual(act, 'cancel'); self.assertIn('we would cross', why)
+        self.assertEqual(self.q.decide(**{**OK, 'resting': rest})[0], 'hold')
 
     def test_nothing_is_posted_after_a_fill_in_the_same_candle(self):
         self.assertEqual(self.q.decide(**{**OK, 'filled_this_candle': True})[0], 'none')
@@ -415,14 +413,24 @@ class NoChasing(unittest.TestCase):
         act, _, _, why = self.q.decide(**{**OK, 'sec': 181, 'resting': self.rest()})
         self.assertEqual(act, 'cancel'); self.assertIn('outside', why)
 
-    def test_reason_3_we_would_be_the_crosser(self):
-        """Our price must stay at or under the best bid."""
-        act, _, _, why = self.q.decide(**{**OK, 'up_bid': 0.69, 'resting': self.rest(0.70)})
-        self.assertEqual(act, 'cancel'); self.assertIn('we would cross', why)
+    def test_the_bid_dropping_below_us_no_longer_pulls_the_order(self):
+        """OWNER option A, 09-30: rule 3 removed. It could only fire once our order had left the
+        book, and the case that matters there - it left because it FILLED - is caught by the fill
+        check that now runs every pass. Cancelling a resting order was the wrong way to detect it."""
+        self.assertEqual(self.q.decide(**{**OK, 'up_bid': 0.69,
+                                          'resting': self.rest(0.70)})[0], 'hold')
 
-    def test_reason_4_bid_ran_two_ticks_away(self):
-        act, _, _, why = self.q.decide(**{**OK, 'up_bid': 0.72, 'resting': self.rest(0.70)})
-        self.assertEqual(act, 'cancel'); self.assertIn('ran >= 2 ticks', why)
+    def test_the_bid_running_away_no_longer_pulls_the_order(self):
+        """OWNER option A: 'bid ran >= 2 ticks' removed. On the live books it fired constantly -
+        10 of 12 exits on 21:00-21:20, every one at exactly our price + 0.02 - so we were still
+        chasing, just rate-limited, with ~10% book time and 0 fills."""
+        self.assertEqual(self.q.decide(**{**OK, 'up_bid': 0.72,
+                                          'resting': self.rest(0.70)})[0], 'hold')
+
+    def test_a_far_bid_still_does_not_pull_it(self):
+        """Not a cliff at 2 ticks any more: nothing about the book pulls a resting order."""
+        self.assertEqual(self.q.decide(**{**OK, 'up_bid': 0.90, 'up_ask': 0.92,
+                                          'resting': self.rest(0.70)})[0], 'hold')
 
     def test_an_offer_reaching_our_resting_price_is_a_FILL_not_a_cancel(self):
         """THE 18:30 REGRESSION. A resting BUY at 0.70 meeting an offer at 0.70 is us being filled
@@ -619,11 +627,18 @@ class FillsFeedTheStops(unittest.TestCase):
         self.p.books = {'TOKUP': dict(bids=[(up_bid, 9.0)], asks=[(up_ask, 9.0)], ts=time.time()),
                         'TOKDN': dict(bids=[(0.28, 9.0)], asks=[(0.30, 9.0)], ts=time.time())}
 
+    def want_cancel(self):
+        """Make the rule want to cancel. Since the owner's option A there is exactly one way to do
+        that mid-window: a Binance move >= 2 bps against our side."""
+        self.p.mover.ticks.clear()
+        n = int(self.now * 1000)
+        self.p.mover.add(n - 900, 100000.0); self.p.mover.add(n, 99950.0)   # -5 bps, bad for UP
+
     def fills(self): return self.p.db.execute('select count(*) from fills').fetchone()[0]
 
     def test_a_fill_survives_a_pass_that_wanted_to_cancel(self):
         """The exact hole: rule 3 wants a cancel, the order has in fact filled."""
-        self.book(0.69)                        # our 0.70 is above the best bid -> cancel wanted
+        self.book(0.70); self.want_cancel()    # 2 bps against us -> cancel wanted
         self.p._last_fill_check = self.now     # defeat the routine check, so only the pre-cancel one can save it
         self.loop.run_until_complete(self.p.one_pass(now=self.now))
         self.assertEqual(self.fills(), 1, 'the fill must be recorded, not thrown away by the cancel')
@@ -643,7 +658,7 @@ class FillsFeedTheStops(unittest.TestCase):
 
     def test_no_fill_means_the_cancel_still_happens(self):
         self.will_fill = False
-        self.book(0.69)
+        self.book(0.70); self.want_cancel()
         self.loop.run_until_complete(self.p.one_pass(now=self.now))
         self.assertEqual(self.fills(), 0)
         self.assertEqual(self.p.db.execute("select status from orders where id=1").fetchone()[0],
@@ -653,7 +668,7 @@ class FillsFeedTheStops(unittest.TestCase):
     def test_the_pre_cancel_check_ignores_the_throttle(self):
         """Throttling the routine check must never be able to delay the pre-cancel one."""
         self.will_fill = False
-        self.book(0.69)
+        self.book(0.70); self.want_cancel()
         self.p._last_fill_check = self.now          # routine check throttled out
         self.loop.run_until_complete(self.p.one_pass(now=self.now))
         self.assertEqual(len(self.calls), 1, 'the pre-cancel check must still have run')
@@ -670,7 +685,7 @@ class FillsFeedTheStops(unittest.TestCase):
     def test_a_fill_recorded_this_way_actually_trips_the_day_stop(self):
         """End to end: the fill lands, the loss is realised, may_trade() refuses. This is the whole
         point of fix (a) - a stop that cannot see a fill is not a stop."""
-        self.book(0.69)
+        self.book(0.70); self.want_cancel()
         self.p._last_fill_check = self.now
         self.loop.run_until_complete(self.p.one_pass(now=self.now))
         self.p.db.execute("update fills set pnl=-10.0"); self.p.db.commit()
@@ -678,7 +693,7 @@ class FillsFeedTheStops(unittest.TestCase):
         self.assertFalse(ok); self.assertIn('DAY STOP', why)
 
     def test_a_fill_recorded_this_way_trips_the_lifetime_stop(self):
-        self.book(0.69)
+        self.book(0.70); self.want_cancel()
         self.p._last_fill_check = self.now
         self.loop.run_until_complete(self.p.one_pass(now=self.now))
         self.p.db.execute("update fills set pnl=-20.0, utc_day='2020-01-01'"); self.p.db.commit()

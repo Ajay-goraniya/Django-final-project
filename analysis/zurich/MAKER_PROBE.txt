@@ -249,3 +249,47 @@ the owner. Nothing else about the rule changed.
 
 90 tests pass. A 5-minute dry run confirms the loop still runs clean. ENABLED absent, no process.
 NO RESTART until V/the owner says so.
+
+================================================================================================
+OWNER OPTION A (09-30, via V): REMOVE the 'bid ran >= 2 ticks away' cancel. STILL PAUSED.
+
+THE RULE NOW, back to the original spec. A resting order is pulled for exactly TWO reasons:
+    1. Binance moves >= 2 bps against our side over the last second
+    2. sec leaves 60-180 (and the candle roll)
+Everything else is unchanged: post-only never-cross ON A NEW POST, max 3 posts per candle, one open
+order, at most one fill per candle, calm < 0.304 for entry, bid band 0.60-0.80, hold to settlement.
+
+I ALSO REMOVED V'S RULE 3 ('our price no longer <= best bid'), and flagged that reading to V rather
+than deciding it quietly. Two reasons: it is not in the original spec's cancel list, which is the
+thing option A restores; and it is now redundant. It could only ever fire once our order had LEFT the
+book, and the case that actually matters there - it left because it FILLED - is caught by the fill
+check that now runs on every pass and unconditionally before every cancel. Detecting a fill by
+cancelling a resting order was the wrong instrument for the job.
+So: being alone at the top of the book, the favourite flipping, the bid leaving the band - none of
+these pull a resting order any more. A maker's edge IS sitting still.
+
+WHY THE 2-TICK RULE HAD TO GO, in the live numbers that killed it:
+  4 calm candles 21:00/21:05/21:10/21:20, 12 orders. Every candle hit the 3-post cap. 10 of 12 exits
+  were 'bid ran >= 2 ticks', and in EVERY case the new bid was exactly our price + 0.02. These books
+  walk up one tick at a time, so a 2-tick tolerance is cleared in seconds: ~46 s of book time across
+  ~480 s of window (10%), and 0 fills. The cap was doing the work, not the rule - we were still
+  chasing, just rate-limited.
+
+MEASURED EFFECT, same candle (17:00), same recorded book, and this time with the 2 bps test driven by
+the REAL Binance 1 s series out of bn_flow (803 ticks) rather than an assumed zero:
+    original chasing rule    34 posts,  ~0 s resting     <- what LIVE actually did
+    2-tick rule (removed)     3 posts,  6 s resting (2%)
+    OWNER RULE (option A)     1 post, 127.9 s resting (49% of the candle)
+  The single order rested the ENTIRE 60-180 window and ended on the 180 s boundary - the 2 bps test
+  never fired on that candle, which was a calm one (vol 0.287). That is the behaviour a maker probe
+  needs: post once, sit still, and let the adverse-move test be the only thing that pulls it.
+  CAVEAT, stated because it cuts against the good result: bn_flow is a 1 s series, while the live
+  probe watches the ms aggTrade websocket. The live 2 bps test is therefore MORE sensitive than this
+  replay, so live will cancel on adverse moves somewhat more often than 1-of-1 here suggests. And
+  this is ONE candle. Do not read 49% as the expected book time.
+
+91 tests. The two safety fixes from the previous round are unchanged and still covered:
+  (a) fills seen on every pass, unconditionally before any cancel, and at the candle roll -> both
+      hard stops, asserted end to end;
+  (b) same-second lockout after a post-only reject.
+STILL OFF: ENABLED absent, no process. The owner gives a fresh yes after this report.

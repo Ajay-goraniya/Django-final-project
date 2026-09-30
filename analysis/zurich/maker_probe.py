@@ -165,35 +165,31 @@ class Quoter:
             return ('cancel', None, None, 'already filled this candle') if resting else \
                    ('none', None, None, 'already filled this candle')
 
-        # ---------- a resting order: the ONLY four reasons to pull it ----------
+        # ---------- a resting order: the ONLY TWO reasons to pull it ----------
+        # OWNER, 09-30, option A: back to the original spec. The order rests until Binance moves
+        # >= 2 bps against us, or 180 s. Nothing about the Polymarket book pulls a resting order.
+        #
+        # What was removed and why it is safe:
+        #   - "bid ran >= 2 ticks away": on the live books this fired constantly. All four calm
+        #     candles on 21:00-21:20 hit the 3-post cap, 10 of 12 exits were this rule, and in every
+        #     case the new bid was exactly our price + 0.02. These books walk up a tick at a time, so
+        #     a 2-tick tolerance is cleared within seconds and we were still chasing, just rate-
+        #     limited. Total book time ~10% of the window, 0 fills in 12 orders.
+        #   - "our price no longer <= best bid" (V's rule 3): not in the original spec's cancel list,
+        #     and now redundant. It could only fire once our order had LEFT the book, and the case
+        #     that actually matters there - it left because it FILLED - is caught properly by the
+        #     fill check that now runs on every pass and before every cancel. Detecting a fill by
+        #     cancelling a resting order was always the wrong instrument.
+        # Being alone at the top of the book, the favourite flipping, the bid leaving the band: none
+        # of these pull the order. A maker's edge IS sitting still; the 2 bps Binance test is the
+        # risk control, and it is faster than anything the book can tell us.
         if resting:
             rs, rp = resting['side'], float(resting['price'])
             if adverse is not None and adverse >= ADVERSE_BPS:
                 return 'cancel', rs, rp, f'adverse {adverse:.2f}bps'
             if sec > self.sec_hi or sec < self.sec_lo:
                 return 'cancel', rs, rp, f'sec {sec} outside {self.sec_lo}-{self.sec_hi}'
-            own_bid = up_bid if rs == 'UP' else dn_bid
-            if own_bid is None:
-                return 'cancel', rs, rp, 'no book on our side'
-            own_bid = float(own_bid)
-            # 3. we must never be the CROSSER - but that is a test on a NEW post, not on a resting
-            #    one, and conflating the two nearly destroyed the probe. I briefly cancelled a
-            #    resting order when the ask came down to our price. That is backwards: a resting BUY
-            #    at 0.70 meeting an offer at 0.70 is US BEING FILLED AS THE MAKER, which is the exact
-            #    event this probe exists to measure. The venue matches them; we do not cross anything.
-            #    The 18:30 dry run pulled all three orders that way, each after under a second - the
-            #    same "never fills" symptom as the 17:00 churn, from the opposite cause. So the ask
-            #    test lives ONLY in the post branch below, and an ask at or through our price is a
-            #    reason to CHECK FOR A FILL, never to cancel.
-            #    V's own form of rule 3 is kept as written, and it is a genuine safety net: our order
-            #    is in the book we read, so the best bid can only be below our price if we are NOT
-            #    where we think we are (already filled, or never rested). Re-sync by pulling.
-            if rp > own_bid + 1e-9:
-                return 'cancel', rs, rp, f'price {rp:.2f} > best bid {own_bid:.2f} (we would cross)'
-            # 4. the touch has run away from us
-            if own_bid - rp >= 2 * TICK - 1e-9:
-                return 'cancel', rs, rp, f'bid {own_bid:.2f} ran >= 2 ticks from {rp:.2f}'
-            return 'hold', rs, rp, f'resting {rp:.2f} vs bid {own_bid:.2f}, sec {sec}'
+            return 'hold', rs, rp, f'resting {rp:.2f}, sec {sec}'
 
         # ---------- nothing resting: may we post? ----------
         if sec < self.sec_lo: return 'none', None, None, f'sec {sec} < {self.sec_lo}'
@@ -550,17 +546,8 @@ class Probe:
         vol = self.fav.vol_before_open(ep)
         side_r = self.resting['side'] if self.resting else None
         adv = self.mover.adverse_bps(side_r) if side_r else None
-        if self.dry_run and self.resting:
-            # A dry run's order is virtual, so it is NOT in the book we read. Live, our own resting
-            # BUY IS in that book and is therefore the best bid on its side. Without this the dry
-            # run sees the real bid tick down one and fires V's rule 3 ("price > best bid") on an
-            # order that live would still be sitting at the front of the queue - it over-cancels by
-            # construction and reports a resting life that means nothing. Measured on the 18:35-19:00
-            # run: 6 of 9 cancels were this artifact. Dry-mode only; the live path reads the venue.
-            if self.resting['side'] == 'UP':
-                ub = self.resting['price'] if ub is None else max(ub, self.resting['price'])
-            else:
-                dbid = self.resting['price'] if dbid is None else max(dbid, self.resting['price'])
+        # (The dry-mode hack that injected our virtual order as the best bid is gone with the
+        # bid-based resting checks it existed to model - no resting decision reads the book now.)
         fav_side, _ = Quoter.favourite(ub, dbid)
         fresh = self.book_fresh(tok_up if fav_side == 'UP' else tok_dn) if fav_side else True
         if self.reject_lock_s is not None:
