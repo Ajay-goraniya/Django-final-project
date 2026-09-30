@@ -105,3 +105,6 @@ SETTLED: candle 02:45 UP @0.68 -> actual UP, pnl +$2.1916.
   Running tally since the baseline: 2 settled candles, realised +$3.0244 (+0.8328 and +2.1916), 1 open.
   Both winners so far, and both at the 0.65-0.85 band's opposite ends (0.85 and 0.68). Two settled
   trades is not evidence of anything; the pre-registered bar is 60 fills.
+
+[09-30 02:59:35 UTC]
+  SETTLED candle 02:50 actual DOWN payout 7.1912 pnl +2.1916
