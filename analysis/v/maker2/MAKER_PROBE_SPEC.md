@@ -12,3 +12,5 @@ Goal: measure, with real orders, whether a post-only bid that cancels on a Binan
 ## OWNER 09-30 14:14 UTC: 'yes, switch it on' (owner has no Zurich terminal; asked Zurich to create ENABLED and start the process on his behalf). Limits unchanged: -$10/day, -$20 lifetime, 5 shares.
 
 ## OWNER 09-30 20:07 UTC: 'Yes' to restart the FIXED maker probe (bab8dc4: rest-don't-chase, max 3 posts/candle, REJECTED status). Limits unchanged.
+
+## OWNER 09-30 21:28 UTC: 'A' = remove the 'bid ran >= 2 ticks away' cancel (V's addition); back to the original spec (rest until Binance 2 bps against or 180 s). Restart still needs a fresh owner yes after the safety fixes.
