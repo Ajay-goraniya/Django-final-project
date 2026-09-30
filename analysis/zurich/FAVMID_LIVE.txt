@@ -62,3 +62,32 @@ RUNNING TALLY since the baseline, one pnl per candle, retries never double count
   realised +$0.8328 on 1 settled candle. Daily window -$0.56 of -$40, headroom $39.44.
   ALERT CHECKS all clear: no non-EF lane order; both EF orders in 60-180 s (174, 62) and in the mid
   band (0.4084, 0.3679); engine tag "fav_mid" on both; daily stop not triggered.
+
+STAKE CHANGED TO FIXED $10 - owner order "Do fixed 10" (09-30 03:5x), AUDIT ROW
+  Applied through the engine's OWN audited control path, POST /api/controls/apply with only
+  {"system":{"stake":{...}}} - not a raw DB write. HTTP 200, ok:true.
+    before  stake_settings mode fixed, fixed_stake 5.0,  current 5.0,  min 5.0,  max 5.0   next_stake 5.0
+    after   stake_settings mode fixed, fixed_stake 10.0, current 10.0, min 10.0, max 10.0  next_stake 10.0
+  min and max were moved to 10 as well because the handler rejects fixed_stake > max_stake and sets
+  next_stake = current_stake; leaving max at 5 would have failed validation or silently clamped to $5.
+  Confirmed on the RUNNING process: shared_next_stake 10.0, shared_stake mode fixed 10/10/10/10.
+  UNCHANGED by me and verified: master true, ef_engine "fav_mid", main_enabled false,
+  reversal_enabled false, tp 0.0.
+
+  sl MOVED 40 -> 50, AND IT WAS NOT ME. My payload carried only system.stake; tp/sl are a different
+  endpoint (/api/controls/daily-limits), and sl read 40.0 on my verification immediately after the
+  stake write. It reads 50.0 now in both meta and the running process, so it changed after that - the
+  owner raised it himself, which is consistent with doubling the stake.
+
+  WHAT DOUBLING THE STAKE DOES TO THE STOP: at $10 a losing trade costs about $10, not $5. With
+  sl now 50 that is ~5 losing trades in the window before new orders are blocked, against ~8 at
+  $5/$40. The stop is still a DAILY CUMULATIVE limit that blocks new orders - it does not exit an
+  open position.
+
+MORE LIVE TRADES (all still at the $5 stake - they were placed before the change)
+  02:45  UP   @0.68  sec 62  vol 0.3679  FILLED 7.191200 sh $4.890000  open
+  02:50  DOWN @0.68  sec 60  vol 0.3081  FILLED 7.191200 sh $4.890000  open
+  Both in window (62, 60) and in band (0.3679, 0.3081), engine tag fav_mid on both.
+  Note 02:50's vol 0.3081 sits just 0.004 above the 0.304 lower edge - a legitimate mid fire, but
+  that close to the boundary the calm/mid split is effectively a coin toss on the vol estimate.
+  Tally: realised +$0.8328 on 1 settled candle, 2 open. Daily window -$0.56 of -$50.

@@ -7,7 +7,13 @@ B=json.load(open('/home/ubuntu/pm_ef3/live_test_baseline.json'))
 T=B['baseline_epoch']
 c=sqlite3.connect('file:/home/ubuntu/pm_paper_zurich/polymarket_v12_zurich_live4.sqlite3?mode=ro',uri=True)
 f=lambda t: dt.datetime.fromtimestamp(t,dt.UTC).strftime('%m-%d %H:%M:%S')
-print(f"LIVE TEST since {B['baseline_utc']} UTC   (ef_engine {B['ef_engine']}, stake ${B['next_stake']:.2f}, sl ${B['sl']:.0f})")
+# stake/engine/sl are read LIVE, not from the baseline snapshot: the baseline captured $5 and the
+# owner moved to fixed $10 at 03:51, so printing the baseline value labelled every later trade wrongly.
+import json as _j
+_m=dict(c.execute("SELECT k,v FROM meta WHERE k IN ('next_stake','sl','ef_engine','stake_settings')"))
+_ns=float(_m['next_stake']); _sl=float(_m['sl']); _eng=_j.loads(_m['ef_engine'])
+print(f"LIVE TEST since {B['baseline_utc']} UTC")
+print(f"  NOW: ef_engine {_eng}, stake ${_ns:.2f} fixed, sl ${_sl:.0f}   (at baseline it was ${B['next_stake']:.2f})")
 m=c.execute("SELECT v FROM meta WHERE k='master'").fetchone()[0]
 print(f"  master now = {m}" + ("   <- LIVE, real money" if m=='true' else "   <- still off, every fill is paper"))
 rows=c.execute("""SELECT o.id,o.epoch,o.ts,o.status,o.plan FROM orders o
