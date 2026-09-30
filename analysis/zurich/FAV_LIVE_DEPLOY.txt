@@ -41,6 +41,30 @@ CHECKS, all against the RUNNING module and its own DB
             lane are LIVE 11 / PAPER 664 - and the LIVE 11 are the 09-28 incident orders, unchanged in
             count before and after this deploy. No new live order exists.
 
+RE-VERIFIED 01:14 UTC, 13 min after the restart, against the RUNNING module and its own DB
+  (a) PASS  master=false, ef_engine="fav", ef_enabled=true, next_stake=5.0. main_enabled=true and
+            reversal_enabled=true - MAIN and REVERSAL were NOT changed, as instructed. decide_log 4 s
+            old, tape1s 1 s old.
+  (b) PASS  the engine has made 1 FAV decision since the restart and it matches the frozen rule exactly:
+            09-30 01:11:00, epoch 1790730600, DOWN sec 60 ask 0.80 vol 0.2861. 1 matched, 0 differed.
+  (c) PASS  EF orders since the restart: PAPER 1, LIVE 0. EF by lane overall LIVE 11 / PAPER 664, and
+            the LIVE 11 are the 09-28 incident orders - unchanged. master=false.
+
+FIRST LIVE FAV DECISION ROW ON decide_log AFTER THE RESTART
+  ts_ms 1790730659973 (09-30 01:10:59 UTC)  epoch 1790730600  up_ask 0.21  dn_ask 0.80
+  side None  ask None  ev None  fire 0  reason "Warming up: 10 minutes of spot / 60 seconds of
+  perpetual trades"
+  READ THIS CAREFULLY, because it looks alarming and is not: the side/ask/ev/fire columns on decide_log
+  belong to the v10 classifier, which is still warming its spot and perp windows after the restart. FAV
+  does not use any of them. FAV reads up_ask and dn_ask from that same row - 0.21 and 0.80 - and DOWN at
+  0.80 is exactly the favourite it bought, inside the 0.65-0.85 band. So the row corroborates the
+  decision; the "Warming up / fire 0" text is the OTHER brain's state, not FAV's.
+
+STEPS 1-6 WERE ALREADY COMPLETE BEFORE V'S 01:1x MESSAGE ASKING FOR THEM (commit 3713d9a, deploy
+01:01:28 UTC). They were NOT run a second time: re-copying the module and restarting 8787 again would
+have caused a second avoidable outage on a live engine for no change whatsoever. Nothing was re-applied;
+the checks above are a fresh re-verification of the deploy that is already running.
+
 I CAUSED A 61 SECOND ENGINE OUTAGE, 01:00:27 -> 01:01:28 UTC, and it was avoidable
   I captured only DASHBOARD_PASSWORD out of the old process environment before killing it, so the first
   relaunch died on "Missing environment variables: POLYMARKET_PRIVATE_KEY, POLYMARKET_WALLET_ADDRESS,
