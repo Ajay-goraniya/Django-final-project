@@ -4,7 +4,7 @@
 These are the properties, not the strategy. A probe that loses money is a result; a probe that
 crosses the spread, outlives its cancel, doubles up, or reaches into 8787's orders is a fault.
 """
-import re, sqlite3, sys, time, unittest
+import re, sqlite3, sys, tempfile, time, unittest
 sys.path.insert(0, '/home/ubuntu/pm_paper_zurich')
 import maker_probe as M
 
@@ -323,6 +323,7 @@ class PostPathIntegration(unittest.TestCase):
         import asyncio
         self.loop = asyncio.new_event_loop()
         self.p = M.Probe(dry_run=True, db=mem())
+        self.p.logfile = tempfile.mktemp(suffix='.log')
         self.ep = int(time.time() // 300) * 300
         self.now = self.ep + 120            # a chosen second inside the 60-180 window
         self.p.gamma_db = ':none:'
@@ -423,11 +424,16 @@ class NoChasing(unittest.TestCase):
         act, _, _, why = self.q.decide(**{**OK, 'up_bid': 0.72, 'resting': self.rest(0.70)})
         self.assertEqual(act, 'cancel'); self.assertIn('ran >= 2 ticks', why)
 
-    def test_reason_3b_the_offer_coming_down_to_us_is_a_cancel(self):
-        """The unambiguous crossing test: if the ask reaches our resting price we are the crosser."""
-        act, _, _, why = self.q.decide(**{**OK, 'up_bid': 0.70, 'up_ask': 0.70,
-                                          'resting': self.rest(0.70)})
-        self.assertEqual(act, 'cancel'); self.assertIn('best ask', why)
+    def test_an_offer_reaching_our_resting_price_is_a_FILL_not_a_cancel(self):
+        """THE 18:30 REGRESSION. A resting BUY at 0.70 meeting an offer at 0.70 is us being filled
+        as the maker - the event the probe exists to measure. Cancelling there would guarantee the
+        probe never fills, which is the 17:00 symptom from the opposite cause."""
+        self.assertEqual(self.q.decide(**{**OK, 'up_bid': 0.70, 'up_ask': 0.70,
+                                          'resting': self.rest(0.70)})[0], 'hold')
+
+    def test_the_crossing_test_still_applies_to_a_NEW_post(self):
+        """Removing it from the resting branch must not weaken entry."""
+        self.assertEqual(self.q.decide(**{**OK, 'up_bid': 0.70, 'up_ask': 0.70})[0], 'none')
 
     def test_being_alone_at_the_top_of_the_book_is_NOT_a_cancel(self):
         """Our own order is in the book we read, so best bid == our price while we rest. A maker
@@ -483,6 +489,7 @@ class RejectBookkeeping(unittest.TestCase):
         import asyncio
         self.loop = asyncio.new_event_loop()
         self.p = M.Probe(dry_run=False, db=mem())
+        self.p.logfile = tempfile.mktemp(suffix='.log')   # never the committed report
         self.p.books = {'T': dict(bids=[(0.70, 9.0)], asks=[(0.72, 9.0)], ts=1000.0)}
 
         class Boom:
@@ -533,6 +540,7 @@ class DryRunRests(unittest.TestCase):
         import asyncio
         self.loop = asyncio.new_event_loop()
         self.p = M.Probe(dry_run=True, db=mem())
+        self.p.logfile = tempfile.mktemp(suffix='.log')
         self.ep = int(time.time() // 300) * 300
         self._orig = M.tokens_for
         M.tokens_for = lambda e, gamma_db=None: ('TOKUP', 'TOKDN') if e == self.ep else (None, None)
@@ -556,3 +564,15 @@ class DryRunRests(unittest.TestCase):
             self.loop.run_until_complete(self.p.one_pass(now=self.ep + t))
         self.assertEqual(self.p.posts_per_epoch[self.ep], 1,
                          f'posted {self.p.posts_per_epoch[self.ep]}x on a book that never moved')
+
+    def test_dry_mode_puts_our_virtual_order_into_the_book_it_reads(self):
+        """Live, our resting BUY is the best bid on its side. The dry sim must reproduce that or it
+        over-cancels on V's rule 3 and its resting life is meaningless."""
+        self.loop.run_until_complete(self.p.one_pass(now=self.ep + 120))
+        self.assertIsNotNone(self.p.resting)
+        px = self.p.resting['price']
+        self.p.books['TOKUP']['bids'] = [(px - 0.01, 500.0)]      # real bid ticks BELOW us
+        for t in range(121, 135):
+            self.loop.run_until_complete(self.p.one_pass(now=self.ep + t))
+        self.assertIsNotNone(self.p.resting, 'must still be resting: live we would be the best bid')
+        self.assertEqual(self.p.posts_per_epoch[self.ep], 1)

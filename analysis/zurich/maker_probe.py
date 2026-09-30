@@ -175,14 +175,18 @@ class Quoter:
             if own_bid is None:
                 return 'cancel', rs, rp, 'no book on our side'
             own_bid = float(own_bid)
-            # 3. we must never be the crosser. TWO tests, because "no longer <= best bid" is
-            #    ambiguous once our own order is IN the book we are reading: at that point the best
-            #    bid IS our price, so that test alone can only fire when our order has left the book.
-            #    The unambiguous one is against the ASK - if the offer has come down to our price we
-            #    are crossing, full stop - and it is the one that protects money.
-            own_ask = up_ask if rs == 'UP' else dn_ask
-            if own_ask is not None and rp >= float(own_ask) - 1e-9:
-                return 'cancel', rs, rp, f'price {rp:.2f} >= best ask {float(own_ask):.2f} (we would cross)'
+            # 3. we must never be the CROSSER - but that is a test on a NEW post, not on a resting
+            #    one, and conflating the two nearly destroyed the probe. I briefly cancelled a
+            #    resting order when the ask came down to our price. That is backwards: a resting BUY
+            #    at 0.70 meeting an offer at 0.70 is US BEING FILLED AS THE MAKER, which is the exact
+            #    event this probe exists to measure. The venue matches them; we do not cross anything.
+            #    The 18:30 dry run pulled all three orders that way, each after under a second - the
+            #    same "never fills" symptom as the 17:00 churn, from the opposite cause. So the ask
+            #    test lives ONLY in the post branch below, and an ask at or through our price is a
+            #    reason to CHECK FOR A FILL, never to cancel.
+            #    V's own form of rule 3 is kept as written, and it is a genuine safety net: our order
+            #    is in the book we read, so the best bid can only be below our price if we are NOT
+            #    where we think we are (already filled, or never rested). Re-sync by pulling.
             if rp > own_bid + 1e-9:
                 return 'cancel', rs, rp, f'price {rp:.2f} > best bid {own_bid:.2f} (we would cross)'
             # 4. the touch has run away from us
@@ -274,7 +278,9 @@ def settle(db, gamma_db=GAMMA_DB):
     return n
 
 
-def log(line, path=LOGFILE):
+def log(path, line):
+    """path first, and always explicit: the tests used to append real rows to the committed
+    MAKER_PROBE.txt because log() defaulted to it."""
     with open(path, 'a') as f: f.write(line.rstrip() + '\n')
 
 
@@ -296,6 +302,7 @@ class Probe:
         self.stale_book_token = None                   # set by a post-only reject
         self.stale_book_ts = None
         self.broker = None
+        self.logfile = LOGFILE   # per-instance so tests never write the committed report
         self.counts = collections.Counter()
         self.funnel = collections.Counter()   # every pass by gate reason, so '0 posts' is explainable
         self.stopped = ''
@@ -375,7 +382,7 @@ class Probe:
                 self.stale_book_token = token
                 self.stale_book_ts = (self.books.get(token) or {}).get('ts')
                 self.counts['postonly_reject'] += 1
-            log(f'[{time.strftime("%F %T", time.gmtime())}] REJECTED epoch {epoch} {side} {price} :: {msg[:200]}')
+            log(self.logfile, f'[{time.strftime("%F %T", time.gmtime())}] REJECTED epoch {epoch} {side} {price} :: {msg[:200]}')
             return None, row
         oid = str(getattr(r, 'order_id', '') or '')
         ok = bool(getattr(r, 'ok', False)) and oid
@@ -401,7 +408,7 @@ class Probe:
             self.db.execute('update orders set note=? where id=?',
                             (f'cancel raised {type(e).__name__}', r['row']))
             self.db.commit()
-            log(f'[{time.strftime("%F %T", time.gmtime())}] CANCEL ERROR {type(e).__name__} '
+            log(self.logfile, f'[{time.strftime("%F %T", time.gmtime())}] CANCEL ERROR {type(e).__name__} '
                 f'order {r["order_id"]} reason {reason}')
 
     def record_decision(self, epoch, sec, action, side, price, reason, vol, ub, dbid, ua, da, adv):
@@ -438,7 +445,7 @@ class Probe:
                          r['side'], ts_ms, price, matched, matched * (price or 0), before))
         self.db.commit()
         self.filled_epochs.add(epoch); self.resting = None; self.counts['fill'] += 1
-        log(f'[{time.strftime("%F %T", time.gmtime())}] FILL epoch {epoch} {r["side"]} '
+        log(self.logfile, f'[{time.strftime("%F %T", time.gmtime())}] FILL epoch {epoch} {r["side"]} '
             f'{matched:g}sh @ {price} bn_before {before if before is None else round(before,2)}bps')
         # the 1 s AFTER the fill is the adverse-fill measurement; recorded a second later
         asyncio.ensure_future(self._after(epoch, r['side'], ts_ms))
@@ -503,7 +510,7 @@ class Probe:
             try:
                 await self.one_pass()
             except Exception as e:
-                log(f'[{time.strftime("%F %T", time.gmtime())}] PASS ERROR {type(e).__name__}: {e}')
+                log(self.logfile, f'[{time.strftime("%F %T", time.gmtime())}] PASS ERROR {type(e).__name__}: {e}')
                 self.counts['error'] += 1
                 await asyncio.sleep(1)
 
@@ -522,6 +529,17 @@ class Probe:
         vol = self.fav.vol_before_open(ep)
         side_r = self.resting['side'] if self.resting else None
         adv = self.mover.adverse_bps(side_r) if side_r else None
+        if self.dry_run and self.resting:
+            # A dry run's order is virtual, so it is NOT in the book we read. Live, our own resting
+            # BUY IS in that book and is therefore the best bid on its side. Without this the dry
+            # run sees the real bid tick down one and fires V's rule 3 ("price > best bid") on an
+            # order that live would still be sitting at the front of the queue - it over-cancels by
+            # construction and reports a resting life that means nothing. Measured on the 18:35-19:00
+            # run: 6 of 9 cancels were this artifact. Dry-mode only; the live path reads the venue.
+            if self.resting['side'] == 'UP':
+                ub = self.resting['price'] if ub is None else max(ub, self.resting['price'])
+            else:
+                dbid = self.resting['price'] if dbid is None else max(dbid, self.resting['price'])
         fav_side, _ = Quoter.favourite(ub, dbid)
         fresh = self.book_fresh(tok_up if fav_side == 'UP' else tok_dn) if fav_side else True
         act, side, price, reason = self.quoter.decide(
@@ -553,7 +571,7 @@ class Probe:
                                      vol, ub, dbid, ua, da, adv)
                 if why.startswith(('DAY STOP', 'LIFETIME STOP')) and self.stopped != why:
                     self.stopped = why
-                    log(f'[{time.strftime("%F %T", time.gmtime())}] HARD STOP: {why}')
+                    log(self.logfile, f'[{time.strftime("%F %T", time.gmtime())}] HARD STOP: {why}')
                 return
             self.record_decision(ep, sec, act, side, price, reason, vol, ub, dbid, ua, da, adv)
             tok = tok_up if side == 'UP' else tok_dn

@@ -156,3 +156,53 @@ VERIFYING IT IS ACTUALLY RUNNING (live.log is EMPTY, and that is by design)
 ALERTS ARMED (watch.sh, polling every 20 s; exits on the first event so it is reported once)
   first live order | any error (PASS/CANCEL ERROR in the log) | either hard stop | 60 fills
   plus two the spec did not ask for: the process dying, and the ENABLED flag disappearing.
+[2026-09-30 17:01:11] PASS ERROR RequestRejectedError: invalid post-only order: order crosses book
+[2026-09-30 17:02:10] PASS ERROR RequestRejectedError: invalid post-only order: order crosses book
+[2026-09-30 17:02:35] PASS ERROR RequestRejectedError: invalid post-only order: order crosses book
+[2026-09-30 17:02:41] PASS ERROR RequestRejectedError: invalid post-only order: order crosses book
+[2026-09-30 17:02:53] PASS ERROR RequestRejectedError: invalid post-only order: order crosses book
+
+================================================================================================
+THE NO-CHASE FIX (V, 09-30 after the 17:00 candle). PROBE STAYS OFF THROUGHOUT.
+
+V's three fixes, all in, 76 tests passing:
+ (1) ONCE POSTED, THE ORDER RESTS. Four reasons to pull it and no others: Binance >= 2 bps against
+     us over the last second; sec > 180; V's rule 3 (our price no longer <= best bid); the bid ran
+     >= 2 ticks away. Ceiling of 3 posts per candle. The old 'bid_moved' re-post is gone.
+ (2) A venue rejection is recorded REJECTED with the venue's message, not left PENDING. The 5
+     historical rows were backfilled from the log.
+ (3) After a post-only reject the probe will not fire again off the same book read.
+
+RESULT ON THE REAL 17:00 BOOK (121 recorded steps over 260 s - the candle that caused all this)
+    OLD rule (chasing):  34 posts, ~0 s resting, 0 fills          <- matches the 34 real live orders
+    NEW rule:             3 posts, 118 s in the book of 260 s (45%)
+    All three ended on "bid ran >= 2 ticks away", i.e. the market moved up and left us, which is the
+    right reason to leave. The replay reproduces the live run exactly under the old rule, which is
+    what makes it trustworthy under the new one.
+
+TWO THINGS I GOT WRONG AND THE TESTING CAUGHT - both were mine, not V's brief
+ A. I added an ask-side crossing test for RESTING orders on my own initiative. It is backwards. A
+    resting BUY at 0.70 meeting an offer at 0.70 is US BEING FILLED AS THE MAKER - the exact event
+    this probe exists to measure. We cross nothing; the venue matches them. On a one-tick-spread
+    book it fires constantly: the 18:30 dry run pulled all 3 orders, each inside a second, giving
+    the same "never fills" symptom as the 17:00 churn from the opposite cause. The crossing test
+    now lives ONLY in the post branch, where it belongs.
+ B. The dry run was not simulating what it claimed. First it cleared self.resting immediately, so
+    nothing ever rested and the run measured only the per-candle cap - caught because the first
+    post-fix run reported exactly 3 posts on all 3 calm candles. Then, once a virtual order rested,
+    that order was not in the book being read, so the real bid ticking down one fired V's rule 3 on
+    an order that live would still be at the front of the queue: 6 of 9 cancels on the 18:35-19:00
+    run were that artifact, and it made resting life look like 1.5 s. Dry mode now puts our own
+    virtual order into the book on its side, exactly as the venue would. Same candle, same rule:
+    2% time-in-book before the correction, 45% after. Do not read any pre-19:07 dry-run life figure.
+ C. The unit tests were appending real log rows to THIS committed file, because log() defaulted to
+    it. 32 such lines removed; the log path is now per-instance and the tests write to a temp file.
+
+DRY RUNS AFTER THE FIX
+  18:35-19:06  3 calm candles, 3 posts each (the cap), but with the flawed resting sim - counts are
+               valid, resting life is not.
+  19:08-19:38  no calm candle at all (2990 passes vol >= 0.304), so 0 posts. No new information.
+  The per-candle count is therefore evidenced twice (cap binding at 3, and 3 on the 17:00 replay);
+  the resting-life figure rests on the 17:00 replay, which is real recorded book data.
+
+STILL OFF. ENABLED absent, no process running. No restart without a fresh yes from the owner.
