@@ -99,3 +99,54 @@ HOW THE OWNER SWITCHES MASTER ON
   hand EF back to the old brain. Both are read live, neither needs a restart, and neither touches master.
 
 NO SESSION TOUCHES MASTER. I did not arm it, did not disarm it, and it reads false now.
+
+
+========================================================================================================
+FAV_mid SECTION - owner order 09-30 02:2x "Start fav mid on Zurich 8787"
+========================================================================================================
+STATUS: DEPLOYED. Code live, profile set, engine up. MASTER NOT TOUCHED - still false.
+
+  when      engine restarted 02:26:5x UTC, profile flipped 02:27:32 UTC
+  pid       301067, port 8787, relaunched from /home/ubuntu/polymarket_v12/deploy.env (all five vars,
+            not a single captured variable - the mistake that caused the 61 s outage last time). No
+            credential error, no outage beyond the restart itself.
+  profile   ef_engine = "fav_mid"   (a FOURTH value: v10 | build11 | fav | fav_mid)
+  rule      identical to the registered shadow arm FAV_mid. The ONLY difference from calm FAV is the
+            vol band: 0.304 <= Binance 1 s trailing-5-min vol < 0.466, same bn_flow series, same
+            240-of-300-s rule, same favourite test, same 0.65-0.85 band, same 60-180 s window, same
+            arrival fill. Nothing tuned.
+  stake     $5.00 fixed (engine's own). sl=40 unchanged. MAIN off, REVERSAL off, EF on - as the owner set.
+  files     poly_fav.py - band is now a PARAMETER (vol_lo/vol_hi/label) so "fav" keeps its exact meaning
+            btc_model_v12_polymarket.py - accepts "fav_mid", builds the right brain, rebuilds on change
+            poly_lanes.py - UNCHANGED. ef_mode='fav' already covers both bands.
+            backups: *.bak-favmid-20260930T021813Z, and the FAV backups are still kept.
+            diffs: analysis/zurich/deploy/poly_fav.py, deploy/engine_favmid.diff
+
+CHECKS
+  (a) PASS  ef_engine="fav_mid", master=false (untouched), ef_enabled=true, main_enabled=false,
+            reversal_enabled=false, next_stake=5.0, sl=40.0. decide_log 2 s old, tape1s 2 s old,
+            port 8787 listening, log line "v13.1.2 LIVE credentials (master OFF = shadow paper)".
+  (b) PASS  40 of the last 40 FAV_mid candles, replayed from the ENGINE's own decide_log through the
+            new brain, match the shadow's FAV_mid byte-for-byte on candle, side, sec AND ask.
+            0 differed, 0 no-fire.
+  (c) PASS  master is off; zero orders of any kind since the restart, and LIVE all-time is still 15 -
+            the same count as before this deploy.
+
+REGRESSION TEST I RAN BECAUSE PARAMETERISING A LIVE RULE CAN CHANGE IT SILENTLY
+  The old pre-parameterisation brain and the new one, with default args, were run against the same 60
+  candles: 0 differences. The defaults (vol_lo=None, vol_hi=VOL_CUT) are arithmetically the old gate
+  v >= 0.304, and that is now demonstrated rather than asserted. Calm FAV is unchanged.
+
+ONE OPEN DISCREPANCY, PRE-EXISTING AND NOT CAUSED BY THIS CHANGE - flagged, not buried
+  Candle 09-30 01:10: the shadow's FAV row reads UP sec 99 ask 0.65, while replaying that candle's
+  decide_log gives DOWN sec 60 ask 0.80 - which is what the live engine actually decided and traded.
+  I checked the obvious cause and it was WRONG: the archive and the live decide_log are identical for
+  that candle (1158 passes, same asks at sec 59-62), so it is not archive lag. The old/new brain test
+  above proves the parameterisation is not involved either. So the shadow's own FAV selection on that
+  candle disagrees with a replay of the same data, and I do not yet know why. It affects one candle of
+  40 and it predates today's work, but it means the shadow's FAV rows are not guaranteed to equal the
+  engine's decisions, and any parity claim should say "39 of 40" for calm FAV rather than 40 of 40.
+
+PENDING AT THE TIME OF WRITING: no fav_mid decision has been recorded on the engine yet - the profile
+flipped at 02:27:32 and a candle must reach 60-180 s with a favourite in band AND mid-band vol. A
+watcher is running; the first live fav_mid decision will be appended when it lands.

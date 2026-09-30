@@ -31,6 +31,7 @@ import math, sqlite3, time
 
 BN_DB        = '/home/ubuntu/pm_multi/bn_flow.sqlite3'
 VOL_CUT      = 0.304      # frozen 09-22/23 Binance tercile; do NOT recompute forward
+VOL_MID_CUT  = 0.466      # the upper frozen tercile, for the FAV_mid band [0.304, 0.466)
 VOL_MIN_PTS  = 240        # of the 300 s before the open
 FF_MAX_S     = 60         # longest trade-less run the 1 s series will bridge
 SEC_LO, SEC_HI = 60, 180
@@ -42,7 +43,14 @@ LOOKBACK_S   = 3600       # only the last hour is ever needed for a 300 s window
 class FavBrain:
     """One instance per engine."""
 
-    def __init__(self, bn_db=BN_DB):
+    def __init__(self, bn_db=BN_DB, vol_lo=None, vol_hi=VOL_CUT, label='fav'):
+        # BAND AS A PARAMETER so "fav" keeps its exact meaning. The defaults reproduce calm FAV
+        # byte-for-byte: vol_lo None means no lower bound, vol_hi VOL_CUT means v < 0.304.
+        #   fav      vol_lo=None       vol_hi=0.304   ->  v < 0.304
+        #   fav_mid  vol_lo=0.304      vol_hi=0.466   ->  0.304 <= v < 0.466
+        # Nothing else differs between the two arms - same bn_flow series, same 240-of-300-s rule,
+        # same favourite test, same band 0.65-0.85, same 60-180 s window, same arrival fill.
+        self.vol_lo, self.vol_hi, self.label = vol_lo, vol_hi, label
         self.bn_db = bn_db
         self._px, self._at = {}, 0.0
         self.block = ''
@@ -117,8 +125,10 @@ class FavBrain:
             self.block = ('vol unavailable: bn_flow ' + self.feed_error) if self.feed_error \
                          else f'vol unavailable (<{VOL_MIN_PTS} s of bn_flow)'
             return None
-        if v >= VOL_CUT:
-            self.block = f'vol {v:.3f} >= {VOL_CUT}'; return None
+        if self.vol_lo is not None and v < self.vol_lo:
+            self.block = f'vol {v:.3f} < {self.vol_lo}'; return None
+        if v >= self.vol_hi:
+            self.block = f'vol {v:.3f} >= {self.vol_hi}'; return None
         self.block = ''
         self.last = dict(epoch=epoch, sec=int(sec), side=side, ask=own, vol=v)
         # p is the market's own favourite price. FAV is a MARKET rule with NO model, so the favourite's
@@ -126,11 +136,14 @@ class FavBrain:
         p = own
         return dict(kind='EF', side=side, p=round(p, 4),
                     probability_up=(p if side == 'UP' else 1.0 - p),
-                    sec=int(sec), engine='fav', how='CALM_FAVOURITE',
+                    sec=int(sec), engine=self.label,
+                    how=('CALM_FAVOURITE' if self.vol_lo is None else 'MID_FAVOURITE'),
                     price_rule='lane_cap', max_ask=BAND_HI, threshold=0.0,
-                    fav=dict(vol=round(v, 4), vol_cut=VOL_CUT, own_ask=round(own, 4), opp_ask=round(opp, 4)),
-                    reason=f'FAV:CALM {side} fav ask {own:.2f} opp {opp:.2f} '
-                           f'vol {v:.3f} < {VOL_CUT} sec {int(sec)}')
+                    fav=dict(vol=round(v, 4), vol_lo=self.vol_lo, vol_hi=self.vol_hi,
+                             own_ask=round(own, 4), opp_ask=round(opp, 4)),
+                    reason=f'{self.label.upper()}:{"CALM" if self.vol_lo is None else "MID"} {side} '
+                           f'fav ask {own:.2f} opp {opp:.2f} vol {v:.3f} in '
+                           f'[{self.vol_lo if self.vol_lo is not None else 0}, {self.vol_hi}) sec {int(sec)}')
 
     # ---- fire-time recheck -------------------------------------------------------------------------
     def still_valid(self, side, up_ask, dn_ask):
