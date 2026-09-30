@@ -1,0 +1,14 @@
+M12: 20 arms x 20 days (2026-09-11..2026-09-30), strict, $10/trade
+(1) persistence: corr(arm $ yesterday, arm $ today) = -0.065 over 380 arm-day pairs; P(today > 0 | yesterday > 0) = 0.42 vs P(today > 0 | yesterday <= 0) = 0.46
+(2) allocator, scored 2026-09-16..2026-09-30 (15 days):
+   trade arms positive over last 1 day(s): $  -1172.9  worst drop  1245.6  days + 4/15
+   trade arms positive over last 2 day(s): $   -900.1  worst drop  1162.4  days + 5/15
+   trade arms positive over last 3 day(s): $   -628.3  worst drop   754.2  days + 6/15
+   trade arms positive over last 5 day(s): $   -165.6  worst drop   500.8  days + 8/15
+   all 20 arms, every day:            $  -1943.3  worst drop  2493.4  days + 5/15
+   HINDSIGHT best single arm (calm(causal)|Europe): $   +146.8  worst drop    44.5  days + 9/15   <- not tradeable
+   HINDSIGHT "only the arms that won that day": $  +2842.3  <- what "it worked partially in a day" looks like, not tradeable
+
+VERDICT (V, 09-30): "use the parts that worked in a day" FAILS. A strategy's win yesterday does not carry to today (corr -0.065;
+P(win today | won yesterday) 0.42 vs 0.46 after a loss). Every walk-forward allocator loses (-166 .. -1,173 over 15 days).
+The +2,842 "only the arms that won that day" is hindsight - it is exactly what partial daily wins look like and cannot be traded.
