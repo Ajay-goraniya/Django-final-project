@@ -1,0 +1,20 @@
+M6 strict TAKER FAV family, 5584 candles 09-11..09-30; $100 start, $10 per trade, ruin < $10.
+arm                    slip     n  win% total$ (no stop) worst drop$  days+           $100 account
+FAV calm<0.304         0.00  2260  74.4           +330.5       280.9  11/20    broke on 2026-09-11
+FAV calm<0.304         0.01  2260  74.4            +19.9       324.2   9/20    broke on 2026-09-11
+FAV_mid 0.304-0.466    0.00  1467  71.6           -362.3       476.9   8/20    broke on 2026-09-15
+FAV_mid 0.304-0.466    0.01  1467  71.6           -555.7       647.3   5/20    broke on 2026-09-15
+FAV_all                0.00  5229  72.3           -729.9      1068.9   7/20    broke on 2026-09-11
+FAV_all                0.01  5229  72.3          -1428.0      1572.2   5/20    broke on 2026-09-11
+calm causal cut        0.00  1787  72.9           -110.1       395.6   6/17    broke on 2026-09-17
+calm causal cut        0.01  1787  72.9           -350.7       511.1   5/17    broke on 2026-09-17
+
+per day, +1c slip:
+  FAV calm<0.304         11:-82 12:+57 13:-16 14:-3 15:+66 16:-38 17:+69 18:-61 19:+1 20:-61 21:-26 22:-61 23:-20 24:+103 25:-24 26:-84 27:+119 28:+35 29:+39 30:+7
+  FAV_mid 0.304-0.466    11:+3 12:-11 13:-2 14:-56 15:-188 16:+10 17:-17 18:-52 19:+12 20:-37 21:+21 22:-45 23:-130 24:-7 25:-5 26:-3 27:-32 28:-41 29:+73 30:-47
+  FAV_all                11:-83 12:+40 13:-12 14:-118 15:-223 16:-80 17:+92 18:-262 19:-36 20:-112 21:-124 22:-121 23:-298 24:+15 25:-91 26:-79 27:+54 28:-3 29:+39 30:-27
+  calm causal cut        14:-17 15:-18 16:-31 17:+48 18:-153 19:-4 20:-66 21:-26 22:-55 23:-118 24:+99 25:-42 26:-83 27:+105 28:-6 29:+10 30:+5
+
+VERDICT (V, 09-30 12:1x): the taker FAV family FAILS the strict 20-day test. FAV_mid -362/-556, FAV_all -730/-1428, calm causal -110/-351.
+FAV calm (fixed 0.304) is +330 at zero slippage but +20 at +1c, with a 281-324 worst drop; a $100 account at $10 is broke on day 1 (09-11 -82).
+Zurich's 09-29/30 paper gains sit on the best 3-day stretch of the 20 (09-27..29). No FAV variant is a stable model.
