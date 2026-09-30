@@ -1,0 +1,38 @@
+(A) London REAL EF fills by session (pnl $, stake-weighted $/1, n, first-half $ / second-half $):
+   Asia 00-07    n  76  $  -25.77  $/1 -0.041  halves  +20.33 /  -46.10
+   Europe 07-13  n  64  $  -76.02  $/1 -0.135  halves  -64.69 /  -11.33
+   US 13-20      n 127  $  +92.11  $/1 +0.088  halves +123.18 /  -31.07
+   Late 20-24    n  29  $  +58.50  $/1 +0.220  halves  +34.59 /  +23.91  *n<60
+
+(B) taker FAV family, strict (+1c), walk-forward session choice: train 09-11..20 -> sealed test 09-21..30
+  FAV calm<0.304:
+     Asia 00-07: train -32 (n408) test -51 (n341)
+     Europe 07-13: train +81 (n385) test +59 (n237) KEEP
+     US 13-20: train +16 (n239) test +52 (n170)
+     Late 20-24: train -134 (n222) test +29 (n258)
+     -> sessions kept ['Europe 07-13']; TEST with session filter: n 237 $ +58.6, days + 7/10; TEST trading all sessions: $ +88.7
+  FAV_mid 0.304-0.466:
+     Asia 00-07: train -228 (n250) test -107 (n262)
+     Europe 07-13: train -68 (n183) test -43 (n204)
+     US 13-20: train -50 (n165) test -16 (n175)
+     Late 20-24: train +7 (n131) test -50 (n97)
+     -> sessions kept none; TEST with session filter: n 0 $ +0.0, days + 0/0; TEST trading all sessions: $ -215.9
+  FAV_all:
+     Asia 00-07: train -452 (n795) test -309 (n778)
+     Europe 07-13: train -37 (n674) test -43 (n635)
+     US 13-20: train -75 (n761) test -226 (n724)
+     Late 20-24: train -231 (n454) test -56 (n408)
+     -> sessions kept none; TEST with session filter: n 0 $ +0.0, days + 0/0; TEST trading all sessions: $ -633.3
+
+(C) CHECK of the one kept cell: FAV calm, Europe 07-13 UTC, all 20 days, strict taker
+  slip +0.01: n 622, win 76.0%, $ +139.8 ($/1 +0.0225), worst drop 91.0, days + 12/20, $100 acct ends 240
+   per day: 09-11 -11  09-12 +47  09-13 -41  09-14 -7  09-15 +18  09-16 -15  09-17 +16  09-18 -3  09-19 +29  09-20 +49  09-21 +2  09-22 -3  09-23 -1  09-24 +23  09-25 +29  09-26 +11  09-27 +0  09-28 +3  09-29 -28  09-30 +22
+  slip +0.02: n 622, win 76.0%, $ +54.9 ($/1 +0.0088), worst drop 109.9, days + 10/20, $100 acct ends 155
+  slip +0.03: n 622, win 76.0%, $ -27.8 ($/1 -0.0045), worst drop 139.7, days + 9/20, $100 acct broke 2026-09-20
+  all 12 arm x session cells (train $, test $): FAV 00h -32/-51; FAV 07h +81/+59; FAV 13h +16/+52; FAV 20h -134/+29; FAV_mid 00h -228/-107; FAV_mid 07h -68/-43; FAV_mid 13h -50/-16; FAV_mid 20h +7/-50; FAV_all 00h -452/-309; FAV_all 07h -37/-43; FAV_all 13h -75/-226; FAV_all 20h -231/-56
+  test $ of all 12 cells: mean -63.4; cells with test >= +58.6: 0/12
+
+VERDICT (V, 09-30): sessions do not rescue London's EF (US +92 / Europe -76 on real fills, but the US halves flip +123/-31; n 29-127).
+One weak candidate: taker FAV calm, EUROPE 07-13 UTC only - chosen on 09-11..20 (+81), held on sealed 09-21..30 (+59, 7/10 days);
+20 days +140 at +1c (P/DD 1.54, 12/20 days, $100 -> 240), +55 at +2c, -28 at +3c (broke). The edge (~2c per $1) is the size of
+1-2c of execution error, so it is NOT trusted; it needs forward paper with real fill prices. 11 of 12 arm x session cells lose on test.
