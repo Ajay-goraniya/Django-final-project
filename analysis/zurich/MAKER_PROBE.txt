@@ -304,3 +304,12 @@ DRY RUN 22:20-22:40 UTC ON THE LIVE FEEDS, owner rule, and it answers my own cav
   session that motivated the change).
   Sample is still 3 calm candles total across replay and dry run. The thing none of this can tell us
   is whether resting for 121 s actually produces a FILL - that needs the live probe and the owner's yes.
+
+TRACEABILITY: the owner's option-A decision is recorded by V in analysis/v/maker2/MAKER_PROBE_SPEC.md
+at git 54d1e1e. It was already implemented here before that note reached me - option A landed in
+0eacc29 and its live-feed confirmation in 82754c9 - so this line exists only to tie the two together,
+not to mark further work. Verified against the running file rather than assumed: the sole remaining
+mention of "bid ran >= 2 ticks" in maker_probe.py is the comment explaining why it is gone, and the
+resting branch is now exactly: 2 bps adverse -> cancel, sec outside 60-180 -> cancel, else HOLD.
+A fill is the third way an order leaves, and it is handled BEFORE any decision is acted on, by the
+every-pass fill check from fix (a).
