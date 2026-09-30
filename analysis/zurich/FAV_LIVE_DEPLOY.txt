@@ -184,3 +184,52 @@ THE 09-30 01:10 DISCREPANCY IS NOW EXPLAINED, AND IT IS A REAL DEFECT IN THE SHA
   (A/B/C/D/E/F/S all consume v10's p); it is wrong only for the model-free FAV family.
   NOT FIXED HERE. Changing load_candles would alter how every registered arm's rows are built, and that
   is not mine to do mid-experiment on a registered forward test. Flagged for V to decide.
+
+
+========================================================================================================
+FIX 12.25.2 - the v10 classifier could route orders while ef_engine was fav/fav_mid
+========================================================================================================
+STATUS: FIXED AND PROVEN. master stayed OFF throughout and reads false.
+
+THE DEFECT WAS MINE. A gate already existed for build11 and my fav/fav_mid deploy did not extend it.
+ef_engine selects which brain owns the LANE EF slot; it never silenced the v10 classifier's own fire
+path in _decide_once. So with ef_engine="fav_mid" BOTH could send live orders, and on 09-30 03:00:56
+the v10 path sent one: sec 56 (outside FAV's 60-180), cheap side at 0.39, -$9.9995 - 79% of that
+session's live loss, on a trade the fav rule would never make.
+
+THE DIFF (smallest possible: the gate's engine list, plus the predicate extracted so it is testable)
+  -            if self.ef_engine()=='build11':
+  -                d=dict(d,fire=False,reason='EF engine build11 (lane) - v10 shadow: '+...)
+  +            _efe=self.ef_engine()
+  +            if self._v10_order_blocked(_efe):
+  +                d=dict(d,fire=False,reason=f'EF engine {_efe} (lane) - v10 shadow: '+...)
+  and a new one-line predicate beside _routing_live:
+  +    LANE_EF_ENGINES=('build11','fav','fav_mid')
+  +    @classmethod
+  +    def _v10_order_blocked(cls,engine): return engine in cls.LANE_EF_ENGINES
+  The order path routes only on d['fire'], so fire=False means no order while the v10 row is still
+  WRITTEN to decide_log as a shadow - exactly what was asked. Any future lane brain must be added to
+  LANE_EF_ENGINES or v10 will silently trade again; that is why the list is named and tested.
+  Backups: btc_model_v12_polymarket.py.bak-v10gate-20260930T035000Z, test_polymarket.py.bak-v10gate-*
+
+CHECKS against the RUNNING module, master off, engine relaunched from deploy.env only (pid 304878)
+  (a) PASS  the 03:00 incident replayed through the patched gate: that candle had 107 v10 rows with
+            fire=1 under the old code; every one now yields blocked=True, final fire=False, NO ORDER.
+  (b) PASS  v10 EF candidate fires (decide_log fire=1) under fav_mid:
+              BEFORE  199 in the preceding 2 h   -> each one was eligible to route an order
+              AFTER     0 of 360 rows since the restart
+            and the v10 reason text now reads "EF engine fav_mid (lane) - v10 shadow: ...".
+  (c) PASS  fav_mid replay still matches the shadow 40/40 on candle, side, sec and ask. 0 differed.
+  (d) PASS  master=false; zero orders of any kind since the restart; ef_engine "fav_mid",
+            ef_enabled true, main_enabled false, reversal_enabled false, next_stake 10.0, sl 50.0 -
+            all unchanged by this fix.
+
+TESTS ADDED (test_polymarket.py, class V10GateTests, 4 tests; full suite 76 tests OK)
+  - every lane engine blocks the v10 order path
+  - only "v10" allows it
+  - a FIRING v10 decision under fav_mid ends with fire=False (the decisive one)
+  - a typo'd engine name does NOT look like a lane engine, so it cannot accidentally block
+
+ONE CORRECTION TO MY OWN EARLIER NUMBER: I annotated the LIVE order count as "16 before this restart".
+That was wrong. 16 was the count at ~02:5x; by this restart it was already 24 (11 from the 09-28
+incident + 4 at 01:xx + 4 at 02:xx + 5 at 03:xx). No orders were placed during or after the restart.
