@@ -10,3 +10,7 @@ TEST = 09-21..09-30, untouched until the selection is written to disk. Report: n
 cells' pooled test $/1, per-day test $, and a null: the same selection rule applied with TRAIN labels shuffled across candles within
 (s, price bucket) 200 times -> how often a random selection does as well on test. A model is only "trusted" if the pooled test result is
 positive after costs, >= 60% of test days positive, and beats >= 95% of the null draws.
+
+## M7b (written before running): the same scan on ETH 5m (Binance ETHUSDT) and BTC 15m (L=900). Only changes: decision points L/10..9L/10,
+momentum look-back L/10, and the vol regime = terciles of that market's trailing 5-min vol computed on TRAIN days only (the BTC 0.304/0.466
+cuts are in BTC units). Same train/test split, same selection bar, same null, same "trusted" bar.
