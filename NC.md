@@ -874,3 +874,8 @@ the Predict.fun bots, it wasn't based on how everyone reacts."
   cap. Partial fills now modelled like a real FAK (min(want, depth <= cap), level-weighted; all-or-nothing kept as reference); depth is
   truncated at level 1, labelled a FLOOR (V: leave it). 34 FAV rows scored by the buggy simulator deleted; arms re-accrue from 01:30.
   First daily FAV ledger ~00:00 UTC 09-30.
+
+- **PASSIVE FAV (V, 09-30, analysis/v/maker2/): FOUND, THEN FAILED THE STRICT TEST - RETRACTED.** M2 on the public tape (09-26..28, fresh
+  09-28..30) looked like P/DD 2-5, but it took its price from real maker fills. M5 strict (decide first, trade-through fills, +1c, causal calm
+  cut, $100/$10, 5,584 candles 09-11..30): every tape variant goes broke; strict -335 / -778 over 20 days. Regime switching (M4) and pre-open
+  both-sides bids (M3) also lose. Zurich's PFAV paper arm (live since 09-30 09:25) uses the lenient fill and should be read with this in mind.
