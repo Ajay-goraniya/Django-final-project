@@ -1,0 +1,6 @@
+M14 result (London, relayed 09-30 16:37; London's files analysis/london/SKIPRULE_M14.txt + m14.py are local on London, not pushed)
+7 fire-time features x skip worst 10/20/30% = 21 cells. Train 09-23..27 n178, sealed test 09-28..30 n159.
+Only 1/21 passed train: skip ask >= 0.51 (worst 30%). SEALED TEST: PnL -27.15 vs baseline -14.73; the 50 skipped fires were net +12.42
+(62% win) -> FAIL. verify: sample FAIL (50<60), paired p 0.119, null FAIL, halves PASS.
+Early-second and high-rv60 skips look good on test (+62..+76) but were net winners on train -> sign flip, not readable.
+VERDICT: no fire-time single-feature skip meets the owner's bar. Nothing proposed.
