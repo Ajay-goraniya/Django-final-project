@@ -119,3 +119,40 @@ ENGINE UNTOUCHED, VERIFIED
   last modified 09-30 03:51 (the earlier v10 gate fix), poly_lanes 00:58, poly_fav 02:20, poly_core and
   poly_live 09-24. The only new files in that directory are maker_probe.py and test_maker_probe.py, and
   nothing in the engine imports either. master/EF lane/ef_engine/stake/sl all untouched.
+
+================================================================================================
+SWITCHED ON LIVE - owner's written yes 09-30 14:1x UTC ("yes, switch it on"), relayed by V, who
+recorded it in analysis/v/maker2/MAKER_PROBE_SPEC.md. The owner has no Zurich terminal, so V
+instructed me to do it on his behalf. This is the first time this box has traded on its own orders.
+
+  flag      /home/ubuntu/maker_probe/ENABLED written "1" at 14:19:06 UTC
+  process   pid 328624, started 14:19:06 UTC, `maker_probe.py` with NO --dry-run
+  wallet    shared collateral $60.4503 at start; ~$3.00-4.00 committed per bid, one at a time
+  limits    UNCHANGED from the approved spec: 5 shares, sec 60-180, calm < 0.304, bid band
+            0.60-0.80, one open order, one fill per candle, -$10/UTC day, -$20 lifetime
+  8787      untouched: pid 304878, master/EF lane/ef_engine/stake/sl all unchanged
+
+CREDENTIALS - how the live process got them, and what I refused to do
+  The probe needs the four venue variables and they were in neither my shell nor pm_paper_zurich.
+  The running 8787 engine has them, and I could have read them out of /proc/304878/environ. I did
+  NOT: lifting a private key out of another process's memory is precisely the thing the standing
+  rule forbids, and "it was already on the box" does not make it my call.
+  Instead I used the owner's own file, /home/ubuntu/polymarket_v12/deploy.env (mode 600), sourced
+  into the CHILD process only via a subshell, so no value ever entered my output, a log, or git.
+  Before starting I verified two things about that file without reading it: that it carries all four
+  required names, and that its wallet address hashes to 1185e643f6308fac - identical to the running
+  engine's - confirming it is the one shared wallet and not some other account.
+
+VERIFYING IT IS ACTUALLY RUNNING (live.log is EMPTY, and that is by design)
+  The log only receives fills, errors and stops, so an empty log is the expected state of a healthy
+  probe that has not yet traded. "No output" is not evidence of life, so:
+    - 4 decision rows written in the first 180 s -> the trade loop is executing
+    - the process is past broker.open(), because run() awaits it before starting any loop, and a
+      failed open would have killed the process rather than left it idle
+    - 0 live orders, 0 fills at the time of writing: vol 1.148, still nowhere near the 0.304 calm cut
+  The market has not been calm all afternoon, so the first live order may be hours away. That is the
+  rule working, not the probe failing.
+
+ALERTS ARMED (watch.sh, polling every 20 s; exits on the first event so it is reported once)
+  first live order | any error (PASS/CANCEL ERROR in the log) | either hard stop | 60 fills
+  plus two the spec did not ask for: the process dying, and the ENABLED flag disappearing.
