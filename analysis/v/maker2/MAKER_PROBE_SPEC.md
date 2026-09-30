@@ -10,3 +10,5 @@ Goal: measure, with real orders, whether a post-only bid that cancels on a Binan
 ## OWNER YES 09-30 ~12:5x UTC: 'Okay test it' (reply to this spec). Build on Zurich, default OFF; live only when the owner switches it on.
 
 ## OWNER 09-30 14:14 UTC: 'yes, switch it on' (owner has no Zurich terminal; asked Zurich to create ENABLED and start the process on his behalf). Limits unchanged: -$10/day, -$20 lifetime, 5 shares.
+
+## OWNER 09-30 20:07 UTC: 'Yes' to restart the FIXED maker probe (bab8dc4: rest-don't-chase, max 3 posts/candle, REJECTED status). Limits unchanged.
