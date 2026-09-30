@@ -8,3 +8,5 @@ Goal: measure, with real orders, whether a post-only bid that cancels on a Binan
   on the same candles. PASS only if $/fill > 0 after 20% rebates and adverse share clearly below M5's; otherwise the maker path is closed.
 
 ## OWNER YES 09-30 ~12:5x UTC: 'Okay test it' (reply to this spec). Build on Zurich, default OFF; live only when the owner switches it on.
+
+## OWNER 09-30 14:14 UTC: 'yes, switch it on' (owner has no Zurich terminal; asked Zurich to create ENABLED and start the process on his behalf). Limits unchanged: -$10/day, -$20 lifetime, 5 shares.
