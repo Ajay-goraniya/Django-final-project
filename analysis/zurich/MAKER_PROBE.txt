@@ -293,3 +293,14 @@ the REAL Binance 1 s series out of bn_flow (803 ticks) rather than an assumed ze
       hard stops, asserted end to end;
   (b) same-second lockout after a post-only reject.
 STILL OFF: ENABLED absent, no process. The owner gives a fresh yes after this report.
+
+DRY RUN 22:20-22:40 UTC ON THE LIVE FEEDS, owner rule, and it answers my own caveat above.
+  2 calm candles, ONE post each, each rested 121.0 s - the entire 60-180 window - both ending on the
+  180 s boundary. 2,359 passes spent in the resting state against 4 cancels in the whole run.
+  This used the real ms aggTrade websocket, not the 1 s bn_flow series, so the more sensitive version
+  of the 2 bps test ALSO did not fire on a calm candle. That was the caveat I put on the replay and it
+  does not hold up as a worry: the sensitivity is not what was stopping us resting - the 2-tick rule
+  was. Three independent looks now agree (recorded 17:00 book, live dry feeds, and the live 21:00-21:20
+  session that motivated the change).
+  Sample is still 3 calm candles total across replay and dry run. The thing none of this can tell us
+  is whether resting for 121 s actually produces a FILL - that needs the live probe and the owner's yes.
