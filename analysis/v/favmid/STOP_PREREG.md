@@ -10,3 +10,9 @@ Per S: fills, $, maxDD, P/DD, days+/-, H1/H2, # stopped, avg stop loss.
 A stop level is a candidate ONLY if on BOTH sets: $ >= base-rule $ * 0.8, maxDD <= 0.6 * base maxDD,
 both halves > 0, and the P/DD curve over S is monotone or flat near the pick (no lone peak).
 Paper only. Stake stays fixed; compounding needs the owner's two confirmations and is not part of this.
+
+## VERDICT 09-30 02:1x - REJECTED on V's set (Zurich run not needed: fails at every S)
+No-stop calm FAV on 09-13..16: +149.15, DD 68.62, P/DD 2.17, 4/4 days, H1 +80.66 / H2 +68.49.
+Every stop level CUTS profit (to +2.93..+85.58) and does NOT cut drawdown (61.7..77.5 vs 68.6).
+Mechanism: the favourite's bid dips and recovers - 78..127 of 255 trades get stopped, many of them eventual winners.
+In-trade stop for FAV is closed.
