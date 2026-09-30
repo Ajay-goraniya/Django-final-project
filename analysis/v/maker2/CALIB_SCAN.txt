@@ -1,0 +1,11 @@
+M7 scan: 71293 (candle, s, side) rows; cells with train rows 3008; SELECTED on train 2
+  s= 30 price 0.55-0.60 mom=up   vol=calm binance=flat       train n 147 +0.057/$1   TEST n 120 +0.057/$1
+  s= 60 price 0.40-0.45 mom=down vol=calm binance=flat       train n 114 +0.096/$1   TEST n  75 -0.325/$1
+
+TEST (sealed) pooled: n 195, -0.0899 per $1, $ at $10/trade -175.2; test days positive 4/10
+  per test day $: 09-21 -21  09-22 -6  09-23 +40  09-24 -0  09-25 +38  09-26 -127  09-27 -23  09-28 +2  09-29 -115  09-30 +39
+NULL (200 label-shuffled selections): test $ median -72.0, p95 +68.2; draws >= ours: 120/200
+
+VERDICT (V, 09-30): NO TRUSTED MODEL on BTC 5m as a taker. 3,008 cells scanned on 09-11..20; 2 passed the train bar; sealed test 09-21..30:
+-0.090/$1, -$175 at $10, 4/10 days; 120 of 200 random (label-shuffled) selections did as well -> indistinguishable from chance.
+The one cell that held (s=30, price 0.55-0.60, rising, calm, Binance flat: train +0.057 n147, test +0.057 n120) is 1 of 3,008 - watch only.
