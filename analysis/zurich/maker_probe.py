@@ -40,6 +40,8 @@ ADVERSE_WINDOW_S = 1.0
 DAY_STOP         = -10.0         # realised $ in a UTC day -> off for the day
 LIFE_STOP        = -20.0         # realised $ lifetime     -> off for good
 POST_ONLY        = True
+MAX_POSTS_PER_CANDLE = 3   # 09-30: the 17:00 candle took 34 posts and got 0 fills. Hard ceiling.
+TICK             = 0.01
 
 HOME        = '/home/ubuntu/maker_probe'
 DB_PATH     = HOME + '/maker_probe.sqlite3'
@@ -132,13 +134,19 @@ class Guard:
 class Quoter:
     """The rule, as a pure function of the state it is given. No clock, no network, no I/O.
 
-    decide() returns one of:
-      ('post',   side, price, reason)   - no order resting, conditions hold
-      ('cancel', side, price, reason)   - an order is resting and must come off NOW
-      ('hold',   None, None, reason)    - resting order stays where it is
-      ('none',   None, None, reason)    - nothing to do
-    Re-joining a risen bid is expressed as a cancel with reason 'bid_moved'; the next pass posts
-    again. That keeps "one open order at a time" true by construction rather than by care.
+    decide() returns ('post'|'cancel'|'hold'|'none', side, price, reason).
+
+    09-30, AFTER THE FIRST LIVE CANDLE: the original version re-posted whenever the best bid moved
+    by a tick. On the 17:00 candle that produced 34 orders in ~2 minutes and ZERO fills - we chased
+    the book and were never still long enough to be hit. V's fix, and it is now the rule:
+    ONCE POSTED, THE ORDER RESTS. There are exactly four reasons to pull it, and a bid that merely
+    moved is not one of them:
+        1. Binance moved >= 2 bps against our side over the last second
+        2. sec > 180 (or the candle ended, which the loop handles)
+        3. our price is no longer <= the best bid - i.e. we would now be the crosser
+        4. the best bid has run >= 2 ticks away from us, so we are no longer near the touch
+    Plus at most MAX_POSTS_PER_CANDLE posts in one candle, so even a pathological book cannot turn
+    this into an order-spam loop again.
     """
     def __init__(self, bid_lo=BID_LO, bid_hi=BID_HI, sec_lo=SEC_LO, sec_hi=SEC_HI):
         self.bid_lo, self.bid_hi, self.sec_lo, self.sec_hi = bid_lo, bid_hi, sec_lo, sec_hi
@@ -151,49 +159,58 @@ class Quoter:
         return ('UP', float(up_bid)) if up_bid > dn_bid else ('DOWN', float(dn_bid))
 
     def decide(self, *, sec, up_bid, dn_bid, up_ask, dn_ask, vol, resting, adverse,
-               filled_this_candle):
+               filled_this_candle, posts_this_candle=0, book_fresh=True):
         if filled_this_candle:
             return ('cancel', None, None, 'already filled this candle') if resting else \
                    ('none', None, None, 'already filled this candle')
-        # --- reasons to pull an order that is already resting, strongest first ---
+
+        # ---------- a resting order: the ONLY four reasons to pull it ----------
         if resting:
+            rs, rp = resting['side'], float(resting['price'])
             if adverse is not None and adverse >= ADVERSE_BPS:
-                return 'cancel', resting['side'], resting['price'], f'adverse {adverse:.2f}bps'
-            if sec > self.sec_hi:
-                return 'cancel', resting['side'], resting['price'], f'sec {sec} > {self.sec_hi}'
-        if sec < self.sec_lo:
-            return ('cancel', resting['side'], resting['price'], f'sec {sec} < {self.sec_lo}') if resting \
-                   else ('none', None, None, f'sec {sec} < {self.sec_lo}')
-        if sec > self.sec_hi:
-            return 'none', None, None, f'sec {sec} > {self.sec_hi}'
-        if vol is None:
-            return ('cancel', resting['side'], resting['price'], 'vol unavailable') if resting \
-                   else ('none', None, None, 'vol unavailable')
-        if vol >= VOL_CUT:
-            return ('cancel', resting['side'], resting['price'], f'vol {vol:.3f} >= {VOL_CUT}') if resting \
-                   else ('none', None, None, f'vol {vol:.3f} >= {VOL_CUT} (not calm)')
+                return 'cancel', rs, rp, f'adverse {adverse:.2f}bps'
+            if sec > self.sec_hi or sec < self.sec_lo:
+                return 'cancel', rs, rp, f'sec {sec} outside {self.sec_lo}-{self.sec_hi}'
+            own_bid = up_bid if rs == 'UP' else dn_bid
+            if own_bid is None:
+                return 'cancel', rs, rp, 'no book on our side'
+            own_bid = float(own_bid)
+            # 3. we must never be the crosser. TWO tests, because "no longer <= best bid" is
+            #    ambiguous once our own order is IN the book we are reading: at that point the best
+            #    bid IS our price, so that test alone can only fire when our order has left the book.
+            #    The unambiguous one is against the ASK - if the offer has come down to our price we
+            #    are crossing, full stop - and it is the one that protects money.
+            own_ask = up_ask if rs == 'UP' else dn_ask
+            if own_ask is not None and rp >= float(own_ask) - 1e-9:
+                return 'cancel', rs, rp, f'price {rp:.2f} >= best ask {float(own_ask):.2f} (we would cross)'
+            if rp > own_bid + 1e-9:
+                return 'cancel', rs, rp, f'price {rp:.2f} > best bid {own_bid:.2f} (we would cross)'
+            # 4. the touch has run away from us
+            if own_bid - rp >= 2 * TICK - 1e-9:
+                return 'cancel', rs, rp, f'bid {own_bid:.2f} ran >= 2 ticks from {rp:.2f}'
+            return 'hold', rs, rp, f'resting {rp:.2f} vs bid {own_bid:.2f}, sec {sec}'
+
+        # ---------- nothing resting: may we post? ----------
+        if sec < self.sec_lo: return 'none', None, None, f'sec {sec} < {self.sec_lo}'
+        if sec > self.sec_hi: return 'none', None, None, f'sec {sec} > {self.sec_hi}'
+        if posts_this_candle >= MAX_POSTS_PER_CANDLE:
+            return 'none', None, None, f'{posts_this_candle} posts this candle (max {MAX_POSTS_PER_CANDLE})'
+        if not book_fresh:
+            # 09-30 fix (3): after a post-only rejection we do not fire again off the same book read.
+            return 'none', None, None, 'awaiting a fresh book after a post-only reject'
+        if vol is None: return 'none', None, None, 'vol unavailable'
+        if vol >= VOL_CUT: return 'none', None, None, f'vol {vol:.3f} >= {VOL_CUT} (not calm)'
         side, bid = self.favourite(up_bid, dn_bid)
-        if side is None:
-            return ('cancel', resting['side'], resting['price'], 'no favourite') if resting \
-                   else ('none', None, None, 'no favourite')
+        if side is None: return 'none', None, None, 'no favourite'
         if not (self.bid_lo <= bid <= self.bid_hi):
-            return ('cancel', resting['side'], resting['price'], f'bid {bid:.2f} outside band') if resting \
-                   else ('none', None, None, f'bid {bid:.2f} outside {self.bid_lo}-{self.bid_hi}')
+            return 'none', None, None, f'bid {bid:.2f} outside {self.bid_lo}-{self.bid_hi}'
         ask = up_ask if side == 'UP' else dn_ask
-        # NEVER CROSS. post_only on the signed order is the venue's guarantee; this is ours, and it
-        # is the one that also catches a book we have misread rather than only a book that moved.
+        # NEVER CROSS. post_only is the venue's guarantee; this is ours. The 17:00 candle proved both
+        # are needed: 5 of 34 passed this check on our book and were still refused by the venue.
         if ask is None or not (bid < float(ask)):
-            return ('cancel', resting['side'], resting['price'], 'would cross') if resting \
-                   else ('none', None, None, f'would cross (bid {bid} >= ask {ask})')
+            return 'none', None, None, f'would cross (bid {bid} >= ask {ask})'
         if adverse is not None and adverse >= ADVERSE_BPS:
-            return ('cancel', resting['side'], resting['price'], f'adverse {adverse:.2f}bps') if resting \
-                   else ('none', None, None, f'adverse {adverse:.2f}bps')
-        if resting:
-            if resting['side'] != side:
-                return 'cancel', resting['side'], resting['price'], 'favourite flipped'
-            if abs(resting['price'] - bid) > 1e-9:
-                return 'cancel', resting['side'], resting['price'], 'bid_moved'
-            return 'hold', side, bid, 'resting at best bid'
+            return 'none', None, None, f'adverse {adverse:.2f}bps'
         return 'post', side, bid, f'calm {vol:.3f} fav {side} bid {bid:.2f} sec {sec}'
 
 
@@ -275,6 +292,9 @@ class Probe:
         self.books = {}                     # token -> dict(bids=[(px,sz)], asks=[(px,sz)], ts)
         self.resting = None                 # dict(side, price, token, order_id, post_ts_ms, row)
         self.filled_epochs = set()
+        self.posts_per_epoch = collections.Counter()   # hard ceiling per candle
+        self.stale_book_token = None                   # set by a post-only reject
+        self.stale_book_ts = None
         self.broker = None
         self.counts = collections.Counter()
         self.funnel = collections.Counter()   # every pass by gate reason, so '0 posts' is explainable
@@ -302,6 +322,17 @@ class Probe:
                 arr.sort(reverse=(arr is b['bids']))
             b['ts'] = time.time()
 
+    def book_fresh(self, token):
+        """False only while we are still looking at the very book read that a post-only reject
+        came from. Any newer book event on that token clears it."""
+        if self.stale_book_token != token: return True
+        ts = (self.books.get(token) or {}).get('ts')
+        if ts is None: return False
+        if self.stale_book_ts is None or ts > self.stale_book_ts:
+            self.stale_book_token = self.stale_book_ts = None
+            return True
+        return False
+
     def best(self, token):
         b = self.books.get(token)
         if not b: return None, None
@@ -318,6 +349,7 @@ class Probe:
             'values(?,?,?,?,?,?,?,?)',
             (epoch, side, token, price, SHARES, now_ms, 'PENDING', int(self.dry_run)))
         self.db.commit(); row = cur.lastrowid
+        self.posts_per_epoch[epoch] += 1
         if self.dry_run:
             self.db.execute("update orders set status='DRY' where id=?", (row,)); self.db.commit()
             self.counts['dry_post'] += 1
@@ -329,7 +361,22 @@ class Probe:
         if tk <= 0 or mk / tk > price + 1e-9:
             self.db.execute("update orders set status='ABORT_PRICE' where id=?", (row,)); self.db.commit()
             raise RuntimeError(f'signed price {mk/tk if tk else 0} exceeds {price}')
-        r = await self.broker.client.post_order(signed)
+        try:
+            r = await self.broker.client.post_order(signed)
+        except Exception as e:
+            # 09-30: a venue rejection used to propagate and leave the row PENDING forever, so the
+            # ledger showed orders in an unknown state - which on a shared wallet is indistinguishable
+            # from an order that might be resting. It is a REJECTED order and it is recorded as one.
+            msg = f'{type(e).__name__}: {e}'
+            self.db.execute('update orders set status=?, note=? where id=?', ('REJECTED', msg[:300], row))
+            self.db.commit(); self.counts['reject'] += 1
+            if 'post-only' in msg or 'crosses book' in msg:
+                # (3) do not fire again off the same book read that just produced a crossing price.
+                self.stale_book_token = token
+                self.stale_book_ts = (self.books.get(token) or {}).get('ts')
+                self.counts['postonly_reject'] += 1
+            log(f'[{time.strftime("%F %T", time.gmtime())}] REJECTED epoch {epoch} {side} {price} :: {msg[:200]}')
+            return None, row
         oid = str(getattr(r, 'order_id', '') or '')
         ok = bool(getattr(r, 'ok', False)) and oid
         self.db.execute('update orders set venue_order_id=?, status=? where id=?',
@@ -475,9 +522,12 @@ class Probe:
         vol = self.fav.vol_before_open(ep)
         side_r = self.resting['side'] if self.resting else None
         adv = self.mover.adverse_bps(side_r) if side_r else None
+        fav_side, _ = Quoter.favourite(ub, dbid)
+        fresh = self.book_fresh(tok_up if fav_side == 'UP' else tok_dn) if fav_side else True
         act, side, price, reason = self.quoter.decide(
             sec=sec, up_bid=ub, dn_bid=dbid, up_ask=ua, dn_ask=da, vol=vol,
-            resting=self.resting, adverse=adv, filled_this_candle=(ep in self.filled_epochs))
+            resting=self.resting, adverse=adv, filled_this_candle=(ep in self.filled_epochs),
+            posts_this_candle=self.posts_per_epoch[ep], book_fresh=fresh)
         self.funnel[NUM.sub('N', reason)] += 1
         if act == 'cancel':
             self.record_decision(ep, sec, act, side, price, reason, vol, ub, dbid, ua, da, adv)
@@ -489,7 +539,13 @@ class Probe:
                 # about the rule. place() is still the only thing that can sign, and it returns a
                 # DRY row without touching the broker (self.broker is None in a dry run).
                 self.record_decision(ep, sec, act, side, price, reason, vol, ub, dbid, ua, da, adv)
-                await self.place(ep, side, (tok_up if side == 'UP' else tok_dn), price)
+                tokd = tok_up if side == 'UP' else tok_dn
+                _, rowd = await self.place(ep, side, tokd, price)
+                # Keep a VIRTUAL resting order (order_id None, so cancel()/check_fill() never reach
+                # the venue). Without this nothing rests, every pass re-posts, and a dry run measures
+                # the per-candle cap instead of the no-chase rule it exists to test.
+                self.resting = dict(epoch=ep, side=side, price=price, token=tokd,
+                                    order_id=None, post_ts_ms=int(now * 1000), row=rowd)
                 return
             ok, why = self.guard.may_trade(now)
             if not ok:
@@ -503,9 +559,13 @@ class Probe:
             tok = tok_up if side == 'UP' else tok_dn
             oid, row = await self.place(ep, side, tok, price)
             if oid or self.dry_run:
+                # A dry run keeps a VIRTUAL resting order (order_id None, so cancel() and
+                # check_fill() never touch the venue). Without it nothing ever rests, every pass
+                # re-posts, and a dry run measures only the per-candle cap instead of the no-chase
+                # rule it is supposed to be testing. Found 09-30 when the first post-fix dry run
+                # reported exactly 3 posts on all 3 calm candles - the cap, not the rule.
                 self.resting = dict(epoch=ep, side=side, price=price, token=tok,
                                     order_id=oid, post_ts_ms=int(now * 1000), row=row)
-                if self.dry_run: self.resting = None      # nothing rests in a dry run
             return
         if act == 'hold':
             if await self.check_fill(ep): return

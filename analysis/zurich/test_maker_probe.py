@@ -124,15 +124,19 @@ class OneOrderOneFill(unittest.TestCase):
         rest = dict(side='UP', price=0.70)
         self.assertEqual(self.q.decide(**{**OK, 'resting': rest})[0], 'hold')
 
-    def test_a_risen_bid_is_a_cancel_then_a_repost_never_a_second_order(self):
+    def test_a_one_tick_rise_now_HOLDS_instead_of_chasing(self):
+        """THE 17:00 REGRESSION. This used to cancel and re-post, which produced 34 orders and zero
+        fills in one candle. One tick is within tolerance: we stay in the book."""
         rest = dict(side='UP', price=0.69)
-        act, _, _, why = self.q.decide(**{**OK, 'resting': rest})
-        self.assertEqual(act, 'cancel'); self.assertEqual(why, 'bid_moved')
+        self.assertEqual(self.q.decide(**{**OK, 'resting': rest})[0], 'hold')
 
-    def test_a_flipped_favourite_cancels_rather_than_adding_a_side(self):
+    def test_a_flipped_favourite_still_cancels_now_via_the_price_test(self):
+        """There is no longer a 'favourite flipped' branch; it is subsumed. If the favourite flips,
+        our side's bid collapses, so our resting price is above it and rule 3 (we would be the
+        crosser) fires. Same outcome, one fewer special case."""
         rest = dict(side='DOWN', price=0.70)
         act, _, _, why = self.q.decide(**{**OK, 'resting': rest})
-        self.assertEqual(act, 'cancel'); self.assertIn('flipped', why)
+        self.assertEqual(act, 'cancel'); self.assertIn('we would cross', why)
 
     def test_nothing_is_posted_after_a_fill_in_the_same_candle(self):
         self.assertEqual(self.q.decide(**{**OK, 'filled_this_candle': True})[0], 'none')
@@ -229,9 +233,13 @@ class Calm(unittest.TestCase):
     def test_unknown_vol_does_not_post(self):
         self.assertEqual(self.q.decide(**{**OK, 'vol': None})[0], 'none')
 
-    def test_becoming_not_calm_pulls_a_resting_order(self):
+    def test_vol_leaving_calm_does_NOT_pull_a_resting_order(self):
+        """Changed 09-30 by V's fix. Calm gates ENTRY, not exit: once we are in the book the only
+        reasons to leave are the four in the no-chase rule. Vol rising is not one of them - the
+        2 bps Binance test is the live risk control, and it is strictly faster than a vol estimate
+        computed over the 300 s BEFORE the open (which cannot change intra-candle anyway)."""
         rest = dict(side='UP', price=0.70)
-        self.assertEqual(self.q.decide(**{**OK, 'vol': 0.5, 'resting': rest})[0], 'cancel')
+        self.assertEqual(self.q.decide(**{**OK, 'vol': 0.5, 'resting': rest})[0], 'hold')
 
 
 class Band(unittest.TestCase):
@@ -365,9 +373,16 @@ class PostPathIntegration(unittest.TestCase):
         self.assertEqual(self.p.db.execute('select status from orders where id=1').fetchone()[0],
                          'CANCELLED')
 
-    def test_dry_run_never_leaves_anything_resting(self):
+    def test_a_dry_resting_order_can_never_reach_the_venue(self):
+        """Changed 09-30: a dry run now DOES keep a virtual resting order, so that it exercises the
+        no-chase rule rather than only the per-candle cap. The invariant that matters is not that
+        nothing rests - it is that a dry order carries NO venue order id, which is what makes
+        cancel() and check_fill() return before touching the broker."""
         self.run_pass()
-        self.assertIsNone(self.p.resting)
+        self.assertIsNotNone(self.p.resting)
+        self.assertIsNone(self.p.resting['order_id'])
+        self.assertEqual(self.p.db.execute(
+            "select count(*) from orders where dry=0").fetchone()[0], 0)
 
     def test_a_dry_run_never_constructs_a_broker(self):
         self.assertIsNone(self.p.broker)
@@ -382,3 +397,162 @@ class PostPathIntegration(unittest.TestCase):
             self.p.place(self.ep, 'UP', 'TOKUP', 0.70))
         self.assertIsNone(oid)
         self.assertEqual(self.p.db.execute('select status from orders where id=?', (row,)).fetchone()[0], 'DRY')
+
+
+class NoChasing(unittest.TestCase):
+    """V's fix, 09-30, after the 17:00 candle produced 34 orders and 0 fills.
+    ONCE POSTED THE ORDER RESTS. Exactly four reasons to pull it - nothing else."""
+    def setUp(self): self.q = M.Quoter()
+
+    def rest(self, price=0.70, side='UP'): return dict(side=side, price=price)
+
+    def test_reason_1_adverse_two_bps(self):
+        act, _, _, why = self.q.decide(**{**OK, 'resting': self.rest(), 'adverse': 2.0})
+        self.assertEqual(act, 'cancel'); self.assertIn('adverse', why)
+
+    def test_reason_2_past_180(self):
+        act, _, _, why = self.q.decide(**{**OK, 'sec': 181, 'resting': self.rest()})
+        self.assertEqual(act, 'cancel'); self.assertIn('outside', why)
+
+    def test_reason_3_we_would_be_the_crosser(self):
+        """Our price must stay at or under the best bid."""
+        act, _, _, why = self.q.decide(**{**OK, 'up_bid': 0.69, 'resting': self.rest(0.70)})
+        self.assertEqual(act, 'cancel'); self.assertIn('we would cross', why)
+
+    def test_reason_4_bid_ran_two_ticks_away(self):
+        act, _, _, why = self.q.decide(**{**OK, 'up_bid': 0.72, 'resting': self.rest(0.70)})
+        self.assertEqual(act, 'cancel'); self.assertIn('ran >= 2 ticks', why)
+
+    def test_reason_3b_the_offer_coming_down_to_us_is_a_cancel(self):
+        """The unambiguous crossing test: if the ask reaches our resting price we are the crosser."""
+        act, _, _, why = self.q.decide(**{**OK, 'up_bid': 0.70, 'up_ask': 0.70,
+                                          'resting': self.rest(0.70)})
+        self.assertEqual(act, 'cancel'); self.assertIn('best ask', why)
+
+    def test_being_alone_at_the_top_of_the_book_is_NOT_a_cancel(self):
+        """Our own order is in the book we read, so best bid == our price while we rest. A maker
+        WANTS to be at the front of the queue; the 2 bps Binance test is what protects us there."""
+        self.assertEqual(self.q.decide(**{**OK, 'up_bid': 0.70, 'up_ask': 0.72,
+                                          'resting': self.rest(0.70)})[0], 'hold')
+
+    def test_one_tick_away_is_within_tolerance(self):
+        self.assertEqual(self.q.decide(**{**OK, 'up_bid': 0.71,
+                                          'resting': self.rest(0.70)})[0], 'hold')
+
+    def test_nothing_else_pulls_it_band_exit(self):
+        """A bid leaving the 0.60-0.80 band is NOT one of the four reasons."""
+        self.assertEqual(self.q.decide(**{**OK, 'up_bid': 0.70, 'up_ask': 0.72,
+                                          'resting': self.rest(0.70), 'vol': 0.29})[0], 'hold')
+
+    def test_the_exact_17_00_sequence_no_longer_churns(self):
+        """Replay of the real bid path from candle 17:00 (0.61 0.60 0.65 0.63 0.61 0.62 0.64 ...).
+        Old rule: a cancel on every change. New rule: at most a handful of pulls."""
+        path = [0.61, 0.60, 0.65, 0.63, 0.61, 0.62, 0.64, 0.62, 0.60, 0.62, 0.61]
+        resting, cancels, posts = None, 0, 0
+        for b in path:
+            act, side, px, _ = self.q.decide(**{**OK, 'up_bid': b, 'up_ask': b + 0.02,
+                                                'resting': resting, 'posts_this_candle': posts})
+            if act == 'cancel': resting = None; cancels += 1
+            elif act == 'post': resting = dict(side=side, price=px); posts += 1
+        self.assertLessEqual(posts, M.MAX_POSTS_PER_CANDLE)
+        self.assertLess(cancels, len(path))
+
+
+class PostCeiling(unittest.TestCase):
+    def setUp(self): self.q = M.Quoter()
+
+    def test_three_posts_is_the_cap(self):
+        self.assertEqual(self.q.decide(**{**OK, 'posts_this_candle': 2})[0], 'post')
+        act, _, _, why = self.q.decide(**{**OK, 'posts_this_candle': 3})
+        self.assertEqual(act, 'none'); self.assertIn('max', why)
+
+    def test_the_cap_is_three(self):
+        self.assertEqual(M.MAX_POSTS_PER_CANDLE, 3)
+
+    def test_place_increments_the_per_candle_count(self):
+        import asyncio
+        p = M.Probe(dry_run=True, db=mem()); loop = asyncio.new_event_loop()
+        for _ in range(2): loop.run_until_complete(p.place(999, 'UP', 'T', 0.70))
+        self.assertEqual(p.posts_per_epoch[999], 2); loop.close()
+
+
+class RejectBookkeeping(unittest.TestCase):
+    """Fix (2) and (3): a venue rejection is REJECTED, not PENDING, and a post-only reject
+    stops us firing again off the same book read."""
+    def setUp(self):
+        import asyncio
+        self.loop = asyncio.new_event_loop()
+        self.p = M.Probe(dry_run=False, db=mem())
+        self.p.books = {'T': dict(bids=[(0.70, 9.0)], asks=[(0.72, 9.0)], ts=1000.0)}
+
+        class Boom:
+            def __init__(s, msg): s.msg = msg
+            async def create_limit_order(s, **k):
+                # maker_amount / taker_amount IS the price; both are venue 1e6 units
+                # (poly_live.prepare relies on exactly this). 0.70 * 5 sh = 3.5 USDC.
+                return type('S', (), dict(maker_amount=3_500_000.0, taker_amount=5_000_000.0))()
+            async def post_order(s, signed): raise RuntimeError(s.msg)
+        self.boom = Boom
+        self.p.broker = type('B', (), {'client': Boom('invalid post-only order: order crosses book')})()
+
+    def tearDown(self): self.loop.close()
+
+    def test_a_venue_rejection_is_recorded_as_REJECTED_not_PENDING(self):
+        oid, row = self.loop.run_until_complete(self.p.place(1, 'UP', 'T', 0.70))
+        self.assertIsNone(oid)
+        r = self.p.db.execute('select status, note from orders where id=?', (row,)).fetchone()
+        self.assertEqual(r['status'], 'REJECTED')
+        self.assertIn('post-only', r['note'])
+
+    def test_no_row_is_ever_left_PENDING_after_a_reject(self):
+        self.loop.run_until_complete(self.p.place(1, 'UP', 'T', 0.70))
+        self.assertEqual(self.p.db.execute(
+            "select count(*) from orders where status='PENDING'").fetchone()[0], 0)
+
+    def test_a_post_only_reject_blocks_the_next_post_until_the_book_moves(self):
+        self.loop.run_until_complete(self.p.place(1, 'UP', 'T', 0.70))
+        self.assertFalse(self.p.book_fresh('T'), 'same book read must be treated as stale')
+        self.p.books['T']['ts'] = 1001.0                      # a newer book event arrives
+        self.assertTrue(self.p.book_fresh('T'))
+
+    def test_a_stale_book_makes_the_quoter_refuse_to_post(self):
+        act, _, _, why = M.Quoter().decide(**{**OK, 'book_fresh': False})
+        self.assertEqual(act, 'none'); self.assertIn('fresh book', why)
+
+    def test_a_non_postonly_error_does_not_set_the_stale_flag(self):
+        self.p.broker = type('B', (), {'client': self.boom('some other venue error')})()
+        self.loop.run_until_complete(self.p.place(1, 'UP', 'T', 0.70))
+        self.assertIsNone(self.p.stale_book_token)
+        self.assertEqual(self.p.db.execute(
+            "select status from orders order by id desc limit 1").fetchone()[0], 'REJECTED')
+
+
+class DryRunRests(unittest.TestCase):
+    """A dry run must simulate resting, or it measures the cap instead of the rule."""
+    def setUp(self):
+        import asyncio
+        self.loop = asyncio.new_event_loop()
+        self.p = M.Probe(dry_run=True, db=mem())
+        self.ep = int(time.time() // 300) * 300
+        self._orig = M.tokens_for
+        M.tokens_for = lambda e, gamma_db=None: ('TOKUP', 'TOKDN') if e == self.ep else (None, None)
+        self.p.books = {'TOKUP': dict(bids=[(0.70, 500.0)], asks=[(0.72, 500.0)], ts=time.time()),
+                        'TOKDN': dict(bids=[(0.28, 500.0)], asks=[(0.30, 500.0)], ts=time.time())}
+        self.p.fav.vol_before_open = lambda epoch, px=None: 0.20
+        n = int((self.ep + 120) * 1000)
+        self.p.mover.add(n - 900, 100000.0); self.p.mover.add(n, 100000.0)
+
+    def tearDown(self): M.tokens_for = self._orig; self.loop.close()
+
+    def test_a_dry_post_leaves_a_virtual_order_resting(self):
+        self.loop.run_until_complete(self.p.one_pass(now=self.ep + 120))
+        self.assertIsNotNone(self.p.resting)
+        self.assertIsNone(self.p.resting['order_id'], 'a dry order must carry no venue id')
+
+    def test_a_stable_book_produces_ONE_post_not_three(self):
+        """The regression the cap was masking: with the book unchanged the probe must post once
+        and then sit, not re-post until it hits the ceiling."""
+        for t in range(120, 150):
+            self.loop.run_until_complete(self.p.one_pass(now=self.ep + t))
+        self.assertEqual(self.p.posts_per_epoch[self.ep], 1,
+                         f'posted {self.p.posts_per_epoch[self.ep]}x on a book that never moved')
