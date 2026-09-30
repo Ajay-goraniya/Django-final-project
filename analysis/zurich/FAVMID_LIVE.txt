@@ -91,3 +91,17 @@ MORE LIVE TRADES (all still at the $5 stake - they were placed before the change
   Note 02:50's vol 0.3081 sits just 0.004 above the 0.304 lower edge - a legitimate mid fire, but
   that close to the boundary the calm/mid split is effectively a coin toss on the vol estimate.
   Tally: realised +$0.8328 on 1 settled candle, 2 open. Daily window -$0.56 of -$50.
+
+REPORTING POLICY CHANGED (V, tokens rule 09-30): every live FAV_mid trade is appended HERE and pushed
+to git, with NO Routine per trade. V is pinged with ONE line only for: a non-EF lane order; an order
+outside 60-180 s or outside the mid band; the daily stop firing; engine down; feeds dead; and the daily
+FAV ledger at ~00:20 UTC. favmid_daemon.py enforces this - it appends and pushes on its own and only
+exits to raise an alert.
+  ONE CORRECTION TO V'S LIST: it says "the $40 daily stop". The stop is now 50 - the owner raised sl
+  from 40 to 50 after the stake went to $10. The daemon reads meta sl LIVE on every pass rather than
+  hardcoding a number, so it cannot fire a false alert at -40 nor miss the real one at -50.
+
+SETTLED: candle 02:45 UP @0.68 -> actual UP, pnl +$2.1916.
+  Running tally since the baseline: 2 settled candles, realised +$3.0244 (+0.8328 and +2.1916), 1 open.
+  Both winners so far, and both at the 0.65-0.85 band's opposite ends (0.85 and 0.68). Two settled
+  trades is not evidence of anything; the pre-registered bar is 60 fills.
