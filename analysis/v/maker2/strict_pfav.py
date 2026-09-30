@@ -5,7 +5,10 @@ import sys, json, gzip, collections, argparse, sqlite3, datetime as dt
 import numpy as np
 ap = argparse.ArgumentParser(); ap.add_argument('--tape'); ap.add_argument('--bn'); ap.add_argument('--book', default=None); ap.add_argument('--out')
 A = ap.parse_args()
-LAG, S0, S1, LO, HI, TOUCH = 2.2, 60, 180, 0.60, 0.80, 14.0
+import os
+LAG, TOUCH = 2.2, 14.0
+S0, S1 = int(os.environ.get('PF_S0', 60)), int(os.environ.get('PF_S1', 180))      # defaults = M5 exactly
+LO, HI = float(os.environ.get('PF_LO', 0.60)), float(os.environ.get('PF_HI', 0.80))
 BUILD = (1790456400, 1790629200)            # 09-26..28 window M2 was designed on (in-sample)
 CUT_FIT_DAYS = {'2026-09-22', '2026-09-23'}  # the fixed 0.304 cut was fitted on these
 T = {}
