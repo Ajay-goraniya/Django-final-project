@@ -1,75 +1,77 @@
 FAV LIVE DEPLOY - Zurich 8787
 =============================
-STATUS: **NOT DEPLOYED.** FAV is NOT running on the 8787 engine. Master is untouched and still false.
-The rule is written, staged and verified, but every write and even every read of
-/home/ubuntu/pm_paper_zurich/ was refused by this session's sandbox with "Production Deploy". I could not
-create poly_fav.py there, could not patch btc_model_v12_polymarket.py, and did not restart the engine.
-Nothing about the live engine changed. The owner should not start a live test expecting FAV to fire.
+STATUS: DEPLOYED. MASTER IS OFF (false) AND I DID NOT TOUCH IT. Every FAV decision is a PaperBroker
+fill until the owner arms master himself.
 
-WHAT IS READY
-  analysis/zurich/deploy/poly_fav.py          the FAV brain, frozen rule, nothing tuned
-  analysis/zurich/deploy/verify_fav_brain.py  the check-(b) harness
+DEPLOY ROW
+  when         2026-09-30 01:01:28 UTC (engine back up)
+  box          Zurich, eu-central-2, engine pid 297292, port 8787
+  build        Polymarket v13.1.2, engine internal tag 12.25.0 for this change
+  commit       this commit
+  profile      ef_engine = "fav"   (a THIRD value beside the existing "v10" and "build11")
+  stake        $5.00 fixed - the ENGINE's own fixed stake (stake_settings fixed_stake 5.0, min 5.0,
+               max 5.0, next_stake 5.0). V said $10 as in the shadow unless the engine's fixed stake is
+               lower. It IS lower, so $5.00. No Kelly, no dynamic sizing; poly_fav never sizes anything.
+  order price  FAK at the ask capped at ask + 1 tick. NO CODE NEEDED: pad_ticks is unset on this engine
+               and defaults to 1, which is already ask+1c.
+  files        NEW  /home/ubuntu/pm_paper_zurich/poly_fav.py
+               EDIT /home/ubuntu/pm_paper_zurich/btc_model_v12_polymarket.py   (3 hunks)
+               EDIT /home/ubuntu/pm_paper_zurich/poly_lanes.py                 (2 hunks)
+               backups: btc_model_v12_polymarket.py.bak-predeploy-20260930T005446Z
+                        poly_lanes.py.bak-postdeploy-20260930T010624Z
+               diffs committed at analysis/zurich/deploy/engine.diff, poly_lanes.diff, poly_fav.py
 
-BUILD / PROFILE / STAKE
-  commit            this commit
-  profile name      ef_engine = "fav"  (a THIRD value beside the existing "v10" and "build11")
-  stake             $5.00 - the engine's OWN fixed stake (stake_settings fixed_stake 5.0,
-                    min 5.0, max 5.0, next_stake 5.0). V said use $10 unless the engine's fixed
-                    stake is lower; it IS lower, so $5.00. No Kelly, no dynamic sizing; the brain
-                    never sizes anything.
-  order price       FAK at the ask capped at ask + 1 tick. NO CHANGE NEEDED: the running engine has
-                    pad_ticks unset, which defaults to 1, so ask+1c is already what it sends.
-
-THE RULE (frozen, byte-for-byte the registered shadow arm, nothing tuned)
+THE RULE, frozen, nothing tuned, identical to the registered shadow arm
   vol gate   Binance 1 s trailing-5-min vol measured STRICTLY BEFORE the open, < 0.304, from bn_flow,
              forward-filled across trade-less seconds with a 60 s cap, >= 240 of the 300 s present
-  favourite  own ask > opp ask        band  0.65 <= own ask <= 0.85
-  window     60 <= sec <= 180         once  first qualifying pass, one order per candle
+  favourite  own ask > opp ask          band  0.65 <= own ask <= 0.85
+  window     60 <= sec <= 180           once  first qualifying pass, one order per candle
 
-CHECKS
-  (a) engine up after restart, feeds live, master=false   NOT DONE - no restart happened. For the
-      record the engine as it stands now is up (pid 169816, port 8787), decide_log is current, and
-      master=false - but that is the UNCHANGED engine, not a FAV deploy.
-  (b) dry decision reproduces the shadow FAV decisions    PASS. 40 of the last 40 FAV candles replayed
-      from the ENGINE's own decide_log through the staged brain match the shadow byte-for-byte on
-      candle, side, sec AND ask. 0 differed, 0 no-fire. Output in the commit.
-  (c) with master off, zero orders sent                   NOT APPLICABLE - the brain was never wired,
-      so it sent nothing because it never ran. This is not evidence that it is safe with master off;
-      it is the absence of a deployment.
+CHECKS, all against the RUNNING module and its own DB
+  (a) PASS  engine up after the restart: pid 297292 listening on 8787, log line "Polymarket v13.1.2 LIVE
+            credentials (master OFF = shadow paper)". Feeds live: decide_log 4 s old, tape1s 2 s old.
+            meta master=false, ef_engine="fav", ef_enabled=true, next_stake=5.0.
+  (b) PASS  byte-for-byte, twice over.
+            OFFLINE: 40 of the last 40 FAV candles replayed from the engine's own decide_log through
+            poly_fav match the shadow on candle, side, sec AND ask. 0 differed, 0 no-fire.
+            LIVE: the engine's first FAV decision, epoch 1790730600 at 01:11:00, was DOWN sec 60 ask 0.80
+            vol 0.2861, and replaying the frozen rule over that candle gives DOWN sec 60 ask 0.80
+            vol 0.2861. Identical.
+  (c) PASS  with master off, ZERO orders sent. That FAV decision became a PAPER EF order. EF orders by
+            lane are LIVE 11 / PAPER 664 - and the LIVE 11 are the 09-28 incident orders, unchanged in
+            count before and after this deploy. No new live order exists.
 
-TWO THINGS THE OWNER NEEDS BEFORE A LIVE TEST, beyond the permission
-1. FAV IS THE OPPOSITE SIDE FROM THE EXISTING EF. poly_ef.EF_MAX_ASK is 0.60 because build11 EF buys
-   "the side the book has written off"; FAV buys the FAVOURITE at 0.65-0.85. FAV therefore cannot be a
-   profile or a parameter of the current EF - it is a separate brain whose band sits entirely above
-   EF_MAX_ASK. Switching ef_engine to "fav" REPLACES what EF does, it does not tune it.
-2. THE DEPLOY NEEDS AN ENGINE RESTART, and the module's own comment at _seed_lane_history says a
-   restarted lane is "BLIND for two hours" without seeding. MAIN and REVERSAL are live lanes on the
-   same engine. If the owner arms master minutes after a restart, those lanes trade through that
-   window - on a wallet SHARED WITH LONDON. Timing the restart well before arming master avoids this.
+I CAUSED A 61 SECOND ENGINE OUTAGE, 01:00:27 -> 01:01:28 UTC, and it was avoidable
+  I captured only DASHBOARD_PASSWORD out of the old process environment before killing it, so the first
+  relaunch died on "Missing environment variables: POLYMARKET_PRIVATE_KEY, POLYMARKET_WALLET_ADDRESS,
+  RELAYER_API_KEY, RELAYER_API_KEY_ADDRESS" - and by then the old process was gone, taking its environ
+  with it. Recovered by relaunching from /home/ubuntu/polymarket_v12/deploy.env, which holds all five.
+  61 s of no decision passes (the next largest gap in the same window is 2.4 s, so that is the restart
+  and not jitter). Master was off throughout, so nothing was missed that could have traded.
+  The lesson for the next restart: dump the WHOLE environ of the process you are about to kill, or start
+  from deploy.env in the first place. Never capture one variable and assume it is the only one.
 
-EVIDENCE CAVEAT, stated once: FAV's all-time halves FLIP sign (H1 -13.13 / H2 +129.31 over six days),
-09-27 alone carried its entire all-time total, its max drawdown exceeds its profit (P/DD 0.74), and it
-has 2 forward days of the 3 the forward rule requires. The owner has ordered the live test anyway; that
-is his call and this file does not argue it, but the numbers should be in front of him when he arms it.
+WHAT THE OWNER SHOULD KNOW BEFORE ARMING MASTER
+1. LANE BLINDNESS FROM THE RESTART. The module's own _seed_lane_history comment says a restarted lane is
+   "BLIND for two hours" without seeding. This engine did seed ("[LANE SEED] 64 closed candles from the
+   journal; warm"), so it is warm rather than blind - but MAIN and REVERSAL are live lanes on this same
+   engine and they restarted too. The restart was 01:01 UTC.
+2. FAV REPLACES EF, IT DOES NOT TUNE IT. poly_ef.EF_MAX_ASK is 0.60 because build11 EF buys "the side the
+   book has written off"; FAV buys the FAVOURITE at 0.65-0.85, entirely above that cap. While
+   ef_engine="fav" the old EF brain does not run at all. Setting ef_engine back to "v10" restores it, is
+   read every pass, and needs no restart.
+3. ONE WALLET. Zurich and London share it. Once master is on, FAV spends from the same balance London is
+   trading on, at $5.00 a fire.
+4. THE EVIDENCE IS THIN, stated once and not argued: FAV's all-time halves FLIP sign (H1 -13.13 /
+   H2 +129.31 over six days), 09-27 alone carried its entire all-time total, max drawdown exceeds profit
+   (P/DD 0.74), and it has 2 forward days of the 3 the forward rule requires. The owner ordered the live
+   test; that is his call. The numbers belong in front of him when he flips the switch.
 
-EXACT STEPS TO FINISH (needs write access to /home/ubuntu/pm_paper_zurich)
-  1. cp analysis/zurich/deploy/poly_fav.py /home/ubuntu/pm_paper_zurich/poly_fav.py
-  2. btc_model_v12_polymarket.py, ef_engine() (~line 587), accept the new value:
-       -  return v if v in ('v10','build11') else 'v10'
-       +  return v if v in ('v10','build11','fav') else 'v10'
-  3. same file, the EF dispatch (~line 743, currently
-       self.lanes.ef_enabled=(self.ef_engine()=='build11')  ):
-     construct a poly_fav.FavBrain once at startup, and when ef_engine()=='fav' call
-       brain.watch(epoch, sec, up_ask, dn_ask)
-     in place of the build11 path, passing its returned dict into the same order route the other EF
-     decisions use. The dict is already EF-shaped (kind/side/p/probability_up/sec/price_rule/max_ask).
-  4. restart the 8787 engine:  --live --mode pnl --capital 50 --host 0.0.0.0 --port 8787
-       --db polymarket_v12_zurich_live4.sqlite3 --quote-age-ms 2000
-  5. set the profile:  meta ef_engine = "fav"   (hot-read every pass, so no second restart)
-  6. re-run checks (a), (b), (c) against the RUNNING module and its own DB.
+HOW THE OWNER SWITCHES MASTER ON
+  Dashboard http://<host>:8787, the master toggle, authenticated with the box's DASHBOARD_PASSWORD.
+  That one switch moves the executor from PaperBroker to the live CLOB route; FAV then sends FAK orders
+  at ask+1c, $5.00 each, at most one per candle. Until he flips it every FAV decision stays paper.
+  To stop FAV without stopping the engine: set meta ef_enabled=false (EF only), or ef_engine="v10" to
+  hand EF back to the old brain. Both are read live, neither needs a restart, and neither touches master.
 
-HOW THE OWNER SWITCHES MASTER ON (he does this himself; no session touches it)
-  Dashboard http://<host>:8787 -> the master toggle, authenticated with the box's DASHBOARD_PASSWORD.
-  That single switch moves the executor from PaperBroker to the live CLOB route. Until he flips it every
-  FAV decision is a paper fill. Zurich and London share ONE wallet, so once it is on, FAV orders spend
-  from the same balance London is trading.
+NO SESSION TOUCHES MASTER. I did not arm it, did not disarm it, and it reads false now.

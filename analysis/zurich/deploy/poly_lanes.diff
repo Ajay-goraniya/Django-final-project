@@ -1,0 +1,56 @@
+--- /home/ubuntu/claude-work/repo/learner/v12_2/poly_lanes.py	2026-09-23 00:38:10.511383788 +0000
++++ poly_lanes.py	2026-09-30 00:58:55.923224546 +0000
+@@ -877,6 +877,16 @@
+             main = self.current_main or self.main_signal
+             return bool(main) and live == side and live != main.get('direction')
+         if kind == 'EF':                                              # 12.22.0: same side, hard gates still pass
++            if getattr(self, 'ef_mode', None) == 'fav':
++                # 12.25.0: a FAV call was NEVER judged on the build11 gate table, so re-applying it here
++                # would fail on essentially every call and the order would be released as SIGNAL_CHANGED
++                # and never submitted - a correct rule silently killed by the wrong recheck. FAV rechecks
++                # its OWN premise: is our side still the favourite, and still inside the band?
++                fav = getattr(self, 'fav', None)
++                if fav is None or self.ef_quote is None: return False
++                try: ua = self.ef_quote('UP'); da = self.ef_quote('DOWN')
++                except Exception: return False
++                return fav.still_valid(side, ua, da)
+             m = self._ef_metrics(f, ts_ms)
+             return bool(m) and m['ef_dir'] == side and all(ok for _, ok in poly_ef.gates(m))
+         return True
+@@ -927,13 +937,29 @@
+         if self.pending.get('EF') or self.ef.fired is not None: return None
+         if 'EF' in getattr(self, 'blocked', ()): return None            # 12.24.8: blocked once per candle, like MAIN
+         if self.ef.attempts >= self.MAIN_MAX_ATTEMPTS: self.ef.block = 'not payable after attempts'; return None
+-        m = self._ef_metrics(f, ts_ms)
+-        ask = None
+-        if m is not None and self.ef_quote is not None:
+-            try: ask = self.ef_quote(m['ef_dir'])
+-            except Exception: ask = None
+-        d = self.ef.watch(m, int(ts_ms), (float(ask) if ask is not None else None), self.ef_fee)
+-        if d is None: return None
++        if getattr(self, 'ef_mode', None) == 'fav':
++            # 12.25.0: the calm-favourite rule supplies the decision. Everything above this point -
++            # once-per-candle, the blocked set, the retry budget - is unchanged and still owned here.
++            # sec is derived from the CANDLE EPOCH, not from phase, because that is what the shadow used
++            # and a 40/40 byte-for-byte replay of decide_log depends on it.
++            fav = getattr(self, 'fav', None); ep = getattr(self, 'ef_epoch', None)
++            if fav is None or ep is None:
++                self.ef.block = 'fav brain not wired'; return None
++            ua = da = None
++            if self.ef_quote is not None:
++                try: ua = self.ef_quote('UP'); da = self.ef_quote('DOWN')
++                except Exception: ua = da = None
++            d = fav.watch(int(ep), int(ts_ms) // 1000 - int(ep), ua, da)
++            if d is None:
++                self.ef.block = fav.block or 'fav: no fire'; return None
++        else:
++            m = self._ef_metrics(f, ts_ms)
++            ask = None
++            if m is not None and self.ef_quote is not None:
++                try: ask = self.ef_quote(m['ef_dir'])
++                except Exception: ask = None
++            d = self.ef.watch(m, int(ts_ms), (float(ask) if ask is not None else None), self.ef_fee)
++            if d is None: return None
+         d['adapt_ratio'] = self.adapt.value(); d['rv60'] = None
+         self.ef_signal = dict(direction=d['side'], ts_ms=int(ts_ms), probability_up=d['probability_up'])
+         self.pending['EF'] = True
