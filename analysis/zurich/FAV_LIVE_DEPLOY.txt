@@ -150,3 +150,37 @@ ONE OPEN DISCREPANCY, PRE-EXISTING AND NOT CAUSED BY THIS CHANGE - flagged, not 
 PENDING AT THE TIME OF WRITING: no fav_mid decision has been recorded on the engine yet - the profile
 flipped at 02:27:32 and a candle must reach 60-180 s with a favourite in band AND mid-band vol. A
 watcher is running; the first live fav_mid decision will be appended when it lands.
+
+VERIFICATION PASS, 02:3x UTC
+  Engine pid 301067 listening on 8787; poly_fav.py, poly_lanes.py and btc_model_v12_polymarket.py all
+  parse; ef3_shadow.py --selftest still row-for-row against ef2_rows.npz; shadow 7147 fires / 19 arms.
+  master=false, ef_engine="fav_mid", LIVE all-time still 15, zero orders since the 02:26 restart.
+
+  NO fav_mid DECISION YET, AND THAT IS CORRECT, not a fault. Only two candles have passed since the
+  02:27:32 flip and the rule declines both for stated reasons:
+    02:25  vol 0.3352 (in the mid band) WOULD have fired DOWN sec 60 ask 0.71 - but sec 60 was 02:26:00,
+           BEFORE the flip, so the engine was still on calm "fav", whose band excludes 0.3352. Correct.
+    02:30  vol 0.2355 - that is a CALM candle, below 0.304, so fav_mid rightly declines; the favourite
+           ask was 0.59, outside 0.65-0.85, so it would not have qualified anyway. Correct.
+  The lane engine is warm and evaluating (131 diagnostics rows and a MAIN call since the restart; MAIN
+  shows BLOCKED because main_enabled=false, which is what the owner set).
+
+THE 09-30 01:10 DISCREPANCY IS NOW EXPLAINED, AND IT IS A REAL DEFECT IN THE SHADOW
+  Cause: ef3_shadow.load_candles selects decide_log rows
+      WHERE p IS NOT NULL AND side IS NOT NULL
+  p and side are the V10 CLASSIFIER's fields. The FAV family does not use v10 at all - it reads only
+  up_ask/dn_ask - so this is a spurious dependency, and it bites hardest straight after a restart while
+  v10 reports "Warming up: 10 minutes of spot / 60 seconds of perpetual trades".
+  On epoch 1790730600: 1158 passes exist, only 503 survive that filter, so 655 are dropped. The first
+  pass the shadow could see was sec 90, so its "first qualifying second" became sec 99 UP ask 0.65 -
+  while the engine, reading its own complete log, fired DOWN sec 60 ask 0.80 and traded it.
+  SCALE, measured not guessed - passes dropped per candle around the two restarts:
+    01:01 restart: 1790730000 835/936, 1790730300 1171/1171 (the WHOLE candle invisible),
+                   1790730600 655/1158, 1790731200 295/1117, 1790731800 460/1139, 1790732400 320/1138
+    02:26 restart: 1790735100 735/1147, 1790735400 267/267 (whole candle invisible)
+  CONSEQUENCE for the day-2/day-3 data V is collecting: around every restart the FAV arms' shadow rows
+  are biased - whole candles missing, and on partially visible candles a later sec with a different
+  side, ask and pnl than the engine actually took. The filter is legitimate for the model arms
+  (A/B/C/D/E/F/S all consume v10's p); it is wrong only for the model-free FAV family.
+  NOT FIXED HERE. Changing load_candles would alter how every registered arm's rows are built, and that
+  is not mine to do mid-experiment on a registered forward test. Flagged for V to decide.
