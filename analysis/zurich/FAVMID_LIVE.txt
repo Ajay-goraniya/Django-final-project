@@ -37,3 +37,28 @@ ALERTS ARMED (a one-line Routine goes to V immediately if any fires)
   - any order from a non-EF lane                      (none since the baseline)
   - an order outside 60-180 s or outside the mid band  (none; this one was sec 174, vol 0.4084)
   - the $40 daily stop triggering                      (headroom -38.61 of -40.00)
+
+SETTLED RESULT - first live FAV_mid trade: WON
+  candle 02:40 (epoch 1790736000) settled actual UP; we were UP, so it won.
+  payout $5.824496, spent $4.939173, fees $0.05255  ->  net pnl +$0.8328
+  Correcting my own estimate: I said a win at 0.85 returns "about +$0.60". The actual is +$0.83,
+  because the fill landed at ~0.848 rather than 0.85 and the fee is charged on the winnings. The
+  asymmetry point still stands unchanged - a loss at this price costs the full ~$4.94, so ~86% of
+  trades at 0.85 must win to break even.
+  Daily window after it: -$0.56 of -$40 (the -1.3934 carried in, plus this +0.8328).
+
+SECOND LIVE FAV_MID ORDER (open at the time of writing)
+  time   09-30 02:46:02 UTC   candle 02:45 (epoch 1790736300)   sec 62
+  vol    0.3679 -> inside [0.304, 0.466)     side UP, fav ask 0.65, opp 0.36
+  order  FAK at 0.65 REJECTED, retry at 0.68 FILLED - one candle, two attempts, ONE position
+  filled 7.191200 shares, spent $4.890000
+  reason FAV_MID:MID UP fav ask 0.65 opp 0.36 vol 0.368 in [0.304, 0.466) sec 62
+  This one is at the GOOD end of the band (0.65-0.68), where the pre-registered anatomy put the edge,
+  in contrast to the first trade at 0.85.
+
+RUNNING TALLY since the baseline, one pnl per candle, retries never double counted
+  candle 02:40  UP @0.85  WON   +0.8328
+  candle 02:45  UP @0.68  open
+  realised +$0.8328 on 1 settled candle. Daily window -$0.56 of -$40, headroom $39.44.
+  ALERT CHECKS all clear: no non-EF lane order; both EF orders in 60-180 s (174, 62) and in the mid
+  band (0.4084, 0.3679); engine tag "fav_mid" on both; daily stop not triggered.
