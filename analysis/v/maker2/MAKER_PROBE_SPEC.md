@@ -14,3 +14,5 @@ Goal: measure, with real orders, whether a post-only bid that cancels on a Binan
 ## OWNER 09-30 20:07 UTC: 'Yes' to restart the FIXED maker probe (bab8dc4: rest-don't-chase, max 3 posts/candle, REJECTED status). Limits unchanged.
 
 ## OWNER 09-30 21:28 UTC: 'A' = remove the 'bid ran >= 2 ticks away' cancel (V's addition); back to the original spec (rest until Binance 2 bps against or 180 s). Restart still needs a fresh owner yes after the safety fixes.
+
+## OWNER 09-30 23:11 UTC: 'Yes' to restart the maker probe build 82754c9 (option A + fill-record + same-second lockout). Limits unchanged.
