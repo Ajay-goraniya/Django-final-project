@@ -1,0 +1,14 @@
+FAV DAILY LEDGER  2026-09-29  window 09-29 01:20 .. 24:00 UTC (exclusive)
+  last candle scored inside the window: 09-29 23:55   day is COMPLETE
+
+arm          decisions  fills  wins     $@10    maxDD   flag
+FAV                96     80    63   +61.54    46.03   
+FAV_mid            94     73    57   +78.28    37.76   
+FAV_all           261    213   160   +81.43    89.31   
+FAV_ref            93     77    61   +71.21    46.03   
+C_fixed15          69     34    18   +37.77    37.20   INSUFFICIENT (<60 fills)
+  FAV arms use the PARTIAL arrival fill (filled shares a FLOOR, depth truncated at level 1).
+  C_fixed15 uses its own registered 250 ms FAK - a different fill model, so C is context
+  beside the FAV arms, not a like-for-like row.
+
+ARRIVAL FILLS (+500 ms): 261 decisions -> 213 cleared the price cap (82%) | PRICE-MISS 48 (18%) | SIZE-MISS 19 (7%) | depth-capped 19
