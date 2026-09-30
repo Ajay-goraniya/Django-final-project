@@ -12,8 +12,16 @@ RULE, exactly as V specified (frozen before the first row):
              the OTHER token at >= 1 - bid (the mint mirror), with >= SH shares in that second.
              Tape timestamps are data-api's, which run ~2.2 s ahead of candle seconds, so sec = ts - 2.2 - epoch.
   money      no fee, no rebate, $10, held to gamma settlement
-  arms       PFAV (SH>=14, the registered one), PFAV50 (SH>=50, the queue-depth check),
-             PFAV_taker (the taker FAV on the SAME candles, for pairing)
+  arms       PFAV (SH>=14, TOUCH fill: a print at <= our bid), PFAV50 (SH>=50, queue-depth check),
+             PFAV_THRU (SH>=14 but the print must trade STRICTLY THROUGH our bid - < bid on our token,
+             or > 1-bid on the other), PFAV_taker (taker FAV on the SAME candles, for pairing)
+  WHY THRU    V's strict 20-day test (STRICT_PFAV_CALM.txt, M5) BROKE the account: -335 to -778 over
+             09-11..30, 0-2 days positive. M2 was lenient. A print AT our bid does not prove our order
+             filled - we would be behind the queue at that level. A print THROUGH it proves the level
+             was consumed past us. PFAV_THRU is the honest fill and is expected to be worse, not better.
+  +1c        every PFAV arm also stores pnl_1c: the same trade paying one cent more (bid + 0.01), in
+             its OWN column. It is NOT folded into pnl_part, which already means "partial fill" for the
+             FAV family - one column with two meanings across arm families is how silent errors start.
   vol        Binance 1 s trailing 5-min, cuts 0.304/0.466, logged so calm and all both report
 
 WHY A SEPARATE MODULE: ef3_shadow scores from decide_log; PFAV needs the 1 s book (best bid) and the
@@ -93,30 +101,43 @@ def score(ep, bk, tape, toks, win_tok, px):
     our_tok = up_tok if is_up else dn_tok
     oth_tok = dn_tok if is_up else up_tok
     # --- fills: per second, maker shares on our token at <= bid, or the mint mirror on the other
-    per = {}
-    for ts, asset, price, size, is_taker in tape:
+    # SIDE MATTERS. A resting BUY is filled when someone SELLS into it, and the tape row that evidences
+    # it is the MAKER BUY print - that is a buy-side resting order being hit. Counting SELL prints as
+    # well would treat "someone sold down there" as proof our bid filled, which it is not.
+    # analysis/v/maker2/passive_fav.py does exactly this (`if sd != 'BUY': continue`); my first version
+    # omitted it and counted both sides.
+    per = {}; thru = {}
+    for ts, asset, price, size, is_taker, side in tape:
         s = (ts - LAG) - ep
         if not (sec0 <= s <= S1): continue
         if is_taker: continue                       # PASSIVE arm fills against MAKER prints
+        if side != 'BUY': continue
         sec = int(s)
         if asset == our_tok and price <= bid + 1e-9: per[sec] = per.get(sec, 0.0) + size
         elif asset == oth_tok and price >= (1.0 - bid) - 1e-9: per[sec] = per.get(sec, 0.0) + size
+        # STRICTLY through: < our bid on our token, > 1-bid on the other. Equality does not count.
+        if asset == our_tok and price < bid - 1e-9: thru[sec] = thru.get(sec, 0.0) + size
+        elif asset == oth_tok and price > (1.0 - bid) + 1e-9: thru[sec] = thru.get(sec, 0.0) + size
     won = 1.0 if our_tok == win_tok else 0.0
-    for arm, need in (('PFAV', 14.0), ('PFAV50', 50.0)):
-        hit = next((s for s in sorted(per) if per[s] >= need), None)
-        if hit is None: out[arm] = (is_up, bid, sec0, 0, won, 0.0)
+    for arm, need, src in (('PFAV', 14.0, per), ('PFAV50', 50.0, per), ('PFAV_THRU', 14.0, thru)):
+        hit = next((s for s in sorted(src) if src[s] >= need), None)
+        if hit is None: out[arm] = (is_up, bid, sec0, 0, won, 0.0, 0.0)
         else:
-            pnl = (STAKE / bid - STAKE) if won else -STAKE     # no fee, no rebate
-            out[arm] = (is_up, bid, hit, 1, won, pnl)
+            pnl  = (STAKE / bid - STAKE) if won else -STAKE            # no fee, no rebate
+            p1c  = (STAKE / min(bid + 0.01, 0.99) - STAKE) if won else -STAKE
+            out[arm] = (is_up, bid, hit, 1, won, pnl, p1c)
     # --- taker FAV on the SAME candle, for pairing: first TAKER buy in window/band
-    tk = sorted(((ts - LAG) - ep, asset, price) for ts, asset, price, size, is_taker in tape if is_taker)
+    tk = sorted(((ts - LAG) - ep, asset, price) for ts, asset, price, size, is_taker, side in tape
+              if is_taker and side == 'BUY')
     ft = next(((s, a, p) for s, a, p in tk if S0 <= s <= S1 and LO <= p <= HI), None)
     if ft:
         s, a, p = ft
         w2 = 1.0 if a == win_tok else 0.0
         cost = p + 0.07 * p * (1 - p)
+        c1 = min(p + 0.01, 0.99); c1 = c1 + 0.07 * c1 * (1 - c1)
         out['PFAV_taker'] = (1 if a == up_tok else 0, p, int(s), 1, w2,
-                             (STAKE / cost - STAKE) if w2 else -STAKE)
+                             (STAKE / cost - STAKE) if w2 else -STAKE,
+                             (STAKE / c1 - STAKE) if w2 else -STAKE)
     return out
 
 
@@ -124,6 +145,8 @@ def main():
     px = bn_series()
     sh = sqlite3.connect(SHADOW)
     have = {r[1] for r in sh.execute('PRAGMA table_info(fires)')}
+    if 'pnl_1c' not in have:
+        sh.execute('ALTER TABLE fires ADD COLUMN pnl_1c REAL'); sh.commit()
     bkc = sqlite3.connect(f'file:{BOOKS}?mode=ro', uri=True)
     tpc = sqlite3.connect(f'file:{TAPE}?mode=ro', uri=True)
     gmc = sqlite3.connect(f'file:{GAMMA}?mode=ro', uri=True)
@@ -137,18 +160,18 @@ def main():
         win_tok = up_tok if oc == 'UP' else dn_tok
         bk = bkc.execute("SELECT ts,up_bid,dn_bid FROM books WHERE market='btc5' AND epoch=?", (ep,)).fetchall()
         if not bk: continue
-        tape = tpc.execute('SELECT ts,asset,price,size,is_taker FROM tape WHERE epoch=?', (ep,)).fetchall()
+        tape = tpc.execute('SELECT ts,asset,price,size,is_taker,side FROM tape WHERE epoch=?', (ep,)).fetchall()
         if not tape: continue
         res = score(ep, bk, tape, (up_tok, dn_tok), win_tok, px)
         if not res: continue
         v = vol_at(px, ep)
         day = dt.datetime.fromtimestamp(ep, dt.UTC).strftime('%m-%d')
-        for arm, (is_up, bid, sec, filled, won, pnl) in res.items():
-            sh.execute('INSERT OR REPLACE INTO fires(epoch,arm,ts_ms,day,sec,up,p,ask,fill,opp_fill,win,pnl,sh,vwap,pnl_part)'
-                       ' VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        for arm, (is_up, bid, sec, filled, won, pnl, p1c) in res.items():
+            sh.execute('INSERT OR REPLACE INTO fires(epoch,arm,ts_ms,day,sec,up,p,ask,fill,opp_fill,win,pnl,sh,vwap,pnl_part,pnl_1c)'
+                       ' VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                        (ep, arm, (ep + sec) * 1000, day, sec, is_up, (v if v is not None else None), bid,
                         (bid if filled else None), None, int(won), pnl,
-                        (STAKE / bid if filled else 0.0), (bid if filled else None), pnl))
+                        (STAKE / bid if filled else 0.0), (bid if filled else None), pnl, p1c))
             n += 1
         sh.commit()
     print(f'{dt.datetime.now(dt.UTC):%H:%M:%S} PFAV scored {len(eps)} candle(s), wrote {n} row(s)')

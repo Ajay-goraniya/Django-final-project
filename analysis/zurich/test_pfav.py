@@ -7,8 +7,8 @@ import pfav
 EP=1790000000; UP='TOKUP'; DN='TOKDN'
 def book(sec_bid):           # {sec: (up_bid, dn_bid)}
     return [(EP+s, u, d) for s,(u,d) in sorted(sec_bid.items())]
-def tape(rows):              # (sec, asset, price, size, is_taker) with sec in CANDLE seconds
-    return [(EP+s+pfav.LAG, a, p, z, t) for s,a,p,z,t in rows]
+def tape(rows):              # (sec, asset, price, size, is_taker[, side]) with sec in CANDLE seconds
+    return [(EP+s+pfav.LAG, a, p, z, t, (r[5] if len(r)>5 else 'BUY')) for r in rows for s,a,p,z,t in [r[:5]]]
 
 class T(unittest.TestCase):
     def test_no_post_when_bid_outside_band(self):
@@ -57,5 +57,41 @@ class T(unittest.TestCase):
         r=pfav.score(EP,b,tape([(100,UP,0.70,20,0),(105,UP,0.72,5,1)]),(UP,DN),UP,{})
         self.assertIn('PFAV_taker',r)
         p=0.72; self.assertAlmostEqual(r['PFAV_taker'][5], 10/(p+0.07*p*(1-p))-10, places=9)
+
+    # ---- PFAV_THRU: a print AT our bid must NOT fill it; only strictly through counts ----
+    def test_thru_needs_strictly_below_our_bid(self):
+        b=book({s:(0.70,0.29) for s in range(60,181)})
+        r=pfav.score(EP,b,tape([(100,UP,0.70,50,0)]),(UP,DN),UP,{})
+        self.assertEqual(r['PFAV'][3],1,'a print AT the bid fills the TOUCH arm')
+        self.assertEqual(r['PFAV_THRU'][3],0,'a print AT the bid must NOT fill the THRU arm')
+        r2=pfav.score(EP,b,tape([(100,UP,0.69,50,0)]),(UP,DN),UP,{})
+        self.assertEqual(r2['PFAV_THRU'][3],1,'strictly below the bid fills THRU')
+    def test_thru_mint_mirror_needs_strictly_above(self):
+        b=book({s:(0.70,0.29) for s in range(60,181)})
+        at=pfav.score(EP,b,tape([(110,DN,0.30,50,0)]),(UP,DN),UP,{})
+        self.assertEqual(at['PFAV_THRU'][3],0,'other token AT 1-bid must not fill THRU')
+        ab=pfav.score(EP,b,tape([(110,DN,0.31,50,0)]),(UP,DN),UP,{})
+        self.assertEqual(ab['PFAV_THRU'][3],1,'other token strictly above 1-bid fills THRU')
+    def test_thru_is_a_subset_of_touch(self):
+        b=book({s:(0.70,0.29) for s in range(60,181)})
+        for px in (0.68,0.69,0.70):
+            r=pfav.score(EP,b,tape([(100,UP,px,50,0)]),(UP,DN),UP,{})
+            if r['PFAV_THRU'][3]: self.assertEqual(r['PFAV'][3],1,f'THRU filled at {px} but TOUCH did not')
+    def test_plus_1c_column_costs_more_on_a_win_and_is_flat_on_a_loss(self):
+        b=book({s:(0.70,0.29) for s in range(60,181)})
+        w=pfav.score(EP,b,tape([(100,UP,0.69,50,0)]),(UP,DN),UP,{})['PFAV_THRU']
+        self.assertAlmostEqual(w[5],10/0.70-10,places=9)
+        self.assertAlmostEqual(w[6],10/0.71-10,places=9)
+        self.assertLess(w[6],w[5],'+1c must reduce a winning trade')
+        l=pfav.score(EP,b,tape([(100,UP,0.69,50,0)]),(UP,DN),DN,{})['PFAV_THRU']
+        self.assertAlmostEqual(l[5],-10.0,places=9)
+        self.assertAlmostEqual(l[6],-10.0,places=9,msg='a loss is the full stake either way')
+
+    def test_sell_prints_do_not_fill_a_resting_buy(self):
+        b=book({s:(0.70,0.29) for s in range(60,181)})
+        sell=pfav.score(EP,b,tape([(100,UP,0.69,50,0,'SELL')]),(UP,DN),UP,{})
+        self.assertEqual(sell['PFAV'][3],0,'a maker SELL print is not evidence our BUY filled')
+        buy=pfav.score(EP,b,tape([(100,UP,0.69,50,0,'BUY')]),(UP,DN),UP,{})
+        self.assertEqual(buy['PFAV'][3],1)
 
 if __name__=='__main__': unittest.main(verbosity=2)
