@@ -303,3 +303,82 @@ class Settlement(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=1)
+
+
+class PostPathIntegration(unittest.TestCase):
+    """The 30-min dry run of 09-30 13:24-13:54 posted NOTHING because all 7 candles were
+    non-calm (vol 0.545-2.456 vs the 0.304 cut). So the dry run proves the gates, not the
+    posting path. These drive Probe.one_pass with injected book/vol state and assert that a
+    post is actually written - the part the market did not let us observe."""
+
+    def setUp(self):
+        import asyncio
+        self.loop = asyncio.new_event_loop()
+        self.p = M.Probe(dry_run=True, db=mem())
+        self.ep = int(time.time() // 300) * 300
+        self.now = self.ep + 120            # a chosen second inside the 60-180 window
+        self.p.gamma_db = ':none:'
+        M_tokens = lambda epoch, gamma_db=None: ('TOKUP', 'TOKDN') if epoch == self.ep else (None, None)
+        self._orig = M.tokens_for; M.tokens_for = M_tokens
+        self.p.books = {'TOKUP': dict(bids=[(0.70, 500.0)], asks=[(0.72, 500.0)], ts=time.time()),
+                        'TOKDN': dict(bids=[(0.28, 500.0)], asks=[(0.30, 500.0)], ts=time.time())}
+        self.p.fav.vol_before_open = lambda epoch, px=None: 0.20     # calm
+        self.p.mover.add(int(self.now * 1000) - 900, 100000.0)
+        self.p.mover.add(int(self.now * 1000), 100000.0)          # flat -> not adverse
+
+    def tearDown(self):
+        M.tokens_for = self._orig; self.loop.close()
+
+    def run_pass(self):
+        self.loop.run_until_complete(self.p.one_pass(now=self.now))
+
+    def test_a_calm_in_band_candle_produces_a_post_row(self):
+        self.run_pass()
+        r = self.p.db.execute('select side, price, shares, status, dry from orders').fetchall()
+        self.assertEqual(len(r), 1, 'exactly one order should have been written')
+        self.assertEqual(r[0]['side'], 'UP')
+        self.assertAlmostEqual(r[0]['price'], 0.70)
+        self.assertEqual(r[0]['shares'], M.SHARES)
+        self.assertEqual(r[0]['status'], 'DRY')
+        self.assertEqual(r[0]['dry'], 1)
+
+    def test_the_posted_price_is_below_the_ask_on_the_real_book(self):
+        self.run_pass()
+        px = self.p.db.execute('select price from orders').fetchone()[0]
+        self.assertLess(px, self.p.books['TOKUP']['asks'][0][0])
+
+    def test_a_non_calm_candle_writes_no_order(self):
+        self.p.fav.vol_before_open = lambda epoch, px=None: 1.50
+        self.run_pass()
+        self.assertEqual(self.p.db.execute('select count(*) from orders').fetchone()[0], 0)
+
+    def test_an_adverse_move_blocks_the_post(self):
+        now = int(self.now * 1000)
+        self.p.mover.ticks.clear()
+        self.p.mover.add(now - 900, 100000.0); self.p.mover.add(now, 99950.0)   # -5 bps, bad for UP
+        self.p.resting = dict(epoch=self.ep, side='UP', price=0.70, token='TOKUP',
+                              order_id=None, post_ts_ms=now, row=1)
+        self.p.db.execute("insert into orders(id,epoch,side,token,price,shares,status) "
+                          "values(1,?,'UP','TOKUP',0.70,5,'OPEN')", (self.ep,))
+        self.run_pass()
+        self.assertIsNone(self.p.resting, 'the resting order must be pulled')
+        self.assertEqual(self.p.db.execute('select status from orders where id=1').fetchone()[0],
+                         'CANCELLED')
+
+    def test_dry_run_never_leaves_anything_resting(self):
+        self.run_pass()
+        self.assertIsNone(self.p.resting)
+
+    def test_a_dry_run_never_constructs_a_broker(self):
+        self.assertIsNone(self.p.broker)
+        self.run_pass()
+        self.assertEqual(self.p.db.execute(
+            "select count(*) from orders where dry=1 and status='DRY'").fetchone()[0], 1)
+
+    def test_place_returns_before_signing_in_a_dry_run(self):
+        """self.broker is None in a dry run, so any attempt to sign would raise AttributeError.
+        Asserting the DRY row exists AND no exception escaped is the proof it returned early."""
+        oid, row = self.loop.run_until_complete(
+            self.p.place(self.ep, 'UP', 'TOKUP', 0.70))
+        self.assertIsNone(oid)
+        self.assertEqual(self.p.db.execute('select status from orders where id=?', (row,)).fetchone()[0], 'DRY')

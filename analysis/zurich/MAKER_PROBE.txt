@@ -1,0 +1,121 @@
+MAKER PROBE - build + dry-run record. Zurich only; London untouched; 8787's master/EF lane/ef_engine
+unchanged. Spec: analysis/v/maker2/MAKER_PROBE_SPEC.md. Owner "Okay test it" (09-30 ~12:5x, via V).
+
+STATUS: BUILT, TESTED, DRY-RUN DONE. NOT ENABLED. No live order has been sent and none can be until
+the owner creates the flag file himself. I have not created it and will not.
+
+FILES
+  /home/ubuntu/pm_paper_zurich/maker_probe.py        the probe (own process, own DB, own flag, own stops)
+  /home/ubuntu/pm_paper_zurich/test_maker_probe.py   55 tests, all passing
+  /home/ubuntu/maker_probe/maker_probe.sqlite3       its own DB: orders, fills, decisions
+  /home/ubuntu/maker_probe/ENABLED                   the flag. ABSENT = OFF. Owner creates it.
+  mirrored in git at analysis/zurich/{maker_probe,test_maker_probe}.py
+
+THE RULE AS BUILT (frozen from the spec, nothing tuned)
+  calm      Binance 1 s trailing-5-min vol before the open < 0.304, via poly_fav.FavBrain - the SAME
+            frozen call the 8787 engine makes. Not re-derived here.
+  window    sec 60-180; 180 s is also the hard cancel
+  favourite the side whose best BID is in [0.60, 0.80]
+  post      BUY 5 shares at that best bid, post_only=True (the SDK supports it: create_limit_order
+            (..., post_only=True)), so the GTC-below-the-ask fallback in the spec is not needed
+  cancel    immediately on a Binance spot move >= 2 bps against our side over the last 1 s; at 180 s;
+            at the candle end; on the favourite flipping; on the book leaving the band; on vol leaving
+            calm. A risen bid is a cancel with reason 'bid_moved' and a fresh post next pass.
+  limits    one open order at a time, at most one FILL per candle
+  settle    held to settlement, graded on the VENUE's own resolution (gamma mirror), never a Binance
+            close. Maker BUY pays price, no taker fee: pnl = shares*(1-price) on a win, -shares*price on
+            a loss.
+  stops     -$10 realised in a UTC day -> off for the day; -$20 realised lifetime -> off for good.
+            Checked before EVERY post, not once at startup.
+
+TESTS - 55, all passing. The five properties the owner's YES is conditional on, plus a sixth.
+  1 never crosses        posts strictly below the ask; refuses at bid==ask, on a crossed book, and when
+                         there is no ask at all; DOWN is priced against dn_ask (the one-sided crossing
+                         bug); asserts post_only and that no FAK/market order path exists in the module
+  2 cancels on 2 bps     sign convention verified for BOTH sides (a fall is adverse for UP and
+                         favourable for DOWN); only the last 1 s counts; binds exactly at 2.00; holds at
+                         1.99; outranks every reason to stay
+  3 cancels at 180 s     no post before 60 or after 180; posts at both edges; a resting order is pulled
+                         at 181 and also if the window has not opened
+  4 one order, one fill  a correct resting order is never duplicated; a risen bid and a flipped
+                         favourite are cancels, not second orders; nothing posts after a fill in that
+                         candle
+  5 both hard stops      day stop binds at exactly -10.00 and not at -9.99; yesterday's loss does not
+                         stop today; lifetime binds across days and outranks a clean day; UNSETTLED
+                         fills are not counted as zero; flag off blocks a clean book; default is OFF
+  6 SHARED WALLET        not in the spec, and it matters more than any of the above: the module may
+                         NEVER call cancel_all() or cancel_market_orders(). Zurich and London share ONE
+                         wallet and 8787 has its own resting orders on it - a wallet-wide cancel from a
+                         probe would reach into another engine's orders. Enforced by a test that greps
+                         this module for those two SDK names, and by a test that every cancel_order call
+                         passes order_id=.
+
+A BUG THE BUILD FOUND, AND HOW
+  I cross-checked my book parse against the 8787 engine's OWN parse of the same venue feed, second by
+  second. On every overlapping second my best ask was None - I had no book at all. Cause: the gamma
+  mirror usually does not yet carry the NEXT candle's tokens when the probe subscribes, so the
+  subscription held only the current pair, while the resubscribe bound (copied from the engine) was
+  ep+345. That left the probe holding STALE tokens for the first ~45 s of every candle. It is outside
+  the 60-180 s window, so it would never have fired a wrong order - but it is silent blindness, and it
+  becomes a live bug the moment the window widens. Fixed: when the next pair is unknown the
+  subscription now ends at the roll instead of ep+345. Blind seconds measured 0/175 after the fix,
+  against 43/43 before.
+  Residual: my best ask and the engine's agree on 111/175 seconds, the rest within about a tick. Two
+  independent websocket clients sampled at different moments inside the same second will differ on a
+  fast book; the probe prices off its OWN book at its OWN moment, which is what the order it is about
+  to send requires. This is a parser sanity check, not a fill test - it is deliberately NOT used to
+  estimate anything about fills.
+
+DRY RUN - 30 minutes, 09-30 13:23:42 to 13:54:18 UTC, no orders (the run cannot send one)
+  passes            8,763 over 7 candles
+  orders            0
+  fills             0
+  decisions logged  176 sampled rows + a per-pass funnel
+  WHY ZERO: every one of the 7 candles was NON-CALM. Measured vol before the open, per candle:
+      0.774  0.612  0.545  1.170  2.456  1.587  1.390        (the calm cut is 0.304)
+  Not one candle came close. For context the last 12 candles before the run had exactly 1 calm.
+  BTC was simply moving hard through that half hour. The calm gate is the binding constraint and it
+  behaved exactly as specified.
+  Gate funnel over all 8,763 passes: vol-not-calm and out-of-window account for all of them; the
+  band and crossing tests were never reached, because vol short-circuits first.
+
+  SO BE CLEAR ABOUT WHAT THE DRY RUN DID AND DID NOT PROVE.
+  It proved: the process runs 30 minutes without error, reads both feeds, resolves tokens, evaluates
+  every pass, and refuses correctly. It did NOT exercise the posting path, because the market never
+  offered a calm candle. A dry run that posts nothing is not evidence that posting works.
+  So the posting path is covered deterministically instead, by integration tests that drive one_pass
+  with an injected book and an injected calm vol at a chosen second in the window, and assert a post
+  row is written at the best bid, strictly below the ask, 5 shares, and that a 2 bps move pulls it.
+  one_pass takes an injectable clock for exactly this reason - otherwise those tests would SKIP
+  whenever the wall clock sat outside 60-180 s, and a skipped test proves nothing.
+
+WHAT THE OWNER MUST SWITCH ON - he does this himself, not me
+  There is no dashboard click. The probe is not part of the 8787 engine and deliberately shares no
+  control surface with it, so that nothing the owner does to the probe can touch the live lane.
+  TWO steps, both on the Zurich box:
+    1)  echo 1 > /home/ubuntu/maker_probe/ENABLED
+    2)  cd /home/ubuntu/pm_paper_zurich && nohup ./.venv/bin/python maker_probe.py > /home/ubuntu/maker_probe/live.log 2>&1 &
+  Step 1 alone does nothing - no process is running. Step 2 alone does nothing - it reads the flag
+  live on every pass and refuses to start if the flag is absent.
+  TO STOP: rm /home/ubuntu/maker_probe/ENABLED   (takes effect on the next pass, within ~0.2 s; any
+  resting order is cancelled at the next gate). Killing the process also cancels on shutdown.
+  STATUS ANY TIME:  ./.venv/bin/python maker_probe.py --status
+  SETTLE FILLS:     ./.venv/bin/python maker_probe.py --settle
+
+ALERTS TO V (one line each): first live order; any error; either hard stop; and at 60 fills.
+BUDGET: 5 shares at 0.60-0.80 is about $3.00-$4.00 per bid, one at a time, $20 lifetime stop.
+
+CONFIRMING DRY RUNS AFTER THE DRY-RUN LOGGING FIX
+  A dry run was routing its would-be posts through guard.may_trade(), which returns "BLOCKED: DRY-RUN"
+  by construction - so a dry run could only ever have logged that it was a dry run, never the decision
+  the rule made. Fixed: in a dry run one_pass records the post decision and calls place(), which writes
+  a DRY row and returns before signing (self.broker is None in a dry run, so signing is not reachable).
+  10 min 13:56-14:06 UTC: ran clean, 0 errors, 0 orders. Candle vols 1.390 / 1.092 / 0.957 / 1.222.
+   3 min 14:1x       UTC: 891 passes, 0 orders, funnel  488 'sec N > N' / 403 'vol N >= N (not calm)'.
+  Still not one calm candle in any run. Total dry-run time 43 min, 0 errors, 0 orders, 0 fills.
+
+ENGINE UNTOUCHED, VERIFIED
+  8787 pid 304878, up 9h32m at the time of the build, never restarted by me. btc_model_v12_polymarket.py
+  last modified 09-30 03:51 (the earlier v10 gate fix), poly_lanes 00:58, poly_fav 02:20, poly_core and
+  poly_live 09-24. The only new files in that directory are maker_probe.py and test_maker_probe.py, and
+  nothing in the engine imports either. master/EF lane/ef_engine/stake/sl all untouched.

@@ -47,6 +47,7 @@ ENABLED_FLAG= HOME + '/ENABLED'
 GAMMA_DB    = '/home/ubuntu/pm_ef3/gamma_zurich.sqlite3'
 LOGFILE     = '/home/ubuntu/claude-work/repo/analysis/zurich/MAKER_PROBE.txt'
 POLY_WS     = 'wss://ws-subscriptions-clob.polymarket.com/ws/market'
+NUM         = re.compile(r'[-+]?\d*\.?\d+')   # collapses numbers so the gate funnel aggregates
 BN_WS       = 'wss://data-stream.binance.vision/ws/btcusdt@aggTrade'
 
 
@@ -459,8 +460,12 @@ class Probe:
                 self.counts['error'] += 1
                 await asyncio.sleep(1)
 
-    async def one_pass(self):
-        now = time.time(); ep = int(now // 300) * 300; sec = int(now - ep)
+    async def one_pass(self, now=None):
+        # `now` is injectable so the post path can be tested at a chosen second in the candle.
+        # The 30 min dry run never saw a calm candle, so without this the posting path would be
+        # covered only by tests that skip whenever the wall clock sits outside 60-180 s.
+        now = time.time() if now is None else now
+        ep = int(now // 300) * 300; sec = int(now - ep)
         # A resting order never survives its own candle.
         if self.resting and self.resting['epoch'] != ep:
             await self.cancel('candle_end')
@@ -473,11 +478,19 @@ class Probe:
         act, side, price, reason = self.quoter.decide(
             sec=sec, up_bid=ub, dn_bid=dbid, up_ask=ua, dn_ask=da, vol=vol,
             resting=self.resting, adverse=adv, filled_this_candle=(ep in self.filled_epochs))
-        self.funnel[re.sub(r'[-+]?\\d*\\.?\\d+', 'N', reason)] += 1
+        self.funnel[NUM.sub('N', reason)] += 1
         if act == 'cancel':
             self.record_decision(ep, sec, act, side, price, reason, vol, ub, dbid, ua, da, adv)
             await self.cancel(reason); return
         if act == 'post':
+            if self.dry_run:
+                # A dry run must SHOW the decision it would have made. Routing it through
+                # guard.may_trade() would only ever record "BLOCKED: DRY-RUN" and tell us nothing
+                # about the rule. place() is still the only thing that can sign, and it returns a
+                # DRY row without touching the broker (self.broker is None in a dry run).
+                self.record_decision(ep, sec, act, side, price, reason, vol, ub, dbid, ua, da, adv)
+                await self.place(ep, side, (tok_up if side == 'UP' else tok_dn), price)
+                return
             ok, why = self.guard.may_trade(now)
             if not ok:
                 self.record_decision(ep, sec, 'blocked', side, price, f'{reason} | BLOCKED: {why}',
