@@ -1,0 +1,100 @@
+SESSION x ARM WALK-FORWARD - 'did we test fixed / raw by session?' (owner via V, 09-30). READ-ONLY, NO DEPLOY.
+
+METHOD (fixed before looking, nothing re-derived here)
+  rows      decide_log per-pass, 09-24..30, via ef3_shadow.load_candles + build_rows (the same builder
+            whose --selftest reproduces ef2_rows.npz row-for-row). q IS the +250 ms London-exec FAK fill.
+  sim       one fire per candle, FAK at the pass's own ask, $10, fee exact (per1/be), gamma labels
+            (venues.outcome, the venue's own resolution - the settlement rule).
+  arms      fixed15 and raw25 are imported from ef3_fine.QUAL, not rewritten. EF-10 cell semantics are
+            ef10.py's mask verbatim; the top-3 are re-ranked by P/DD ON THE TRAIN DAYS ONLY, never read
+            off EF10_grid.csv (whose totals are over a different 5-day window).
+  sessions  Asia 00-07 / Europe 07-13 / US 13-20 / Late 20-24 UTC, by the candle's open hour.
+  split     train 09-24..27, sealed test 09-28..30. Keep a cell iff train $>0 AND both train halves >0
+            AND n>=30. The test days were scored only after the keep list was fixed.
+  size      2,645,336 passes over 1,723 candles.
+            candles/day  09-24 132  09-25 288  09-26 288  09-27 288  09-28 288  09-29 288  09-30 151
+
+TWO THINGS THAT LIMIT HOW THIS CAN BE READ - stated before the numbers, not after
+  1. 09-24 is a HALF day (132 of 288 candles) and 09-30 is the day in progress (151).
+  2. US 13-20 and Late 20-24 have ZERO candles on 09-30 (it is ~13:00 UTC). So every kept cell in
+     those two sessions is tested on 09-28 and 09-29 ONLY - a 2-day sealed test, not 3. 'days +'
+     below counts days that EXIST for that cell.
+
+TOP-3 EF-10 CELLS BY TRAIN P/DD - and a correction to what 'top-3' bought us
+  EF10#1 ev.20 s60-210 a.05-.55 c+2   train $  +276.1  DD  49.5  P/DD 5.58  n 104
+  EF10#2 ev.20 s60-210 a.15-.55 c+2   train $  +276.1  DD  49.5  P/DD 5.58  n 104
+  EF10#3 ev.20 s60-210 a.05-.65 c+2   train $  +259.3  DD  49.5  P/DD 5.24  n 109
+  #1 and #2 ARE THE SAME RULE. The lowest own ask on any p>=0.5 pass is 0.150, so ask_min 0.05 and
+  ask_min 0.15 select identically - verified fire-for-fire (474 vs 474, same list). The grid's top-3
+  by P/DD is therefore only TWO distinct rules, and the 'three' EF-10 columns below are not three
+  independent tests. (My first identity check said they differed; that check compared dicts holding
+  NaN no-fill prices, and NaN != NaN makes any such comparison False. The check was broken, not the cells.)
+
+FULL GRID - every arm x session cell, train and sealed test, $ at $10/fill
+  arm                                 session        train $/n     halves      test $/n    KEEP
+  fixed15                             Asia 00-07       -3.6/9    +46.4/ -50.0    +42.9/35   
+  fixed15                             Europe 07-13    -42.6/13   -43.3/  +0.7    +13.7/26   
+  fixed15                             US 13-20        +75.7/40  +112.7/ -37.0    +21.3/31   
+  fixed15                             Late 20-24      +44.1/17   +19.4/ +24.8     +8.8/6    
+  raw25 S0=60                         Asia 00-07       +3.5/24   +11.2/  -7.7     -6.9/45   
+  raw25 S0=60                         Europe 07-13     +2.9/26   -10.4/ +13.3   -133.4/41   
+  raw25 S0=60                         US 13-20       +124.3/46  +108.7/ +15.6    +26.3/39   KEEP
+  raw25 S0=60                         Late 20-24      +74.4/21   +45.2/ +29.3     -2.6/7    
+  raw25 S0=0                          Asia 00-07      +14.3/25   +32.0/ -17.7    -90.8/54   
+  raw25 S0=0                          Europe 07-13     +2.3/26   -11.0/ +13.3    -80.2/44   
+  raw25 S0=0                          US 13-20        +30.9/52   +92.6/ -61.7    -12.0/48   
+  raw25 S0=0                          Late 20-24      +78.9/31   +67.9/ +11.0    +34.6/10   KEEP
+  EF10#1 ev.20 s60-210 a.05-.55 c+2   Asia 00-07      +47.2/20    +6.6/ +40.6    +33.6/45   
+  EF10#1 ev.20 s60-210 a.05-.55 c+2   Europe 07-13    +28.9/21    -7.0/ +35.9    -64.4/33   
+  EF10#1 ev.20 s60-210 a.05-.55 c+2   US 13-20       +113.5/43   +87.9/ +25.6     -0.5/35   KEEP
+  EF10#1 ev.20 s60-210 a.05-.55 c+2   Late 20-24      +86.4/20   +45.2/ +41.3    -17.2/6    
+  EF10#2 ev.20 s60-210 a.15-.55 c+2   Asia 00-07      +47.2/20    +6.6/ +40.6    +33.6/45   
+  EF10#2 ev.20 s60-210 a.15-.55 c+2   Europe 07-13    +28.9/21    -7.0/ +35.9    -64.4/33   
+  EF10#2 ev.20 s60-210 a.15-.55 c+2   US 13-20       +113.5/43   +87.9/ +25.6     -0.5/35   KEEP
+  EF10#2 ev.20 s60-210 a.15-.55 c+2   Late 20-24      +86.4/20   +45.2/ +41.3    -17.2/6    
+  EF10#3 ev.20 s60-210 a.05-.65 c+2   Asia 00-07      +37.2/21    +6.6/ +30.6    +40.4/44   
+  EF10#3 ev.20 s60-210 a.05-.65 c+2   Europe 07-13    +16.0/24   -10.0/ +25.9    -68.0/33   
+  EF10#3 ev.20 s60-210 a.05-.65 c+2   US 13-20       +119.7/44   +94.1/ +25.6     +0.6/36   KEEP
+  EF10#3 ev.20 s60-210 a.05-.65 c+2   Late 20-24      +86.4/20   +45.2/ +41.3    -17.2/6    
+
+KEPT CELLS (5) AND THEIR SEALED TEST, day by day
+  raw25 S0=60 / US 13-20:  test $ +26.3  n 39   per day {'09-28': 4.7, '09-29': 21.5}
+  raw25 S0=0 / Late 20-24:  test $ +34.6  n 10   per day {'09-28': 44.9, '09-29': -10.3}
+  EF10#1 ev.20 s60-210 a.05-.55 c+2 / US 13-20:  test $ -0.5  n 35   per day {'09-28': -11.4, '09-29': 10.9}
+  EF10#2 ev.20 s60-210 a.15-.55 c+2 / US 13-20:  test $ -0.5  n 35   per day {'09-28': -11.4, '09-29': 10.9}
+  EF10#3 ev.20 s60-210 a.05-.65 c+2 / US 13-20:  test $ +0.6  n 36   per day {'09-28': -10.3, '09-29': 10.9}
+  POOLED sealed test: $ +60.5 over 155 fills, days + 2/2  (09-28 +16.5, 09-29 +44.0)
+
+THE COMPARISON THAT DECIDES IT - same arms, ALL sessions, same sealed test days
+  arm                                 test $/n      DD    days +
+  fixed15                               +86.8/98    75.9   2/3
+  raw25 S0=60                          -116.7/132  175.8   0/3
+  raw25 S0=0                           -148.4/156  207.1   0/3
+  EF10#1 ev.20 s60-210 a.05-.55 c+2     -48.5/119  137.3   2/3
+  EF10#2 ev.20 s60-210 a.15-.55 c+2     -48.5/119  137.3   2/3
+  EF10#3 ev.20 s60-210 a.05-.65 c+2     -44.2/119  141.0   2/3
+
+WHAT THIS ANSWERS
+  1. NO fixed15 cell survived the train filter, in ANY session. fixed15/US 13-20 had train +75.7 on n=40
+     but its halves were +112.7 / -37.0, so the both-halves rule dropped it. And fixed15
+     trading ALL sessions is the BEST arm on the sealed test (+86.8, n=98, 2/3 days). So for fixed15 the session
+     split found nothing - applying it would have taken us from the best result on the board to no trades.
+  2. For the RAW arms the split is the difference between a loss and a gain. All sessions: raw25 S0=60
+     -116.7 (n=132, DD 175.8) and raw25 S0=0 -148.4 (n=156, DD 207.1), both losing on
+     EVERY test day (0/3 and 0/3). Their kept session cells: +26.3 (n=39) and +34.6 (n=10).
+     The effect is large and points the same way in both raw variants, which is the one thing here
+     that is not explainable by a single lucky cell.
+  3. The EF-10 cells are the CONTROL, and they say be careful: the same procedure kept three US cells
+     whose sealed test is -0.5, -0.5, +0.6 - indistinguishable from zero. A selection rule that
+     returns a real number on one arm and 0.0 on another, from the same train window, is not yet a finding.
+  4. Sample. The pooled +60.5 leans on raw25 S0=0 / Late 20-24 at n=10 fills (09-28 +44.9, 09-29 -10.3).
+     Under 60 graded fires is 'insufficient' by our own standard - do not read it. raw25 S0=60 / US 13-20
+     at n=39 is the only kept cell with both a real effect and a real sample, and it is still under 60
+     and still only 2 days. No cell in this study clears the 60-fill bar.
+
+VERDICT: session timing DOES separate the raw arms - US and Late carry them, Asia and Europe sink them -
+but it does NOT beat simply using fixed15 unfiltered, and the EF-10 control shows the same selection
+procedure returning zero. NO DEPLOY, NO CHANGE: this is a research answer to a research question.
+
+Built 2026-09-30 13:02 UTC from a live decide_log; re-running later moves the
+late-09-30 columns as that day fills in. Rows cached at /home/ubuntu/pm_ef3/session_ef_rows.pkl.
