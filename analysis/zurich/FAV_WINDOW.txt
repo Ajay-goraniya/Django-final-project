@@ -1,0 +1,12 @@
+1. NO. No window blocks FAV inside sec 60-180. The text is btc_model_v10.py:412 in Model.decide() - the
+   v10 CLASSIFIER's window, bounds 15-240 s: "outside decision window (15-240 s), at N s". FAV's 60-180
+   sits entirely inside 15-240, and the string appears nowhere in poly_lanes.py or poly_fav.py, so it is
+   not in FAV's code path at all (FAV runs poly_lanes._try_ef -> poly_fav.watch, which never consults it).
+2. COSMETIC. Evidence, since the 01:01:28 restart: 337 decide_log rows carry that text, spanning sec
+   0.3-287.3, and EXACTLY 0 of them fall inside 60-180 - it only ever prints below 15 s or above 240 s.
+   It is the other brain's row: while ef_engine="fav" the v10 classifier still logs decide_log every pass
+   (side/ask/ev/fire/reason are its fields, not FAV's) and the dashboard shows its reason text.
+3. NO REAL BLOCK EXISTS, so there is no fix to apply. Proof FAV is not gated: the live FILLED order at
+   01:21:03 UTC, candle 1790731200, was taken at sec 63 - inside 60-180 - UP at ask 0.65, 7.507691 shares
+   for $4.879999. A blocked lane cannot fill. If the owner wants the text gone it is a DASHBOARD display
+   question (it is showing the v10 lane's reason while EF is being driven by fav), not a gate on FAV.
