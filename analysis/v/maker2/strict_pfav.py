@@ -9,7 +9,11 @@ LAG, S0, S1, LO, HI, TOUCH = 2.2, 60, 180, 0.60, 0.80, 14.0
 BUILD = (1790456400, 1790629200)            # 09-26..28 window M2 was designed on (in-sample)
 CUT_FIT_DAYS = {'2026-09-22', '2026-09-23'}  # the fixed 0.304 cut was fitted on these
 T = {}
-for f in A.tape.split(','): T.update(json.load(gzip.open(f)))
+import glob
+for pat in A.tape.split(','):
+    for f in sorted(glob.glob(pat)): T.update(json.load(gzip.open(f)))
+for k, d in T.items():                       # lean format (fetch_tape_lean.py): normalise
+    if 'p' in d: d['win'] = 'U' if d['up_won'] else 'D'; d['up'] = 'U'
 BN = {}
 for f in A.bn.split(','): BN.update({int(k): v for k, v in json.load(open(f)).items()})
 day = lambda e: dt.datetime.fromtimestamp(e, dt.timezone.utc).strftime('%Y-%m-%d')
@@ -28,6 +32,7 @@ if A.book:
     for e, sec, bu, bd in sqlite3.connect(A.book).execute('select epoch, sec, bid_up, bid_dn from pb where bid_up is not null and bid_dn is not null'):
         BOOK[e][int(sec)] = (bu, bd)
 def prints(d, e):
+    if 'p' in d: return 'U', 'D', [(ts - LAG - e, 'U' if f else 'D', p, s) for ts, f, p, s in d['p']]
     toks = sorted({a for _, _, a, *_ in d['all']}); ref = d.get('up', toks[0])
     seen, out = set(), []
     for w, sd, a, s, p, ts, tx in d['all']:
