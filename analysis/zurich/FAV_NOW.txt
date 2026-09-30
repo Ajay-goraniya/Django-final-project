@@ -1,0 +1,32 @@
+FAV STATUS - generated 09-30 02:12 UTC. READ-ONLY, nothing changed.
+
+DAY 2 SO FAR  09-30 00:00 .. 09-30 02:00 UTC   (2 h of the day)
+arm          decisions  fills  wins     $@10    maxDD   flag
+  FAV               12     10     7    -3.91    22.34   INSUFFICIENT (<60 fills)
+  FAV_mid            7      6     5    +5.22    10.00   INSUFFICIENT (<60 fills)
+  FAV_all           20     16    12    +1.31    18.36   INSUFFICIENT (<60 fills)
+  FAV_ref            6      6     3   -15.68    30.00   INSUFFICIENT (<60 fills)
+  C_fixed15          6      3     1    -7.64    10.00   INSUFFICIENT (<60 fills)
+
+CUMULATIVE  09-29 01:20 .. 09-30 02:00 UTC   (24.7 h)
+arm          decisions  fills  wins     $@10    maxDD   flag
+  FAV              108     90    70   +57.63    46.03
+  FAV_mid          101     79    62   +83.50    37.76
+  FAV_all          280    228   171   +79.80    89.31
+  FAV_ref           99     83    64   +55.53    46.03
+  C_fixed15         75     37    19   +30.14    40.61   INSUFFICIENT (<60 fills)
+
+SHADOW: last scored candle 09-30 02:00, 12 min ago, and it IS writing - 7138 fires across 19 arms,
+23 new fires on the run that produced this file. The ~20 min offset is the venue outcome lag plus the
+20 min cron, not a stall.
+
+READING IT HONESTLY
+  Cumulative is positive on all four FAV arms and FAV_mid still leads on profit-per-drawdown
+  (+83.50 against 37.76). Day 2's first two hours are mixed and small: FAV -3.91, FAV_ref -15.68,
+  FAV_mid +5.22. Every day-2 cell has under 60 fills, so none of the day-2 column is evidence about
+  anything - at 6 to 20 decisions a single loss moves a row more than the rule does.
+  FAV_ref is the weakest today (3 wins of 6). It is the reference arm on the Chainlink series, so if
+  that gap persists over days 2 and 3 it is the useful comparison: the settlement series underperforming
+  the Binance series the rule was validated on.
+  Master is off; every one of these rows is paper. The forward decision rule still reports
+  "needs >= 3 full FORWARD days, have 2", so days 2 and 3 are being collected exactly as ordered.
