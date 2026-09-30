@@ -1,0 +1,8 @@
+M7b scan: 27270 (candle, s, side) rows; cells with train rows 2156; SELECTED on train 0
+
+TEST (sealed) pooled: n 0, +0.0000 per $1, $ at $10/trade +0.0; test days positive 0/0
+  per test day $: 
+NULL (200 label-shuffled selections): test $ median +0.0, p95 +0.0; draws >= ours: 200/200
+
+VERDICT: BTC 15m - 2,156 cells, NONE passed the train bar (n>=100, >= +0.03/$1 after costs, both halves). Nothing to test.
+(the header's "L=[]" was a print-label bug - the list of output lines shadowed L after the scan ran; the scan itself used L=900 / 300 correctly)
