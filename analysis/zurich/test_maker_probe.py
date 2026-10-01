@@ -1195,3 +1195,140 @@ class DustDoesNotLockTheCandle(unittest.TestCase):
         self.assertEqual(M.MAX_POSTS_PER_CANDLE, 3)
         act, _, _, why = self.p.quoter.decide(**{**OK, 'posts_this_candle': 3})
         self.assertEqual(act, 'none'); self.assertIn('max', why)
+
+
+class ComplementTokenFillIsFound(unittest.TestCase):
+    """OWNER APPROVED 10-01 ~20:1x ("Yes to whatever issue Zurich has"): the fill scan must query the
+    account tape WITHOUT a token filter and let matched_by() decide ownership.
+
+    THE BUG THIS LOCKS OUT: the venue books a maker fill against the COMPLEMENT token at the
+    complement price. Order 109 was UP @ 0.60 on token 4432226411 and its trade sits on token
+    7780369265 at 0.40. scan_tape asked for OUR token, i.e. the one token the trade is not filed
+    under, and 12 real fills were invisible for a whole day while the stops read an empty table.
+
+    The fake client below returns the trade ONLY when no token_id is passed, and returns nothing when
+    one is. So these tests fail if the filter ever comes back - which is the point. A test that merely
+    checked matched_by() would have passed throughout the outage, because matched_by was never wrong.
+    """
+    COMP_TOK = '7780369265'          # the complement; our order sits on OUR_TOK
+    OUR_TOK  = '4432226411'
+
+    def setUp(self):
+        import asyncio
+        self.loop = asyncio.new_event_loop()
+        self.ep = int(time.time() // 300) * 300
+        self.now = self.ep + 120
+        self.p = M.Probe(dry_run=False, db=mem())
+        self.p.logfile = tempfile.mktemp(suffix='.log')
+        self.p.guard.flag_on = lambda: True
+        self.p.db.execute("insert into orders(id,epoch,side,token,price,shares,status,dry,post_ts_ms) "
+                          "values(1,?,'UP',?,0.60,5,'OPEN',0,?)",
+                          (self.ep, self.OUR_TOK, int(self.now*1000))); self.p.db.commit()
+        self.p.resting = dict(epoch=self.ep, side='UP', price=0.60, token=self.OUR_TOK,
+                              order_id='OID109', post_ts_ms=int(self.now*1000), row=1)
+        self.filtered_calls = []
+        outer = self
+        class MO:
+            order_id='OID109'; matched_amount=5.0; price=0.60; outcome='Up'
+        class TR:
+            # the OUTER trade is the TAKER's view: complement token, complement price, taker's size
+            id='t-comp'; size=10.0; price=0.40; status='CONFIRMED'
+            asset_id=outer.COMP_TOK; taker_order_id='OTHER'; maker_orders=(MO(),)
+            matched_at=dt.datetime.fromtimestamp(outer.now+1, dt.UTC)
+        class Page: items=(TR(),)
+        class Client:
+            def list_account_trades(s, **kw):
+                outer.filtered_calls.append(kw)
+                async def gen():
+                    if 'token_id' in kw and kw['token_id'] is not None:
+                        return            # a token-filtered query finds NOTHING, as the venue behaves
+                    yield Page()
+                return gen()
+            async def cancel_order(s, **kw): return None
+        self.p.broker = type('B', (), {'client': Client()})()
+
+    def tearDown(self): self.loop.close()
+
+    def test_the_scan_passes_NO_token_filter(self):
+        self.loop.run_until_complete(self.p.scan_tape(self.OUR_TOK, 'OID109', int(self.now*1000)))
+        self.assertTrue(self.filtered_calls, 'the tape was never queried')
+        for kw in self.filtered_calls:
+            self.assertNotIn('token_id', kw, f'token filter is back: {kw}')
+
+    def test_a_complement_token_fill_IS_found(self):
+        sh, px, ts = self.loop.run_until_complete(
+            self.p.scan_tape(self.OUR_TOK, 'OID109', int(self.now*1000)))
+        self.assertAlmostEqual(sh, 5.0)
+        self.assertAlmostEqual(px, 0.60, msg='price must come from maker_orders, not the outer trade')
+
+    def test_the_outer_trade_fields_are_NOT_used(self):
+        """The outer trade says 10 shares @ 0.40. Ours is 5 @ 0.60. Taking the outer values would
+        both overstate size and misprice the fill."""
+        sh, px, _ = self.loop.run_until_complete(
+            self.p.scan_tape(self.OUR_TOK, 'OID109', int(self.now*1000)))
+        self.assertNotAlmostEqual(sh, 10.0); self.assertNotAlmostEqual(px, 0.40)
+
+    def test_check_fill_records_it_and_locks_the_candle(self):
+        self.assertTrue(self.loop.run_until_complete(self.p.check_fill(self.ep)))
+        r = self.p.db.execute('select shares,price,spent from fills').fetchone()
+        self.assertAlmostEqual(r['shares'], 5.0); self.assertAlmostEqual(r['price'], 0.60)
+        self.assertAlmostEqual(r['spent'], 3.00)
+        self.assertIn(self.ep, self.p.filled_epochs, '5 shares is not dust; the candle must close')
+        act, _, _, why = self.p.quoter.decide(**{**OK, 'filled_this_candle': True})
+        self.assertEqual(act, 'none'); self.assertIn('already filled', why)
+
+    def test_BOTH_stops_see_a_complement_token_fill(self):
+        self.loop.run_until_complete(self.p.check_fill(self.ep))
+        today = time.strftime('%Y-%m-%d', time.gmtime())
+        self.p.db.execute('update fills set pnl=-10.0, utc_day=?', (today,)); self.p.db.commit()
+        ok, why = self.p.guard.may_trade(); self.assertFalse(ok); self.assertIn('DAY STOP', why)
+        self.p.db.execute("update fills set pnl=-20.0, utc_day='2020-01-01'"); self.p.db.commit()
+        ok, why = self.p.guard.may_trade(); self.assertFalse(ok); self.assertIn('LIFETIME', why)
+
+
+class TheTwelveRecoveredFills(unittest.TestCase):
+    """The 12 fills the token filter hid on 10-01, as they now stand in the probe's own ledger.
+
+    Their pnl and outcomes were written from VENUE truth (maker_orders[] on an unfiltered tape), and
+    each order carries a note saying the token filter missed it. This asserts the recovery is intact
+    and graded; the live re-scan against the venue is run by hand with credentials, which a unit test
+    must not need."""
+    DB = '/home/ubuntu/maker_probe/maker_probe.sqlite3'
+
+    @classmethod
+    def setUpClass(cls):
+        import os
+        if not os.path.exists(cls.DB): raise unittest.SkipTest('no probe db on this host')
+        c = sqlite3.connect(f'file:{cls.DB}?mode=ro', uri=True); c.row_factory = sqlite3.Row
+        cls.rec = [dict(r) for r in c.execute(
+            "select o.id, o.side, o.price, o.note, f.shares, f.spent, f.pnl, f.outcome "
+            "from orders o join fills f on f.order_row=o.id "
+            "where o.note like '%token filter%' order by o.id")]
+        c.close()
+
+    def test_all_twelve_are_present(self):
+        self.assertEqual(len(self.rec), 12, f'expected the 12 recovered fills, found {len(self.rec)}')
+
+    def test_every_one_is_graded(self):
+        for r in self.rec:
+            self.assertIsNotNone(r['pnl'], f"order {r['id']} ungraded - the stops cannot see it")
+            self.assertIn(r['outcome'], ('UP', 'DOWN'))
+
+    def test_the_money_is_consistent_with_the_prices(self):
+        for r in self.rec:
+            self.assertAlmostEqual(r['spent'], r['shares'] * r['price'], places=4)
+            won = r['outcome'] == r['side']
+            want = r['shares'] * (1 - r['price']) if won else -r['shares'] * r['price']
+            self.assertAlmostEqual(r['pnl'], want, places=4,
+                                   msg=f"order {r['id']} pnl does not match its own price and outcome")
+
+    def test_they_reach_the_stops(self):
+        tot = sum(r['pnl'] for r in self.rec)
+        self.assertNotEqual(tot, 0.0)
+        p = M.Probe(dry_run=False, db=mem()); p.logfile = tempfile.mktemp(suffix='.log')
+        for r in self.rec:
+            p.db.execute("insert into fills(epoch,utc_day,side,fill_ts_ms,price,shares,spent,pnl) "
+                         "values(1,'2020-01-01',?,0,?,?,?,?)",
+                         (r['side'], r['price'], r['shares'], r['spent'], -abs(r['pnl'])))
+        p.db.commit()
+        self.assertLess(p.guard.realised(), 0.0)

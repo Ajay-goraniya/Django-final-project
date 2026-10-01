@@ -40,3 +40,19 @@ could have produced a real one, and the adverse-fill series, since a 0.01-share 
 Implemented on Zurich as MIN_LOCK_SHARES = 1.0 with 9 tests covering both sides of the boundary
 (0.99 does not lock, 1.00 does, the real 0.01 case does not, 5.0 still does, the dust row and its
 pnl survive, dust pnl trips both stops, and the candle remains postable afterwards).
+
+## OWNER APPROVAL 10-01 ~20:1x UTC, via V: "Yes to whatever issue Zurich has"
+Approved: **fix the probe's wrong-token fill check and restart.** The fill scan now queries the
+account tape with **NO token filter** and lets `matched_by()` decide ownership from `maker_orders[]`.
+Limits and rules unchanged - 5 shares, one open order, 3 posts/candle, MIN_LOCK_SHARES 1.0, the
+0.60-0.80 bid band, 2 bps / 180 s cancels, -$10 day and -$20 lifetime stops.
+Cause being fixed: the venue books a maker fill against the COMPLEMENT token at the complement price
+(order 109 was UP @ 0.60 on token 4432226411; its trade sits on token 7780369265 at 0.40), so asking
+for OUR token asked for the one token the trade is not filed under. 12 fills across 10 orders were
+invisible for a day while both stops read an empty table.
+Also fixed in the same change, because removing the filter created it: the unfiltered tape carries
+London's trades too, so "newest page only" became much likelier to miss ours. The scan now walks up to
+5 pages and stops early once the tape is older than the order itself - a real bound, since a fill
+cannot precede its own order.
+Verified against the LIVE venue before restart: the fixed scan finds **10 of 10** of those orders
+(5.0sh each bar one partial at 4.996154sh), where the old token-filtered scan found 0 of 12.

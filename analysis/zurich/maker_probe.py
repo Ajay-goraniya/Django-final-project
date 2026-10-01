@@ -42,6 +42,7 @@ LIFE_STOP        = -20.0         # realised $ lifetime     -> off for good
 POST_ONLY        = True
 MAX_POSTS_PER_CANDLE = 3   # 09-30: the 17:00 candle took 34 posts and got 0 fills. Hard ceiling.
 MIN_LOCK_SHARES  = 1.0     # owner 10-01: a fill below this does not close the candle (dust)
+MAX_TAPE_PAGES   = 5       # the tape is unfiltered now, so it carries London's trades too
 FILL_CHECK_S     = 1.0     # how often a resting order is checked against the venue tape
 TICK             = 0.01
 
@@ -469,25 +470,46 @@ class Probe:
             except (TypeError, ValueError): continue
         return default_ms
 
-    async def scan_tape(self, token, order_id, now_ms):
+    async def scan_tape(self, token, order_id, now_ms, since_ms=0):
         """(shares, price, first_match_ts_ms) that order_id has matched on the account tape.
 
-        One 5-share order can arrive as several trades - the owner's app shows our 00:31 order as
-        'Buy 2 Down @ 64c' then 'Buy 3 Down @ 64c' - so every trade naming it is summed, and trade
-        ids are de-duplicated in case a page repeats one. Raises; the caller records the failure."""
+        NO TOKEN FILTER, and that is the whole point. 10-01: this queried
+        list_account_trades(token_id=OUR token) and missed 12 real fills across the day, because the
+        venue books a maker fill against the COMPLEMENT token at the complement price - order 109 was
+        UP @ 0.60 on token 4432226411 and its trade sits on token 7780369265 at 0.40. Asking for our
+        token asks for the one token the trade is NOT filed under. matched_by() already identifies
+        ownership from maker_orders[] by order id, so the tape does not need filtering by token at
+        all; filtering could only ever exclude the answer. `token` is kept in the signature for the
+        log line and is deliberately NOT used to query.
+
+        One order can arrive as several trades - the owner's app showed our 00:31 order as 'Buy 2 Down
+        @ 64c' then 'Buy 3 Down @ 64c' - so every trade naming it is summed, with trade ids
+        de-duplicated in case a page repeats one.
+
+        PAGING. Unfiltered, this tape carries London's trades too, so "newest page only" became far
+        more likely to miss ours than it was when the query was narrowed to one token. It now walks up
+        to MAX_TAPE_PAGES and stops early once the tape is older than the order itself, which is a
+        real bound rather than a guessed page count: a fill cannot precede its own order.
+        Raises; the caller records the failure."""
         matched, price, ts_ms, seen = 0.0, None, None, set()
-        async for page in self.broker.client.list_account_trades(token_id=token):
+        floor = max(0, since_ms - 60_000) if since_ms else 0
+        pages = 0
+        async for page in self.broker.client.list_account_trades():
+            pages += 1
+            oldest = None
             for t in getattr(page, 'items', ()):
                 tid = str(getattr(t, 'id', '')) or None
                 if tid is not None and tid in seen: continue
+                tts = self.trade_ts_ms(t, now_ms)
+                oldest = tts if oldest is None else min(oldest, tts)
                 sh, px = self.matched_by(t, order_id)
                 if sh <= 0: continue
                 if tid is not None: seen.add(tid)
                 matched += sh
                 if px is not None: price = px
-                ts = self.trade_ts_ms(t, now_ms)
-                ts_ms = ts if ts_ms is None else min(ts_ms, ts)   # the FIRST match is the fill
-            break                                    # newest page only; the tape is newest-first
+                ts_ms = tts if ts_ms is None else min(ts_ms, tts)   # the FIRST match is the fill
+            if pages >= MAX_TAPE_PAGES: break
+            if floor and oldest is not None and oldest < floor: break
         return matched, price, ts_ms
 
     async def check_fill(self, epoch):
@@ -496,7 +518,8 @@ class Probe:
         if not r or self.dry_run or not r.get('order_id'): return False
         now_ms = int(time.time() * 1000)
         try:
-            matched, price, ts_ms = await self.scan_tape(r['token'], r['order_id'], now_ms)
+            matched, price, ts_ms = await self.scan_tape(r['token'], r['order_id'], now_ms,
+                                                         since_ms=r.get('post_ts_ms') or 0)
         except Exception as e:
             self.db.execute('update orders set note=? where id=?',
                             (f'fill check {type(e).__name__}', r['row'])); self.db.commit()
@@ -530,7 +553,8 @@ class Probe:
             # Re-read the tape once and amend, whether the cancel raised or not. Without this the
             # extra shares are invisible to the stops in the same way the maker fills were.
             try:
-                m2, px2, ts2 = await self.scan_tape(r['token'], r['order_id'], now_ms)
+                m2, px2, ts2 = await self.scan_tape(r['token'], r['order_id'], now_ms,
+                                                    since_ms=r.get('post_ts_ms') or 0)
             except Exception as e:
                 m2 = 0.0
                 log(self.logfile, f'[{time.strftime("%F %T", time.gmtime())}] AMEND ERROR '
