@@ -605,3 +605,6 @@ printed) and the SAME block with the 09-30 17:00 candle removed. First run of it
     H1 n26 +17.1362 = +0.2303/$1 | H2 n26 +0.1515 = +0.0017/$1 (split 10-01 19:16:24 UTC)
 That ONE candle is 24.05 of the 41.34, and without it the second half is flat. Not a finding yet -
 it goes to V with the report at 60 candles, and nothing changes on the probe either way.
+[2026-10-01 23:26:20] FILL epoch 1790897100 UP 5sh @ 0.6 bn_before -0.0bps
+[2026-10-01 23:36:01] FILL epoch 1790897700 UP 5sh @ 0.68 bn_before 0.15bps
+[2026-10-01 23:42:44] FILL epoch 1790898000 DOWN 5sh @ 0.7 bn_before 2.34bps
