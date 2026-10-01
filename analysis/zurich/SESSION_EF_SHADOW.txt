@@ -105,3 +105,36 @@ is NOT STABLE, and neither sign should be traded. Two independent reasons to ref
 WHAT WOULD ACTUALLY ANSWER IT: the same split on London's OWN longer history, before 09-23, with the
 buckets fixed in advance. Zurich's EF history only reaches back to 09-15 and is thin before 09-21, so
 4 usable out-of-window days is all this box can offer. I am not proposing a session rule either way.
+
+================================================================================================
+CORRECTION 10-01, after the owner challenged the result. I MADE TWO MISTAKES AND THE SECOND ONE
+NARROWS THE CONCLUSION. The numbers in the grid above are right; what I said about them was not.
+
+MISTAKE 1, a misquote. I told V the inside-window morning was "-107.67". It is NOT: -107.67 is the
+ALL-DAYS 00-13 London figure (block C). The inside-window morning is -135.16 (block B). I read the
+wrong block.
+
+MISTAKE 2, and this is the one that matters. I claimed "INSIDE 09-23..10-01 I REPRODUCE LONDON". I do
+not. At London execution - the only basis comparable to London's REAL executed fills - inside the
+window I get:
+        00-13  -135.16   London says -235   -> same sign, agrees
+        13-24   -34.72   London says +151   -> OPPOSITE SIGN, disagrees
+So I reproduce the MORNING half and NOT the afternoon. I checked the morning, saw it matched, and
+asserted the whole split had reproduced. The afternoon disagreement exists INSIDE the window too,
+which is exactly what my "window effect, not clock effect" story cannot explain.
+
+WHERE THE AFTERNOON DISAGREEMENT ACTUALLY COMES FROM: the execution model, not the clock. On PAPER,
+inside the window, both halves match London's signs - 00-13 -128.21 and 13-24 +43.69. Applying
+lane_exec_sim turns that +43.69 into -34.72, a swing of about 78 on 70 fires. So the thing standing
+between Zurich's afternoon and London's +151 is MY exec model, and if lane_exec_sim is too harsh it
+would push the afternoon negative everywhere. That is a flag on my model, not on London's data, and
+it should be checked against London's real afternoon fills before anyone leans on my afternoon number.
+
+WHAT STILL STANDS, and it is narrower than what I sent:
+  The MORNING's sign is window-dependent: +23.44 (+0.105/$1) out of window against -135.16
+  (-0.339/$1) inside it. So the answer to the owner's "does this happen all the time?" is still NO -
+  but the evidence is about the MORNING only, on 37 out-of-window morning fills over 3 days, and it
+  says London's "the morning loses" is not a standing property of the clock.
+WHAT I SHOULD NOT HAVE SAID: that the whole split reverses, and that Zurich reproduces London.
+WHAT IS UNRESOLVED: the afternoon. I cannot corroborate +151 on any basis once execution is applied,
+and I now think that is my exec model rather than a real contradiction.
