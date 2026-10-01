@@ -686,7 +686,16 @@ def run_once():
             q = r['q']
             pnl = STAKE * per1(r['win'], q) if q == q else 0.0
             _nn = lambda v: None if v is None or v != v else float(v)
-            d.execute('INSERT OR REPLACE INTO fires VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+            # COLUMNS NAMED, NOT POSITIONAL. 09-30: pfav.py does `ALTER TABLE fires ADD COLUMN
+            # pnl_1c` (V asked PFAV for a +1c column) on this SHARED table, and this INSERT was
+            # positional with 15 placeholders - so the moment that 16th column appeared, every
+            # shadow run died with "table fires has 16 columns but 15 values were supplied". The
+            # cron kept firing every 20 min and kept crashing: 12.4 h of forward evidence lost,
+            # silently, until the daily report asked for a day that was not there. A positional
+            # INSERT against a table another process can extend is the bug; naming the columns
+            # fixes it permanently, and pfav.py's own INSERT was already named.
+            d.execute('INSERT OR REPLACE INTO fires(epoch,arm,ts_ms,day,sec,up,p,ask,fill,'
+                      'opp_fill,win,pnl,sh,vwap,pnl_part) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                       (ep, arm, r['ts'], day, r['sec'], r['up'], float(p), r['own'],
                        (None if q != q else float(q)),
                        _nn(opp.get((r['ts'], r['up']), float('nan'))),
