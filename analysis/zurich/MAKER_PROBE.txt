@@ -559,3 +559,15 @@ No code change to the probe. Verified on the running build c9a5482 + 5 new tests
 5) Detection added OUTSIDE the probe (watch.py): ALERT BALANCE_REJECT on the FIRST cash reject since
    the restart - REJECT_RATE would not have fired until the 12th. Trigger tested both ways on a copy
    of the live DB: fires on 'not enough balance / allowance', stays quiet on a post-only reject.
+
+== 10-01 22:0x  "KEEP RUNNING PAST 60 TRADES" (owner via V) - 60 is a REPORT, not a stop
+Checked every piece of the setup for a stop at 60. Nothing in the probe: no fill ceiling of any kind
+(no MAX_FILLS / fill_limit / >=60), the hard stop only sets self.stopped and returns, and nothing in
+the probe removes ENABLED or exits except the pre-start live guard. Nothing in grade.py. Nothing in
+crontab. Stops and limits untouched: day -10, lifetime -20, 3 posts/candle, 1 open order.
+The ONE thing that ended at 60 was the alert watcher, outside the probe: it breaks to deliver an
+alert, so GRADED_60 exited it - and with no latch, re-arming would re-fire GRADED_60 on every start,
+so HARD STOP / errors / process death could never be watched again past the 60th graded fill.
+FIXED: SIXTY_FLAG (.graded60.alerted) latches the report to once, ever. Tested on the watcher's own
+branch text: quiet at 59, fires once at 60 and writes the latch, stays quiet at 63 on a re-arm.
+The probe was never touched and never paused. 58 fills / 56 graded, today +2.24 of -10, life +38.84.

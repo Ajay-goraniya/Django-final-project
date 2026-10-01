@@ -21,6 +21,7 @@ REM_MIN   = 1.0     # a remainder below this is dust and does not interrupt - se
 TOP_BASE  = int(sys.argv[4]) if len(sys.argv) > 4 else 0      # top-of-band fills already seen
 REM_BASE  = int(sys.argv[5]) if len(sys.argv) > 5 else 0      # remainder-cancels already seen
 REJECT_ALERT = 12          # a burst of post-only rejects since the restart
+SIXTY_FLAG   = '/home/ubuntu/maker_probe/.graded60.alerted'   # fires the 60 report once, ever
 PAT = re.compile(r'HARD STOP|CANCEL ERROR|PASS ERROR', re.I)
 
 def alive(pid):
@@ -48,8 +49,14 @@ while True:
     # The owner's 60-GRADED-FILL ping takes priority over everything else here. GRADED, not total:
     # an unsettled fill carries no outcome, so counting it would announce the bar on a number that
     # cannot yet be read. The report itself is maker_60.py.
+    # 10-01 22:0x, owner via V: "Keep Zurich maker test running even if it goes over 60 trades." 60 is
+    # a REPORT, not a stop. Nothing in the probe, the grader or cron stops at 60 (verified). The one
+    # thing that did end at 60 was THIS watcher: it breaks to deliver the alert, and with no latch a
+    # re-arm would re-fire GRADED_60 on every start, so hard stop / error / process death could never
+    # be watched again past the 60th graded fill. The latch fires the report once, for good.
     graded = q('select count(*) from fills where pnl is not null')
-    if graded >= 60:
+    if graded >= 60 and not os.path.exists(SIXTY_FLAG):
+        open(SIXTY_FLAG, 'w').write(str(graded))
         print(f'ALERT GRADED_60: {graded} graded fills - run maker_60.py and send the report to V'); break
     # V, 10-01 20:5x: GO QUIET ON SINGLE FILLS. The market turned calm and fills began landing every
     # few minutes, so a ping per fill was spending tokens on information the 60-graded report carries
