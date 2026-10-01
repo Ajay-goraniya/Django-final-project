@@ -522,3 +522,4 @@ HEARTBEAT ADDED TO THE GRADER 10-01 18:47 (V's instruction). Outside the probe, 
   Verified by running it twice exactly as cron does: the heartbeat advanced (18:47:47, 2 s old on
   read) and the hourly line printed once then correctly suppressed on the second run.
   Probe untouched: pid 396645 still up, never restarted for this.
+[2026-10-01 19:16:00] REJECTED epoch 1790882100 UP 0.61 :: RequestRejectedError: invalid post-only order: order crosses book
