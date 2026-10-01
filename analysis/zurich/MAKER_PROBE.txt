@@ -313,3 +313,55 @@ mention of "bid ran >= 2 ticks" in maker_probe.py is the comment explaining why 
 resting branch is now exactly: 2 bps adverse -> cancel, sec outside 60-180 -> cancel, else HOLD.
 A fill is the third way an order leaves, and it is handled BEFORE any decision is acted on, by the
 every-pass fill check from fix (a).
+[2026-09-30 23:51:34] REJECTED epoch 1790812200 UP 0.73 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 00:16:25] REJECTED epoch 1790813700 DOWN 0.8 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 00:16:26] REJECTED epoch 1790813700 DOWN 0.77 :: RequestRejectedError: invalid post-only order: order crosses book
+
+================================================================================================
+10-01 00:45 PAUSED. I MUST RETRACT WHAT I TOLD V THREE TIMES: THE PROBE DID FILL.
+
+V's hypothesis was right and my verification was wrong. I reported "0 fills, venue-confirmed" on
+three separate occasions and used that to reassure V the wallet moves were not ours. They were ours.
+
+THE TRUTH, from the venue, hand-checked fill by fill:
+    27 fill events over 10 DISTINCT CANDLES, $77.60 deployed, local fills table had 0 ROWS.
+    realised +42.3988, 27 wins / 0 losses, every epoch graded on the venue's own resolution.
+    15 of those 27 fills are in ONE candle, 17:00 - the candle I reported as "0 fills, 29 cancels".
+
+WHY MY CHECK MISSED THEM. check_fill compared getattr(trade,'maker_order_id','') against our id.
+polymarket-client 0.10.0's ClobTrade HAS NO SUCH FIELD. When we are the maker - which a post-only
+probe is by construction, every single time - our fill appears only inside `maker_orders[]`, as a
+MakerOrder carrying our order_id, our price and the real matched_amount. The outer trade carries the
+TAKER's id, the TAKER's size and the TAKER's price, which is why the outer rows looked like someone
+else's business: size 10 and 98.52 against our 5, price 0.41 against our 0.60. It never raised and
+never logged. check_fill simply returned False forever.
+
+WHAT THAT BROKE, beyond the ledger:
+  1. BOTH HARD STOPS WERE BLIND THE ENTIRE TIME. They are computed FROM the fills table. An empty
+     table means -$10/day and -$20 lifetime could never fire. The only reason this did not cost
+     money is that all 27 fills happened to win. That is luck, not a control.
+  2. ONE FILL PER CANDLE NEVER ENGAGED - it keys off filled_this_candle, which keys off the same
+     broken detection. Hence 15 fills in the 17:00 candle against a rule of one.
+  3. Every "0 fills" figure I gave V, and the whole "it never fills, the rule must be wrong"
+     diagnosis built on top of it, was an artefact of this bug. The 2-tick rule I had V and the
+     owner remove on that evidence may well have been fine. That conclusion is now unsupported.
+
+AND DO NOT READ +42.40 AS A RESULT. It is 10 candles, every one resolving the favourite's way. At a
+~75% favourite base rate, 10 for 10 is about a 5.6% coincidence - unusual, not impossible, and far
+from evidence. The effective sample is 10 candles, not 27 fills, because the fills cluster inside a
+handful of candles. Nothing here says the maker structure is profitable.
+
+THE FIX (authored by another session concurrently, 00:52-00:54, verified by me rather than assumed):
+  matched_by() now reads maker_orders[] and both sides; trade_dead() compares TradeStatus on .value
+  because str(enum) is 'TradeStatus.FAILED' and never matched the ('FAILED',...) tuple, so dead
+  trades counted as live; trade_ts_ms() reads `matched_at` because `match_time` does not exist on the
+  model and the old path fell back to the LOCAL clock for every fill - the same clock bn_before_bps
+  is measured against. 102 tests pass. I validated it against real venue data independently: it
+  finds $77.60 across 24 of 50 orders, matching my own hand count to the cent.
+  NOTE FOR WHOEVER READS THIS NEXT: that fix was uncommitted and being edited while I was reading the
+  same file. Two sessions were working maker_probe.py at once on a live box. Mine is the verification
+  and this record; the code edit is theirs.
+
+FILLS BACKFILLED into the probe DB from venue maker_orders[] so the stops have real history to read.
+PROBE PAUSED: ENABLED absent, process stopped, 0 open orders and 0 open positions confirmed at the
+venue. It must NOT restart until V and the owner see this retraction.
