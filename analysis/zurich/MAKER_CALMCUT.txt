@@ -100,3 +100,33 @@ VERDICT (Zurich, 10-01 23:4x)
     and the window gets WORSE (-13.15 vs -12.15). Every cell is under 60 fills = INSUFFICIENT.
     The real split is time, not vol: H1 +0.4147/$1 vs H2 -0.0874/$1 at the current gate, and the
     tightest cuts cannot rescue H2 (-0.3333/$1 at 0.150). No change to the probe, no gate proposed.
+
+APPENDIX (V, 10-01 23:5x): the owner's 23:43:29 screenshot "not calm (0.308 >= 0.304)" vs the
+23:40 DOWN 5sh @ 0.70 fill. Candle epoch 1790898000. READ-ONLY; probe untouched.
+
+WHAT THE PROBE SAW, from its own decisions table, every pass of that candle:
+  23:41:00.020 sec  60 post  vol 0.285  "calm 0.285 fav DOWN bid 0.70 sec 60"
+  23:41:06 .. 23:42:34       vol 0.285  hold, adverse +0.00 on every pass
+  23:42:44.939 sec 164 fill  vol 0.285  "filled before cancel (adverse 2.34bps)"
+  then sec 165-297           "already filled this candle" (no further posts)
+So vol at POST = 0.285 and vol at FILL = 0.285. It is the SAME number because the gate's value is
+FavBrain.vol_before_open(epoch): the 1 s log-return std over [epoch-300, epoch) x 1e4 - the five
+minutes BEFORE the candle opened. It is fixed before the candle starts and cannot move inside it.
+INDEPENDENT CHECK, Binance BTCUSDT 1 s closes, the probe's own formula:
+  [23:35:00,23:40:00) = 0.285  n 300   <- reproduces the probe's logged value exactly
+  trailing 300 s to 23:41:00 (post)   = 0.245
+  trailing 300 s to 23:42:44 (fill)   = 0.221
+  trailing 300 s to 23:43:29 (shot)   = 0.257
+  [23:40:00,23:45:00) = vol_before_open(23:45) = 0.207 ; [23:30,23:35) = 0.258
+  inside-candle [23:40:00,23:43:29) = 0.188
+NONE of these is 0.308, so the 8787 card's 0.308 is computed off the ENGINE's own series/window, not
+the probe's gate value - and 23:43:29 is 45 s AFTER the fill, so the screenshot cannot describe the
+state at fill time anyway.
+IS THE GATE RE-CHECKED WHILE RESTING? No. decide() tests vol only in the "nothing resting: may we
+post?" branch. A resting order leaves on exactly two things: Binance >= 2 bps adverse, or sec outside
+60-180. Nothing re-reads vol, so a LIVE vol could rise after a post and the order would stay - but on
+this order the gate value itself never moved, so that is not what happened here.
+WHAT DID HAPPEN: Binance moved 2.34 bps AGAINST us and the fill landed on the same pass as the cancel
+decision - fills.bn_before_bps = 2.3372, log "filled before cancel (adverse 2.34bps)". That is the
+known fill-before-cancel race, which the probe handles correctly (it books the fill instead of
+cancelling). It is not a calm-gate breach.
