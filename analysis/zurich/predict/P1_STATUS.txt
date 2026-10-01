@@ -1,0 +1,39 @@
+P1 (Zurich) STATUS 10-01 19:4x. READ-ONLY throughout: no orders, no trading keys, nothing touched on
+the probe, the engine or the Tokyo host.
+
+1. CAN ZURICH REACH THE PREDICT.FUN PUBLIC API?  NOT USABLY - EVERY DATA PATH IS HTTP 401.
+     /v1/markets?limit=1                401
+     /v1/search?query=BTC&limit=1       401
+     /health, /, predict.fun/api/...    404 (paths do not exist)
+     ws.predict.fun over https          404
+   THE NETWORK IS FINE. IPv4 resolves (172.67.68.75), the TLS handshake completes, and curl gets a
+   real 401 body back on both stacks - so this is an AUTHORISATION wall, not a reachability problem.
+   CORRECTING MY OWN FIRST GUESS: I expected the known IPv6-only-DNS trap on this host (the one that
+   made ws-live-data look unreachable). It is NOT that. api.predict.fun has A records and `curl -4`
+   returns the identical 401. I checked before reporting rather than assuming the familiar cause.
+   AND THERE IS NO CREDENTIAL ON THIS BOX: no PREDICT_JWT or PREDICT_API_KEY in deploy.env, in
+   deploy.env.example, or in the running engine's environment. predict_venue.py only attaches a
+   bearer if one is ALREADY in the process environment, so discovery is unauthenticated by design and
+   the venue has simply closed it.
+
+2. THE 48 h QUOTE COLLECTOR: WRITTEN, COMMITTED, NOT RUNNING. NO PID.
+   analysis/zurich/predict/predict_quotes.py (live copy /home/ubuntu/predict_p1/predict_quotes.py)
+   logs market id, candle epoch, and best ask/bid WITH SIZES for both UP and DOWN every 1 s into its
+   own sqlite (/home/ubuntu/predict_p1/predict_quotes.sqlite3), separate from every other database on
+   the box. It has a preflight that REFUSES to start on a 401 rather than hammering a venue that will
+   not answer - verified, it exits 2 with the reason.
+   IT NEEDS EXACTLY ONE THING: a READ-ONLY Predict credential in the environment as PREDICT_JWT or
+   PREDICT_API_KEY, placed by the owner. I am not asking for its value and it must never be
+   committed. Once it exists the collector starts with one command and the 48 h begins.
+
+3. EF'S WOULD-FIRE STREAM: DONE, AND IT DOES NOT DEPEND ON PREDICT.
+   analysis/zurich/predict/ef_fire_stream.py, on cron every 5 min, read-only on the shadow, writing
+   ef_fire into the same sqlite so V can join fires to Predict asks the moment quotes exist.
+   First run: 1,177 fires exported - B_raw25_S60 669 and C_fixed15 508, spanning 09-24 12:51 to
+   10-01 19:27. Columns: arm, epoch, fire_ts_ms, side, p (the MODEL probability), ask, sec, win.
+   ONLY THE MODEL ARMS ARE EXPORTED. The FAV family is a market rule with no model - its "p" is the
+   favourite's own ask - and shipping that as a model p would invite the exact confusion P2 is trying
+   to avoid. The arm is on every row so nothing has to be inferred later.
+
+WHAT P2 STILL CANNOT DO: price fires at Predict's own ask, because there are no Predict quotes. The
+fire stream is half the join; the other half is blocked on the credential.
