@@ -1,0 +1,21 @@
+MAKER PROBE HAS REACHED 60 GRADED FILLS (bar 60). Venue-graded. 2026-10-01 22:32:47 UTC
+  fills 60 over 40 DISTINCT candles | 52W / 8L | 2 still unsettled and excluded
+  pnl +44.6877 on $181.84 deployed = +0.2458 per $1
+  today +8.0877 of -10 stop | lifetime +44.6877 of -20 stop
+  adverse share (>=2bps against us within 1s of the fill): 0 of 21 fills that HAVE a venue-timed window (0.0%); the other 39 predate the matched_at fix and are excluded rather than counted as zero
+
+M16 BAND GRID - PREREG_M16_BAND.md, fills AFTER 10-01 12:45 UTC only (out of sample)
+  bucket          fills  candles     W/L   deployed       pnl    pnl/$1  flag
+  [0.60,0.65)     4        4     2/2      12.29     -2.30   -0.1870  INSUFFICIENT (<60)
+  [0.65,0.70)     5        5     3/2      16.55     -1.55   -0.0937  INSUFFICIENT (<60)
+  [0.70,0.75)     8        5     8/0      21.95     +8.05   +0.3667  INSUFFICIENT (<60)
+  [0.75,0.81]     6        6     5/1      23.05     +1.95   +0.0846  INSUFFICIENT (<60)
+
+  THE PRE-REGISTERED PREDICTION was: [0.75,0.81] pnl/$ < 0, the other three combined > 0.
+    [0.75,0.81]      n   6  pnl/$1 +0.0846  -> prediction FAILED
+    other three      n  17  pnl/$1 +0.0827  -> prediction HELD
+    out-of-sample fills available: 23 of 60 graded. EVERY bucket is under 60
+    fills, which the prereg itself said to expect, so this read decides nothing on its own
+    and NO band change happens without the owner's confirmation.
+
+  venue cross-check SKIPPED: no credentials in this environment
