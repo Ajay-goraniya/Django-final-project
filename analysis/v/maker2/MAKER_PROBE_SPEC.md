@@ -16,3 +16,11 @@ Goal: measure, with real orders, whether a post-only bid that cancels on a Binan
 ## OWNER 09-30 21:28 UTC: 'A' = remove the 'bid ran >= 2 ticks away' cancel (V's addition); back to the original spec (rest until Binance 2 bps against or 180 s). Restart still needs a fresh owner yes after the safety fixes.
 
 ## OWNER 09-30 23:11 UTC: 'Yes' to restart the maker probe build 82754c9 (option A + fill-record + same-second lockout). Limits unchanged.
+
+## 10-01 00:57 UTC - RETRACTION (Zurich, verified at the venue; commit 3794218)
+Probe DID fill: 27 fill events over 10 candles 09-30 17:00 .. 10-01 00:45, $77.60 deployed, +$42.40 realised, 27/27 won.
+check_fill read a field ClobTrade does not have (maker fills live in maker_orders[]) -> fills table empty -> BOTH hard stops and
+one-fill-per-candle were blind the whole time (15 fills in the 17:00 candle). Every "0 fills" report was this bug, incl. the evidence
+used for the owner's option A. Result is 10 candles, not 27 - not evidence. Probe PAUSED 00:45, 0 open orders/positions at the venue.
+Fix (reads maker_orders[]) deployed by another session 00:52-00:54; Zurich verified it against venue data to the cent; 102 tests.
+OFF until the owner decides how to restart.
