@@ -81,8 +81,9 @@ def grid(sel, title):
         out.append('  they are counted in the already>= column and cannot be a take-profit at it.')
     return out
 
-L += grid(fills, 'A. ALL 43 GRADED FILLS')
+L += grid(fills, f'A. ALL {len(fills)} GRADED FILLS')   # computed: the count moves as fills settle
 sub = [x for x in fills if x['epoch'] != BIG_CANDLE]
-L += grid(sub, 'B. EXCLUDING THE 09-30 17:00 CANDLE (it holds 15 of the 43 fills)')
+nbig = sum(1 for x in fills if x['epoch'] == BIG_CANDLE)
+L += grid(sub, f'B. EXCLUDING THE 09-30 17:00 CANDLE (it holds {nbig} of the {len(fills)} fills)')
 open('/tmp/tp_block.txt', 'w').write('\n'.join(L) + '\n')
 print('\n'.join(L[-34:]))

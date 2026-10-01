@@ -108,7 +108,7 @@ E. THE ONE THING THESE GRIDS SAY MOST CLEARLY
   the outcome.
 
 ================================================================================================
-TAKE-PROFIT STUDY (owner via V, 10-01 20:4x) - mirror of the drawdown grids, appended below.
+TAKE-PROFIT STUDY (owner via V) - REFRESHED 10-01 20:5x as more fills settled.
 Owner question via V, READ-ONLY, mirror of MAKER_DRAWDOWN: how high did our token trade AFTER each
 fill, and would taking profit at 0.80 / 0.85 / 0.90 / 0.95 have beaten holding to settlement?
 
@@ -128,7 +128,7 @@ ITS OWN size and that is stated rather than rounded away.
 NO SELL FEE IS CHARGED in the take-profit figure. A real exit would cross the spread and pay the taker
 fee, so every take-profit number here is optimistic - another reason to read it as a ceiling.
 
-GRADED FILLS 44 over 24 distinct candles.
+GRADED FILLS 46 over 26 distinct candles.
 
 PER FILL - highest price reached after the fill, and the second it printed
   time           side  price  shares  max all   sec  max bid   sec  outcome  result
@@ -176,59 +176,66 @@ PER FILL - highest price reached after the fill, and the second it printed
   10-01 19:16:24 UP     0.60   5.000     0.22   230     0.18   231     DOWN  LOST
   10-01 19:21:08 DOWN   0.79   5.000     1.00   227     1.00   227     DOWN  WON
   10-01 20:31:09 DOWN   0.65   5.000     0.99   242     0.99   243     DOWN  WON
+  10-01 20:36:28 DOWN   0.67   5.000     0.99   224     0.99   236     DOWN  WON
+  10-01 20:41:00 DOWN   0.75   5.000     1.00   267     1.00   267     DOWN  WON
 
-A. ALL 43 GRADED FILLS
-  n=44 fills over 24 candles
+A. ALL 46 GRADED FILLS
+  n=46 fills over 26 candles
    level       src  already>=  reached    W    L    TP pnl  HOLD pnl      diff
-    0.80       all          1       39   39    0    +21.83    +54.14    -32.31
-    0.80 maker-bid          1       39   39    0    +21.83    +54.14    -32.31
-    0.85       all          0       40   40    0    +30.16    +55.14    -24.98
-    0.85 maker-bid          0       40   40    0    +30.16    +55.14    -24.98
-    0.90       all          0       40   40    0    +38.48    +55.14    -16.65
-    0.90 maker-bid          0       40   40    0    +38.48    +55.14    -16.65
-    0.95       all          0       40   40    0    +46.81    +55.14     -8.33
-    0.95 maker-bid          0       40   40    0    +46.81    +55.14     -8.33
+    0.80       all          1       41   41    0    +22.73    +57.04    -34.31
+    0.80 maker-bid          1       41   41    0    +22.73    +57.04    -34.31
+    0.85       all          0       42   42    0    +31.56    +58.04    -26.48
+    0.85 maker-bid          0       42   42    0    +31.56    +58.04    -26.48
+    0.90       all          0       42   42    0    +40.38    +58.04    -17.65
+    0.90 maker-bid          0       42   42    0    +40.38    +58.04    -17.65
+    0.95       all          0       42   42    0    +49.21    +58.04     -8.83
+    0.95 maker-bid          0       42   42    0    +49.21    +58.04     -8.83
   fills ALREADY at or above a level are excluded from "reached" for that level, as asked;
   they are counted in the already>= column and cannot be a take-profit at it.
 
-B. EXCLUDING THE 09-30 17:00 CANDLE (it holds 15 of the 43 fills)
-  n=29 fills over 23 candles
+B. EXCLUDING THE 09-30 17:00 CANDLE (it holds 15 of the 46 fills)
+  n=31 fills over 25 candles
    level       src  already>=  reached    W    L    TP pnl  HOLD pnl      diff
-    0.80       all          1       24   24    0    +10.78    +30.09    -19.31
-    0.80 maker-bid          1       24   24    0    +10.78    +30.09    -19.31
-    0.85       all          0       25   25    0    +15.86    +31.09    -15.23
-    0.85 maker-bid          0       25   25    0    +15.86    +31.09    -15.23
-    0.90       all          0       25   25    0    +20.93    +31.09    -10.15
-    0.90 maker-bid          0       25   25    0    +20.93    +31.09    -10.15
-    0.95       all          0       25   25    0    +26.01    +31.09     -5.08
-    0.95 maker-bid          0       25   25    0    +26.01    +31.09     -5.08
+    0.80       all          1       26   26    0    +11.68    +32.99    -21.31
+    0.80 maker-bid          1       26   26    0    +11.68    +32.99    -21.31
+    0.85       all          0       27   27    0    +17.26    +33.99    -16.73
+    0.85 maker-bid          0       27   27    0    +17.26    +33.99    -16.73
+    0.90       all          0       27   27    0    +22.83    +33.99    -11.15
+    0.90 maker-bid          0       27   27    0    +22.83    +33.99    -11.15
+    0.95       all          0       27   27    0    +28.41    +33.99     -5.58
+    0.95 maker-bid          0       27   27    0    +28.41    +33.99     -5.58
   fills ALREADY at or above a level are excluded from "reached" for that level, as asked;
   they are counted in the already>= column and cannot be a take-profit at it.
 
 THREE THINGS I CHECKED BEFORE BELIEVING THIS TABLE
- 1. THE SAMPLE GREW WHILE I WORKED. V asked about "the 43 graded fills over 23 candles"; the 20:30
-    fill settled in the meantime, so the table above is 44 GRADED over 24 CANDLES. Same method, one
-    more fill. I am not relabelling it 43 to match the brief.
+ 1. THE SAMPLE KEEPS GROWING. V's brief says "the 43 graded fills over 23 candles"; it was 44/24 when I
+    first ran this and 46 GRADED over 26 CANDLES now - the market went calm and fills are landing every
+    few minutes. The table above is the CURRENT read, refreshed rather than re-sent, and it is not
+    relabelled to match the brief. I also had to fix my own section titles, which hardcoded "43" and
+    "15 of the 43" while n was 46: a number typed into a heading is a number the data can outrun.
  2. THE "all" AND "maker-bid" ROWS ARE IDENTICAL, and identical numbers across two arms is exactly the
     thing I have been wrong about before, so I tested it rather than shipping it. The two maxima differ
-    on only 4 of 44 fills, and on NONE of those does the difference cross one of the four levels - so
+    on only 4 of the fills, and on NONE of those does the difference cross one of the four levels - so
     the identity is structural, not a copied query. Near resolution a 5-minute token's bids and trades
     both sit at 0.99, which is why they coincide.
  3. EVERY "reached" BUCKET HAS ZERO LOSSES, which looked wrong until I tested the obvious explanation:
-      level 0.80  reached n=39 -> 39 WON, 0 LOST | NOT reached n=4 -> 0 WON, 4 LOST
-      level 0.95  reached n=40 -> 40 WON, 0 LOST | NOT reached n=4 -> 0 WON, 4 LOST
-    That is PERFECT SEPARATION. Reaching 0.80+ after our fill is, in this sample, the same event as
-    winning - a 5-minute binary trading at 0.80 is already resolving.
+    at 0.80, reached -> every one WON and not one LOST, while the fills that never reached 0.80 are
+    exactly the losers. That is PERFECT SEPARATION. Reaching 0.80+ after our fill is, in this sample,
+    the same event as winning - a 5-minute binary trading at 0.80 is already resolving.
 
 SO THE ANSWER TO THE OWNER'S QUESTION IS NOT "WHICH LEVEL IS BEST"
 Taking profit LOSES at every level, and loses MOST at the level people reach for first:
-    0.80  TP +21.83 vs HOLD +54.14  = -32.31
-    0.85  TP +30.16 vs HOLD +55.14  = -24.98
-    0.90  TP +38.48 vs HOLD +55.14  = -16.65
-    0.95  TP +46.81 vs HOLD +55.14  =  -8.33
-Excluding the 09-30 17:00 candle (15 fills) the shape is identical: -19.31 / -15.23 / -10.15 / -5.08.
+    0.80  TP +22.73 vs HOLD +57.04  = -34.31      (41 reached, 41 W / 0 L)
+    0.85  TP +31.56 vs HOLD +58.04  = -26.48      (42 reached, 42 W / 0 L)
+    0.90  TP +40.38 vs HOLD +58.04  = -17.65      (42 reached, 42 W / 0 L)
+    0.95  TP +49.21 vs HOLD +58.04  =  -8.83      (42 reached, 42 W / 0 L)
+One fill sits ALREADY at or above 0.80 - the 0.80 fill itself - so it is excluded from that level's
+"reached" and counted separately, as asked.
+Excluding the 09-30 17:00 candle (15 fills) the shape is identical: -21.31 / -16.73 / -11.15 / -5.58
+on 31 fills over 25 candles.
 The reason is point 3. A take-profit here cannot avoid losers, because no loser ever gets near these
 levels; all it can do is cap winners. The closer the level is to 1.00 the less it costs, converging on
 holding - which is the same statement as "do not do it".
 TWO WAYS THIS IS OPTIMISTIC AND STILL LOSES: no sell fee is charged (a real exit crosses the spread and
-pays the taker fee) and each fill is sold at its own size with no slippage. Both flatter the TP column.
+pays the taker fee) and each fill is sold at ITS OWN size with no slippage. V wrote "sell 5 shares",
+but several fills are partials down to 0.01 shares and selling 5 of those would invent a position.
