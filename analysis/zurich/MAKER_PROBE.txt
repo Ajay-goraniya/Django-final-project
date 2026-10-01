@@ -433,3 +433,47 @@ TWO WATCHER DEFECTS FIXED BEFORE ARMING, both of which would have broken the one
      "PROCESS_DOWN pid 1". Now only ESRCH counts as gone. A false PROCESS_DOWN on the channel that
      must not cry wolf is worse than no channel at all.
   Armed with pid 389461, reject window from 09:48 (0 rejects after it), fill baseline 27.
+[2026-10-01 09:51:09] FILL epoch 1790848200 DOWN 1.53sh @ 0.65 bn_before 0.0bps
+[2026-10-01 11:22:21] REJECTED epoch 1790853600 DOWN 0.67 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 11:31:40] FILL epoch 1790854200 UP 5sh @ 0.78 bn_before 0.74bps
+[2026-10-01 11:41:04] FILL epoch 1790854800 UP 0.01sh @ 0.71 bn_before -0.0bps
+
+================================================================================================
+10-01 12:4x OWNER: "Zurich is confusing, for a maker, new design needed" (on the :8787 screenshot).
+
+1. THE EF CARD AND THIS PROBE ARE NOT THE SAME THING, AND BOTH NUMBERS ARE CORRECT.
+   The card read "65.5% 19 W / 10 L, real 29". I reproduced it exactly from the engine's own journal
+   (lane_metrics, poly_core): real n=29, 19W/10L, 65.5%, pnl -20.6810.
+     WHAT IT COUNTS   the ENGINE's EF lane. 29 is 29 CANDLES, not 29 fills - lane_metrics groups one
+                      row per (kind, epoch, lane), so a candle with several fills counts once.
+     WHAT IT GRADES   results.actual against the SIGNAL's side (s.side), not the order's side.
+     real vs shadow   real = LIVE-lane fills, shadow = PAPER; headline is real when any exist.
+     WHEN             09-28 19:45 -> 09-30 07:40. It is FROZEN: the engine's last live EF fill was
+                      09-30 07:40 and master has been off since, so the card cannot move.
+   THE PROBE, for contrast: 30 fills over 13 candles, 09-30 17:00 -> 10-01 11:40, graded on the
+   VENUE's own resolution, 28W / 1L / 1 pending.
+   OVERLAP: ZERO candles. The card has never included the probe and structurally CANNOT - the probe
+   writes its own sqlite and poly_dashboard never opens it. One wallet, two instruments. The owner
+   was not misreading a broken number; he was reading the right number off the wrong instrument.
+
+2. MAKER-ONLY PAGE: /home/ubuntu/maker_probe/maker_page.py, port 8788, /maker and /maker.json.
+   SEPARATE PROCESS, STRICTLY READ-ONLY, and NEITHER the engine nor the probe was restarted or
+   touched - engine pid 304878 (up 1d08h) and probe pid 389461 (up 2h06m) both undisturbed across
+   the build. A /maker route inside poly_dashboard.py would have required restarting the engine,
+   which the brief forbids, so it binds its own port instead. Every database is opened mode=ro and
+   it imports no broker, so it cannot place, cancel or modify an order.
+   Auth mirrors :8787 - Basic, user ajay, the same DASHBOARD_PASSWORD - so the owner's existing
+   login works. Verified 200 authenticated, 401 without.
+   Shows: probe ON/OFF + pid + build; the live candle, calm gate with the vol number, resting order
+   side/price/age or "waiting"; fills and distinct candles, W/L, today vs the -10 stop, lifetime vs
+   -20, progress x/60; the fills table newest first; and the adverse share. NO MAIN / REVERSAL /
+   COMBINED cards. Mobile viewport, plain labels.
+   Every figure was checked against the database rather than eyeballed: 30 fills / 13 candles,
+   28W/1L/1 pending, today +2.43, lifetime +39.03, 29/60 graded - all exact.
+   ONE LABEL I HAD TO FIX BEFORE SHIPPING IT: the build line first printed repo HEAD, so it read
+   "build 54ac2d7" while the probe was really running f770acf - HEAD had moved for an unrelated
+   report commit. Putting one thing's identifier on another thing is precisely the confusion this
+   page exists to end, so it now reports the last commit that TOUCHED maker_probe.py and says
+   "FILE ON DISK DIFFERS" if the running file has drifted from it.
+   The page also carries a short closing card explaining why it is not the EF card, so the next
+   person to see both does not have to re-derive section 1.
