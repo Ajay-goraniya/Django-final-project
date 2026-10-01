@@ -15,3 +15,22 @@ P1. Zurich: read-only Predict.fun quote collector (best ask both sides, 1 s) for
 P2. Price every EF fire at Predict's OWN ask at fire time (+delay ~236 ms measured on Tokyo), 2% share fee on winners,
     graded on Binance close>=open (candles.actual). Train/test halves, null (random side at same asks), full grid by ask bucket.
 P3. Only if P2 passes: a small live Predict lane = owner's decision (and Tokyo host is off-limits to sessions - owner chooses the box).
+
+## OWNER 10-01 ~20:1x, relayed by V: "Don't make it live, just paper on Zurich."
+**PREDICT.FUN IS PAPER ONLY ON ZURICH.** No orders, no trading key, no live lane. A read-only quote
+credential is the ONLY Predict secret that may ever be placed on this box, and it exists solely to
+read the book. P3 ("a small live Predict lane") is therefore NOT on Zurich's table at all; if it ever
+happens it is the owner's decision and his choice of box, and the Tokyo host remains off-limits to
+sessions regardless.
+Logged by Zurich 10-01 19:5x. Zurich holds no Predict credential of any kind as of this entry, and
+every Predict data path answers HTTP 401 from here (see analysis/zurich/predict/P1_STATUS.txt).
+
+### The paper lane V specified, to run once a READ-ONLY key is in Zurich's environment
+Every **C_fixed15** fire (London's model), priced at **Predict's own best ask on that side** at
+`fire_ts + 236 ms`; shares = `$5 / ask` **capped by the displayed ask size**; fee **2% of shares on
+winners only**; graded on **Binance close >= open** (`candles.actual`), which is Predict's own
+settlement rule and NOT Polymarket's resolution. The same fire is ALSO priced at the Polymarket ask
+so the two venues can be compared on identical fires - that comparison column is the point of the
+exercise, since R-31b showed Polymarket prices cannot stand in for Predict's.
+Implemented ready-to-run at analysis/zurich/predict/predict_paper.py. It is NOT validated against
+real Predict quotes, because there are none yet; it will be the moment the collector has data.

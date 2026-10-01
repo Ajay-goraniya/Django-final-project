@@ -37,3 +37,31 @@ the probe, the engine or the Tokyo host.
 
 WHAT P2 STILL CANNOT DO: price fires at Predict's own ask, because there are no Predict quotes. The
 fire stream is half the join; the other half is blocked on the credential.
+
+================================================================================================
+10-01 20:1x OWNER: "Don't make it live, just paper on Zurich." LOGGED IN PREDICT_PLAN_1001.md.
+PREDICT.FUN ON ZURICH IS PAPER ONLY: no orders, no trading key, no live lane, ever, on this box. The
+only Predict secret that may be placed here is a READ-ONLY quote credential, and its sole purpose is
+reading the book. P3 (a live Predict lane) is off Zurich's table entirely.
+
+THE PAPER LANE IS WRITTEN AND READY: analysis/zurich/predict/predict_paper.py. It places nothing,
+imports no broker and holds no key. Exactly V's rule: every C_fixed15 fire, priced at PREDICT's own
+best ask on that side at fire_ts + 236 ms, shares = $5/ask CAPPED by the displayed ask size, fee 2% of
+shares on WINNERS ONLY, graded on Binance close >= open, with the SAME fire also priced at the
+Polymarket ask as the control so the venues are compared on identical fires.
+
+TWO THINGS I HAD TO GET RIGHT RATHER THAN ASSUME
+ 1. "candles.actual" DOES NOT EXIST. V and CLAUDE.md both use that shorthand, but the engine's candles
+    table carries open/high/low/close/volume and no actual column. So the rule is COMPUTED here from
+    open and close - UP iff close >= open - which is what "Binance close >= open" means. The tempting
+    substitute, results.actual, is POLYMARKET's resolution for the v12 lane; using it would pair
+    Predict's prices with Polymarket's answers, the exact cross-venue error CLAUDE.md bans.
+ 2. A number that differs from the brief, flagged rather than buried: on all 1,299 candles where both
+    are available, the Binance rule agrees with Polymarket's resolution on 83.8%. V's figure is 79.1%,
+    measured on London's 364 FIRED candles. Not a contradiction - a different sample, and fired
+    candles are a selected subset - but P2 should use the fired-candle figure, not mine, and should not
+    treat the two as interchangeable.
+
+STATUS: the lane runs today and correctly REFUSES - "NO PREDICT QUOTES YET ... this lane will not
+substitute Polymarket asks for Predict asks, so it stops here", exit 0. Nothing to do until the
+read-only key arrives. When it does: start predict_quotes.py for 48 h, then this lane has both halves.
