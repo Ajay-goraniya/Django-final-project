@@ -130,3 +130,19 @@ WHAT DID HAPPEN: Binance moved 2.34 bps AGAINST us and the fill landed on the sa
 decision - fills.bn_before_bps = 2.3372, log "filled before cancel (adverse 2.34bps)". That is the
 known fill-before-cancel race, which the probe handles correctly (it books the fill instead of
 cancelling). It is not a calm-gate breach.
+
+CORRECTION (10-01 23:5x). The 0.308 was MY /maker PAGE, not the 8787 engine. I said earlier it had
+to come from the engine's own series; that was wrong and this is the fix.
+maker_page.vol_now() recomputed the calm number itself and omitted the one thing FavBrain._series()
+does: FORWARD-FILL a second with no print (up to FF_MAX_S), so a quiet second contributes a ZERO
+return. The page skipped those seconds instead and took log-returns ACROSS the holes, which inflates
+the std. Same window, same db, different number: page 0.30809 vs gate 0.28513 on candle 1790898000 -
+enough to flip the displayed verdict to "not calm" on a candle the gate had called calm. That is
+exactly the reimplementation-of-a-live-rule error CLAUDE.md warns about, in my own code.
+FIX (page only, probe untouched, no probe restart): the page no longer computes it. It reads
+decisions.vol - the value the running probe LOGGED for that candle - and falls back to
+FavBrain.vol_before_open() from poly_fav, the gate's own module. Verified identical to 15 decimals
+on three candles via both paths (0.285125185626913 for 23:40). Labels now read "calm (5 min before
+open)" with its source, plus a separate "live vol (trailing 5 min, NOT the gate)" row and a line
+saying the gate cannot change inside the candle and that 8787's live vol is that other kind of
+reading. Page restarted (pid 435384); auth re-verified 401 without creds, 200 with.

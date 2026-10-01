@@ -20,7 +20,7 @@ WHY A SEPARATE SERVER. V's brief says do not restart or touch the engine or the 
 binds its own port, opens every database read-only (mode=ro), and holds no handle to anything the
 engine or the probe writes. It cannot place, cancel or modify an order: it imports no broker.
 """
-import base64, hmac, json, os, sqlite3, subprocess, time, datetime as dt
+import base64, hmac, json, os, sqlite3, subprocess, sys, time, datetime as dt
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT   = int(os.environ.get('MAKER_PAGE_PORT', '8788'))
@@ -76,21 +76,41 @@ def build_hash():
         return 'unknown'
 
 
-def vol_now(epoch):
-    """1 s trailing-5-min log-return vol before the open, x1e4 - the frozen definition, read-only."""
-    import math
+def gate_vol(epoch):
+    """The GATE'S OWN calm value for this candle, and where it came from.
+
+    10-01 23:5x: this page used to recompute the number itself, and it got 0.308 for the 23:40
+    candle while the probe's gate had 0.285 - the owner read "not calm" on a candle the gate had
+    called calm. Cause: FavBrain._series() FORWARD-FILLS a second with no print (up to FF_MAX_S) so
+    a quiet second contributes a zero return, and this page skipped those seconds instead, taking
+    log-returns ACROSS the holes and inflating the std. A reimplementation of a live rule is exactly
+    what CLAUDE.md says not to trust, so the page no longer has one.
+
+    Order of preference:
+      1. the value the running probe LOGGED for this candle (decisions.vol) - the actual number the
+         gate used, not a recomputation of it;
+      2. FavBrain.vol_before_open(epoch) from poly_fav - the gate's own module, same code path.
+    """
+    v = q('SELECT vol FROM decisions WHERE epoch=? AND vol IS NOT NULL ORDER BY ts_ms DESC',
+          (epoch,), one=True)
+    if v is not None and v['vol'] is not None:
+        return float(v['vol']), 'probe log'
     try:
-        c = sqlite3.connect(f'file:{BN_DB}?mode=ro', uri=True)
-        raw = {}
-        for tms, px in c.execute("SELECT ts_ms,px FROM flow WHERE stream='spot' AND px IS NOT NULL "
-                                 "AND ts_ms>=? AND ts_ms<?", ((epoch - 400) * 1000, epoch * 1000)):
-            raw[int(tms) // 1000] = float(px)
-        c.close()
-        w = [raw[t] for t in range(epoch - 300, epoch) if t in raw]
-        if len(w) < 240: return None
-        m = [math.log(w[i + 1] / w[i]) for i in range(len(w) - 1)]
-        mu = sum(m) / len(m)
-        return math.sqrt(sum((x - mu) ** 2 for x in m) / len(m)) * 1e4
+        sys.path.insert(0, '/home/ubuntu/pm_paper_zurich')
+        from poly_fav import FavBrain
+        return FavBrain(bn_db=BN_DB).vol_before_open(epoch), 'poly_fav'
+    except Exception as e:
+        return None, f'unavailable ({type(e).__name__})'
+
+
+def live_vol(now_s):
+    """A TRAILING 5 min vol ending NOW. It gates NOTHING; it is here only so the pre-open gate value
+    and a live reading can be told apart on one screen. Same forward-fill as the gate, via the same
+    module, with the window moved to [now-300, now)."""
+    try:
+        sys.path.insert(0, '/home/ubuntu/pm_paper_zurich')
+        from poly_fav import FavBrain
+        return FavBrain(bn_db=BN_DB).vol_before_open(int(now_s))
     except Exception:
         return None
 
@@ -115,11 +135,13 @@ def state():
     # adverse share: ONLY fills with a venue-timed window (bn_after_bps present)
     adv = [f for f in fills if f['bn_after_bps'] is not None]
     adv_n = sum(1 for f in adv if (f['bn_after_bps'] or 0) >= 2.0)
-    v = vol_now(ep)
+    v, vsrc = gate_vol(ep)
+    lv = live_vol(now)
     return dict(now=now, ep=ep, sec=sec, pid=pid, on=on, flag=os.path.exists(FLAG),
                 alive=alive(pid), build=build_hash(), fills=fills, candles=len({f['epoch'] for f in fills}),
                 today=tp, life=lp, w=w, l=l, pend=pend, resting=r, vol=v,
-                calm=(None if v is None else v < VOL_CUT), adv=adv, adv_n=adv_n,
+                calm=(None if v is None else v < VOL_CUT), vsrc=vsrc, live_vol=lv,
+                adv=adv, adv_n=adv_n,
                 rejects=len(q("SELECT 1 FROM orders WHERE dry=0 AND status='REJECTED'")))
 
 
@@ -156,6 +178,9 @@ def page(s):
     calm = ('<span class="mut">vol unknown</span>' if s['calm'] is None else
             (f'<span class="on">calm</span> ({s["vol"]:.3f} &lt; {VOL_CUT})' if s['calm']
              else f'<span class="warn">not calm</span> ({s["vol"]:.3f} &ge; {VOL_CUT})'))
+    calm += f' <span class=mut>&middot; {s["vsrc"]}</span>'
+    livetxt = ('<span class=mut>unavailable</span>' if s['live_vol'] is None else
+               f'<span class=mut>{s["live_vol"]:.3f}</span>')
     graded = s['w'] + s['l']
     prog = min(100, 100 * graded / BAR)
     dayc = 'off' if s['today'] <= DAY_STOP else ('warn' if s['today'] < 0 else 'on')
@@ -184,7 +209,9 @@ def page(s):
 
 <div class=card><h2>Right now</h2>
 <div class=row><span class=k>candle</span><span class=v>{hhmm(s['ep'])} &middot; sec {s['sec']}</span></div>
-<div class=row><span class=k>calm gate</span><span class=v>{calm}</span></div>
+<div class=row><span class=k>calm (5 min before open)</span><span class=v>{calm}</span></div>
+<div class=row><span class=k>live vol (trailing 5 min, NOT the gate)</span><span class=v>{livetxt}</span></div>
+<div class=sub style="margin-top:6px">The gate uses only the 5 minutes BEFORE this candle opened, read once when the order is posted; it cannot change inside the candle. The live number below it moves all the time and decides nothing - 8787's &quot;engine live vol&quot; is that kind of reading, not this gate.</div>
 <div class=row><span class=k>resting order</span><span class=v>{rest}</span></div></div>
 
 <div class=card><h2>Totals</h2>
