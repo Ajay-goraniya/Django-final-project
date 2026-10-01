@@ -15,7 +15,10 @@ SINCE_MS = int(sys.argv[2]) if len(sys.argv) > 2 else 0
 # Fills already in the db when we armed. 27 real fills were recovered from the venue and
 # backfilled, so a bare 'fills >= 1' would fire on history instead of on the next real
 # fill - which is precisely the alert V asked to be sure about.
-FILL_BASE = int(sys.argv[3]) if len(sys.argv) > 3 else 0
+FILL_BASE = int(sys.argv[3]) if len(sys.argv) > 3 else 0      # kept for the arm line; no longer alerts
+TOP_BAND  = 0.78
+TOP_BASE  = int(sys.argv[4]) if len(sys.argv) > 4 else 0      # top-of-band fills already seen
+REM_BASE  = int(sys.argv[5]) if len(sys.argv) > 5 else 0      # remainder-cancels already seen
 REJECT_ALERT = 12          # a burst of post-only rejects since the restart
 PAT = re.compile(r'HARD STOP|CANCEL ERROR|PASS ERROR', re.I)
 
@@ -47,12 +50,31 @@ while True:
     graded = q('select count(*) from fills where pnl is not null')
     if graded >= 60:
         print(f'ALERT GRADED_60: {graded} graded fills - run maker_60.py and send the report to V'); break
-    fills = q('select count(*) from fills')
-    if fills > FILL_BASE:
+    # V, 10-01 20:5x: GO QUIET ON SINGLE FILLS. The market turned calm and fills began landing every
+    # few minutes, so a ping per fill was spending tokens on information the 60-graded report carries
+    # anyway. Only these fills still interrupt:
+    #   TOP OF BAND (>= 0.78) - the asymmetric corner. At 0.78 a win pays ~1.10 and a loss costs the
+    #     full ~3.90, so it needs ~79% to break even; both 5-share fills at 0.78+ were the two worst
+    #     outcomes in the ledger at the time V asked for this.
+    #   A PARTIAL NEEDING A REMAINDER CANCEL - because the remainder is live at the venue until that
+    #     cancel lands, and an orphaned remainder is the one shape here that can lose money unwatched.
+    # The plain fill counter is deliberately gone: a quiet channel that only speaks for these is worth
+    # more than one that speaks for everything.
+    topband = q('select count(*) from fills where price >= ?', (TOP_BAND,))
+    if topband > TOP_BASE:
         r = sqlite3.connect(f'file:{DB}?mode=ro', uri=True)
-        row = r.execute('select epoch, side, shares, price, bn_before_bps from fills order by id desc limit 1').fetchone()
+        row = r.execute('select epoch, side, shares, price from fills where price >= ? '
+                        'order by id desc limit 1', (TOP_BAND,)).fetchone()
         r.close()
-        print(f'ALERT FILL: {fills - FILL_BASE} NEW fill(s) (baseline {FILL_BASE}); latest epoch {row[0]} {row[1]} {row[2]}sh @ {row[3]} bn_before {row[4]}'); break
+        print(f'ALERT TOP_BAND_FILL: {row[1]} {row[2]}sh @ {row[3]} (epoch {row[0]}) - '
+              f'top-of-band entry, needs ~{100*row[3]:.0f}% to break even'); break
+    rem = q("select count(*) from orders where dry=0 and cancel_reason like 'remainder%'")
+    if rem > REM_BASE:
+        r = sqlite3.connect(f'file:{DB}?mode=ro', uri=True)
+        row = r.execute("select id, side, price, cancel_reason from orders where dry=0 and "
+                        "cancel_reason like 'remainder%' order by id desc limit 1").fetchone()
+        r.close()
+        print(f'ALERT PARTIAL_REMAINDER: order {row[0]} {row[1]} @ {row[2]} - {row[3]}'); break
     rej = q("select count(*) from orders where dry=0 and status='REJECTED' and post_ts_ms>?", (SINCE_MS,))
     if rej >= REJECT_ALERT:
         print(f'ALERT REJECT_RATE: {rej} post-only rejects since the restart'); break
