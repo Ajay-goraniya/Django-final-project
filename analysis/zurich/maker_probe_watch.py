@@ -8,16 +8,28 @@ fired and it never complained - the exact 'silence is not success' failure. One 
 import os, re, sqlite3, sys, time
 
 DB   = '/home/ubuntu/maker_probe/maker_probe.sqlite3'
-LOG  = '/home/ubuntu/maker_probe/live3.log'
+LOG  = '/home/ubuntu/maker_probe/live5.log'
 FLAG = '/home/ubuntu/maker_probe/ENABLED'
 PID  = int(sys.argv[1])
 SINCE_MS = int(sys.argv[2]) if len(sys.argv) > 2 else 0
+# Fills already in the db when we armed. 27 real fills were recovered from the venue and
+# backfilled, so a bare 'fills >= 1' would fire on history instead of on the next real
+# fill - which is precisely the alert V asked to be sure about.
+FILL_BASE = int(sys.argv[3]) if len(sys.argv) > 3 else 0
 REJECT_ALERT = 12          # a burst of post-only rejects since the restart
 PAT = re.compile(r'HARD STOP|CANCEL ERROR|PASS ERROR', re.I)
 
 def alive(pid):
-    try: os.kill(pid, 0); return True
-    except OSError: return False
+    """EPERM means the process EXISTS but we may not signal it - that is ALIVE, not dead. Only
+    ESRCH (no such process) is death. The naive `except OSError: return False` reports a live
+    process as gone, which is a false PROCESS_DOWN alert on the one channel that must not cry wolf."""
+    import errno
+    try:
+        os.kill(pid, 0); return True
+    except PermissionError:
+        return True
+    except OSError as e:
+        return e.errno != errno.ESRCH
 
 def q(sql, args=()):
     d = sqlite3.connect(f'file:{DB}?mode=ro', uri=True)
@@ -30,11 +42,11 @@ while True:
     if not os.path.exists(FLAG):
         print('ALERT FLAG_REMOVED: ENABLED gone; the probe stops posting on its next pass'); break
     fills = q('select count(*) from fills')
-    if fills >= 1:
+    if fills > FILL_BASE:
         r = sqlite3.connect(f'file:{DB}?mode=ro', uri=True)
         row = r.execute('select epoch, side, shares, price, bn_before_bps from fills order by id desc limit 1').fetchone()
         r.close()
-        print(f'ALERT FILL: {fills} fill(s); latest epoch {row[0]} {row[1]} {row[2]}sh @ {row[3]} bn_before {row[4]}'); break
+        print(f'ALERT FILL: {fills - FILL_BASE} NEW fill(s) (baseline {FILL_BASE}); latest epoch {row[0]} {row[1]} {row[2]}sh @ {row[3]} bn_before {row[4]}'); break
     rej = q("select count(*) from orders where dry=0 and status='REJECTED' and post_ts_ms>?", (SINCE_MS,))
     if rej >= REJECT_ALERT:
         print(f'ALERT REJECT_RATE: {rej} post-only rejects since the restart'); break

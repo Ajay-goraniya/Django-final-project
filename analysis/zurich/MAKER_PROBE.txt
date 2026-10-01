@@ -416,3 +416,20 @@ V'S PRE-RESTART CHECKS, all three done:
     enough fills to clear -$10 while staying above -$20. The ordering is correct; the test had to
     respect it to be testing the day stop at all.
  111 tests pass.
+
+RESTARTED LIVE 09:45:51 UTC on pinned build f770acf. pid 389461. ENABLED=1. Limits unchanged.
+  deployed == f770acf, asserted by diff against the commit, not assumed.
+  The guard now reads real history: 27 fills, realised +42.3988, which is above both stop bars, so
+  trading is permitted - and for the first time that permission is a MEASURED fact rather than the
+  side effect of an empty table.
+
+TWO WATCHER DEFECTS FIXED BEFORE ARMING, both of which would have broken the one alert V singled out:
+  1. REBASELINED ON FILLS. The check was `fills >= 1` against a table that now holds 27 backfilled
+     fills, so it would have fired instantly on HISTORY and reported it as the next real fill - the
+     exact alert V asked to be certain of. It now takes a baseline and fires only on fills > 27.
+     Proven both directions: quiet at baseline 27, and alerting at baseline 26 with "1 NEW fill".
+  2. alive() CALLED A LIVE PROCESS DEAD. `except OSError: return False` treats EPERM - which means
+     the process EXISTS but we may not signal it - as death. Found by my own dry run reporting
+     "PROCESS_DOWN pid 1". Now only ESRCH counts as gone. A false PROCESS_DOWN on the channel that
+     must not cry wolf is worse than no channel at all.
+  Armed with pid 389461, reject window from 09:48 (0 rejects after it), fill baseline 27.
