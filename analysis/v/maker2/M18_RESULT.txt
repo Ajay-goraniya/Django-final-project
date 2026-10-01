@@ -1,0 +1,27 @@
+M18: 364 of 366 London fixed15 fires have Polymarket tape.
+train 172  test 192.  taker (real, scaled to $10): train +101.85  test -74.32
+cell        | TRAIN fills  maker$   taker$(all fires) | TEST fills fill%  maker$  halves          win%  taker$(all)  taker$(same fires)
+d=0.01 W= 30 |  170  +219.82  +101.85       |  189 98.4%   +33.37  +94.40/ -61.02  46.0   -74.32   -78.30
+d=0.01 W= 60 |  172  +215.95  +101.85       |  190 99.0%   +23.37  +84.40/ -61.02  45.8   -74.32   -88.30
+d=0.01 W=120 |  172  +215.95  +101.85       |  190 99.0%   +23.37  +84.40/ -61.02  45.8   -74.32   -88.30
+d=0.02 W= 30 |  168  +266.15  +101.85       |  184 95.8%    +2.09  +50.01/ -47.92  44.6   -74.32  -144.36
+d=0.02 W= 60 |  171  +252.55  +101.85       |  185 96.4%    -7.91  +40.01/ -47.92  44.3   -74.32  -154.36
+d=0.02 W=120 |  171  +252.55  +101.85       |  185 96.4%    -7.91  +40.01/ -47.92  44.3   -74.32  -154.36
+d=0.03 W= 30 |  165  +265.37  +101.85       |  181 94.3%   +23.68  +68.25/ -44.57  44.2   -74.32  -161.65
+d=0.03 W= 60 |  168  +252.03  +101.85       |  184 95.8%   +17.49  +62.06/ -44.57  44.0   -74.32  -170.24
+d=0.03 W=120 |  168  +252.03  +101.85       |  184 95.8%   +17.49  +62.06/ -44.57  44.0   -74.32  -170.24
+
+chosen on TRAIN: d=0.02 W=30. SEALED TEST: maker +2.09 on 184 fills vs taker -74.32 on all fires; halves +50.01/-47.92; filled win 44.6% -> FAIL
+null (random fires, same count, same price rule): mean +82.38; P(null >= ours) = 0.996
+maker minus taker, same fires (unfilled maker = 0), by quarter of 09-23..10-01:
+d=0.01 W=30: diff   +75.9   +45.2   +57.1   +47.5 | maker  +221.1   -41.5  +166.4   -92.8 | taker  +145.2   -86.7  +109.3  -140.2
+d=0.02 W=30: diff  +113.1   +55.5   +13.8   +58.2 | maker  +258.3   -31.1  +123.1   -82.0 | taker  +145.2   -86.7  +109.3  -140.2
+d=0.03 W=30: diff  +141.8   +13.6   +27.7   +78.5 | maker  +286.9   -73.1  +136.9   -61.7 | taker  +145.2   -86.7  +109.3  -140.2
+
+VERDICT (V, 10-01 15:0x): the pre-registered PASS fails (sealed test second half -47.92), BUT the execution swap itself is robust:
+maker beats taker on the SAME fires in 12 of 12 blocks (3 price offsets x 4 quarters, +14..+142 each), train and test.
+At $10/trade over 364 fires: taker +27.5 -> maker (1c below ask, 30 s) +253.2 = about +$0.62 per trade (taker fee ~3.5% + 1c price).
+Fill rate 94-99% (strict trade-through), so adverse selection is small here (unlike M5/M10).
+What it does NOT fix: EF's direction on bad days - maker still loses in quarters 2 and 4. It shifts every trade by ~6% of stake.
+Caveat: simulated fills from public prints; queue position is not modeled (trade-through is the conservative side of that).
+Proposal to owner: EF-maker live trial on London (EF decides; post-only bid at ask-1c for 30 s instead of crossing). Needs his confirmation.
