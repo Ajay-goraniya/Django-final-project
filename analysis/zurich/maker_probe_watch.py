@@ -8,7 +8,7 @@ fired and it never complained - the exact 'silence is not success' failure. One 
 import os, re, sqlite3, sys, time
 
 DB   = '/home/ubuntu/maker_probe/maker_probe.sqlite3'
-LOG  = '/home/ubuntu/maker_probe/live5.log'
+LOG  = '/home/ubuntu/maker_probe/live7.log'
 FLAG = '/home/ubuntu/maker_probe/ENABLED'
 PID  = int(sys.argv[1])
 SINCE_MS = int(sys.argv[2]) if len(sys.argv) > 2 else 0
@@ -41,6 +41,12 @@ while True:
         print(f'ALERT PROCESS_DOWN: maker probe pid {PID} is gone'); break
     if not os.path.exists(FLAG):
         print('ALERT FLAG_REMOVED: ENABLED gone; the probe stops posting on its next pass'); break
+    # The owner's 60-GRADED-FILL ping takes priority over everything else here. GRADED, not total:
+    # an unsettled fill carries no outcome, so counting it would announce the bar on a number that
+    # cannot yet be read. The report itself is maker_60.py.
+    graded = q('select count(*) from fills where pnl is not null')
+    if graded >= 60:
+        print(f'ALERT GRADED_60: {graded} graded fills - run maker_60.py and send the report to V'); break
     fills = q('select count(*) from fills')
     if fills > FILL_BASE:
         r = sqlite3.connect(f'file:{DB}?mode=ro', uri=True)
