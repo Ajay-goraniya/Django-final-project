@@ -26,3 +26,17 @@ Fix (reads maker_orders[]) deployed by another session 00:52-00:54; Zurich verif
 OFF until the owner decides how to restart.
 
 ## OWNER 10-01 01:03 UTC, verbatim: 'Bro just do whatever is better' (reply to: restart fixed probe with option A or the 2-tick rule; stays off until you reply). V's choice: option A on the FIXED build (maker_orders[] fill detection), limits unchanged, restart once Zurich confirms deployed file == a committed hash and no other session is editing it.
+
+## OWNER APPROVAL 10-01 ~11:5x UTC, relayed by V: "Yes" then "I approve, send it to Zurich"
+Change approved, exactly as scoped: **a fill under 1.0 share does not set filled-this-candle.** Its
+ledger row and its pnl stay, and it still counts toward BOTH stops. Nothing else changes - max 3
+posts per candle, one open order at a time, the 0.60-0.80 bid band and the -$10/day / -$20 lifetime
+stops are all untouched. Stated worst case per candle: **2 x 0.99 + 5 shares**, which holds because
+the 3-post ceiling holds.
+Cause: on 10-01 11:40 a 0.01-share fill - seven tenths of a cent - closed a whole candle and blocked
+11 passes. One-fill-per-candle exists to cap exposure, and dust is not exposure; letting it close a
+candle biased both things the probe measures (the fill RATE, since each dust fill burns a candle that
+could have produced a real one, and the adverse-fill series, since a 0.01-share outcome is noise).
+Implemented on Zurich as MIN_LOCK_SHARES = 1.0 with 9 tests covering both sides of the boundary
+(0.99 does not lock, 1.00 does, the real 0.01 case does not, 5.0 still does, the dust row and its
+pnl survive, dust pnl trips both stops, and the candle remains postable afterwards).

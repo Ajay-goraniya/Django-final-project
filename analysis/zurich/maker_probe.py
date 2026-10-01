@@ -41,6 +41,7 @@ DAY_STOP         = -10.0         # realised $ in a UTC day -> off for the day
 LIFE_STOP        = -20.0         # realised $ lifetime     -> off for good
 POST_ONLY        = True
 MAX_POSTS_PER_CANDLE = 3   # 09-30: the 17:00 candle took 34 posts and got 0 fills. Hard ceiling.
+MIN_LOCK_SHARES  = 1.0     # owner 10-01: a fill below this does not close the candle (dust)
 FILL_CHECK_S     = 1.0     # how often a resting order is checked against the venue tape
 TICK             = 0.01
 
@@ -545,9 +546,23 @@ class Probe:
                 log(self.logfile, f'[{time.strftime("%F %T", time.gmtime())}] FILL AMENDED epoch '
                     f'{epoch} {matched:g}sh -> {m2:g}sh @ {price} (raced the remainder cancel)')
                 matched = m2
-        self.filled_epochs.add(epoch); self.resting = None; self.counts['fill'] += 1
+        # OWNER APPROVED 10-01 11:5x ("I approve, send it to Zurich"): a fill UNDER 1.0 share does
+        # NOT set filled-this-candle. Its ledger row and pnl stay, and it still counts toward both
+        # stops - the ONLY thing it no longer does is burn the candle.
+        # Why: on 10-01 11:40 a 0.01-share fill - seven tenths of a cent - locked a whole candle and
+        # blocked 11 passes. One-fill-per-candle exists to cap EXPOSURE, and dust is not exposure;
+        # letting it close a candle biased the two things this probe measures, the fill RATE (every
+        # dust fill burns a candle that could have produced a real one) and the adverse-fill series
+        # (a 0.01-share outcome is noise whichever way it lands).
+        # Exposure bound is unchanged in spirit and stated: with max 3 posts a candle the worst case
+        # is 2 x 0.99 + 5 shares, because only a sub-1-share fill declines to lock.
+        if matched >= MIN_LOCK_SHARES:
+            self.filled_epochs.add(epoch)
+        self.resting = None; self.counts['fill'] += 1
+        self.counts['dust_fill' if matched < MIN_LOCK_SHARES else 'lock_fill'] += 1
         log(self.logfile, f'[{time.strftime("%F %T", time.gmtime())}] FILL epoch {epoch} {r["side"]} '
-            f'{matched:g}sh @ {price} bn_before {before if before is None else round(before,2)}bps')
+            f'{matched:g}sh @ {price} bn_before {before if before is None else round(before,2)}bps'
+            + ('' if matched >= MIN_LOCK_SHARES else f' DUST (<{MIN_LOCK_SHARES}sh): candle stays open'))
         # the 1 s AFTER the fill is the adverse-fill measurement; recorded a second later
         asyncio.ensure_future(self._after(epoch, r['side'], ts_ms))
         return True

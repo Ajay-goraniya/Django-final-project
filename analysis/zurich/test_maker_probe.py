@@ -4,7 +4,7 @@
 These are the properties, not the strategy. A probe that loses money is a result; a probe that
 crosses the spread, outlives its cancel, doubles up, or reaches into 8787's orders is a fault.
 """
-import re, sqlite3, sys, tempfile, time, unittest
+import datetime as dt, re, sqlite3, sys, tempfile, time, unittest
 sys.path.insert(0, '/home/ubuntu/pm_paper_zurich')
 import maker_probe as M
 
@@ -1010,10 +1010,16 @@ class RealBackfilledFillIsHonoured(unittest.TestCase):
         import os
         if not os.path.exists(cls.DB): raise unittest.SkipTest('no probe db on this host')
         src = sqlite3.connect(f'file:{cls.DB}?mode=ro', uri=True); src.row_factory = sqlite3.Row
+        # SETTLED rows only. This reads the LIVE probe db, which legitimately carries an unsettled
+        # fill whenever a candle has not resolved yet - the first version summed pnl across all rows
+        # and broke the moment the probe took a new fill mid-candle. A test that reads live data has
+        # to tolerate the data being live.
         cls.rows = [dict(r) for r in src.execute(
-            'select epoch, side, price, shares, pnl, utc_day from fills order by fill_ts_ms')]
+            'select epoch, side, price, shares, pnl, utc_day FROM fills '
+            'WHERE pnl IS NOT NULL ORDER BY fill_ts_ms')]
+        cls.pending = src.execute('select count(*) from fills where pnl is null').fetchone()[0]
         src.close()
-        if not cls.rows: raise unittest.SkipTest('no backfilled fills to assert on')
+        if not cls.rows: raise unittest.SkipTest('no settled fills to assert on')
 
     def fresh(self):
         """A probe whose fills table is loaded with the REAL recovered fills."""
@@ -1029,8 +1035,9 @@ class RealBackfilledFillIsHonoured(unittest.TestCase):
         return p
 
     def test_the_recovered_fills_are_really_there(self):
-        self.assertGreaterEqual(len(self.rows), 20, 'expected the 27 recovered fills')
-        self.assertTrue(all(r['pnl'] is not None for r in self.rows), 'all must be settled')
+        self.assertGreaterEqual(len(self.rows), 20, 'expected at least the 27 recovered fills')
+        self.assertTrue(all(r['pnl'] is not None for r in self.rows),
+                        'this class selects settled rows only, so none may be None here')
 
     def test_a_real_fill_blocks_a_second_post_in_that_candle(self):
         """one fill per candle, driven by the real fill's own epoch."""
@@ -1092,3 +1099,99 @@ class RealBackfilledFillIsHonoured(unittest.TestCase):
         self.assertFalse(p.guard.may_trade()[0])
         p.db.execute('delete from fills'); p.db.commit()
         self.assertTrue(p.guard.may_trade()[0], 'blind stops let trading continue - the bug')
+
+
+class DustDoesNotLockTheCandle(unittest.TestCase):
+    """OWNER APPROVED 10-01 11:5x: a fill under 1.0 share does not set filled-this-candle. Its
+    ledger row and pnl stay, and it still counts toward BOTH stops.
+
+    Provoked by the real 11:40 fill: 0.01 shares - seven tenths of a cent - closed a whole candle
+    and blocked 11 passes. One-fill-per-candle caps EXPOSURE, and dust is not exposure. Both sides
+    of the boundary are asserted, because a threshold tested on one side only is half a test."""
+
+    def setUp(self):
+        import asyncio
+        self.loop = asyncio.new_event_loop()
+        self.ep = int(time.time() // 300) * 300
+        self.p = M.Probe(dry_run=False, db=mem())
+        self.p.logfile = tempfile.mktemp(suffix='.log')
+        self.p.guard.flag_on = lambda: True
+        self.p.resting = dict(epoch=self.ep, side='UP', price=0.70, token='T',
+                              order_id='OID', post_ts_ms=0, row=1)
+        self.p.db.execute("insert into orders(id,epoch,side,token,price,shares,status,dry) "
+                          "values(1,?,'UP','T',0.70,5,'OPEN',0)", (self.ep,)); self.p.db.commit()
+
+    def tearDown(self): self.loop.close()
+
+    def fill(self, shares):
+        """Drive the real check_fill with a venue trade of `shares` on our order."""
+        class MO:
+            def __init__(s, n): s.order_id='OID'; s.matched_amount=n; s.price=0.70
+        class TR:
+            def __init__(s, n):
+                s.id='t1'; s.size=n; s.price=0.70; s.status='CONFIRMED'
+                s.taker_order_id='OTHER'; s.maker_orders=(MO(n),)
+                s.matched_at=dt.datetime.fromtimestamp(self.ep + 100, dt.UTC)
+        class Page:
+            def __init__(s, n): s.items=(TR(n),)
+        class Client:
+            def __init__(s, n): s.n=n
+            def list_account_trades(s, **k):
+                async def gen():
+                    yield Page(s.n)
+                return gen()
+            async def cancel_order(s, **k): return None
+        self.p.broker = type('B', (), {'client': Client(shares)})()
+        return self.loop.run_until_complete(self.p.check_fill(self.ep))
+
+    def test_the_threshold_is_one_share(self):
+        self.assertEqual(M.MIN_LOCK_SHARES, 1.0)
+
+    def test_0_99_shares_does_NOT_lock_the_candle(self):
+        self.assertTrue(self.fill(0.99))
+        self.assertNotIn(self.ep, self.p.filled_epochs, '0.99sh must leave the candle open')
+
+    def test_1_00_shares_DOES_lock_the_candle(self):
+        self.assertTrue(self.fill(1.00))
+        self.assertIn(self.ep, self.p.filled_epochs, '1.00sh is not dust and must close the candle')
+
+    def test_the_real_0_01_share_case_no_longer_locks(self):
+        self.assertTrue(self.fill(0.01))
+        self.assertNotIn(self.ep, self.p.filled_epochs)
+
+    def test_a_full_5_share_fill_still_locks(self):
+        self.assertTrue(self.fill(5.0))
+        self.assertIn(self.ep, self.p.filled_epochs)
+
+    def test_a_dust_fill_STILL_writes_its_ledger_row(self):
+        """The row and the money are kept - only the candle lock is waived."""
+        self.fill(0.01)
+        r = self.p.db.execute('select shares, price, spent from fills').fetchone()
+        self.assertIsNotNone(r, 'a dust fill must still be recorded')
+        self.assertAlmostEqual(r['shares'], 0.01)
+        self.assertAlmostEqual(r['spent'], 0.007, places=4)
+
+    def test_dust_pnl_REACHES_both_stops(self):
+        """The stops read the fills table, so a dust loss must still count against them."""
+        self.fill(0.01)
+        self.p.db.execute('update fills set pnl=-10.0, utc_day=?',
+                          (time.strftime('%Y-%m-%d', time.gmtime()),)); self.p.db.commit()
+        ok, why = self.p.guard.may_trade()
+        self.assertFalse(ok); self.assertIn('DAY STOP', why)
+        self.p.db.execute("update fills set pnl=-20.0, utc_day='2020-01-01'"); self.p.db.commit()
+        ok, why = self.p.guard.may_trade()
+        self.assertFalse(ok); self.assertIn('LIFETIME', why)
+
+    def test_the_candle_stays_postable_after_dust(self):
+        """End to end: dust fill, then decide() must still be willing to post in that candle."""
+        self.fill(0.01)
+        act, _, _, _ = self.p.quoter.decide(
+            **{**OK, 'filled_this_candle': (self.ep in self.p.filled_epochs),
+               'posts_this_candle': 1})
+        self.assertEqual(act, 'post', 'the candle must remain open after a dust fill')
+
+    def test_the_post_ceiling_still_bounds_the_worst_case(self):
+        """Owner's stated bound: 2 x 0.99 + 5 shares. It holds only because the 3-post cap holds."""
+        self.assertEqual(M.MAX_POSTS_PER_CANDLE, 3)
+        act, _, _, why = self.p.quoter.decide(**{**OK, 'posts_this_candle': 3})
+        self.assertEqual(act, 'none'); self.assertIn('max', why)
