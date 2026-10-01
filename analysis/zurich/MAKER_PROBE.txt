@@ -571,3 +571,37 @@ so HARD STOP / errors / process death could never be watched again past the 60th
 FIXED: SIXTY_FLAG (.graded60.alerted) latches the report to once, ever. Tested on the watcher's own
 branch text: quiet at 59, fires once at 60 and writes the latch, stays quiet at 63 on a re-arm.
 The probe was never touched and never paused. 58 fills / 56 graded, today +2.24 of -10, life +38.84.
+[2026-10-01 22:11:06] REJECTED epoch 1790892600 UP 0.78 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 22:11:08] FILL epoch 1790892600 UP 5sh @ 0.77 bn_before 1.97bps
+[2026-10-01 22:21:01] FILL epoch 1790893200 DOWN 5sh @ 0.72 bn_before 0.57bps
+[2026-10-01 22:27:03] FILL epoch 1790893500 UP 5sh @ 0.6 bn_before -0.0bps
+[2026-10-01 22:31:05] FILL epoch 1790893800 DOWN 5sh @ 0.62 bn_before 0.53bps
+[2026-10-01 22:41:06] FILL epoch 1790894400 DOWN 5sh @ 0.75 bn_before -0.0bps
+[2026-10-01 22:52:14] FILL epoch 1790895000 DOWN 5sh @ 0.62 bn_before 0.52bps
+[2026-10-01 22:56:01] FILL epoch 1790895300 UP 5sh @ 0.66 bn_before 0.0bps
+[2026-10-01 23:06:08] REJECTED epoch 1790895900 DOWN 0.8 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 23:06:11] FILL epoch 1790895900 DOWN 5sh @ 0.79 bn_before 0.97bps
+[2026-10-01 23:11:04] REJECTED epoch 1790896200 DOWN 0.6 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 23:12:21] FILL epoch 1790896200 UP 5sh @ 0.63 bn_before 0.0bps
+[2026-10-01 23:16:04] REJECTED epoch 1790896500 DOWN 0.79 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 23:16:06] FILL epoch 1790896500 DOWN 5sh @ 0.78 bn_before 0.0bps
+[2026-10-01 23:22:05] FILL epoch 1790896800 DOWN 5sh @ 0.6 bn_before 0.33bps
+
+== 10-01 23:2x  V: drop top-band pings; the bar becomes 60 DISTINCT GRADED CANDLES
+Watcher: TOP_BAND_FILL removed entirely (tokens). What still speaks: PROCESS_DOWN, FLAG_REMOVED,
+log PAT (HARD STOP / CANCEL ERROR / PASS ERROR), PARTIAL_REMAINDER (>= 1.0 sh), BALANCE_REJECT (first
+one), REJECT_RATE (>= 12). FLAG_REMOVED and REJECT_RATE are not on V's list by name - kept because
+both are fault-class (the flag going means the probe stops posting; a reject storm is the 17:00 churn
+shape) and neither can fire on routine trading. Say so if either should go.
+The 60 bar is now DISTINCT GRADED CANDLES, latched separately (.candles60.alerted). Candles is the
+honest unit: the 09-30 17:00 candle alone holds 15 fills, so a 60-FILL bar is reached on far fewer
+independent outcomes than it looks. At 23:22 we are at 47 graded candles on 67 graded fills, so the
+report is still pending; the earlier 60-FILL ping already went out and its branch is gone.
+maker_60.py now also carries, from one shared summary(): TIME HALVES (equal count, split time
+printed) and the SAME block with the 09-30 17:00 candle removed. First run of it, 23:22:
+  all graded   67 fills / 47 candles  56W-11L  +41.3377 on $205.19 = +0.2015/$1
+    H1 n34 +39.7872 = +0.4112/$1 | H2 n33 +1.5505 = +0.0143/$1 (split 10-01 12:11:18 UTC)
+  ex 17:00     52 fills / 46 candles  41W-11L  +17.2877 on $164.24 = +0.1053/$1
+    H1 n26 +17.1362 = +0.2303/$1 | H2 n26 +0.1515 = +0.0017/$1 (split 10-01 19:16:24 UTC)
+That ONE candle is 24.05 of the 41.34, and without it the second half is flat. Not a finding yet -
+it goes to V with the report at 60 candles, and nothing changes on the probe either way.
