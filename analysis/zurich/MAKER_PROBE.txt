@@ -365,3 +365,54 @@ THE FIX (authored by another session concurrently, 00:52-00:54, verified by me r
 FILLS BACKFILLED into the probe DB from venue maker_orders[] so the stops have real history to read.
 PROBE PAUSED: ENABLED absent, process stopped, 0 open orders and 0 open positions confirmed at the
 venue. It must NOT restart until V and the owner see this retraction.
+
+================================================================================================
+10-01: SOLE EDITOR ASSIGNED, BUILD PINNED, RESTART ON OPTION A (owner delegated, V decided).
+
+THE OTHER EDITOR, identified: session claude-work-c0, cse_01NGfZzCarRbBKJXp4vGJ68g, pid 361397,
+started 00:44:58 - the minute V raised the fill alarm. Its edits landed 00:52:51, 00:54:56, 00:57:40.
+It has STOOD DOWN in writing and confirmed nothing is in flight. I am the only editor from here.
+Its fix is KEPT, not reverted, and it is more than the three pieces I first credited:
+  matched_by() reads maker_orders[] (and the taker side too, so the answer never depends on which
+    side we turned out to be); trade_dead() compares TradeStatus on .value, because str(enum) is
+    'TradeStatus.FAILED' and matched no ('FAILED',...) tuple - dead trades had counted as live;
+    trade_ts_ms() reads matched_at, as `match_time` does not exist on the model and the old path
+    fell back to the LOCAL clock for every fill - the same clock bn_before_bps is measured against;
+  scan_tape() sums EVERY trade naming our order with trade-id dedup, which matters because a single
+    order really does arrive as several trades in our own data (row 8 = 0.36 + 2.0 + 2.64 shares,
+    row 90 = 2.08 + 2.92);
+  a partial fill now CANCELS THE REMAINDER before self.resting is cleared, else the rest is orphaned
+    live at the venue where nothing can reach it; and the tape is re-read afterwards to amend the
+    fill, because that cancel races a second match - pre-fix that race booked 2 of 5 shares and never
+    corrected itself.
+Credit where it is due: that was the right diagnosis and I had been wrong about it three times.
+
+THREE DISCREPANCIES THE PEER RAISED, resolved:
+ (a) My "$77.60" is GROSS SPEND (sum of shares x fill price), NOT P&L. Realised P&L is +42.3988.
+     And "24 of 50" vs "27 fills" is not a contradiction: 50 orders carried a venue id, 24 of them
+     filled, and those 24 produced 27 fill EVENTS because some filled across several trades. The
+     peer was right that my wording ran the two together.
+ (b) 0 open orders at the venue is now confirmed TWICE, by my own credentialed query and by the
+     peer's verify_fills.py which I ran for it (it has no credentials): 0 open on the wallet, and
+     the db's FILLED rows line up with the venue's CONFIRMED trades.
+ (c) The peer overwrote note= instead of appending on orders 81/82/89/90/91, losing the
+     ' | venue fill <id>' trade references. Fills and pnl are intact; the ids come back only from
+     re-running the reconciliation. Recorded here so nobody mistakes the gap for missing fills.
+
+AND A CORRECTION OF MY OWN, same shape as the one I keep making: I dismissed verify_fills.py's
+"done 09:43 UTC" as a formatting bug because my own clock reads said 01:1x. The box clock is right
+(NTP synced, RTC agrees) - about 8.5 h of real time passed between my turns. The script was correct
+and I was wrong to call it buggy on no evidence.
+
+V'S PRE-RESTART CHECKS, all three done:
+ 1. other editor identified and stood down (above); I am sole editor.
+ 2. deployed file committed; deployed == the commit hash, asserted below by diff, not by assumption.
+ 3. a test proves a REAL recovered maker fill trips one-fill-per-candle AND reaches both stops:
+    class RealBackfilledFillIsHonoured reads the probe's OWN db so the subject is the real recovered
+    row, not an agreeable fixture. 7 tests, including the counterfactual that makes the rest mean
+    anything - delete the fills and the same losing history PASSES may_trade(), which is precisely
+    what shipped. One of them had to be reshaped: re-signing all 27 fills to losses sums to -42.40
+    and trips the LIFETIME stop before the day stop is consulted, so the day-stop test now uses only
+    enough fills to clear -$10 while staying above -$20. The ordering is correct; the test had to
+    respect it to be testing the day stop at all.
+ 111 tests pass.

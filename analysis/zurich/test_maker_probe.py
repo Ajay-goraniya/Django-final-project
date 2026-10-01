@@ -307,10 +307,6 @@ class Settlement(unittest.TestCase):
         self.assertEqual(M.settle(self.db, self.path), 0)
 
 
-if __name__ == '__main__':
-    unittest.main(verbosity=1)
-
-
 class PostPathIntegration(unittest.TestCase):
     """The 30-min dry run of 09-30 13:24-13:54 posted NOTHING because all 7 candles were
     non-calm (vol 0.545-2.456 vs the 0.304 cut). So the dry run proves the gates, not the
@@ -791,3 +787,308 @@ class SameSecondLockout(unittest.TestCase):
         self.assertEqual(r['status'], 'REJECTED'); self.assertIn('post-only', r['note'])
         self.assertEqual(self.p.db.execute(
             "select count(*) from orders where status='PENDING'").fetchone()[0], 0)
+
+
+# =================================================================================================
+try:
+    from polymarket.models.clob.account import ClobTrade
+except Exception:                                   # pragma: no cover - the venv always has it
+    ClobTrade = None
+
+HEX32 = '0x' + 'ab' * 32
+WALLET = '0x' + '11' * 20
+
+
+def venue_trade(our_id='0xOURS', *, matched='5', trader_side='MAKER', taker_order_id='0xTAKER',
+                status='MATCHED', match_time='1790813160', price='0.60', makers=None, tid='t1'):
+    """One trade as the venue really serialises it, parsed by the SDK's own model.
+
+    Built through ClobTrade.model_validate on purpose: the bug was that our code read a field name
+    the model does not have, so a test that fakes the trade with a SimpleNamespace would have
+    passed while the probe stayed blind. If polymarket-client renames or reshapes this, these
+    tests fail here, at the parse, which is the only early warning there is."""
+    if makers is None:
+        makers = [dict(order_id=our_id, asset_id='TOKUP', maker_address=WALLET, owner='own',
+                       side='BUY', price=price, matched_amount=matched, outcome='Up',
+                       fee_rate_bps='0')]
+    return ClobTrade.model_validate(dict(
+        id=tid, market=HEX32, asset_id='TOKUP', owner='own', maker_address=WALLET,
+        taker_order_id=taker_order_id, side='BUY', trader_side=trader_side, price=price,
+        size='5', outcome='Up', status=status, fee_rate_bps='0', bucket_index=0,
+        transaction_hash='0x' + 'cd' * 32, maker_orders=makers,
+        match_time=match_time, last_update=match_time))
+
+
+class TapeClient:
+    """The two client calls check_fill can make, and a record of the cancels it asked for."""
+    def __init__(self, trades):
+        self.trades, self.cancelled = trades, []
+
+    def list_account_trades(self, token_id=None, **kw):
+        trades = self.trades
+        class Pages:
+            def __aiter__(self):
+                async def gen():
+                    yield type('Page', (), {'items': tuple(trades)})()
+                return gen()
+        return Pages()
+
+    async def cancel_order(self, order_id=None):
+        self.cancelled.append(order_id); return {'canceled': [order_id]}
+
+
+@unittest.skipIf(ClobTrade is None, 'polymarket-client not importable')
+class MakerFillsAreVisible(unittest.TestCase):
+    """The 10-01 blindness: our post-only order is the MAKER of every trade it is in, and a maker
+    appears on the tape only inside the taker's trade, under maker_orders[]. check_fill compared
+    our id against t.maker_order_id - a field ClobTrade does not define - so it matched nothing,
+    recorded nothing, raised nothing, and left both hard stops with an empty fills table to read.
+    The probe reported 0 fills while the wallet showed 4 real 5-share buys."""
+
+    def setUp(self):
+        import asyncio
+        self.loop = asyncio.new_event_loop()
+        self.p = M.Probe(dry_run=False, db=mem())
+        self.p.logfile = tempfile.mktemp(suffix='.log')
+        self.ep = 1790813100
+        self.p.db.execute("insert into orders(id,epoch,side,token,price,shares,post_ts_ms,"
+                          "venue_order_id,status,dry) values(1,?,'UP','TOKUP',0.60,5,?,'0xOURS',"
+                          "'OPEN',0)", (self.ep, 1790813100000))
+        self.p.db.commit()
+        self.p.resting = dict(epoch=self.ep, side='UP', price=0.60, token='TOKUP',
+                              order_id='0xOURS', post_ts_ms=1790813100000, row=1)
+
+    def tearDown(self):
+        import asyncio
+        for t in asyncio.all_tasks(self.loop): t.cancel()
+        self.loop.close()
+
+    def check(self, *trades):
+        self.p.broker = type('B', (), {'client': TapeClient(list(trades))})()
+        return self.loop.run_until_complete(self.p.check_fill(self.ep))
+
+    def test_the_sdk_trade_has_no_maker_order_id_field(self):
+        """The root cause, pinned. getattr(t,'maker_order_id','') was '' on every trade forever."""
+        t = venue_trade()
+        self.assertNotIn('maker_order_id', ClobTrade.model_fields)
+        self.assertFalse(hasattr(t, 'maker_order_id'))
+
+    def test_a_maker_fill_nested_in_maker_orders_is_seen(self):
+        self.assertTrue(self.check(venue_trade()))
+        f = self.p.db.execute('select * from fills').fetchall()
+        self.assertEqual(len(f), 1, 'the maker fill must be recorded exactly once')
+        self.assertEqual(f[0]['shares'], 5.0)
+        self.assertEqual(f[0]['price'], 0.60)
+        self.assertEqual(f[0]['side'], 'UP')
+        self.assertEqual(self.p.db.execute('select status from orders where id=1').fetchone()[0],
+                         'FILLED')
+        self.assertIsNone(self.p.resting, 'a filled order is no longer resting')
+
+    def test_the_fill_is_stamped_with_the_venue_match_time(self):
+        """match_time is parsed into `matched_at`; reading `match_time` off the model gave 0 and
+        stamped the local clock, which is the clock bn_before_bps is measured against."""
+        self.check(venue_trade(match_time='1790813160'))
+        r = self.p.db.execute('select fill_ts_ms, utc_day from fills').fetchone()
+        self.assertEqual(r['fill_ts_ms'], 1790813160000)
+        self.assertEqual(r['utc_day'], '2026-10-01')
+
+    def test_a_fill_leaves_a_row_the_hard_stops_can_read(self):
+        """Both stops are sums over fills. No row, no stop - that is what made this a safety bug."""
+        self.check(venue_trade())
+        self.assertEqual(self.p.db.execute('select count(*) from fills').fetchone()[0], 1)
+        # -25 so this binds on the LIFETIME stop, which does not depend on what day it is run
+        self.p.db.execute("update fills set pnl=-25.0 where id=1"); self.p.db.commit()
+        on = tempfile.mktemp(suffix='.flag')
+        with open(on, 'w') as f: f.write('1')       # the flag is a different gate; prove the STOP
+        ok, why = M.Guard(self.p.db, flag_path=on, dry_run=False).may_trade()
+        self.assertFalse(ok); self.assertIn('LIFETIME STOP', why)
+
+    def test_a_taker_side_trade_is_still_seen(self):
+        self.assertTrue(self.check(venue_trade(trader_side='TAKER', taker_order_id='0xOURS',
+                                               makers=[])))
+        self.assertEqual(self.p.db.execute('select shares from fills').fetchone()[0], 5.0)
+
+    def test_another_makers_order_in_the_same_trade_is_not_our_fill(self):
+        """The wallet is shared with 8787. Someone else's maker order in the same trade must not
+        be read as ours, or the probe books a fill it never had and trips a stop on it."""
+        other = [dict(order_id='0x8787', asset_id='TOKUP', maker_address=WALLET, owner='own',
+                      side='BUY', price='0.60', matched_amount='5', outcome='Up', fee_rate_bps='0')]
+        self.assertFalse(self.check(venue_trade(makers=other, taker_order_id='0xSOMEONE')))
+        self.assertEqual(self.p.db.execute('select count(*) from fills').fetchone()[0], 0)
+        self.assertIsNotNone(self.p.resting)
+
+    def test_a_failed_trade_is_not_a_fill(self):
+        """TradeStatus is an enum: str(status).upper() is 'TRADESTATUS.FAILED', which is in no
+        ('FAILED', ...) tuple, so the old skip never fired either."""
+        self.assertFalse(self.check(venue_trade(status='FAILED')))
+        self.assertEqual(self.p.db.execute('select count(*) from fills').fetchone()[0], 0)
+
+    def test_two_partial_trades_on_one_order_sum_to_one_fill(self):
+        a = venue_trade(matched='2', tid='t1', match_time='1790813160')
+        b = venue_trade(matched='3', tid='t2', match_time='1790813170')
+        self.assertTrue(self.check(a, b))
+        r = self.p.db.execute('select shares, fill_ts_ms from fills').fetchone()
+        self.assertEqual(r['shares'], 5.0)
+        self.assertEqual(r['fill_ts_ms'], 1790813160000, 'the FIRST match is when we were filled')
+
+    def test_a_partial_fill_pulls_its_own_remainder(self):
+        """2 of 5 filled leaves 3 resting at the venue. Clearing self.resting without cancelling
+        them would orphan them: nothing can reach an order id self.resting no longer holds."""
+        self.p.broker = type('B', (), {'client': TapeClient([venue_trade(matched='2')])})()
+        self.assertTrue(self.loop.run_until_complete(self.p.check_fill(self.ep)))
+        self.assertEqual(self.p.broker.client.cancelled, ['0xOURS'])
+        self.assertEqual(self.p.db.execute('select shares from fills').fetchone()[0], 2.0)
+
+    def test_a_full_fill_does_not_cancel_anything(self):
+        self.p.broker = type('B', (), {'client': TapeClient([venue_trade()])})()
+        self.loop.run_until_complete(self.p.check_fill(self.ep))
+        self.assertEqual(self.p.broker.client.cancelled, [],
+                         'a fully filled order has nothing left to cancel')
+
+    def test_the_owners_2_then_3_split_is_one_5_share_fill(self):
+        """The owner's app on the 8:30-8:35PM ET candle: 'Buy 2 Down @ 64c' then 'Buy 3 Down @ 64c'
+        - our order 90, one 5-share post, two venue trades. They must sum to one 5-share fill, not
+        be read as 2 and the other 3 dropped."""
+        a = venue_trade(matched='2', price='0.64', tid='t1', match_time='1790814660')
+        b = venue_trade(matched='3', price='0.64', tid='t2', match_time='1790814665')
+        self.assertTrue(self.check(a, b))
+        f = self.p.db.execute('select shares, price, spent from fills').fetchall()
+        self.assertEqual(len(f), 1)
+        self.assertEqual(f[0]['shares'], 5.0)
+        self.assertAlmostEqual(f[0]['spent'], 3.20)
+        self.assertEqual(self.p.broker.client.cancelled, [], 'nothing is left to cancel')
+
+    def test_shares_that_match_while_we_cancel_the_remainder_are_still_booked(self):
+        """The race the 2-then-3 split makes real: we see 2, we cancel the other 3, and the venue
+        had already matched them. Before the re-read those 3 shares were as invisible to the stops
+        as the maker fills themselves - the fill row said 2 and nothing ever corrected it."""
+        two = venue_trade(matched='2', price='0.64', tid='t1', match_time='1790814660')
+        three = venue_trade(matched='3', price='0.64', tid='t2', match_time='1790814665')
+
+        class RacingTape(TapeClient):
+            def __init__(self): super().__init__([two])
+            async def cancel_order(self, order_id=None):
+                self.cancelled.append(order_id)
+                self.trades = [two, three]          # the venue had already matched the rest
+                raise RuntimeError('order is already filled')
+
+        self.p.broker = type('B', (), {'client': RacingTape()})()
+        self.assertTrue(self.loop.run_until_complete(self.p.check_fill(self.ep)))
+        f = self.p.db.execute('select shares, spent, fill_ts_ms from fills').fetchall()
+        self.assertEqual(len(f), 1, 'one order is one fill row, amended - never two rows')
+        self.assertEqual(f[0]['shares'], 5.0, 'the raced 3 shares must be booked')
+        self.assertAlmostEqual(f[0]['spent'], 3.20)
+        self.assertEqual(f[0]['fill_ts_ms'], 1790814660000)
+
+    def test_a_tape_error_is_recorded_not_swallowed(self):
+        class Boom:
+            def list_account_trades(self, **kw): raise RuntimeError('tape down')
+        self.p.broker = type('B', (), {'client': Boom()})()
+        self.assertFalse(self.loop.run_until_complete(self.p.check_fill(self.ep)))
+        self.assertIn('fill check',
+                      self.p.db.execute('select note from orders where id=1').fetchone()[0])
+
+
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
+
+
+class RealBackfilledFillIsHonoured(unittest.TestCase):
+    """V, 10-01: prove that a REAL maker fill - one of the 27 recovered from the venue's
+    maker_orders[] - trips one-fill-per-candle AND counts toward both hard stops.
+
+    This is the end of the chain that broke. The fill was invisible, so filled_this_candle never
+    set (15 fills landed in the 17:00 candle against a rule of one) and the stops read an empty
+    table (so -$10/day and -$20 lifetime could never fire). Synthetic fills already cover the
+    plumbing; this reads the probe's OWN database so the thing under test is the real recovered
+    row, not a fixture that happens to agree with me.
+    """
+    DB = '/home/ubuntu/maker_probe/maker_probe.sqlite3'
+
+    @classmethod
+    def setUpClass(cls):
+        import os
+        if not os.path.exists(cls.DB): raise unittest.SkipTest('no probe db on this host')
+        src = sqlite3.connect(f'file:{cls.DB}?mode=ro', uri=True); src.row_factory = sqlite3.Row
+        cls.rows = [dict(r) for r in src.execute(
+            'select epoch, side, price, shares, pnl, utc_day from fills order by fill_ts_ms')]
+        src.close()
+        if not cls.rows: raise unittest.SkipTest('no backfilled fills to assert on')
+
+    def fresh(self):
+        """A probe whose fills table is loaded with the REAL recovered fills."""
+        p = M.Probe(dry_run=False, db=mem())
+        p.logfile = tempfile.mktemp(suffix='.log')
+        p.guard.flag_on = lambda: True
+        for r in self.rows:
+            p.db.execute('insert into fills(epoch,utc_day,side,fill_ts_ms,price,shares,spent,pnl) '
+                         'values(?,?,?,?,?,?,?,?)',
+                         (r['epoch'], r['utc_day'], r['side'], 0, r['price'], r['shares'],
+                          r['shares'] * r['price'], r['pnl']))
+        p.db.commit()
+        return p
+
+    def test_the_recovered_fills_are_really_there(self):
+        self.assertGreaterEqual(len(self.rows), 20, 'expected the 27 recovered fills')
+        self.assertTrue(all(r['pnl'] is not None for r in self.rows), 'all must be settled')
+
+    def test_a_real_fill_blocks_a_second_post_in_that_candle(self):
+        """one fill per candle, driven by the real fill's own epoch."""
+        p = self.fresh()
+        ep = self.rows[0]['epoch']
+        p.filled_epochs.add(ep)                       # what check_fill now does on a real fill
+        act, _, _, why = p.quoter.decide(**{**OK, 'filled_this_candle': (ep in p.filled_epochs)})
+        self.assertEqual(act, 'none'); self.assertIn('already filled', why)
+
+    def test_the_17_00_candle_would_now_be_capped_at_one_fill(self):
+        """15 of the 27 fills were in one candle. Count them, then prove that candle is now shut."""
+        from collections import Counter
+        worst, n = Counter(r['epoch'] for r in self.rows).most_common(1)[0]
+        self.assertGreater(n, 1, 'the incident had repeated fills inside one candle')
+        p = self.fresh(); p.filled_epochs.add(worst)
+        self.assertEqual(p.quoter.decide(**{**OK, 'filled_this_candle': True})[0], 'none')
+
+    def test_the_real_fills_reach_guard_realised(self):
+        p = self.fresh()
+        want = round(sum(r['pnl'] for r in self.rows), 4)
+        self.assertAlmostEqual(round(p.guard.realised(), 4), want, places=3)
+        self.assertNotEqual(p.guard.realised(), 0.0, 'an empty read is the bug we are testing for')
+
+    def test_a_real_losing_day_trips_the_DAY_stop(self):
+        """Re-sign the real fills to a loss. Only as many as it takes to clear -$10 WITHOUT clearing
+        the -$20 lifetime bar, because may_trade() checks lifetime FIRST - re-signing all 27 sums to
+        -42.40 and the lifetime stop answers before the day stop is ever consulted. That ordering is
+        correct; the test has to respect it to be testing the day stop at all."""
+        p = self.fresh()
+        day = time.strftime('%Y-%m-%d', time.gmtime())
+        p.db.execute('delete from fills'); p.db.commit()
+        run = 0.0
+        for r in self.rows:
+            loss = -abs(r['pnl'])
+            if run + loss < -19.0: break
+            p.db.execute('insert into fills(epoch,utc_day,side,fill_ts_ms,price,shares,spent,pnl) '
+                         'values(?,?,?,?,?,?,?,?)',
+                         (r['epoch'], day, r['side'], 0, r['price'], r['shares'],
+                          r['shares'] * r['price'], loss))
+            run += loss
+        p.db.commit()
+        self.assertLessEqual(run, M.DAY_STOP, f'need <= {M.DAY_STOP} to test the day stop, got {run}')
+        self.assertGreater(run, M.LIFE_STOP, 'must stay above the lifetime bar')
+        ok, why = p.guard.may_trade()
+        self.assertFalse(ok); self.assertIn('DAY STOP', why)
+        self.assertLessEqual(p.guard.realised(day), M.DAY_STOP)
+
+    def test_a_real_losing_history_trips_the_LIFETIME_stop(self):
+        p = self.fresh()
+        p.db.execute("update fills set pnl=-abs(pnl), utc_day='2020-01-01'"); p.db.commit()
+        ok, why = p.guard.may_trade()
+        self.assertFalse(ok); self.assertIn('LIFETIME', why)
+
+    def test_with_the_fills_INVISIBLE_the_stops_do_not_fire(self):
+        """The counterfactual that makes the rest of this class mean something: delete the rows and
+        the same losing history passes may_trade(). That is exactly what shipped."""
+        p = self.fresh()
+        p.db.execute('update fills set pnl=-abs(pnl)'); p.db.commit()
+        self.assertFalse(p.guard.may_trade()[0])
+        p.db.execute('delete from fills'); p.db.commit()
+        self.assertTrue(p.guard.may_trade()[0], 'blind stops let trading continue - the bug')

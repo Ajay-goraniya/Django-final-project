@@ -421,25 +421,87 @@ class Probe:
                          ub, dbid, ua, da, adv))
         self.db.commit(); self.counts['decision_' + action] += 1
 
+    @staticmethod
+    def trade_dead(trade):
+        """True if this trade did not stand. TradeStatus is an enum, so str() of it is
+        'TradeStatus.FAILED' - which is in no ('FAILED', ...) tuple. Compare on .value."""
+        st = getattr(trade, 'status', '')
+        st = str(getattr(st, 'value', st)).upper()
+        return 'FAIL' in st or 'CANCEL' in st
+
+    @staticmethod
+    def matched_by(trade, order_id):
+        """(shares, price) OUR order_id got out of one venue trade; (0.0, None) if nothing.
+
+        A trade names the TAKER in `taker_order_id`. When we are the maker - which a post-only
+        probe is BY CONSTRUCTION, every time - our order appears only as an entry inside
+        `maker_orders[]`. polymarket-client 0.10.0's ClobTrade has no `maker_order_id` field at
+        all (models/clob/account.py:132-157), so the old compare against
+        getattr(t, 'maker_order_id', '') was '' != our id on every trade on the tape, and not one
+        maker fill could ever be seen. It never raised and never logged: check_fill just returned
+        False forever. Both hard stops are computed FROM the fills table, so this did not merely
+        lose rows - it held the stops open. Found 10-01 after London read 4 buys on the shared
+        wallet at 23:46 / 23:51 / 00:26 / 00:31 that match our orders 81 / 82 / 89 / 90 to the
+        second, the side, the price and the 5-share size, while this probe recorded 0 fills.
+        Both sides are read here so the answer never depends on which side we turned out to be."""
+        if Probe.trade_dead(trade): return 0.0, None
+        if str(getattr(trade, 'taker_order_id', '')) == order_id:
+            return float(trade.size), float(trade.price)
+        shares, price = 0.0, None
+        for mo in getattr(trade, 'maker_orders', None) or ():
+            if str(getattr(mo, 'order_id', '')) != order_id: continue
+            shares += float(mo.matched_amount); price = float(mo.price)
+        return shares, price
+
+    @staticmethod
+    def trade_ts_ms(trade, default_ms):
+        """Venue match time in ms. 0.10.0 parses the wire's `match_time` INTO `matched_at`, a
+        datetime; the old code read `match_time` off the model, got 0, and fell back to the local
+        clock for every fill - the same clock bn_before_bps is then measured against."""
+        for name in ('matched_at', 'match_time'):
+            v = getattr(trade, name, None)
+            if v is None: continue
+            if hasattr(v, 'timestamp'):
+                try: return int(v.timestamp() * 1000)
+                except Exception: continue
+            try: return int(float(v) * 1000)
+            except (TypeError, ValueError): continue
+        return default_ms
+
+    async def scan_tape(self, token, order_id, now_ms):
+        """(shares, price, first_match_ts_ms) that order_id has matched on the account tape.
+
+        One 5-share order can arrive as several trades - the owner's app shows our 00:31 order as
+        'Buy 2 Down @ 64c' then 'Buy 3 Down @ 64c' - so every trade naming it is summed, and trade
+        ids are de-duplicated in case a page repeats one. Raises; the caller records the failure."""
+        matched, price, ts_ms, seen = 0.0, None, None, set()
+        async for page in self.broker.client.list_account_trades(token_id=token):
+            for t in getattr(page, 'items', ()):
+                tid = str(getattr(t, 'id', '')) or None
+                if tid is not None and tid in seen: continue
+                sh, px = self.matched_by(t, order_id)
+                if sh <= 0: continue
+                if tid is not None: seen.add(tid)
+                matched += sh
+                if px is not None: price = px
+                ts = self.trade_ts_ms(t, now_ms)
+                ts_ms = ts if ts_ms is None else min(ts_ms, ts)   # the FIRST match is the fill
+            break                                    # newest page only; the tape is newest-first
+        return matched, price, ts_ms
+
     async def check_fill(self, epoch):
-        """Has our resting order matched? Venue truth only: the account trade tape, then get_order."""
+        """Has our resting order matched? Venue truth only: the account trade tape."""
         r = self.resting
         if not r or self.dry_run or not r.get('order_id'): return False
-        matched, price, ts_ms = 0.0, None, None
+        now_ms = int(time.time() * 1000)
         try:
-            async for page in self.broker.client.list_account_trades(token_id=r['token']):
-                for t in getattr(page, 'items', ()):
-                    if str(getattr(t, 'maker_order_id', '')) != r['order_id']: continue
-                    if str(getattr(t, 'status', '')).upper() in ('FAILED', 'CANCELLED', 'CANCELED'): continue
-                    matched += float(t.size); price = float(t.price)
-                    ts_ms = int(float(getattr(t, 'match_time', 0) or time.time()) * 1000)
-                break                                    # newest page only; a 5-share fill is one trade
+            matched, price, ts_ms = await self.scan_tape(r['token'], r['order_id'], now_ms)
         except Exception as e:
             self.db.execute('update orders set note=? where id=?',
                             (f'fill check {type(e).__name__}', r['row'])); self.db.commit()
             return False
         if matched <= 0: return False
-        ts_ms = ts_ms or int(time.time() * 1000)
+        ts_ms = ts_ms or now_ms
         before = self.mover.adverse_bps(r['side'], now_ms=ts_ms)          # the 1 s BEFORE the fill
         self.db.execute('update orders set status=? where id=?', ('FILLED', r['row'])); self.db.commit()
         self.db.execute('insert into fills(order_row,epoch,utc_day,side,fill_ts_ms,price,shares,spent,'
@@ -447,6 +509,42 @@ class Probe:
                         (r['row'], epoch, time.strftime('%Y-%m-%d', time.gmtime(ts_ms / 1000)),
                          r['side'], ts_ms, price, matched, matched * (price or 0), before))
         self.db.commit()
+        fill_id = self.db.execute('select max(id) from fills').fetchone()[0]
+        # A partial fill leaves the REST of our order live at the venue. Clearing self.resting
+        # without pulling it would orphan it: cancel() only ever reaches what self.resting holds,
+        # so nothing would cancel it at 180 s, at the candle's end, or at shutdown.
+        if SHARES - matched > 1e-9 and r.get('order_id'):
+            try:
+                await self.broker.client.cancel_order(order_id=r['order_id'])
+                self.db.execute('update orders set cancel_ts_ms=?, cancel_reason=? where id=?',
+                                (int(time.time() * 1000), f'remainder {SHARES - matched:g}sh after partial fill',
+                                 r['row'])); self.db.commit()
+            except Exception as e:
+                self.db.execute('update orders set note=? where id=?',
+                                (f'remainder cancel raised {type(e).__name__}', r['row'])); self.db.commit()
+                log(self.logfile, f'[{time.strftime("%F %T", time.gmtime())}] CANCEL ERROR '
+                    f'{type(e).__name__} remainder of order {r["order_id"]}')
+            # That cancel can lose a race: the rest of our order may have matched between the scan
+            # and the cancel landing - which is exactly the 2-then-3 shape the owner's app showed.
+            # Re-read the tape once and amend, whether the cancel raised or not. Without this the
+            # extra shares are invisible to the stops in the same way the maker fills were.
+            try:
+                m2, px2, ts2 = await self.scan_tape(r['token'], r['order_id'], now_ms)
+            except Exception as e:
+                m2 = 0.0
+                log(self.logfile, f'[{time.strftime("%F %T", time.gmtime())}] AMEND ERROR '
+                    f'{type(e).__name__} re-reading tape for order {r["order_id"]}')
+            if m2 > matched + 1e-9:
+                price = px2 if px2 is not None else price
+                ts_ms = min(ts_ms, ts2) if ts2 else ts_ms
+                self.db.execute('update fills set shares=?, spent=?, price=?, fill_ts_ms=?, '
+                                'utc_day=? where id=?',
+                                (m2, m2 * (price or 0), price, ts_ms,
+                                 time.strftime('%Y-%m-%d', time.gmtime(ts_ms / 1000)), fill_id))
+                self.db.commit()
+                log(self.logfile, f'[{time.strftime("%F %T", time.gmtime())}] FILL AMENDED epoch '
+                    f'{epoch} {matched:g}sh -> {m2:g}sh @ {price} (raced the remainder cancel)')
+                matched = m2
         self.filled_epochs.add(epoch); self.resting = None; self.counts['fill'] += 1
         log(self.logfile, f'[{time.strftime("%F %T", time.gmtime())}] FILL epoch {epoch} {r["side"]} '
             f'{matched:g}sh @ {price} bn_before {before if before is None else round(before,2)}bps')
