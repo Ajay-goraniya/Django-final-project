@@ -477,3 +477,35 @@ TWO WATCHER DEFECTS FIXED BEFORE ARMING, both of which would have broken the one
    "FILE ON DISK DIFFERS" if the running file has drifted from it.
    The page also carries a short closing card explaining why it is not the EF card, so the next
    person to see both does not have to re-derive section 1.
+[2026-10-01 12:42:14] FILL epoch 1790858400 UP 5sh @ 0.79 bn_before 1.43bps
+
+================================================================================================
+10-01 13:0x THE STOPS WERE BLIND AGAIN - SAME FAMILY OF FAULT, DIFFERENT LINK IN THE CHAIN.
+
+The owner saw the 12:40 fill (UP, 5sh @ 0.79) reading "pending" at 13:04. Gamma had resolved that
+candle DOWN at 12:45:53, so it was a LOSS of -3.95 and had been for twenty minutes.
+
+CAUSE: maker_probe.settle() is reachable ONLY from the `--settle` CLI flag (line 756). The running
+probe never calls it - not in run(), not in trade_loop(). So every fill sits at pnl=NULL until a
+human types the command. I had been settling by hand after each fill alert, which is why it looked
+like it worked. The gamma mirror was NOT the problem: it already held (1790858400, 'DOWN').
+
+WERE THE STOPS BLIND? YES, and this is the part that matters. Both stops sum fills.pnl over non-NULL
+rows, so an ungraded fill contributes nothing. At 13:04 the day read +2.4372 when the truth was
+-1.5128 - $3.95 of realised loss uncounted. Worse in principle than in this instance: a RUN of losses
+would stay invisible and the -$10 day stop could not fire at all, because the only thing that turns a
+fill into a number the stop can see was a manual command. That is the third time this probe's safety
+has depended on something outside the loop: the fill itself was invisible (maker_orders[]), then the
+fill-before-cancel gap, now the grading.
+
+FIXED OUTSIDE THE PROBE, as V's brief requires: /home/ubuntu/maker_probe/grade.py on cron every 2
+minutes, flock-guarded, committed as analysis/zurich/maker_probe_grade.py. It is a separate
+short-lived process calling the probe's OWN tested settle(), with a 30 s busy timeout so it waits for
+the probe's lock instead of failing, and it prints a loud line if grading a fill puts either stop into
+breach. Nothing in the probe process was touched and it was NOT restarted.
+The 12:40 fill is now graded: outcome DOWN, pnl -3.9500. Today -1.5128 of -10, lifetime +35.0872.
+
+STILL OUTSTANDING AND IT IS V's AND THE OWNER'S CALL: the probe should grade inside its own loop
+rather than relying on a cron process to make its stops work. That is a code change plus a restart,
+so I have not done it. The cron closes the window to ~2 minutes; it does not make the stops
+self-sufficient.
