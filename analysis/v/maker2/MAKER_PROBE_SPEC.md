@@ -24,3 +24,5 @@ one-fill-per-candle were blind the whole time (15 fills in the 17:00 candle). Ev
 used for the owner's option A. Result is 10 candles, not 27 - not evidence. Probe PAUSED 00:45, 0 open orders/positions at the venue.
 Fix (reads maker_orders[]) deployed by another session 00:52-00:54; Zurich verified it against venue data to the cent; 102 tests.
 OFF until the owner decides how to restart.
+
+## OWNER 10-01 01:03 UTC, verbatim: 'Bro just do whatever is better' (reply to: restart fixed probe with option A or the 2-tick rule; stays off until you reply). V's choice: option A on the FIXED build (maker_orders[] fill detection), limits unchanged, restart once Zurich confirms deployed file == a committed hash and no other session is editing it.
