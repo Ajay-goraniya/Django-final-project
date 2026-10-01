@@ -1332,3 +1332,83 @@ class TheTwelveRecoveredFills(unittest.TestCase):
                          (r['side'], r['price'], r['shares'], r['spent'], -abs(r['pnl'])))
         p.db.commit()
         self.assertLess(p.guard.realised(), 0.0)
+
+
+class InsufficientBalanceReject(unittest.TestCase):
+    """10-01 21:4x, V: the shared wallet is down to ~$25 and London's master is OFF. A
+    not-enough-cash rejection must not be retried in a loop and must never be read as a fill.
+    The venue's wording is not ours to choose, so the properties are tested on the message the
+    venue actually sends ('not enough balance / allowance') AND on the generic case: neither
+    contains 'post-only', so neither takes the post-only branch."""
+    MSG = 'RequestRejectedError: not enough balance / allowance'
+
+    def setUp(self):
+        import asyncio
+        self.loop = asyncio.new_event_loop()
+        self.p = M.Probe(dry_run=False, db=mem())
+        self.p.logfile = tempfile.mktemp(suffix='.log')
+        self.p.books = {'T': dict(bids=[(0.70, 9.0)], asks=[(0.72, 9.0)], ts=1000.0)}
+        msg = self.MSG
+
+        class Broke:
+            calls = 0
+            async def create_limit_order(s, **k):
+                return type('S', (), dict(maker_amount=3_500_000.0, taker_amount=5_000_000.0))()
+            async def post_order(s, signed):
+                type(s).calls += 1
+                raise RuntimeError(msg)
+        self.client = Broke
+        self.p.broker = type('B', (), {'client': Broke()})()
+
+    def tearDown(self): self.loop.close()
+
+    def test_a_balance_reject_is_REJECTED_and_writes_no_fill(self):
+        oid, row = self.loop.run_until_complete(self.p.place(1, 'UP', 'T', 0.70))
+        self.assertIsNone(oid)
+        r = self.p.db.execute('select status, note, venue_order_id from orders where id=?',
+                              (row,)).fetchone()
+        self.assertEqual(r['status'], 'REJECTED')
+        self.assertIn('balance', r['note'])
+        self.assertIsNone(r['venue_order_id'], 'no venue id, so nothing can be attributed to it')
+        self.assertEqual(self.p.db.execute('select count(*) from fills').fetchone()[0], 0)
+
+    def test_a_reject_leaves_nothing_resting_so_check_fill_cannot_fire(self):
+        self.loop.run_until_complete(self.p.place(1, 'UP', 'T', 0.70))
+        self.assertIsNone(self.p.resting, 'place() returned no order id; nothing may rest')
+        self.assertFalse(self.loop.run_until_complete(self.p.check_fill(1)))
+        self.assertEqual(self.p.db.execute('select count(*) from fills').fetchone()[0], 0)
+
+    def test_the_rejected_attempt_still_counts_against_the_per_candle_cap(self):
+        """The loop bound. posts_per_epoch is incremented at the INSERT, before post_order, so a
+        reject consumes an attempt exactly like a successful post does."""
+        for _ in range(M.MAX_POSTS_PER_CANDLE):
+            self.loop.run_until_complete(self.p.place(7, 'UP', 'T', 0.70))
+        self.assertEqual(self.p.posts_per_epoch[7], M.MAX_POSTS_PER_CANDLE)
+        act, _, _, why = M.Quoter().decide(**{**OK, 'posts_this_candle': self.p.posts_per_epoch[7]})
+        self.assertEqual(act, 'none')
+        self.assertIn('max', why)
+
+    def test_a_balance_reject_cannot_exceed_the_cap_however_often_the_loop_runs(self):
+        """Drive the quoter the way one_pass does: once the cap is reached the answer is 'none',
+        so no fourth post_order call can happen in that candle no matter how many passes run."""
+        posts = 0
+        for _ in range(50):
+            act, side, px, _ = M.Quoter().decide(**{**OK, 'posts_this_candle': posts})
+            if act != 'post': break
+            self.loop.run_until_complete(self.p.place(7, side, 'T', px)); posts += 1
+        self.assertEqual(posts, M.MAX_POSTS_PER_CANDLE)
+        self.assertEqual(self.client.calls, M.MAX_POSTS_PER_CANDLE)
+        self.assertEqual(self.p.db.execute(
+            "select count(*) from orders where status='REJECTED'").fetchone()[0],
+            M.MAX_POSTS_PER_CANDLE)
+
+    def test_a_balance_reject_does_NOT_take_the_post_only_branch(self):
+        """Documents the one real gap: 'not enough balance' contains neither 'post-only' nor
+        'crosses book', so the same-second lockout and the stale-book flag are NOT set. The cap
+        is therefore the only thing spacing the retries - 3 in a candle, possibly in one second."""
+        self.loop.run_until_complete(self.p.place(1, 'UP', 'T', 0.70))
+        self.assertIsNone(self.p.reject_lock_s)
+        self.assertIsNone(self.p.stale_book_token)
+        self.assertTrue(self.p.book_fresh('T'))
+        self.assertEqual(self.p.counts['reject'], 1)
+        self.assertEqual(self.p.counts.get('postonly_reject', 0), 0)

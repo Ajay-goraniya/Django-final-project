@@ -523,3 +523,39 @@ HEARTBEAT ADDED TO THE GRADER 10-01 18:47 (V's instruction). Outside the probe, 
   read) and the hourly line printed once then correctly suppressed on the second run.
   Probe untouched: pid 396645 still up, never restarted for this.
 [2026-10-01 19:16:00] REJECTED epoch 1790882100 UP 0.61 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 20:31:10] FILL epoch 1790886600 DOWN 5sh @ 0.65 bn_before 0.0bps
+[2026-10-01 20:36:29] FILL epoch 1790886900 DOWN 5sh @ 0.67 bn_before -1.41bps
+[2026-10-01 20:41:01] FILL epoch 1790887200 DOWN 5sh @ 0.75 bn_before 0.0bps
+[2026-10-01 20:46:05] REJECTED epoch 1790887500 DOWN 0.8 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 20:46:10] FILL epoch 1790887500 DOWN 5sh @ 0.75 bn_before 0.24bps
+[2026-10-01 20:51:01] FILL epoch 1790887800 UP 5sh @ 0.74 bn_before -0.0bps
+[2026-10-01 20:56:07] FILL epoch 1790888100 UP 5sh @ 0.79 bn_before -0.0bps
+[2026-10-01 21:02:20] FILL epoch 1790888400 UP 4.9941sh @ 0.61 bn_before -0.0bps
+[2026-10-01 21:06:03] FILL epoch 1790888700 UP 5sh @ 0.67 bn_before -0.0bps
+[2026-10-01 21:11:01] FILL epoch 1790889000 DOWN 5sh @ 0.64 bn_before 0.14bps
+[2026-10-01 21:17:06] REJECTED epoch 1790889300 DOWN 0.75 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 21:17:09] FILL epoch 1790889300 DOWN 5sh @ 0.76 bn_before -0.0bps
+[2026-10-01 21:26:08] FILL epoch 1790889900 DOWN 5sh @ 0.73 bn_before 0.0bps
+[2026-10-01 21:32:43] FILL epoch 1790890200 UP 5sh @ 0.67 bn_before 0.48bps
+[2026-10-01 21:36:05] FILL epoch 1790890500 UP 5sh @ 0.65 bn_before -0.0bps
+[2026-10-01 21:41:01] FILL epoch 1790890800 DOWN 5sh @ 0.73 bn_before 0.0bps
+[2026-10-01 21:46:52] FILL epoch 1790891100 UP 4.99462sh @ 0.6100000989847465 bn_before 0.42bps
+
+== 10-01 21:5x  LOW WALLET (~$25), London master OFF - insufficient-balance reject check (V)
+No code change to the probe. Verified on the running build c9a5482 + 5 new tests (134 total, all pass).
+1) A cash reject CANNOT count as a fill. place() returns (None, row) and writes status REJECTED with
+   venue_order_id NULL; one_pass only sets self.resting when the order id is truthy; check_fill()
+   returns False on `not r.get('order_id')`. Fill rows are written only by check_fill, and matched_by
+   attributes only on an exact venue order_id, which a rejected row never has.
+2) It CANNOT loop. posts_per_epoch[epoch] += 1 runs at the orders INSERT, BEFORE post_order, so a
+   rejected attempt consumes an attempt exactly like a filled one. Quoter returns 'none' at
+   posts_this_candle >= MAX_POSTS_PER_CANDLE, so the hard bound is 3 attempts per candle for ANY
+   reject reason. Driven 50 passes in a test: exactly 3 post_order calls, 3 REJECTED rows.
+3) GAP (reported, not patched): reject_lock_s and the stale-book flag are set only when the message
+   contains 'post-only' or 'crosses book'. A balance reject takes neither, so the 3 allowed attempts
+   can land inside one second. Bounded, not a runaway - but unspaced.
+4) History: 17 rejects ever, all post-only/crosses-book, ZERO balance rejects. Order size is 5 sh at
+   <= 0.80 = <= $4.00, one open order at a time, so ~$25 cash is not tight for a single order.
+5) Detection added OUTSIDE the probe (watch.py): ALERT BALANCE_REJECT on the FIRST cash reject since
+   the restart - REJECT_RATE would not have fired until the 12th. Trigger tested both ways on a copy
+   of the live DB: fires on 'not enough balance / allowance', stays quiet on a post-only reject.

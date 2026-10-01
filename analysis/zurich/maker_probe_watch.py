@@ -87,6 +87,21 @@ while True:
                         (REM_MIN,)).fetchone()
         r.close()
         print(f'ALERT PARTIAL_REMAINDER: order {row[0]} {row[1]} @ {row[2]} - {row[3]}'); break
+    # 10-01 21:5x, V: the shared wallet is down to ~$25 (London's master is OFF). A not-enough-cash
+    # rejection is bounded by the 3-posts-per-candle cap and can never become a fill (tested), but V
+    # wants ONE ping if it ever happens - and it would not trip REJECT_RATE until the 12th one.
+    cash = q("select count(*) from orders where dry=0 and status='REJECTED' and post_ts_ms>? and ("
+             "lower(coalesce(note,'')) like '%balance%' or lower(coalesce(note,'')) like '%insufficient%'"
+             " or lower(coalesce(note,'')) like '%allowance%' or lower(coalesce(note,'')) like '%funds%'"
+             " or lower(coalesce(note,'')) like '%collateral%')", (SINCE_MS,))
+    if cash:
+        r = sqlite3.connect(f'file:{DB}?mode=ro', uri=True)
+        row = r.execute("select id, epoch, price, substr(note,1,90) from orders where dry=0 and "
+                        "status='REJECTED' and post_ts_ms>? order by id desc limit 1",
+                        (SINCE_MS,)).fetchone()
+        r.close()
+        print(f'ALERT BALANCE_REJECT: {cash} cash reject(s); last order {row[0]} epoch {row[1]} '
+              f'@ {row[2]} :: {row[3]}'); break
     rej = q("select count(*) from orders where dry=0 and status='REJECTED' and post_ts_ms>?", (SINCE_MS,))
     if rej >= REJECT_ALERT:
         print(f'ALERT REJECT_RATE: {rej} post-only rejects since the restart'); break
