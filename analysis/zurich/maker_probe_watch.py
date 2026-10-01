@@ -17,6 +17,7 @@ SINCE_MS = int(sys.argv[2]) if len(sys.argv) > 2 else 0
 # fill - which is precisely the alert V asked to be sure about.
 FILL_BASE = int(sys.argv[3]) if len(sys.argv) > 3 else 0      # kept for the arm line; no longer alerts
 TOP_BAND  = 0.78
+REM_MIN   = 1.0     # a remainder below this is dust and does not interrupt - see below
 TOP_BASE  = int(sys.argv[4]) if len(sys.argv) > 4 else 0      # top-of-band fills already seen
 REM_BASE  = int(sys.argv[5]) if len(sys.argv) > 5 else 0      # remainder-cancels already seen
 REJECT_ALERT = 12          # a burst of post-only rejects since the restart
@@ -68,11 +69,22 @@ while True:
         r.close()
         print(f'ALERT TOP_BAND_FILL: {row[1]} {row[2]}sh @ {row[3]} (epoch {row[0]}) - '
               f'top-of-band entry, needs ~{100*row[3]:.0f}% to break even'); break
-    rem = q("select count(*) from orders where dry=0 and cancel_reason like 'remainder%'")
+    # MATERIALITY FLOOR on the remainder alert, added 10-01 21:0x. V kept this category because an
+    # orphaned remainder can lose money unwatched - which is right, but the first one it caught was
+    # 0.005897 shares, worth $0.0036. Alerting on a third of a cent is noise, and a channel that cries
+    # wolf is the one nobody reads when it matters. The floor is 1.0 share, the same number the owner
+    # approved as the dust threshold for candle-locking, so "dust" means one thing across the system.
+    # The remainders actually seen so far are 3.47sh, 4.99sh and 0.0059sh, so this separates them
+    # cleanly rather than being fitted to a borderline case.
+    rem = q("select count(*) from orders where dry=0 and cancel_reason like 'remainder%' "
+            "and cast(replace(substr(cancel_reason, 11), 'sh after partial fill', '') as real) >= ?",
+            (REM_MIN,))
     if rem > REM_BASE:
         r = sqlite3.connect(f'file:{DB}?mode=ro', uri=True)
         row = r.execute("select id, side, price, cancel_reason from orders where dry=0 and "
-                        "cancel_reason like 'remainder%' order by id desc limit 1").fetchone()
+                        "cancel_reason like 'remainder%' and cast(replace(substr(cancel_reason, 11), "
+                        "'sh after partial fill', '') as real) >= ? order by id desc limit 1",
+                        (REM_MIN,)).fetchone()
         r.close()
         print(f'ALERT PARTIAL_REMAINDER: order {row[0]} {row[1]} @ {row[2]} - {row[3]}'); break
     rej = q("select count(*) from orders where dry=0 and status='REJECTED' and post_ts_ms>?", (SINCE_MS,))
