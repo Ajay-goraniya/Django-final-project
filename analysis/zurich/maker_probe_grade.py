@@ -16,14 +16,37 @@ import sqlite3, sys, time
 sys.path.insert(0, '/home/ubuntu/pm_paper_zurich')
 import maker_probe as M
 
+HEARTBEAT = '/home/ubuntu/maker_probe/grade.heartbeat'
+HOURLY = 3600
+
 db = sqlite3.connect(M.DB_PATH, timeout=30)       # wait for the probe's lock rather than failing
 db.row_factory = sqlite3.Row
 try:
     n = M.settle(db)
+    # HEARTBEAT, added 10-01 on V's instruction. This script only wrote when it actually graded
+    # something, so an empty log was indistinguishable from a dead cron - and the stops depend on
+    # this script running. Now every run overwrites a heartbeat file (so the LAST run is always
+    # provable from one cheap read) and the log gets one line an hour (so the log itself carries a
+    # liveness trail without 720 lines a day). Silence is now a readable fact, not an assumption.
+    today_hb = time.strftime('%Y-%m-%d', time.gmtime())
+    d_hb = db.execute('select coalesce(sum(pnl),0) from fills where utc_day=?', (today_hb,)).fetchone()[0]
+    l_hb = db.execute('select coalesce(sum(pnl),0) from fills').fetchone()[0]
+    nf = db.execute('select count(*) from fills').fetchone()[0]
+    uns = db.execute('select count(*) from fills where pnl is null').fetchone()[0]
+    now = time.time()
+    with open(HEARTBEAT, 'w') as f:
+        f.write(f'{int(now)} {time.strftime("%F %T", time.gmtime(now))} graded_this_run={n} '
+                f'fills={nf} unsettled={uns} today={d_hb:+.4f} lifetime={l_hb:+.4f}\n')
+    try:
+        last = float(open(HEARTBEAT + '.hourly').read().strip())
+    except Exception:
+        last = 0.0
+    if now - last >= HOURLY:
+        open(HEARTBEAT + '.hourly', 'w').write(str(now))
+        print(f'{time.strftime("%F %T", time.gmtime(now))} alive; fills {nf} unsettled {uns} '
+              f'today {d_hb:+.4f} lifetime {l_hb:+.4f}', flush=True)
     if n:
-        today = time.strftime('%Y-%m-%d', time.gmtime())
-        d = db.execute('select coalesce(sum(pnl),0) from fills where utc_day=?', (today,)).fetchone()[0]
-        l = db.execute('select coalesce(sum(pnl),0) from fills').fetchone()[0]
+        d, l = d_hb, l_hb
         print(f'{time.strftime("%F %T", time.gmtime())} graded {n}; today {d:+.4f} lifetime {l:+.4f}',
               flush=True)
         if d <= M.DAY_STOP or l <= M.LIFE_STOP:

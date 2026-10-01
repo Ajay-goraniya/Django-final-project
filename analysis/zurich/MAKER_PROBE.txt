@@ -509,3 +509,16 @@ STILL OUTSTANDING AND IT IS V's AND THE OWNER'S CALL: the probe should grade ins
 rather than relying on a cron process to make its stops work. That is a code change plus a restart,
 so I have not done it. The cron closes the window to ~2 minutes; it does not make the stops
 self-sufficient.
+
+HEARTBEAT ADDED TO THE GRADER 10-01 18:47 (V's instruction). Outside the probe, no restart.
+  The grader only wrote when it actually graded something, so an empty grade.log was
+  indistinguishable from a dead cron - and both hard stops now depend on that cron running. Two
+  cheap additions make silence a readable fact instead of an assumption:
+    - grade.heartbeat, OVERWRITTEN every run: epoch, UTC time, graded_this_run, fills, unsettled,
+      today, lifetime. One read gives the age of the last run, so "is the grader alive" is answerable
+      without waiting for a fill to prove it.
+    - one log line an hour (state kept in grade.heartbeat.hourly), so the log carries a liveness
+      trail without 720 lines a day.
+  Verified by running it twice exactly as cron does: the heartbeat advanced (18:47:47, 2 s old on
+  read) and the hourly line printed once then correctly suppressed on the second run.
+  Probe untouched: pid 396645 still up, never restarted for this.
