@@ -28,6 +28,8 @@ _UNUSED   = int(sys.argv[4]) if len(sys.argv) > 4 else 0      # was TOP_BASE; th
 REM_BASE  = int(sys.argv[5]) if len(sys.argv) > 5 else 0      # remainder-cancels already seen
 REJECT_ALERT = 12          # a burst of post-only rejects since the restart
 CAND60_FLAG  = '/home/ubuntu/maker_probe/.candles60.alerted'  # fires the 60-candle report once, ever
+CAND200_FLAG = '/home/ubuntu/maker_probe/.candles200.alerted' # M21 out-of-sample mark, once, ever
+M21_BAR = 200
 # ANCHORED on the log-line format, and only lines NEWER than the arm time. The file is also the
 # written record, and my own prose about hard stops matches a bare pattern on 4 lines - an
 # unanchored grep would have cried wolf the moment it was pointed at the right file.
@@ -62,6 +64,13 @@ while True:
     # GRADED, not total: an unsettled fill carries no outcome. 60 is a REPORT, not a stop (owner) -
     # the latch fires it once, ever, so a re-arm keeps covering faults instead of re-reporting.
     cand = q('select count(distinct epoch) from fills where pnl is not null')
+    # M21 (PREREG_M21_PROBE_OOS.md, V 10-02 10:4x): the out-of-sample evaluation point. Latched like
+    # the 60 mark so it fires once and the watcher keeps covering faults afterwards. The cron twin in
+    # m21_watch.py writes the same flag independently, so the mark is not missed if no watcher is up.
+    if cand >= M21_BAR and not os.path.exists(CAND200_FLAG):
+        open(CAND200_FLAG, 'w').write(str(cand))
+        print(f'ALERT M21_200_CANDLES: {cand} distinct graded candles - run the M21 out-of-sample '
+              f'evaluation (fills after 10-02 10:27 UTC only) and report to V'); break
     if cand >= 60 and not os.path.exists(CAND60_FLAG):
         open(CAND60_FLAG, 'w').write(str(cand))
         print(f'ALERT GRADED_60_CANDLES: {cand} distinct graded candles - run maker_60.py and send '
