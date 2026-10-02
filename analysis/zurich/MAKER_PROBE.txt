@@ -637,3 +637,6 @@ it goes to V with the report at 60 candles, and nothing changes on the probe eit
 [2026-10-02 08:51:25] FILL epoch 1790931000 UP 5sh @ 0.61 bn_before 0.85bps
 [2026-10-02 08:56:01] FILL epoch 1790931300 UP 5sh @ 0.74 bn_before -0.0bps
 [2026-10-02 09:06:57] REJECTED epoch 1790931900 UP 0.8 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-02 10:11:00] REJECTED epoch 1790935800 DOWN 0.8 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-02 10:11:03] FILL epoch 1790935800 DOWN 5sh @ 0.77 bn_before 0.0bps
+[2026-10-02 10:16:08] FILL epoch 1790936100 UP 5sh @ 0.73 bn_before 0.0bps
