@@ -46,3 +46,8 @@ $39 (10%), $35 (20%) over all fills, against $49 / $76 / $144 on the sec 60-120 
 only subset that never tripped the -10 day stop. That subset is P1 itself, so the figure measures the
 same selection twice and is hindsight, not an expectation. No staking change is proposed, and Kelly
 or any dynamic staking still needs the owner's two separate confirmations.
+
+CONTINUATION 10-02 15:0x (before any London fill exists): owner stopped the Zurich probe 15:01 (88/200 candles, lifetime +26.32)
+and moved the same rule to London 13.3.0's EF lane. The 200-candle judgment continues on LONDON's real maker fills from its
+master-ON baseline, same rule, same P2-P7 and pass criteria; P1 is replaced by "60-120 pnl/$ > 0 in both halves" (no 120-180
+fills exist any more). Zurich's 88 candles are reported beside it, never pooled. London cannot push: V pulls its fills.
