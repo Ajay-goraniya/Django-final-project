@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Maker PnL Curve</title>
+<title>__TAB__</title>
 <style>
 :root{--surface:#fcfcfb;--text:#0b0b0b;--text2:#52514e;--muted:#8a8984;--grid:#e6e5e0;--band:#f0efea;--series:#2a78d6;--good:#0ca30c;--crit:#d03b3b;--zero:#b9b8b2}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--surface:#1a1a19;--text:#fff;--text2:#c3c2b7;--muted:#8f8e86;--grid:#2c2c2a;--band:#242422;--series:#3987e5;--good:#2fb82f;--crit:#e05a5a;--zero:#55544f}}
@@ -16,11 +16,11 @@ h1{font-size:18px;margin:0 0 2px}.sub{color:var(--text2);margin:0 0 12px;font-si
 table{border-collapse:collapse;width:100%;font-size:13px;margin:4px 0 16px}th,td{text-align:right;padding:4px 8px;border-bottom:1px solid var(--grid)}th:first-child,td:first-child{text-align:left}th{color:var(--text2);font-weight:600}
 h2{font-size:15px;margin:14px 0 4px}
 </style></head><body><div class="wrap">
-<h1>Maker test — real PnL, fill by fill</h1>
-<p class="sub">Zurich maker probe, real money, cumulative $ after each graded fill (UTC). Shaded = 00:00–13:00 UTC (Asia + Europe).</p>
+<h1>__TITLE__</h1>
+<p class="sub">__SUB__</p>
 <div class="tiles" id="tiles"></div>
 <div class="chart" id="chart"><div class="tip" id="tip"></div></div>
-<div class="legend"><span><i class="sw" style="background:var(--series)"></i>Cumulative PnL</span><span><i class="sw" style="background:var(--good)"></i>Peak</span><span><i class="sw" style="background:var(--crit)"></i>Low</span><span><i class="sw" style="background:var(--band);border:1px solid var(--grid)"></i>00–13 UTC</span></div>
+<div class="legend"><span><i class="sw" style="background:var(--series)"></i>Cumulative PnL</span><span><i class="sw" style="background:var(--good)"></i>Peak</span><span><i class="sw" style="background:var(--crit)"></i>Low</span><span><i class="sw" style="background:var(--band);border:1px solid var(--grid)"></i>__BAND__</span></div>
 <h2>By session (UTC, by fill time)</h2><table id="ses"></table>
 <h2>By day</h2><table id="days"></table>
 </div>
