@@ -26,8 +26,14 @@ rt = [r[0] for r in d.execute('select ms from rtt where code=200')]
 rt.sort()
 pct = lambda p: rt[min(len(rt) - 1, int(p * len(rt)))] if rt else float('nan')
 hrs = (dt.datetime.now(dt.UTC).timestamp() - (t0 or 0) / 1000) / 3600 if t0 else 0
+# The owner asked for this to run indefinitely, so it WILL be restarted (cron+flock, and once at
+# the old 48 h self-stop). Dating the report from the current process alone would read "0.0 h in"
+# after every restart, so the data span is taken from the db and the uptime shown beside it.
+span0 = d.execute('select min(ts_ms) from quotes').fetchone()[0]
+span = (dt.datetime.now(dt.UTC).timestamp() - (span0 or 0) / 1000) / 3600 if span0 else 0
 
-L = [f'M19 PAPER SHADOW - {hrs:.1f} h in, {dt.datetime.now(dt.UTC):%F %T} UTC. NO ORDERS, paper only.',
+L = [f'M19 PAPER SHADOW - data spans {span:.1f} h, this process up {hrs:.1f} h, '
+     f'{dt.datetime.now(dt.UTC):%F %T} UTC. NO ORDERS, paper only.',
      f'  graded {len(g)} fills, {op} unsettled; quotes {h["quotes"] if h else 0}; '
      f'venue trade prints seen {h["poly_trades"] if h else 0}']
 L.append(f'  {"arm":>12s} {"n":>5s} {"W/L":>8s} {"deployed":>9s} {"pnl":>9s} {"pnl/$1":>8s}  flag')
@@ -45,4 +51,46 @@ if rt:
     L.append(f'  WHICH D IS REALISTIC: a quote needs one read + one write, so the floor is ~2x the '
              f'one-way p50 = ~{pct(0.5)*2:.0f} ms -> D={real} is the closest arm. The sim says the '
              f'edge survives ~1000 ms and dies by ~2000 ms.')
+# ---- the owner's post-to-ack question (V, 10-02 01:4x). READ-ONLY, probe untouched. ----------
+L.append('')
+L.append('  PROBE POST -> ACK LATENCY: NOT MEASURABLE from what the probe records. Why, and what is:')
+try:
+    import re
+    mk = sqlite3.connect('file:/home/ubuntu/maker_probe/maker_probe.sqlite3?mode=ro', uri=True)
+    mk.row_factory = sqlite3.Row
+    gaps = [b - a for a, b in zip(*[[r[0] for r in mk.execute(
+        'select ts_ms from decisions order by ts_ms')]] * 2 and
+        [[r[0] for r in mk.execute('select ts_ms from decisions order by ts_ms')]] * 2)]
+    rows = [r[0] for r in mk.execute('select ts_ms from decisions order by ts_ms')]
+    gaps = [b - a for a, b in zip(rows, rows[1:]) if 0 < b - a < 60000]
+    gq = lambda f: sorted(gaps)[int(f * (len(gaps) - 1))] if gaps else float('nan')
+    ds = []
+    for ln in open('/home/ubuntu/claude-work/repo/analysis/zurich/MAKER_PROBE.txt', errors='replace'):
+        m = re.search(r'^\[(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)\] REJECTED epoch (\d+) '
+                      r'(UP|DOWN) ([0-9.]+) ::', ln)
+        if not m: continue
+        t = dt.datetime.strptime(m.group(1), '%Y-%m-%d %H:%M:%S').replace(
+            tzinfo=dt.UTC).timestamp() * 1000
+        r = mk.execute("select post_ts_ms from orders where epoch=? and abs(price-?)<1e-9 and "
+                       "status='REJECTED' order by abs(post_ts_ms-?) limit 1",
+                       (int(m.group(2)), float(m.group(4)), t)).fetchone()
+        if r: ds.append(t - r['post_ts_ms'])
+    rq = lambda f: sorted(ds)[int(f * (len(ds) - 1))] if ds else float('nan')
+    L += [f'    orders has post_ts_ms but NO ack timestamp, and the probe does not log a successful',
+          f'    post at all - only rejects, fills and errors. So no post/ack pair exists to difference.',
+          f'    The decisions table is not a substitute: its rows arrive every ~{gq(.5)/1000:.1f} s '
+          f'(p10 {gq(.1)/1000:.1f} s, p90 {gq(.9)/1000:.1f} s, n {len(gaps)}), NOT once per 200 ms pass,',
+          f'    so consecutive rows are not adjacent passes. I tried that differential first and it',
+          f'    returned a NEGATIVE latency (-132 ms), which is how I know the method is invalid.',
+          f'    THE ONE REAL BOUND, from the reject path (the log line is written AFTER the venue',
+          f'    answers): n {len(ds)} samples, p50 {rq(.5):+.0f} ms, p90 {rq(.9):+.0f} ms, range '
+          f'{min(ds) if ds else float("nan"):+.0f}..{max(ds) if ds else float("nan"):+.0f} ms.',
+          f'    Those stamps are whole SECONDS and truncated, so values up to -999 ms are expected and',
+          f'    the only honest reading is: the venue answered within the same second or the next,',
+          f'    i.e. the round trip is UNDER ~1 s. It cannot be resolved finer than that from here.',
+          f'    To get a real median/p90 the probe must record the ack time inside place() - a code',
+          f'    change plus a restart, which is the owner\'s call, not mine.']
+    mk.close()
+except Exception as e:
+    L.append(f'    could not read the probe artefacts: {type(e).__name__}: {e}')
 print('\n'.join(L))

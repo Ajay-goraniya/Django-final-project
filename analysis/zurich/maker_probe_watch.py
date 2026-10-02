@@ -8,7 +8,11 @@ fired and it never complained - the exact 'silence is not success' failure. One 
 import os, re, sqlite3, sys, time
 
 DB   = '/home/ubuntu/maker_probe/maker_probe.sqlite3'
-LOG  = '/home/ubuntu/maker_probe/live7.log'
+# 10-02 01:4x: this pointed at live7.log, which is ZERO BYTES - the probe's logfile is
+# maker_probe.LOGFILE, the committed incident record. So the HARD STOP / CANCEL ERROR / PASS ERROR
+# alert could never have fired, for any of the runs that used it. Same shape as the bash watcher
+# that returned -1 instead of a count: armed, silent, useless.
+LOG  = '/home/ubuntu/claude-work/repo/analysis/zurich/MAKER_PROBE.txt'
 FLAG = '/home/ubuntu/maker_probe/ENABLED'
 PID  = int(sys.argv[1])
 SINCE_MS = int(sys.argv[2]) if len(sys.argv) > 2 else 0
@@ -24,7 +28,11 @@ _UNUSED   = int(sys.argv[4]) if len(sys.argv) > 4 else 0      # was TOP_BASE; th
 REM_BASE  = int(sys.argv[5]) if len(sys.argv) > 5 else 0      # remainder-cancels already seen
 REJECT_ALERT = 12          # a burst of post-only rejects since the restart
 CAND60_FLAG  = '/home/ubuntu/maker_probe/.candles60.alerted'  # fires the 60-candle report once, ever
-PAT = re.compile(r'HARD STOP|CANCEL ERROR|PASS ERROR', re.I)
+# ANCHORED on the log-line format, and only lines NEWER than the arm time. The file is also the
+# written record, and my own prose about hard stops matches a bare pattern on 4 lines - an
+# unanchored grep would have cried wolf the moment it was pointed at the right file.
+PAT = re.compile(r'^\[(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)\] '
+                 r'(HARD STOP|CANCEL ERROR|PASS ERROR|AMEND ERROR)')
 
 def alive(pid):
     """EPERM means the process EXISTS but we may not signal it - that is ALIVE, not dead. Only
@@ -100,7 +108,15 @@ while True:
     if rej >= REJECT_ALERT:
         print(f'ALERT REJECT_RATE: {rej} post-only rejects since the restart'); break
     try:
-        with open(LOG) as f: hits = [l for l in f if PAT.search(l)]
+        import datetime as _dt
+        hits = []
+        with open(LOG, errors='replace') as f:
+            for ln in f:
+                m = PAT.search(ln)
+                if not m: continue
+                t = _dt.datetime.strptime(m.group(1), '%Y-%m-%d %H:%M:%S').replace(
+                    tzinfo=_dt.timezone.utc).timestamp() * 1000
+                if t >= SINCE_MS: hits.append(ln)
         if hits: print('ALERT LOG: ' + hits[-1].strip()); break
     except OSError: pass
     time.sleep(20)
