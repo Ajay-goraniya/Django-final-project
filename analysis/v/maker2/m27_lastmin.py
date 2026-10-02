@@ -31,7 +31,9 @@ for e, S in B.items():
         n = S[s + 1]; ta = n[0] if fav else n[2]
         if ta is None or not (0.02 <= ta <= 0.995): break
         won = (UP[e] == 1) == (fav == 1)
-        R.append(dict(e=e, calm=calm, a=a, taker=(1 if won else 0) - ta - fee(ta), maker=((1 if won else 0) - b) if b else None, won=won))
+        da = n[2] if fav else n[0]  # the UNDERDOG's ask 1 s later (owner 10-02: buy the losing side)
+        dog = ((0 if won else 1) - da - fee(da)) if (da is not None and 0.005 <= da <= 0.98) else None
+        R.append(dict(dog=dog, e=e, calm=calm, a=a, taker=(1 if won else 0) - ta - fee(ta), maker=((1 if won else 0) - b) if b else None, won=won))
         break
 def line(nm, L):
     if not L: print(f'  {nm:22s} none'); return
@@ -39,6 +41,8 @@ def line(nm, L):
     d = collections.defaultdict(float)
     for x in L: d[datetime.datetime.utcfromtimestamp(x['e']).strftime('%m-%d')] += x['taker']
     k = len(L) // 2
+    dg = [x['dog'] for x in L if x['dog'] is not None]
+    print(f'  {nm:22s} UNDERDOG taker n {len(dg)} win {np.mean([not x["won"] for x in L])*100:4.1f}% pnl {sum(dg):+7.2f} ({sum(dg)/max(1,len(dg)):+.3f}/trade)')
     print(f'  {nm:22s} n {len(L):4d} win {np.mean([x["won"] for x in L])*100:5.1f}%  TAKER {t:+7.2f} ({t/len(L):+.3f}/trade, halves {sum(x["taker"] for x in L[:k]):+.2f}/{sum(x["taker"] for x in L[k:]):+.2f}, days+ {sum(v>0 for v in d.values())}/{len(d)})  MAKER-upper-bound {m:+7.2f}')
 R.sort(key=lambda x: x['e'])
 print(f'M27: {len(B)} candles with book; {len(R)} last-minute favourite >= 0.70 entries. pnl per 1 share.')
