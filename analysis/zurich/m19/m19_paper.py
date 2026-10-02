@@ -176,10 +176,24 @@ class Shadow:
         return 'UP' if token == up else ('DOWN' if token == dn else None)
 
     def tokens(self, ep):
-        if ep not in self.toks:
-            self.toks[ep] = tokens_for(ep)
-            for k in [k for k in self.toks if k < ep - 1200]: del self.toks[k]
-        return self.toks[ep]
+        """Token pair for a candle, cached - but ONLY when the answer is complete.
+
+        10-02 01:3x, the first real defect of this run and it was silent. poly_loop looks the NEXT
+        candle up (`self.tokens(ep + 300)`) to subscribe early. The gamma mirror does not carry a
+        future candle yet, so that returned (None, None) - and the old version CACHED it. Five
+        minutes later, when that epoch became the current one, the cache answered (None, None)
+        again, forever. Consequences, all of them quiet: poly_loop took its `if not toks: sleep(2)`
+        branch with no counter and no exception, and quote_loop found no token to write a row
+        against. Binance ticks kept climbing while poly_msgs and quotes froze at 00:53 with
+        errs bn0 poly0 q0 - 'silence is not success' in its purest form, caught only because the
+        heartbeat prints the counters side by side. A miss is now never cached, so it is retried."""
+        t = self.toks.get(ep)
+        if t is None or not all(t):
+            t = tokens_for(ep)
+            if all(t):
+                self.toks[ep] = t
+                for k in [k for k in self.toks if k < ep - 1200]: del self.toks[k]
+        return t
 
     async def poly_loop(self):
         import websockets
@@ -188,6 +202,10 @@ class Shadow:
             nxt = self.tokens(ep + 300)
             toks = [t for t in self.tokens(ep) + nxt if t]
             if not toks:
+                self.c['no_tokens'] += 1
+                if self.c['no_tokens'] % 30 == 1:
+                    log(f'NO TOKENS for epoch {ep} (gamma mirror); subscription idle, '
+                        f'{self.c["no_tokens"]} passes so far')
                 await asyncio.sleep(2); continue
             deadline = ep + 345 if all(nxt) else ep + 300
             try:
@@ -342,7 +360,7 @@ class Shadow:
                                 (int(time.time() * 1000), self.c['bn'], self.c['poly'],
                                  self.c['trade'], self.c['quote'], self.c['fill'],
                                  f'settled {n}; errs bn{self.c["bn_err"]} poly{self.c["poly_err"]} '
-                                 f'q{self.c["quote_err"]}'))
+                                 f'q{self.c["quote_err"]} notok{self.c["no_tokens"]}'))
                 self.db.commit()
                 rt = sorted(self.rtt)
                 med = rt[len(rt) // 2] if rt else float('nan')
