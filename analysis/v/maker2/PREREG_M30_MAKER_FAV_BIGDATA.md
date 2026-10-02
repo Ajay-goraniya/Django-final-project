@@ -24,3 +24,6 @@ MAKER: fidelity gate FAILED (39.5% / 44.7% / book-model 75.4% vs 85%): 70 of the
 FAV calm: +382.84 @$10, +0.0216/$ (t +1.52, inside 2 SE), 11/19 green days (58%), halves +/+, +1c still +. FAIL (green days).
 FAV_mid: -598.82, -0.0502/$ (t -2.76), 4/19 green. FAIL.   FAV_all: -976.14, -0.0244/$ (t -2.49), 7/19 green. FAIL.
 Reading: the calm cut removes a significant loss; calm itself is positive but not proven, and not every-day green.
+ADDENDUM (Zurich 1f6d866): MAKER on 2,392 candles (09-11..16 polybook + public prints, and 09-30..10-02), book fill model
+(gate 75%, still below 85%): +83.82 @$10, +0.0131/$ +/-0.0274 (t +0.48), 6/11 green, NEGATIVE at +1c (-0.0278). Same sign both
+blocks. Print fill models INVALID (fill event conditioned on outcome: prints at our bid win 63/63). Verdict unchanged: no pass.
