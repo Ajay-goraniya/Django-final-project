@@ -1,0 +1,82 @@
+M26 TEST A - HYBRID (rest 60-120, take 121-180 only if unfilled) vs FAV TAKER vs PROBE.
+READ-ONLY. 2026-10-02 13:30:01 UTC. Window 09-30 17:00 .. now, calm candles only.
+Phase 1 = the probe's REAL fills at sec <= 120 (real money, maker fee 0). Phase 2 = simulated
+with the shadow's own _fav_fill/_fav_pnl (real recorded ask, arrival +500 ms, exact fee).
+Per $1 is on money ACTUALLY deployed on both legs, so the three arms are comparable.
+calm candles in the window: 202
+
+
+== WHOLE WINDOW  (202 calm candles)
+   arm          trades     pnl $   per $1  deployed  flag
+   HYBRID          155     -7.55  -0.0072   1053.30  
+   FAV taker       159    +32.44  +0.0211   1537.97  
+   PROBE only       76    +35.96  +0.1271    283.01  
+
+== HALF 1 (09-30 .. 10-01)  (101 calm candles)
+   arm          trades     pnl $   per $1  deployed  flag
+   HYBRID           70    +17.02  +0.0265    641.63  
+   FAV taker        79    +74.99  +0.0994    754.03  
+   PROBE only       10    +33.65  +0.5485     61.35  INSUFFICIENT (<60)
+
+== HALF 2 (10-01 .. 10-02)  (101 calm candles)
+   arm          trades     pnl $   per $1  deployed  flag
+   HYBRID           85    -24.56  -0.0597    411.67  
+   FAV taker        80    -42.54  -0.0543    783.94  
+   PROBE only       66     +2.32  +0.0104    221.67  
+
+== THE FALLBACK LEG ALONE - the number that decides it
+   fallback trades: 79 (57W/22L), pnl -43.51 on $770.28 = -0.0565 per $1
+   candles with no probe fill and no phase-2 qualifier (hybrid does nothing): 47
+   mean fallback entry: sec 128, ask 0.7643
+   For reference, FAV taker entering in its full 60-180 window on the same candles:
+   96 trades, +64.59 on $928.64 = +0.0696 per $1, mean sec 71 ask 0.7212
+   -> the cost of WAITING for 121 instead of taking FAV's own first qualifying second.
+
+== PER DAY
+   day     candles hyb n    hyb $ fav n    fav $ probe n  probe $ fb n     fb $
+   09-30        44    31   +43.50    33   +52.42       7   +27.85   24   +15.65
+   10-01       113    87   -50.77    91   +44.99      36   +16.48   51   -67.25
+   10-02        45    37    -0.28    35   -64.97      33    -8.37    4    +8.08
+
+== TEST A VERDICT against the prereg
+   hybrid beats FAV taker per $1 AND in $: -0.0072 vs +0.0211, -7.55 vs +32.44 -> FAIL
+   hybrid > 0 in both halves: +17.02 and -24.56 -> FAIL
+   TEST A: FAIL  (test B is forward and judged at 150 calm candles)
+
+TEST A VERDICT IN WORDS (Zurich, 10-02 13:2x). HYBRID FAILS, and it fails on the exact risk the
+prereg named: the fallback is too late.
+ - Hybrid -0.0072/$1 (-7.55) against FAV taker +0.0211/$1 (+32.44) and probe-only +0.1271/$1
+   (+35.96). Hybrid is WORSE THAN EITHER COMPONENT, which is the clearest possible verdict.
+ - The deciding number: the fallback leg on its own is 79 trades, 57W/22L, -43.51 on $770.28 =
+   -0.0565 per $1. It does not merely add less than hoped; it loses.
+ - WHY, in one comparison. The fallback enters at mean sec 128 at an ask of 0.7643. FAV, on those
+   SAME candles, enters at mean sec 71 at 0.7212 and makes +0.0696/$1. So waiting for the maker
+   window to expire costs 4.3 cents on the ask and turns +0.0696 into -0.0565. The hybrid's phase 2
+   is not "FAV as a fallback", it is "FAV 57 seconds late and 4 cents worse", and that is the whole
+   difference. This is the same fact M25 found from the other direction: in calm-FAV, WHEN you buy
+   dominates, and the price the clock charges is larger than the edge.
+ - Halves: +17.02 then -24.56, so it also fails the both-halves test.
+ - Per day it is not uniform: hybrid beats FAV badly on 10-02 (-0.28 vs -64.97) because the probe's
+   real fills carried the day and only 4 fallbacks fired, and loses badly on 10-01 (-50.77 vs +44.99)
+   where 51 fallbacks fired at -67.25. Hybrid cushions bad days and spoils good ones.
+ - One thing worth keeping: probe-only is still the best per $1 by a wide margin (+0.1271 on $283
+   deployed), on 76 trades. The hybrid dilutes it by adding a leg with a negative expectation.
+WHAT THIS IMPLIES, offered as the next hypothesis and NOT as a proposal: if FAV's edge lives in the
+EARLY entry, a fallback must not wait for the maker leg to expire - it would have to take at FAV's
+own first qualifying second while the bid still rests, which means two positions in one candle, more
+capital per candle, and its own prereg. I am not testing that without V registering it first.
+
+TEST B - WHAT IT WOULD NEED, and why I have not built it.
+It is technically straightforward and needs nothing from the live probe or 8787's live path:
+  - a standalone paper process with its OWN sqlite (not the shared `fires` table, which pfav.py also
+    writes - a new arm there is an avoidable risk to a shared research table), on cron under flock
+    like grade.py and m21_watch.py;
+  - read-only on maker_probe.sqlite3 for phase 1 (the probe's real fills, which is what makes this a
+    hybrid rather than a simulation) and on the shadow's book/vol inputs for phase 2;
+  - roughly 80 lines, reusing S.build_rows / S._fav_fill / S._fav_pnl rather than copying them;
+  - no change to the probe, no restart of anything, no credentials.
+I have NOT built it, because it would spend four days of forward candles measuring a rule that just
+failed its own retro on 202 calm candles with the fallback leg negative at -0.0565/$1. If V wants it
+forward anyway - the retro window is short and 10-01 dominates the loss - say so and it is a short
+job. The variant I would rather spend the forward capacity on is the concurrent-fallback version
+above, once it is registered.
