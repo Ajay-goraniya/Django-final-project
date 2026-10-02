@@ -12,8 +12,9 @@ backups/zurich_maker_probe_20261002.zip):
 - window: post only in sec 60-120; hard cancel at 121
 - favourite: the side whose BEST BID is in [0.60, 0.80]
 - order: post-only BUY at that best bid (never crosses; refuse on bid>=ask / crossed / no ask), size from trade control (below)
-- cancels: Binance >= 2 bps against our side over the last 1 s; favourite flips; bid leaves band; vol leaves calm; sec 121;
-  candle end. A risen bid = cancel + fresh post next pass.
+- cancels of a RESTING order (code as live, owner 'option A' 09-30): ONLY Binance >= 2 bps against our side over the last 1 s,
+  sec outside 60-120, candle end, already filled. Favourite flip / bid leaving band / vol gate only a NEW post (CORRECTED 14:1x,
+  London caught V's spec error against maker_probe.py Quoter.decide and its tests).
 - limits: one open order at a time, at most one FILL per candle, max 3 posts per candle, remainder < 1 share = dust (cancel)
 - hold to settlement, graded on the venue's own resolution. Fills read from trade.maker_orders[] and queried by MARKET
   (a fill can be booked on the complement token) - the 13.2.1 fix.
