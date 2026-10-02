@@ -683,3 +683,22 @@ halves) against the pre-change 60-120 fills. P2-P7 are unchanged.
 IN-DB MARKER CONFIRMED 12:02:01 UTC: decision row "sec 121 > 120" on the 12:00 candle, followed by
 "sec 131 > 120". Zero rows since the 11:50:32 restart mention 180. The window change is now provable
 from the probe's own ledger in both directions - the old bound absent, the new bound firing.
+
+== 10-02 15:01  PROBE STOPPED. OWNER ORDER via V, his words: "Stop Zurich and start london"
+(London now runs the same maker rule as its EF lane, 13.3.0, on the same wallet).
+ORDER OF OPERATIONS, chosen so nothing could be orphaned: I checked the code first - guard.may_trade()
+is consulted ONLY on the `post` branch of one_pass, while the `cancel` branch runs unconditionally -
+so removing the flag stops new posts and still lets a resting order be pulled normally. Then:
+  15:01:19  ENABLED removed. No order was resting at that moment (verified before and after), and
+            the 15:00 candle was not calm anyway (vol 1.160 >= 0.304), so none could be posted.
+  15:01:2x  pid 475268 stopped. No cancel_all was used and no order id had to be cancelled.
+FINAL STATE: 0 open orders, 0 unsettled fills, today -5.2192, lifetime +26.3185 over 108 fills on 88
+distinct candles (all graded). The cron grader is left running as ordered, though with nothing
+unsettled it has nothing left to do. The M19 PAPER shadow keeps running untouched (pid 441912, no
+orders, ever). The watcher fired FLAG_REMOVED on cue, which is the alert doing its job.
+LIFETIME RECORD, for whoever reads this next: 108 fills over 88 candles, lifetime +26.3185 on a
+5-share fixed stake. It peaked at +45.13 on 10-02 morning and gave back ~19 in the afternoon; the
+best single candle (09-30 17:00) is +24.05 of the total, and its second half by time was negative.
+The M21 out-of-sample test (PREREG_M21_PROBE_OOS.md, P1-P7) is now FROZEN AT 88 of its 200 graded
+candles and cannot complete on this box unless the probe is restarted - London's fills are a
+different process on a different build and are NOT a continuation of this sample.
