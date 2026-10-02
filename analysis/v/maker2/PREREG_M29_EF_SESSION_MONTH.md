@@ -15,3 +15,14 @@ REPORT: per day x session (Asia 00-07, Europe 07-13, US 13-20, Late 20-24), per 
 vs 00-13. Real-book days and tape-priced days reported separately AND together. n<60 flagged. Whole grid, no best cell.
 PASS -> V proposes EF 13-24 to the owner as the alternative to the maker lane (his yes in London's terminal).
 FAIL -> the session effect is retracted; the 13-24 curve was those days, not the clock.
+
+AMENDMENT 10-02 16:1x (before any run; Zurich stopped correctly at step 0, 16:04):
+- THE BRAIN: London's fixed EF fills were NOT poly_ef (the 12.22.0 reversal lane). They are profile 'fixed15' =
+  ef_engine 'v10' + Platt (a 1.0677, b -0.3208) + fixed EV bar 0.15 (learner/v12_2/poly_dashboard.py:314), first qualifying pass
+  per candle - the FIXED arm of Zurich's own raw_vs_fixed_london_exec.py. v10 = learner/live_backup model, trained 08-29..09-06
+  (v10_features_8days.parquet), so every day from 09-08 is out of sample for the MODEL as well.
+- THE DATA: no Polymarket ask history exists anywhere for 09-01..09-07. The unseen window that CAN be run on venue asks is
+  09-08..09-22 (~15 days): (a) Zurich's own EF decide rows 09-15..09-22 (p_raw + ask at each pass, as used in raw_vs_fixed);
+  (b) learner/live_backup book1s/polybook/venues (1 Hz asks, 09-08..09-16) with v10 recomputed from Binance 1 s.
+  Not a full month: stated, not hidden. Days 09-23..10-01 remain the fidelity window only, never pooled with the test.
+- Prediction, pass rule and report unchanged.
