@@ -78,3 +78,106 @@ WHAT IT SAYS, and it is the opposite of what I expected when I flagged the wall:
     what London's brain would have produced, not exactly it. The 09-15..09-22 half, which uses the
     journalled p directly and needs no recompute, carries none of this error, and the two halves
     are reported separately for that reason as well as for the book-vs-ask one.
+M29 STEP 1 (A) - 09-14..09-22 on the ENGINE'S OWN journalled rows. READ-ONLY. 2026-10-02 16:30:05 UTC
+No recompute and no reconstruction error: p, both sides' asks and the real depth features all
+come from the rows the engine wrote. Unseen for the finding (London started 09-22) and out of
+sample for the model (v10 trained 08-29..09-06).
+candles with passes and a label: 218; labels from venues 419, from the journal's own results 332
+(CLAUDE.md records results.actual matching venues.outcome 776/776 on Polymarket lanes, which
+ is why the journal fallback is acceptable here - and the split is shown so it can be judged)
+
+
+== WHOLE WINDOW 09-14..09-22
+   arm / exec                 n      W/L     pnl $   per $1  flag
+   FIXED / taker            170    85/85    -21.81  -0.0257  
+   FIXED / ask-touch         70    22/48   -113.43  -0.3241  
+     ask-touch fill rate  70/170 = 41.2%   (London live 81% on 16 orders; M18 sim 94-99%)
+   RAW / taker              206   93/113    -55.43  -0.0538  
+   RAW / ask-touch           95    31/64   -122.15  -0.2572  
+     ask-touch fill rate  95/206 = 46.1%   (London live 81% on 16 orders; M18 sim 94-99%)
+
+== 13-24 UTC vs 00-13 UTC, the prediction
+
+== 13-24 UTC
+   arm / exec                 n      W/L     pnl $   per $1  flag
+   FIXED / taker             94    45/49    -44.53  -0.0947  
+   FIXED / ask-touch         36     9/27    -85.43  -0.4746  INSUFFICIENT (<60)
+     ask-touch fill rate  36/94 = 38.3%   (London live 81% on 16 orders; M18 sim 94-99%)
+   RAW / taker              116    47/69    -93.27  -0.1608  
+   RAW / ask-touch           55    14/41   -120.32  -0.4375  INSUFFICIENT (<60)
+     ask-touch fill rate  55/116 = 47.4%   (London live 81% on 16 orders; M18 sim 94-99%)
+
+== 00-13 UTC
+   arm / exec                 n      W/L     pnl $   per $1  flag
+   FIXED / taker             76    40/36    +22.73  +0.0598  
+   FIXED / ask-touch         34    13/21    -28.00  -0.1647  INSUFFICIENT (<60)
+     ask-touch fill rate  34/76 = 44.7%   (London live 81% on 16 orders; M18 sim 94-99%)
+   RAW / taker               90    46/44    +37.84  +0.0841  
+   RAW / ask-touch           40    17/23     -1.83  -0.0091  INSUFFICIENT (<60)
+     ask-touch fill rate  40/90 = 44.4%   (London live 81% on 16 orders; M18 sim 94-99%)
+
+== BOTH HALVES BY TIME
+
+== first half
+   arm / exec                 n      W/L     pnl $   per $1  flag
+   FIXED / taker             82    35/47    -72.04  -0.1757  
+   FIXED / ask-touch         29     6/23    -73.78  -0.5089  INSUFFICIENT (<60)
+     ask-touch fill rate  29/82 = 35.4%   (London live 81% on 16 orders; M18 sim 94-99%)
+   RAW / taker              103    44/59    -59.56  -0.1157  
+   RAW / ask-touch           36     9/27    -68.96  -0.3831  INSUFFICIENT (<60)
+     ask-touch fill rate  36/103 = 35.0%   (London live 81% on 16 orders; M18 sim 94-99%)
+
+== second half
+   arm / exec                 n      W/L     pnl $   per $1  flag
+   FIXED / taker             88    50/38    +50.23  +0.1142  
+   FIXED / ask-touch         41    16/25    -39.64  -0.1934  INSUFFICIENT (<60)
+     ask-touch fill rate  41/88 = 46.6%   (London live 81% on 16 orders; M18 sim 94-99%)
+   RAW / taker              103    49/54     +4.14  +0.0080  
+   RAW / ask-touch           59    22/37    -53.20  -0.1803  INSUFFICIENT (<60)
+     ask-touch fill rate  59/103 = 57.3%   (London live 81% on 16 orders; M18 sim 94-99%)
+
+== PER DAY x SESSION, FIXED/taker then RAW/taker (per $1, n)
+   day                   Asia             Europe                 US               Late
+   09-15    +0.330/7 +0.581/9  +0.053/6 +0.053/6 -0.378/24 -0.438/26  -0.143/7 -0.165/8
+   09-16    -0.463/7 -0.530/8  +0.396/3 +0.040/6  -0.684/6 -0.378/7  -1.000/1 -1.000/1
+   09-17    -0.190/5 +0.116/8  -0.432/6 -0.220/7  +0.483/4 +0.510/7  +0.571/1 +0.237/3
+   09-18    +0.321/6 -0.009/8 -0.254/8 -0.234/11 +0.086/18 +0.037/21  -0.316/5 -0.437/7
+   09-19    +0.262/3 -0.053/4                  -                  -                  -
+   09-21                    -                  - -0.028/20 -0.158/23 +0.543/8 -0.050/13
+   09-22   +0.384/14 +0.335/15 +0.132/11 +0.558/8                  -                  -
+   days positive, FIXED/taker: 3 of 7
+   days positive, FIXED/ask-touch: 2 of 7
+   days positive, RAW/taker: 2 of 7
+   days positive, RAW/ask-touch: 1 of 7
+
+STEP 1 (A) VERDICT - THE PREDICTION FAILS, AND THE SIGN INVERTS.
+The prereg predicted, per $1 on unseen days: 13-24 UTC > 00-13 UTC, AND 13-24 > 0. On 09-14..09-22,
+using the engine's own journalled rows with no reconstruction error at all:
+  13-24 UTC   FIXED/taker -0.0947 (n 94)   RAW/taker -0.1608 (n 116)   BOTH NEGATIVE
+  00-13 UTC   FIXED/taker +0.0598 (n 76)   RAW/taker +0.0841 (n 90)    BOTH POSITIVE
+Both legs of the prediction fail, and not marginally - the profitable half of the clock is the one
+the finding said loses. London's 13-24 +151.26 / all-hours -84.10 was those nine days, not the hour.
+NOR IS IT STABLE WITHIN THIS WINDOW: FIXED/taker is -0.1757 in the first half and +0.1142 in the
+second; RAW/taker -0.1157 then +0.0080. Days positive: FIXED/taker 3 of 7, RAW/taker 2 of 7,
+FIXED/ask-touch 2 of 7, RAW/ask-touch 1 of 7. A rule whose session sign flips between halves of a
+seven-day window is not being measured by a session filter.
+THE OWNER'S QUESTION - would RAW with the fill fix do better? NO, and the fill fix is the worse half
+of it. Whole window: FIXED/taker -0.0257 vs RAW/taker -0.0538, so RAW is WORSE as a taker; on the
+maker leg RAW is the less bad of two bad numbers (-0.2572 vs -0.3241). Every maker cell is far worse
+than every taker cell, for both arms.
+WHY THE MAKER LEG FAILS HERE, and it is the same shape as the live maker probe: the ask-touch FILL
+RATE is only 41.2% (FIXED) and 46.1% (RAW), against London's 81% live and M18's 94-99% simulated -
+and the fills it does get are adversely selected. FIXED is 85W/85L as a taker but 22W/48L on the
+subset that filled; RAW is 93W/113L against 31W/64L. A resting bid only trades when the ask comes
+down to it, and the ask comes down when the side is going wrong. That is the third independent time
+this adverse-selection signature has appeared (probe vs FAV, the M26 fallback, and now here).
+SAMPLE HONESTY: 751 candles carried a label and 218 of them produced at least one fire. Labels are
+419 venues.outcome and 332 journal results.actual (CLAUDE.md records those agreeing 776/776 on
+Polymarket lanes). Every per-day x session cell is tiny - n 1 to 26 - and the 13-24 negative is
+heavily weighted by 09-15's US session alone (-0.378 on n 24 for FIXED, -0.438 on n 26 for RAW), so
+the SESSION verdict rests on the pooled n 94 / n 116 figures, not on any day's cell.
+STILL OUTSTANDING: the 09-08..09-16 half needs Binance 1 s spot and perp fetched from data-api
+(klines carry taker-buy volume, which is the per-second split the harness needs) and then the v10
+recompute, carrying the ~0.022-0.034 mean|dp| reconstruction error measured above. Given that this
+half - 7 unseen days, zero reconstruction error - already fails the prediction with the sign
+inverted, I am asking V whether that fetch is still worth the hours before spending them.
