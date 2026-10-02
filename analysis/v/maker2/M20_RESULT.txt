@@ -1,0 +1,62 @@
+M20 - WHY DOES THE LIVE MAKER PROBE WIN? (V, 10-02 ~10:00 UTC). Script m20_whymaker.py, grid fixed before running.
+5494 candles, two independent periods: P1 09-11..22 (3456), P2 09-23..10-01 (2038). Fill = print strictly below our bid.
+
+ANSWER (sim): NONE of the probe's ingredients makes money on history. The probe rule itself
+(mkt join-bid, band 0.60-0.80, calm, sec 60-180, 2 bps cancel) = -0.028/$ (P1, 1648 fills) and -0.009/$ (P2, 1018).
+All 16 mkt cells lose in BOTH periods (-0.009..-0.044/$), both halves negative in every one.
+The 2 bps cancel changes nothing: BTC almost never moves 2 bps in 1 s in calm candles. Even a PERFECT
+same-second cancel (optimistic bound) at 1 or 2 bps: -0.026..-0.028 (P1), -0.009 (P2).
+This agrees with STRICT_PFAV_CALM.txt (09-30): same rule, 20 days, -335..-778, positive only 09-27..30.
+
+So the live +45 (94 fills, ~80% win) is NOT explained by the rule. Either (a) the period - the rule's
+historical good stretch is exactly when the probe went live - or (b) real fills at the touch are less adverse
+than "print through bid" (live win ~80% vs 66-67% in sim). Zurich's live breakdown (WHY_MAKER_WINS.txt) tests (b).
+Until (b) is shown, treat the live result as a good stretch, not an edge. Do not scale.
+
+M19 side-note: its sim edge sits OUTSIDE the probe's filters - window 60-180 alone turns +0.084/+0.059 into
+-0.007/-0.015, band 0.60-0.80 alone into -0.048/-0.049. M19's sim money is in cheap sides and early/late
+seconds, exactly where the live paper shows adverse fills.
+
+FULL GRID
+* = n<60 INSUFFICIENT.  cols per period: fills  win%  pnl/$  halves(pnl/$)
+pricing band calm win cancel |  P1 09-11..22                    |  P2 09-23..10-01
+fair     0    0    0    0   | 3777  36.0 +0.084  +0.089/+0.080   | 2151  34.3 +0.059  +0.066/+0.052
+fair     0    0    0    1   | 3773  36.1 +0.088  +0.093/+0.082   | 2147  34.3 +0.062  +0.067/+0.057
+fair     0    0    1    0   | 3021  33.6 -0.007  +0.002/-0.017   | 1748  33.0 -0.015  +0.008/-0.039
+fair     0    0    1    1   | 3017  33.6 -0.006  +0.002/-0.014   | 1748  33.0 -0.013  +0.011/-0.038
+fair     0    1    0    0   | 1626  39.5 +0.075  +0.059/+0.092   |  968  36.5 +0.049  +0.036/+0.063
+fair     0    1    0    1   | 1624  39.5 +0.079  +0.063/+0.095   |  965  36.6 +0.054  +0.042/+0.068
+fair     0    1    1    0   | 1295  37.1 +0.001  -0.026/+0.030   |  795  35.2 -0.019  -0.007/-0.031
+fair     0    1    1    1   | 1293  37.1 +0.004  -0.023/+0.032   |  795  35.2 -0.016  -0.002/-0.031
+fair     1    0    0    0   | 1218  61.4 -0.048  -0.042/-0.054   |  690  60.6 -0.049  -0.054/-0.044
+fair     1    0    0    1   | 1215  61.5 -0.047  -0.038/-0.055   |  685  60.9 -0.044  -0.050/-0.039
+fair     1    0    1    0   |  631  63.5 -0.009  -0.014/-0.004   |  384  64.6 +0.021  +0.073/-0.031
+fair     1    0    1    1   |  628  63.7 -0.007  -0.011/-0.003   |  383  64.8 +0.023  +0.078/-0.032
+fair     1    1    0    0   |  607  65.6 +0.004  +0.038/-0.031   |  343  62.7 -0.033  -0.017/-0.050
+fair     1    1    0    1   |  605  65.8 +0.007  +0.042/-0.028   |  341  63.0 -0.027  -0.011/-0.044
+fair     1    1    1    0   |  340  66.5 +0.022  +0.051/-0.008   |  197  68.0 +0.060  +0.089/+0.031
+fair     1    1    1    1   |  338  66.9 +0.028  +0.058/-0.002   |  197  68.0 +0.060  +0.089/+0.031
+mkt      0    0    0    0   | 6831  49.9 -0.035  -0.034/-0.037   | 4062  49.8 -0.038  -0.040/-0.037
+mkt      0    0    0    1   | 6831  49.9 -0.035  -0.034/-0.036   | 4062  49.8 -0.038  -0.040/-0.037
+mkt      0    0    1    0   | 6772  49.6 -0.036  -0.035/-0.037   | 4012  49.4 -0.041  -0.042/-0.040
+mkt      0    0    1    1   | 6771  49.6 -0.036  -0.036/-0.036   | 4010  49.5 -0.041  -0.041/-0.040
+mkt      0    1    0    0   | 2843  50.0 -0.035  -0.033/-0.037   | 1760  49.8 -0.038  -0.038/-0.039
+mkt      0    1    0    1   | 2843  50.0 -0.035  -0.033/-0.037   | 1760  49.8 -0.038  -0.038/-0.039
+mkt      0    1    1    0   | 2814  49.6 -0.039  -0.040/-0.038   | 1739  49.5 -0.044  -0.045/-0.043
+mkt      0    1    1    1   | 2813  49.6 -0.039  -0.040/-0.038   | 1739  49.5 -0.044  -0.045/-0.043
+mkt      1    0    0    0   | 4940  65.8 -0.017  -0.011/-0.024   | 2991  64.7 -0.031  -0.029/-0.033
+mkt      1    0    0    1   | 4940  65.8 -0.017  -0.011/-0.024   | 2990  64.7 -0.031  -0.028/-0.034
+mkt      1    0    1    0   | 4090  66.7 -0.022  -0.014/-0.030   | 2463  65.8 -0.030  -0.038/-0.023
+mkt      1    0    1    1   | 4088  66.7 -0.023  -0.015/-0.031   | 2461  65.8 -0.030  -0.036/-0.023
+mkt      1    1    0    0   | 1999  66.4 -0.013  -0.002/-0.024   | 1257  65.6 -0.023  -0.018/-0.027
+mkt      1    1    0    1   | 1999  66.4 -0.013  -0.002/-0.025   | 1257  65.6 -0.023  -0.018/-0.027
+mkt      1    1    1    0   | 1648  66.3 -0.028  -0.008/-0.047   | 1018  67.4 -0.009  -0.015/-0.004
+mkt      1    1    1    1   | 1648  66.3 -0.028  -0.008/-0.047   | 1018  67.4 -0.009  -0.015/-0.004
+
+CANCEL BOUND - probe rule. mode 0 none, 1 last known second, 2 same second as the fill (optimistic, a perfect sub-second cancel)
+  2 bps mode 0 | P1 1648  66.3 -0.028  -0.008/-0.047 | P2 1018  67.4 -0.009  -0.015/-0.004
+  2 bps mode 1 | P1 1648  66.3 -0.028  -0.008/-0.047 | P2 1018  67.4 -0.009  -0.015/-0.004
+  2 bps mode 2 | P1 1647  66.4 -0.027  -0.007/-0.047 | P2 1018  67.4 -0.009  -0.015/-0.004
+  1 bps mode 0 | P1 1648  66.3 -0.028  -0.008/-0.047 | P2 1018  67.4 -0.009  -0.015/-0.004
+  1 bps mode 1 | P1 1648  66.3 -0.028  -0.008/-0.047 | P2 1018  67.4 -0.009  -0.015/-0.003
+  1 bps mode 2 | P1 1645  66.4 -0.026  -0.004/-0.048 | P2 1018  67.4 -0.009  -0.014/-0.003
