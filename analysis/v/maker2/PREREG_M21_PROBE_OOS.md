@@ -23,3 +23,26 @@ AMENDMENT 10-02 10:4x (before any OOS read; Zurich ack c914a35, armed at 78/200 
   FAIL on them means "was never there", not "reversed". P1 is the only prediction with in-sample support.
 - P4 came from the ex-17:00 table; with the 09-30 17:00 candle in, 15 winners touched 0.10. One such candle fails P4 alone.
 - Null permutes the bucket label only, never the outcome. Group sizes kept.
+
+## P5-P7 appended by Zurich, 10-02 11:0x UTC, from PROBE_EXIT_GRID.txt (in-sample exploratory)
+Owner 10:5x asked for all exit combinations and for stricter rules that allow compounding. The grid
+(45 stop x take-profit x trailing cells, exits priced at a PROVEN bid print with no queue or size,
+i.e. an upper bound) says the answer is "no exit rule, better entries". Frozen before any OOS fill:
+ P5 HOLD BEATS EVERY EXIT CELL. On fills after 10-02 10:27, pnl/$ of hold-to-settlement >= pnl/$ of
+    every one of the 45 cells. In sample: 45 of 45 cells lost to hold (best L0.10/U0.95 +0.1123 vs
+    hold +0.1232); ex-17:00, 2 of 45 beat it (L0.20 +0.26, L0.10 +7.81 in dollars), both deep stops
+    with no take-profit. FAIL if any cell beats hold by more than 0 on the OOS fills.
+ P6 CANCELLING ON A BID DIP LOSES MONEY. The fills a 1-tick cancel would have removed have POSITIVE
+    pnl/$ out of sample. In sample: 10 fills removed, 9W/1L, +7.63 (+0.2642/$). Same sign at 2 and 3
+    ticks. FAIL if the removed fills are net negative.
+ P7 MAX ADVERSE EXCURSION SEPARATES, AND THE BANDS STAY ALMOST DISJOINT: median max drop below entry
+    is SMALLER for winners than losers, and the winners' p75 stays below the losers' p25. In sample
+    winners median 0.21 / max 0.62, losers median 0.64 / min 0.57. This is a post-hoc descriptor,
+    NOT a proposed gate - section 3 of the file explains why acting on it is just the deep stop.
+Gates for P5-P7: direction holds out of sample, n >= 60 on the better side where a split applies,
+both OOS halves same sign, random-subset null p < 0.05 where a two-group gap is being tested.
+NOT A PREDICTION, recorded as context: compounding a fixed fraction from $30 on HOLD gave $36 (5%),
+$39 (10%), $35 (20%) over all fills, against $49 / $76 / $144 on the sec 60-120 subset, which is the
+only subset that never tripped the -10 day stop. That subset is P1 itself, so the figure measures the
+same selection twice and is hindsight, not an expectation. No staking change is proposed, and Kelly
+or any dynamic staking still needs the owner's two separate confirmations.
