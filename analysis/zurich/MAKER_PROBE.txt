@@ -679,3 +679,7 @@ from the probe's own ledger without a schema change to a live database.
 M21 CONSEQUENCE: from 11:50 no 120-180 fill can exist, so P1 can no longer be tested as a split
 within the same period. At the 200-candle mark P1 is reported as post-change 60-120 pnl/$ (both
 halves) against the pre-change 60-120 fills. P2-P7 are unchanged.
+[2026-10-02 11:56:16] FILL epoch 1790942100 DOWN 5sh @ 0.79 bn_before 1.25bps
+IN-DB MARKER CONFIRMED 12:02:01 UTC: decision row "sec 121 > 120" on the 12:00 candle, followed by
+"sec 131 > 120". Zero rows since the 11:50:32 restart mention 180. The window change is now provable
+from the probe's own ledger in both directions - the old bound absent, the new bound firing.
