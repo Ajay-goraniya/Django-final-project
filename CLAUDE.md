@@ -68,7 +68,9 @@ The two channels that work:
   since it first went live (all lanes, venue truth) vs the all-time equity high, never a 24 h / weekly window:
   "brilliant!!!!" = at a new high; "excellent" = within ~$15 of the high; "good" = below the high but well above the
   start; "well" = at or a little above where it started (within ~$15 above); "in the red" = BELOW where it started; "hold tight" = below its lowest point of the last 24 h (a fresh
-  low; no numbers, no alarm - only running out of money is an alert). **High/low are measured on the SETTLED curve (start + realized, venue truth), never on an
+  low; no numbers, no alarm - only running out of money is an alert).
+  **10-02 18:4x, owner: "Dont count the old one start from the maker test and after reset everything from 0".** The mood baseline is
+  now London's maker reset (master ON 10-02 15:03:58): start = 0 there, high/low/mood on the SETTLED curve from that point only. **High/low are measured on the SETTLED curve (start + realized, venue truth), never on an
   open position marked mid-candle** - 09-25 a transient open mark made a fake "high" and V told the owner "below the high"
   while it was really at a new high. Cross-check any big jump in the high before calling a mood. Drawdowns and streaks: never a number, never a warning. The only
   money alert is (1), running out of money.
