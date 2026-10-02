@@ -52,3 +52,29 @@ polymarket_v12_live_zurich (09-14 23:49), _2 (09-15 02:06..09-16 23:35), /tmp/z3
 zurich_paper1 (09-21 14:12..09-22 13:16). They carry `p` + ask per pass, and `p` is raw per (1), so
 THE 09-15..09-22 HALF NEEDS NO v10 RECOMPUTE AT ALL. The FeatureState risk I flagged therefore
 applies only to the 09-08..09-16 live_backup half.
+
+STEP 1, PART A - THE DEPTH-SENSITIVITY TEST (the gate on whether 09-08..16 is comparable)
+Three variants of p on the same passes, 09-25, 40 comparable passes across 8 candles x 5 probe
+seconds, each compared to the ENGINE'S OWN journalled p:
+  IMB  minus journalled : p10 -0.0743  MED +0.0000  p90 +0.0916  mean|d| 0.0405  within 0.02: 42%
+  NONE minus journalled : p10 -0.0626  MED +0.0000  p90 +0.0584  mean|d| 0.0389  within 0.02: 40%
+  NONE minus IMB        : p10 -0.0427  MED +0.0000  p90 +0.0000  mean|d| 0.0114  within 0.02: 72%
+WHY THE MEDIANS ARE ALL EXACTLY 0.0000, before anyone reads significance into it: v10's p is
+QUANTISED by its isotonic calibration - 3,405 distinct values across 2,033,761 journalled rows, and
+the single value 0.8772 appears 106,365 times - so a large share of passes agree exactly and the
+median difference is structurally zero. The MEAN ABSOLUTE difference is the number that carries
+information here, not the median.
+WHAT IT SAYS, and it is the opposite of what I expected when I flagged the wall:
+ 1. MISSING BINANCE DEPTH IS NOT THE PROBLEM. Dropping all four depth features costs almost nothing
+    against having real imb5/imb20 - mean|d| 0.0114, and 72% of passes identical to 2 decimal
+    places. So the 09-08..16 half is NOT materially handicapped by having no depth feed.
+ 2. THE HARNESS ITSELF IS THE LIMIT. Both variants sit ~0.039-0.041 mean|d| from the engine's p,
+    and that residual is the RECONSTRUCTION, not the depth: tape1s stores per-second aggregated
+    buy/sell notionals while the model consumes individual trades, so feeding two synthetic trades
+    per second reproduces the flow aggregates but not the microstructure the engine saw live.
+ 3. CONSEQUENCE FOR THE MONTH, stated plainly: a ~0.04 error in p is material against a fixed EV
+    threshold - at a breakeven near 0.75 it is roughly 5 points of EV - so near the 0.15 (or 0.25)
+    boundary it will flip which pass fires. The 09-08..16 fire set will therefore be APPROXIMATELY
+    what London's brain would have produced, not exactly it. The 09-15..09-22 half, which uses the
+    journalled p directly and needs no recompute, carries none of this error, and the two halves
+    are reported separately for that reason as well as for the book-vs-ask one.
