@@ -78,6 +78,24 @@ WHAT IT SAYS, and it is the opposite of what I expected when I flagged the wall:
     what London's brain would have produced, not exactly it. The 09-15..09-22 half, which uses the
     journalled p directly and needs no recompute, carries none of this error, and the two halves
     are reported separately for that reason as well as for the book-vs-ask one.
+
+LARGER DEPTH-SENSITIVITY SAMPLE - 396 passes, and it REVISES point 3 downward.
+The 40-pass figures above are a thin sample, so I re-ran the same test on two full days at 40
+candles x 5 probe seconds each (09-25: 197 comparable passes, 09-26: 199):
+  2026-09-25, 197 passes
+    IMB  minus journalled : p10 -0.0743  MED +0.0000  p90 +0.0526  mean|d| 0.0338  within 0.02: 51%
+    NONE minus journalled : p10 -0.0546  MED +0.0000  p90 +0.0581  mean|d| 0.0318  within 0.02: 47%
+    NONE minus IMB        : p10 -0.0340  MED +0.0000  p90 +0.0340  mean|d| 0.0145  within 0.02: 69%
+  2026-09-26, 199 passes
+    IMB  minus journalled : p10 -0.0371  MED +0.0000  p90 +0.0505  mean|d| 0.0215  within 0.02: 62%
+    NONE minus journalled : p10 -0.0434  MED +0.0000  p90 +0.0505  mean|d| 0.0242  within 0.02: 58%
+    NONE minus IMB        : p10 -0.0391  MED +0.0000  p90 +0.0147  mean|d| 0.0134  within 0.02: 71%
+Both conclusions above survive the bigger sample, with one correction to my own number: the
+harness-vs-engine error is 0.022-0.034 mean|d|, not the ~0.04 the 40-pass run suggested, so the
+40-pass figure was pessimistic by roughly a third. The depth finding is unchanged and is now on
+396 passes rather than 40: dropping all four depth features costs mean|d| 0.0134-0.0145 against
+having real imb5/imb20, an order of magnitude less than the reconstruction error itself. Missing
+Binance depth is still not what limits the 09-08..16 half; the per-second trade aggregation is.
 M29 STEP 1 (A) - 09-14..09-22 on the ENGINE'S OWN journalled rows. READ-ONLY. 2026-10-02 16:30:05 UTC
 No recompute and no reconstruction error: p, both sides' asks and the real depth features all
 come from the rows the engine wrote. Unseen for the finding (London started 09-22) and out of
