@@ -37,3 +37,17 @@ The 13.2.x 13-24 session trial is REMOVED for this lane (the probe trades all ho
 Full test suite green; the probe's 55+ property tests ported (never crosses, 2 bps cancel both sides, 60/121 edges, one fill per
 candle, dust, by-id cancel only, maker_orders[] fill parse incl. complement token); a dry run (master OFF) logging >= 20 decision
 rows with the same reasons as Zurich's probe on the same candles (parity check). V reviews the tests, then asks the owner for "go".
+
+## OWNER ADDENDUM 10-02 ~14:1x (his words): "make sure that maker test replace ef but all the things that i can control in ef should
+## be same, like stake, on, off and specifically master, recording trades in csv and data csv page and file, accounting and accuracy and all"
+The maker brain must plug into the EF lane's EXISTING plumbing, not run beside it. Acceptance checklist (each item tested):
+ 1. MASTER: the maker lane sends a live order ONLY when master is ON; master OFF = paper/shadow exactly like EF today.
+ 2. EF on/off toggle in trade control turns the maker lane on/off (no new switch needed).
+ 3. STAKE: trade control's EF stake drives the order size ($ -> shares at the bid, min 5).
+ 4. RECORDING: every maker order/fill/cancel/settlement lands in the same journal tables EF uses, so the CSV export, the data/CSV
+    page and the CSV file include them with the same columns (lane = EF, plus engine = maker, order type post-only, price paid = bid).
+ 5. ACCOUNTING: fills and settlements flow into the same PnL, cash, realized/unrealized, ledgers and PnL curves; partial fills
+    counted at the filled shares; maker fee 0.
+ 6. ACCURACY / metrics: metrics.ef (accuracy, wins, losses, real vs shadow, local_pnl) computed from maker fills the same way.
+ 7. Dashboard last-fill card, health, alerts unchanged.
+Show each of 1-7 passing in the test report before V asks the owner for "go".
