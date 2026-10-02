@@ -15,3 +15,9 @@ on (a) the forward shadow 09-29 00:00 .. now and (b) history 09-24..28. PASS nee
     have pnl > 0 on n >= 60, else INSUFFICIENT (and then 2 alone does not pass);
  4. per day reported, no day hidden.
 FAIL -> base FAV stays the reference. PASS -> proposed to the owner as the FAV rule for paper/live (his yes needed).
+
+IN-SAMPLE MECHANISM (09-11..16, logged before the forward read): of 638 FAV-wide trades, 281 are identical to base,
+47 are extra (+0.15, nothing), and on 310 candles BOTH trade but FAV-wide buys EARLIER and CHEAPER (avg ask 0.596 vs 0.699):
+wide +17.10 vs base -3.07. Paired on those 310: mean +0.065/share, t 2.52, sign-flip p 0.006, halves +14.45 / +5.73.
+Reading: base waits for the favourite to climb to 0.65 and pays for the move; buying the same favourite at ~0.60 keeps it.
+So the forward check that matters most is #3, the paired one.
