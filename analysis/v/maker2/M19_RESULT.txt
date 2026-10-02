@@ -21,3 +21,9 @@ Robustness (M19_ROBUST*.txt, post-hoc, no reselection): survives a size filter (
 THE RISK = SPEED: fair from 1 s ago +0.095/$, 2 s +0.058, 3 s -0.022, 5 s -0.098. The edge is being the fast quote when the
 Polymarket book dislocates vs Binance; it needs a <~1.5 s quote refresh. Must be measured live (paper) before money.
 Untested in sim: queue priority at equal price (trade-through rule already conservative), rate limits, rebates (upside).
+
+CORRECTION (V, 10-02 00:4x, my own): Binance 1 s closes are keyed by kline OPEN time, so BN[t] is only known at t+1. In the sim
+"lat 1" therefore means ZERO reaction delay (quote ready at the exact second boundary) - not achievable live. The realistic
+row is "lat 2" (= 1 s real delay): m 0.15 +0.058/$ (n 1068, halves +79/+17), m 0.20 +0.112/$ (n 899, halves +80/+60).
+"lat 3" (= 2 s real delay) is ~0 / negative. So: the edge needs < ~1 s from Binance tick to resting quote. Still positive at
+1 s, gone at 2 s. The headline +0.096 overstated it; the honest live expectation is ~+0.06..+0.11/$ IF the loop is fast.
