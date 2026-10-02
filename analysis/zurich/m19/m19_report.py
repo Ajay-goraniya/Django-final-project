@@ -46,6 +46,13 @@ for m in MARGINS:
                  f'{pnl/max(dep,1e-9):+8.4f}  {"INSUFFICIENT (<60)" if len(s) < 60 else ""}')
 L += [f'  REST round-trip to the CLOB read endpoint: n {len(rt)}, p50 {pct(0.5):.0f} ms, '
       f'p90 {pct(0.9):.0f} ms, max {rt[-1] if rt else float("nan"):.0f} ms']
+L += ['  BINANCE CLOCK: SETTLED 10-02 01:5x, see analysis/zurich/m19/M19_CLOCK.txt. The +329 ms REST',
+      '    serverTime offset I flagged was MY artefact, not Binance\'s clock: it tracks the round trip',
+      '    (slow hosts data-api.binance.vision +331 at rtt 883, api-gcp +384 at rtt 1026; fast hosts',
+      '    api.binance.com +3, fapi +4, testnet +4 at rtt ~227). Decisive check: a 1 s kline cannot be',
+      '    published before it closes, and all 76 closed bars arrived AFTER their own close time',
+      '    (p50 +139 ms, p10 +127), so the publishing clock is not ahead. True feed lag is the measured',
+      '    ~111 ms (p90 126) and the REST offset must NOT be added to D.']
 if rt:
     real = min(DELAYS, key=lambda D: abs(D - (pct(0.5) * 2)))
     L.append(f'  WHICH D IS REALISTIC: a quote needs one read + one write, so the floor is ~2x the '

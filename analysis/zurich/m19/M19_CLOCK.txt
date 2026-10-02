@@ -1,0 +1,44 @@
+BINANCE CLOCK QUESTION - SETTLED 10-02 01:5x UTC. READ-ONLY, cheap, no credentials.
+
+WHAT I CLAIMED EARLIER AND GOT WRONG
+At 01:38 I told V that Binance's REST serverTime read +329 ms ahead of NTP with a 4 ms spread and
+that "path asymmetry cannot explain it at an 80-130 ms round trip", so the true Binance feed lag
+might be ~440 ms rather than 112 ms and the realistic arm might be D=700 rather than D=300.
+That reasoning was wrong. The 80-130 ms figure was a curl round trip; the python urllib round trip
+to that same host is ~883 ms, because urllib does a fresh TLS handshake per request and that host
+is slow. At an 883 ms round trip the midpoint estimate can be biased by hundreds of ms, so the
+offset was MY measurement artefact, not Binance's clock.
+
+A) SEVERAL INDEPENDENT BINANCE HOSTS, serverTime minus our NTP-exact clock (chrony RMS 1.6 us)
+  host                      skew p50    own rtt p50   skew spread
+  data-api.binance.vision     +331 ms      883 ms         20 ms
+  api-gcp.binance.com         +384 ms     1026 ms        382 ms
+  api.binance.com               +3 ms      227 ms          2 ms
+  fapi.binance.com              +4 ms      229 ms          1 ms
+  testnet.binance.vision        +4 ms      227 ms        103 ms
+The apparent offset TRACKS THE ROUND TRIP: the three fast-path hosts agree with our clock to within
+3-4 ms, the two slow-path hosts appear hundreds of ms ahead. That is the signature of an asymmetric
+path, not of a skewed exchange clock.
+
+B) THE DECISIVE TEST, which needs no second opinion about anyone's clock
+A 1 s kline cannot be PUBLISHED before it has CLOSED. So (our receipt) minus (its own close time)
+must be positive by at least the network lag. If Binance's publishing clock ran ~330 ms ahead of
+real time, a bar stamped close=X would be emitted at real time X-0.33 s and we would receive it
+BEFORE its own close time by our clock.
+  btcusdt@kline_1s, closed bars only, n 76 over 75 s:
+    receipt - kline CLOSE time : p50 +139 ms   p10 +127   p90 +166
+    receipt - stream EVENT time: p50 +111 ms   p10 +110   p90 +112
+Every bar arrived AFTER its close time, p10 included. The publishing clock is not ahead.
+
+CONCLUSION
+The Binance market-data clock agrees with ours. The true feed lag is the directly measured ~111 ms
+(p90 ~126 ms), and the REST serverTime offset is a property of two slow REST hosts, not of the
+market-data path. It must NOT be added to the reaction-delay budget.
+So the D verdict stands as first stated: D=300 is reachable on the feed side; D=700 remains the
+conservative planning number only because the SIGNED WRITE leg is still unmeasured (the CLOB read
+round trip, p50 43 ms, is a floor on it). Nothing here needs D=1000 or D=1500.
+
+SIDE NOTE worth recording: api.binance.com answered /api/v3/time from this box (+3 ms, rtt 227 ms).
+CLAUDE.md says api.binance.com is geo-blocked from these containers. That may still hold for the
+data endpoints while /time is served - I only tested /time, so this is a flag to re-check, not a
+claim that the block is gone.

@@ -622,3 +622,4 @@ it goes to V with the report at 60 candles, and nothing changes on the probe eit
 [2026-10-02 01:31:17] FILL epoch 1790904600 UP 4.99158sh @ 0.6200000075999998 bn_before -0.0bps
 [2026-10-02 01:36:15] FILL epoch 1790904900 UP 5sh @ 0.61 bn_before -0.0bps
 [2026-10-02 01:41:12] FILL epoch 1790905200 DOWN 5sh @ 0.61 bn_before -0.0bps
+[2026-10-02 01:46:12] FILL epoch 1790905500 UP 5sh @ 0.6 bn_before -0.0bps
