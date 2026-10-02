@@ -27,3 +27,9 @@ CORRECTION (V, 10-02 00:4x, my own): Binance 1 s closes are keyed by kline OPEN 
 row is "lat 2" (= 1 s real delay): m 0.15 +0.058/$ (n 1068, halves +79/+17), m 0.20 +0.112/$ (n 899, halves +80/+60).
 "lat 3" (= 2 s real delay) is ~0 / negative. So: the edge needs < ~1 s from Binance tick to resting quote. Still positive at
 1 s, gone at 2 s. The headline +0.096 overstated it; the honest live expectation is ~+0.06..+0.11/$ IF the loop is fast.
+
+INDEPENDENT PERIOD (V, 10-02 01:0x) - M19_OLDPERIOD.txt: 09-11..09-22, 3456 candles, never used to build/choose M19, k=1.4 fixed.
+Realistic 1 s delay ("lat2"), >=5 shares traded through: m 0.15 +0.085/$ (n 3766, 11/12 days +), m 0.20 +0.161/$ (n 3104,
+12/12 days +), m 0.25 +0.243/$ (n 2513, 12/12). Even at 2 s delay m 0.20 stays +0.090/$. Combined with 09-23..10-01: the
+fair-value maker is positive on ~20 of 21 days at m 0.20 with a 1 s loop. Remaining unknowns (live paper will measure):
+real reaction time, queue priority at our price, whether thin-book prints below our bid would really have reached us.
