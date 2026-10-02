@@ -34,3 +34,8 @@ VERDICT: the EF 13-24 session effect is RETRACTED - the +151 curve (09-23..10-01
 Exploratory (post-freeze): raw is worse than fixed; the ask-touch maker fill is worse than taker (fill 41-46%, adverse:
 fixed 85W/85L as taker vs 22W/48L on the filled subset). STEP 1(B) 09-08..16 NOT run (V, 16:3x): (A) is decisive with zero
 reconstruction error; (B) would add recompute error to a test that already failed.
+
+## NOTE 10-02 16:51 (Zurich correction, relayed by V): 1B is a WEAKER test than 1A
+Dumps harness vs engine's own journalled p on 09-15..16: 5,147 passes, mean |dp| 0.0245, within 0.02 on 58%, opposite side on 235
+(4.4%). No Chainlink for 09-08..16, so open-relative features use the Binance TWAP60 proxy, not the settlement line. Same fidelity as
+the tape1s harness, not better. 1A (zero reconstruction error) stays decisive; 1B is reported as supporting evidence only.
