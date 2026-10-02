@@ -26,3 +26,11 @@ AMENDMENT 10-02 16:1x (before any run; Zurich stopped correctly at step 0, 16:04
   (b) learner/live_backup book1s/polybook/venues (1 Hz asks, 09-08..09-16) with v10 recomputed from Binance 1 s.
   Not a full month: stated, not hidden. Days 09-23..10-01 remain the fidelity window only, never pooled with the test.
 - Prediction, pass rule and report unchanged.
+
+RESULT (Zurich M29_EF_MONTH.txt eaf0f52/c07b234, 10-02 16:36): STEP 0 fidelity 94.6% PASS. STEP 1(A) 09-14..09-22, engine's own
+journalled rows, zero reconstruction: FIXED taker 13-24 -0.0947/$ (n94) vs 00-13 +0.0598 (n76); RAW 13-24 -0.1608 (n116) vs
+00-13 +0.0841 (n90). Both legs of the prediction FAIL and the sign INVERTS; 13-24 halves -0.18/+0.11; 3/7 days positive.
+VERDICT: the EF 13-24 session effect is RETRACTED - the +151 curve (09-23..10-01) was those days, not the clock.
+Exploratory (post-freeze): raw is worse than fixed; the ask-touch maker fill is worse than taker (fill 41-46%, adverse:
+fixed 85W/85L as taker vs 22W/48L on the filled subset). STEP 1(B) 09-08..16 NOT run (V, 16:3x): (A) is decisive with zero
+reconstruction error; (B) would add recompute error to a test that already failed.
