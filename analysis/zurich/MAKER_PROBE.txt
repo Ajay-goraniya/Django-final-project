@@ -647,3 +647,35 @@ it goes to V with the report at 60 candles, and nothing changes on the probe eit
 [2026-10-02 11:21:34] FILL epoch 1790940000 UP 5sh @ 0.69 bn_before 1.12bps
 [2026-10-02 11:26:00] REJECTED epoch 1790940300 UP 0.68 :: RequestRejectedError: invalid post-only order: order crosses book
 [2026-10-02 11:26:03] FILL epoch 1790940300 UP 5sh @ 0.66 bn_before -0.0bps
+[2026-10-02 11:31:20] FILL epoch 1790940600 DOWN 5sh @ 0.6 bn_before 2.63bps
+[2026-10-02 11:41:11] REJECTED epoch 1790941200 DOWN 0.8 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-02 11:41:13] FILL epoch 1790941200 DOWN 5sh @ 0.78 bn_before 1.64bps
+[2026-10-02 11:50:57] WINDOW CHANGED 60-180 -> 60-120 by OWNER confirmation via V ("Cool change Zurich maker to this", 11:4x UTC). Everything else unchanged. Old pid 423387 stopped; restarting.
+[2026-10-02 11:51:12] FILL epoch 1790941800 UP 5sh @ 0.73 bn_before -0.0bps
+
+== 10-02 11:50  WINDOW 60-180 -> 60-120. OWNER CONFIRMED, his words via V: "Cool change Zurich
+maker to this", on V's stated lead "same maker rule, fills only in seconds 60-120, hold to
+settlement, no exits". Zurich probe ONLY; London untouched.
+CHANGED: SEC_LO, SEC_HI = 60, 120 (SEC_HI is also the hard cancel, so a resting order now leaves at
+121 instead of 181). NOTHING ELSE: band 0.60-0.80, calm 0.304, 5 shares, post-only at the best bid,
+2 bps adverse cancel, 3-posts-per-candle cap, 1-share dust floor, -10 day / -20 lifetime, fixed
+stake. No Kelly, no staking change - that still needs the owner's two separate confirmations.
+EVIDENCE IT RESTS ON (both in-sample, and that is stated in both files): PROBE_FILLS_ANATOMY.txt
+section C, live fills at sec 60-120 +0.2058/$1 (n 78) against -0.1617/$1 (n 19) at 120-180; and
+PROBE_EXIT_GRID.txt, where none of 45 exit cells beat holding and the sec 60-120 entry filter was
+the only subset that compounded without tripping the day stop.
+TESTS: 135 pass. The window edge tests moved to 120/121, and a new test_the_old_180_window_is_gone
+asserts that 121, 150, 179, 180 and 181 all refuse to post - the test that would catch the constant
+being changed without the gate following it. Three fixtures that used ep+120 as "inside the window"
+and then stepped to 121-150 were moved to ep+80 with their loops kept inside 60-120; they were
+asserting the old window incidentally, not the rule each was written for.
+RESTART: old pid 423387 stopped at 11:50:32 with ZERO open orders resting (checked first, at sec 32
+of the 11:50 candle, before the posting window opens, so nothing could be orphaned). New pid 475268,
+ENABLED present, env sourced into the child only. The one unsettled fill at the time (11:30 DOWN
+5sh @ 0.60) is unaffected - the cron grader settles it from the fills table.
+IN-DB MARKER: the decisions table is the marker. Every row written before 11:50:32 carries reasons
+of the form "sec N > 180" and every row after carries "sec N > 120", so the change time is provable
+from the probe's own ledger without a schema change to a live database.
+M21 CONSEQUENCE: from 11:50 no 120-180 fill can exist, so P1 can no longer be tested as a split
+within the same period. At the 200-candle mark P1 is reported as post-change 60-120 pnl/$ (both
+halves) against the pre-change 60-120 fills. P2-P7 are unchanged.

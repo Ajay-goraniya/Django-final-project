@@ -33,7 +33,16 @@ from poly_fav import FavBrain, VOL_CUT          # the FROZEN calm gate; not re-d
 
 # ---- frozen from the spec; nothing here is tuned ------------------------------------------------
 BID_LO, BID_HI   = 0.60, 0.80    # favourite = side whose best BID is in this band
-SEC_LO, SEC_HI   = 60, 180       # post window; 180 s is also the hard cancel
+# 10-02 11:4x, OWNER CONFIRMED via V, his words "Cool change Zurich maker to this", on the lead
+# "same maker rule, fills only in seconds 60-120, hold to settlement, no exits". Was 60, 180.
+# Evidence: PROBE_FILLS_ANATOMY.txt section C - live fills at sec 60-120 paid +0.2058/$1 (n 78)
+# against -0.1617 (n 19) at 120-180 - and PROBE_EXIT_GRID.txt, where no exit rule beat holding and
+# the sec 60-120 entry filter was the only thing that compounded without tripping the day stop.
+# NOTHING ELSE CHANGES: band 0.60-0.80, calm 0.304, 5 shares, post-only at the best bid, the 2 bps
+# cancel, the 3-posts cap, the 1-share dust floor, -10 day / -20 lifetime, fixed stake.
+# From this change the probe's own fills ARE the out-of-sample test of M21's P1: no 120-180 fill can
+# exist any more, so P1 is judged post-change 60-120 against pre-change 60-120.
+SEC_LO, SEC_HI   = 60, 120       # post window; SEC_HI is also the hard cancel
 SHARES           = 5.0           # ~$3 a bid
 ADVERSE_BPS      = 2.0           # cancel if Binance moves this far against us over the last 1 s
 ADVERSE_WINDOW_S = 1.0

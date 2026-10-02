@@ -93,23 +93,29 @@ class CancelsOnAdverseMove(unittest.TestCase):
 
 
 class Window(unittest.TestCase):
-    """Property 3. 60-180 s, and nothing rests past 180."""
+    """Property 3. 60-120 s, and nothing rests past 120 (owner 10-02: was 180)."""
     def setUp(self): self.q = M.Quoter()
 
     def test_no_post_before_60(self):
         self.assertEqual(self.q.decide(**{**OK, 'sec': 59})[0], 'none')
 
-    def test_posts_at_60_and_at_180(self):
+    def test_posts_at_60_and_at_120(self):
         self.assertEqual(self.q.decide(**{**OK, 'sec': 60})[0], 'post')
-        self.assertEqual(self.q.decide(**{**OK, 'sec': 180})[0], 'post')
+        self.assertEqual(self.q.decide(**{**OK, 'sec': 120})[0], 'post')
 
-    def test_no_post_after_180(self):
-        self.assertEqual(self.q.decide(**{**OK, 'sec': 181})[0], 'none')
+    def test_no_post_after_120(self):
+        self.assertEqual(self.q.decide(**{**OK, 'sec': 121})[0], 'none')
 
-    def test_resting_order_is_cancelled_at_181(self):
+    def test_the_old_180_window_is_gone(self):
+        """The edge that moved. 121-180 used to post and must not any more; this is the test that
+        would have caught the change being applied to the constant but not to the gate."""
+        for sec in (121, 150, 179, 180, 181):
+            self.assertEqual(self.q.decide(**{**OK, 'sec': sec})[0], 'none', f'sec {sec} must not post')
+
+    def test_resting_order_is_cancelled_at_121(self):
         rest = dict(side='UP', price=0.70)
-        act, _, _, why = self.q.decide(**{**OK, 'sec': 181, 'resting': rest})
-        self.assertEqual(act, 'cancel'); self.assertIn('181', why)
+        act, _, _, why = self.q.decide(**{**OK, 'sec': 121, 'resting': rest})
+        self.assertEqual(act, 'cancel'); self.assertIn('121', why)
 
     def test_resting_order_is_cancelled_if_the_window_has_not_opened(self):
         rest = dict(side='UP', price=0.70)
@@ -131,7 +137,7 @@ class OneOrderOneFill(unittest.TestCase):
         self.assertEqual(self.q.decide(**{**OK, 'resting': rest})[0], 'hold')
 
     def test_a_flipped_favourite_does_NOT_pull_a_resting_order(self):
-        """OWNER option A: only 2 bps or 180 s pull it. A favourite that flips against us shows up
+        """OWNER option A: only 2 bps or the window end pull it. A favourite that flips against us shows up
         as a Binance move, which is the faster signal anyway - that is the control, not the book."""
         rest = dict(side='DOWN', price=0.70)
         self.assertEqual(self.q.decide(**{**OK, 'resting': rest})[0], 'hold')
@@ -319,7 +325,7 @@ class PostPathIntegration(unittest.TestCase):
         self.p = M.Probe(dry_run=True, db=mem())
         self.p.logfile = tempfile.mktemp(suffix='.log')
         self.ep = int(time.time() // 300) * 300
-        self.now = self.ep + 120            # a chosen second inside the 60-180 window
+        self.now = self.ep + 100            # a chosen second inside the 60-120 window
         self.p.gamma_db = ':none:'
         M_tokens = lambda epoch, gamma_db=None: ('TOKUP', 'TOKDN') if epoch == self.ep else (None, None)
         self._orig = M.tokens_for; M.tokens_for = M_tokens
@@ -405,8 +411,8 @@ class NoChasing(unittest.TestCase):
         act, _, _, why = self.q.decide(**{**OK, 'resting': self.rest(), 'adverse': 2.0})
         self.assertEqual(act, 'cancel'); self.assertIn('adverse', why)
 
-    def test_reason_2_past_180(self):
-        act, _, _, why = self.q.decide(**{**OK, 'sec': 181, 'resting': self.rest()})
+    def test_reason_2_past_120(self):
+        act, _, _, why = self.q.decide(**{**OK, 'sec': 121, 'resting': self.rest()})
         self.assertEqual(act, 'cancel'); self.assertIn('outside', why)
 
     def test_the_bid_dropping_below_us_no_longer_pulls_the_order(self):
@@ -551,20 +557,20 @@ class DryRunRests(unittest.TestCase):
         self.p.books = {'TOKUP': dict(bids=[(0.70, 500.0)], asks=[(0.72, 500.0)], ts=time.time()),
                         'TOKDN': dict(bids=[(0.28, 500.0)], asks=[(0.30, 500.0)], ts=time.time())}
         self.p.fav.vol_before_open = lambda epoch, px=None: 0.20
-        n = int((self.ep + 120) * 1000)
+        n = int((self.ep + 80) * 1000)
         self.p.mover.add(n - 900, 100000.0); self.p.mover.add(n, 100000.0)
 
     def tearDown(self): M.tokens_for = self._orig; self.loop.close()
 
     def test_a_dry_post_leaves_a_virtual_order_resting(self):
-        self.loop.run_until_complete(self.p.one_pass(now=self.ep + 120))
+        self.loop.run_until_complete(self.p.one_pass(now=self.ep + 80))
         self.assertIsNotNone(self.p.resting)
         self.assertIsNone(self.p.resting['order_id'], 'a dry order must carry no venue id')
 
     def test_a_stable_book_produces_ONE_post_not_three(self):
         """The regression the cap was masking: with the book unchanged the probe must post once
         and then sit, not re-post until it hits the ceiling."""
-        for t in range(120, 150):
+        for t in range(80, 110):            # inside 60-120 since the owner's 10-02 change
             self.loop.run_until_complete(self.p.one_pass(now=self.ep + t))
         self.assertEqual(self.p.posts_per_epoch[self.ep], 1,
                          f'posted {self.p.posts_per_epoch[self.ep]}x on a book that never moved')
@@ -572,11 +578,12 @@ class DryRunRests(unittest.TestCase):
     def test_dry_mode_puts_our_virtual_order_into_the_book_it_reads(self):
         """Live, our resting BUY is the best bid on its side. The dry sim must reproduce that or it
         over-cancels on V's rule 3 and its resting life is meaningless."""
-        self.loop.run_until_complete(self.p.one_pass(now=self.ep + 120))
+        self.loop.run_until_complete(self.p.one_pass(now=self.ep + 80))
         self.assertIsNotNone(self.p.resting)
         px = self.p.resting['price']
         self.p.books['TOKUP']['bids'] = [(px - 0.01, 500.0)]      # real bid ticks BELOW us
-        for t in range(121, 135):
+        for t in range(81, 95):             # inside the window: this test is about the BOOK, not
+                                            # the clock, so it must not step over the window edge
             self.loop.run_until_complete(self.p.one_pass(now=self.ep + t))
         self.assertIsNotNone(self.p.resting, 'must still be resting: live we would be the best bid')
         self.assertEqual(self.p.posts_per_epoch[self.ep], 1)
@@ -593,7 +600,7 @@ class FillsFeedTheStops(unittest.TestCase):
         self.p = M.Probe(dry_run=False, db=mem())
         self.p.logfile = tempfile.mktemp(suffix='.log')
         self.ep = int(time.time() // 300) * 300
-        self.now = self.ep + 120
+        self.now = self.ep + 80
         self._orig = M.tokens_for
         M.tokens_for = lambda e, gamma_db=None: ('TOKUP', 'TOKDN') if e == self.ep else (None, None)
         self.p.fav.vol_before_open = lambda epoch, px=None: 0.20
@@ -721,7 +728,7 @@ class SameSecondLockout(unittest.TestCase):
         self.p = M.Probe(dry_run=False, db=mem())
         self.p.logfile = tempfile.mktemp(suffix='.log')
         self.ep = int(time.time() // 300) * 300
-        self.now = self.ep + 120
+        self.now = self.ep + 80
         self._orig = M.tokens_for
         M.tokens_for = lambda e, gamma_db=None: ('TOKUP', 'TOKDN') if e == self.ep else (None, None)
         self.p.fav.vol_before_open = lambda epoch, px=None: 0.20
@@ -1217,7 +1224,7 @@ class ComplementTokenFillIsFound(unittest.TestCase):
         import asyncio
         self.loop = asyncio.new_event_loop()
         self.ep = int(time.time() // 300) * 300
-        self.now = self.ep + 120
+        self.now = self.ep + 80
         self.p = M.Probe(dry_run=False, db=mem())
         self.p.logfile = tempfile.mktemp(suffix='.log')
         self.p.guard.flag_on = lambda: True
