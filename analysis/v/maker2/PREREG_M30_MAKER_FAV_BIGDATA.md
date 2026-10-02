@@ -17,3 +17,10 @@ REPORT (file analysis/zurich/M30_MAKER_FAV_BIGDATA.txt): per arm - n, W/L, $ at 
 (owner wants every day positive: count green days / total days, worst day); two time halves; verify.py (sample, halves,
 costs +1c, null = buy the favourite at the same second without the vol rule). n<60 = INSUFFICIENT. Full grid, no best cell.
 PASS for an arm = positive overall at +1c costs AND same sign both halves AND >=70% green days.
+
+## RESULT (Zurich be271ee, analysis/zurich/M30_MAKER_FAV_BIGDATA.txt) - ALL FAIL
+MAKER: fidelity gate FAILED (39.5% / 44.7% / book-model 75.4% vs 85%): 70 of the probe's 108 real fills are absent from tape_btc5.
+  UNRELIABLE - no verdict. Only the live London lane can judge it.
+FAV calm: +382.84 @$10, +0.0216/$ (t +1.52, inside 2 SE), 11/19 green days (58%), halves +/+, +1c still +. FAIL (green days).
+FAV_mid: -598.82, -0.0502/$ (t -2.76), 4/19 green. FAIL.   FAV_all: -976.14, -0.0244/$ (t -2.49), 7/19 green. FAIL.
+Reading: the calm cut removes a significant loss; calm itself is positive but not proven, and not every-day green.
