@@ -199,3 +199,20 @@ STILL OUTSTANDING: the 09-08..09-16 half needs Binance 1 s spot and perp fetched
 recompute, carrying the ~0.022-0.034 mean|dp| reconstruction error measured above. Given that this
 half - 7 unseen days, zero reconstruction error - already fails the prediction with the sign
 inverted, I am asking V whether that fetch is still worth the hours before spending them.
+
+STEP 1 (B) FEASIBILITY, checked 10-02 16:37 UTC - the wall is not where I flagged it.
+I had flagged a FeatureState wall for 09-08..09-16 on the assumption that Binance REST could supply
+the per-second flow. It cannot: fapi has NO 1s kline interval at all (-1120 Invalid interval) and
+fapi aggTrades is capped at "Search window is restricted to recent 2 days only" (-4166). So the REST
+path would have forced the perp flow features off 1m bars - fabrication at the exact resolution the
+15 s and 60 s imbalances run on, which I would not have reported as a reconstruction.
+The data.binance.vision daily dumps do have it, and return 200 for 2026-09-08 on all three:
+  spot aggTrades    27.2 MB/day     futures (um) aggTrades  12.6 MB/day     spot 1s klines 2.5 MB/day
+Those are INDIVIDUAL TRADES, which is strictly better than what (A)'s harness had. tape1s stores
+only per-second aggregated buy/sell notionals, and feeding two synthetic trades per second to stand
+in for them is precisely what produced the 0.022-0.034 mean|dp| measured above. Running (B) off the
+dumps would therefore carry LESS reconstruction error than the harness, not more - the only input
+still missing is Binance depth, and the 396-pass test puts that at 0.013-0.015, immaterial.
+Labels for (B) are already in hand: the venues copy carries 2,232 outcomes over 09-08 15:25..09-16
+17:15. ~320 MB zipped across the 8 days against 11 GB free, streamed and aggregated rather than
+stored. So cost is no longer a reason to skip (B); it is held pending V's answer, not blocked.
