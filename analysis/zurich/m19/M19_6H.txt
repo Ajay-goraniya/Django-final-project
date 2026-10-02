@@ -1,0 +1,57 @@
+M19 PAPER SHADOW - data spans 7.2 h, this process up 6.0 h, 2026-10-02 07:36:34 UTC. NO ORDERS, paper only.
+  graded 599 fills, 8 unsettled; quotes 17908; venue trade prints seen 128702
+           arm     n      W/L  deployed       pnl   pnl/$1  flag
+  m0.15 D  300    75    26/49    126.85   +3.1500  +0.0248  
+  m0.15 D  700    81    28/53    145.35   -5.3500  -0.0368  
+  m0.15 D 1000    83    28/55    151.50  -11.5000  -0.0759  
+  m0.15 D 1500    85    29/56    152.35   -7.3500  -0.0482  
+  m0.20 D  300    62    21/41    100.70   +4.3000  +0.0427  
+  m0.20 D  700    69    22/47    111.30   -1.3000  -0.0117  
+  m0.20 D 1000    71    23/48    116.25   -1.2500  -0.0108  
+  m0.20 D 1500    73    25/48    118.05   +6.9500  +0.0589  
+
+  INDEPENDENT SAMPLE: 88 unique candle-sides, not 599 arm-fills. The eight arms
+    quote the SAME candles, so they are one sample seen eight ways - a per-arm n of ~74
+    is not eight independent tests, and the 60 bar applies to the 88 candle-sides.
+
+  MONOTONICITY IN D (the speed hypothesis predicts faster = better, in order):
+    m0.15: +0.0248  -0.0368  -0.0759  -0.0482   monotone in D? NO
+    m0.20: +0.0427  -0.0117  -0.0108  +0.0589   monotone in D? NO
+    A non-monotone sweep peaking at an arbitrary cell is the shape this project treats as noise.
+
+  PAIRED, D=300 vs each slower arm, counting ONLY the candle-sides where the two actually
+    set DIFFERENT bids - the ones where they agree carry no information about latency:
+    m0.15 D300 vs D700: 31 discordant of 74 shared -> +11.50 vs +2.10   (only-D300 1, only-D700 7)  INSUFFICIENT (<60)
+    m0.15 D300 vs D1000: 36 discordant of 74 shared -> +9.20 vs -2.60   (only-D300 1, only-D1000 9)  INSUFFICIENT (<60)
+    m0.15 D300 vs D1500: 40 discordant of 74 shared -> +7.10 vs -2.85   (only-D300 1, only-D1500 11)  INSUFFICIENT (<60)
+    m0.20 D300 vs D700: 14 discordant of 61 shared -> -7.55 vs -9.25   (only-D300 1, only-D700 8)  INSUFFICIENT (<60)
+    m0.20 D300 vs D1000: 22 discordant of 61 shared -> -9.35 vs -13.00   (only-D300 1, only-D1000 10)  INSUFFICIENT (<60)
+    m0.20 D300 vs D1500: 25 discordant of 61 shared -> -2.25 vs -2.80   (only-D300 1, only-D1500 12)  INSUFFICIENT (<60)
+
+  POOLED all arms: n 599, win 33.7%, -12.35 on $1022.35 = -0.0121/$1.
+    The sim expected +0.058 (m0.15) to +0.112 (m0.20) per $1 at a realistic 1 s delay, so live
+    paper is NOT reproducing it yet. The win rate does match the sim (~33-34%), which says the
+    fair model is calibrated and the gap is in what we get filled on, not in the prediction.
+  REST round-trip to the CLOB read endpoint: n 428, p50 42 ms, p90 55 ms, max 121 ms
+  BINANCE CLOCK: SETTLED 10-02 01:5x, see analysis/zurich/m19/M19_CLOCK.txt. The +329 ms REST
+    serverTime offset I flagged was MY artefact, not Binance's clock: it tracks the round trip
+    (slow hosts data-api.binance.vision +331 at rtt 883, api-gcp +384 at rtt 1026; fast hosts
+    api.binance.com +3, fapi +4, testnet +4 at rtt ~227). Decisive check: a 1 s kline cannot be
+    published before it closes, and all 76 closed bars arrived AFTER their own close time
+    (p50 +139 ms, p10 +127), so the publishing clock is not ahead. True feed lag is the measured
+    ~111 ms (p90 126) and the REST offset must NOT be added to D.
+  WHICH D IS REALISTIC: a quote needs one read + one write, so the floor is ~2x the one-way p50 = ~84 ms -> D=300 is the closest arm. The sim says the edge survives ~1000 ms and dies by ~2000 ms.
+
+  PROBE POST -> ACK LATENCY: NOT MEASURABLE from what the probe records. Why, and what is:
+    orders has post_ts_ms but NO ack timestamp, and the probe does not log a successful
+    post at all - only rejects, fills and errors. So no post/ack pair exists to difference.
+    The decisions table is not a substitute: its rows arrive every ~10.1 s (p10 10.1 s, p90 10.2 s, n 10476), NOT once per 200 ms pass,
+    so consecutive rows are not adjacent passes. I tried that differential first and it
+    returned a NEGATIVE latency (-132 ms), which is how I know the method is invalid.
+    THE ONE REAL BOUND, from the reject path (the log line is written AFTER the venue
+    answers): n 20 samples, p50 -323 ms, p90 -123 ms, range -911..+18 ms.
+    Those stamps are whole SECONDS and truncated, so values up to -999 ms are expected and
+    the only honest reading is: the venue answered within the same second or the next,
+    i.e. the round trip is UNDER ~1 s. It cannot be resolved finer than that from here.
+    To get a real median/p90 the probe must record the ack time inside place() - a code
+    change plus a restart, which is the owner's call, not mine.

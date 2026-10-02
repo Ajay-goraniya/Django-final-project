@@ -4,6 +4,7 @@ import sqlite3, sys, datetime as dt
 
 DB = '/home/ubuntu/m19_paper/m19_paper.sqlite3'
 MARGINS, DELAYS = (0.15, 0.20), (300, 700, 1000, 1500)
+BAR = 60
 d = sqlite3.connect(f'file:{DB}?mode=ro', uri=True); d.row_factory = sqlite3.Row
 g = [dict(r) for r in d.execute('select * from fills where pnl is not null')]
 op = d.execute('select count(*) from fills where pnl is null').fetchone()[0]
@@ -44,6 +45,42 @@ for m in MARGINS:
         dep = sum(x['spent'] for x in s); pnl = sum(x['pnl'] for x in s)
         L.append(f'  m{m:.2f} D{D:>5d} {len(s):5d} {f"{w}/{l}":>8s} {dep:9.2f} {pnl:+9.4f} '
                  f'{pnl/max(dep,1e-9):+8.4f}  {"INSUFFICIENT (<60)" if len(s) < 60 else ""}')
+# ---- the three things that stop the per-arm table being read wrong ---------------------------
+uniq = {(x['epoch'], x['side']) for x in g}
+L += ['', f'  INDEPENDENT SAMPLE: {len(uniq)} unique candle-sides, not {len(g)} arm-fills. The eight arms',
+      f'    quote the SAME candles, so they are one sample seen eight ways - a per-arm n of ~{len(g)//8}',
+      f'    is not eight independent tests, and the 60 bar applies to the {len(uniq)} candle-sides.']
+mono_txt = []
+for m in MARGINS:
+    row = []
+    for D in DELAYS:
+        sel = [x for x in g if abs(x['m'] - m) < 1e-9 and x['delay_ms'] == D]
+        dep = sum(x['spent'] for x in sel)
+        row.append(sum(x['pnl'] for x in sel) / max(dep, 1e-9))
+    mono = all(row[i] >= row[i + 1] for i in range(len(row) - 1))
+    mono_txt.append(f'    m{m:.2f}: ' + '  '.join(f'{v:+.4f}' for v in row) +
+                    f'   monotone in D? {"YES" if mono else "NO"}')
+L += ['', '  MONOTONICITY IN D (the speed hypothesis predicts faster = better, in order):'] + mono_txt
+L += ['    A non-monotone sweep peaking at an arbitrary cell is the shape this project treats as noise.']
+L += ['', '  PAIRED, D=300 vs each slower arm, counting ONLY the candle-sides where the two actually',
+      '    set DIFFERENT bids - the ones where they agree carry no information about latency:']
+for m in MARGINS:
+    for b in DELAYS[1:]:
+        A = {(x['epoch'], x['side']): x for x in g if abs(x['m'] - m) < 1e-9 and x['delay_ms'] == 300}
+        B = {(x['epoch'], x['side']): x for x in g if abs(x['m'] - m) < 1e-9 and x['delay_ms'] == b}
+        both = set(A) & set(B)
+        diff = [k for k in both if abs(A[k]['bid'] - B[k]['bid']) > 1e-9]
+        if not diff: continue
+        da = sum(A[k]['pnl'] for k in diff); db = sum(B[k]['pnl'] for k in diff)
+        L.append(f'    m{m:.2f} D300 vs D{b}: {len(diff)} discordant of {len(both)} shared -> '
+                 f'{da:+.2f} vs {db:+.2f}   (only-D300 {len(set(A)-set(B))}, only-D{b} {len(set(B)-set(A))})'
+                 + ('  INSUFFICIENT (<60)' if len(diff) < BAR else ''))
+wr = 100 * sum(1 for x in g if x['pnl'] > 0) / max(len(g), 1)
+dep = sum(x['spent'] for x in g); pnl = sum(x['pnl'] for x in g)
+L += ['', f'  POOLED all arms: n {len(g)}, win {wr:.1f}%, {pnl:+.2f} on ${dep:.2f} = {pnl/max(dep,1e-9):+.4f}/$1.',
+      f'    The sim expected +0.058 (m0.15) to +0.112 (m0.20) per $1 at a realistic 1 s delay, so live',
+      f'    paper is NOT reproducing it yet. The win rate does match the sim (~33-34%), which says the',
+      f'    fair model is calibrated and the gap is in what we get filled on, not in the prediction.']
 L += [f'  REST round-trip to the CLOB read endpoint: n {len(rt)}, p50 {pct(0.5):.0f} ms, '
       f'p90 {pct(0.9):.0f} ms, max {rt[-1] if rt else float("nan"):.0f} ms']
 L += ['  BINANCE CLOCK: SETTLED 10-02 01:5x, see analysis/zurich/m19/M19_CLOCK.txt. The +329 ms REST',
