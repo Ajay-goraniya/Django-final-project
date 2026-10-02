@@ -12,3 +12,8 @@ TEST A (Zurich, retro, 09-30 17:00..now): hybrid = real probe fills + FAV-taker 
  Caveat logged now: the probe ran 60-180 until 11:50 today, so retro phase 1 uses only its fills at sec <= 120.
 TEST B (forward): same three as paper arms from now, judged at 150 calm candles with >= 60 hybrid trades.
 PASS (both A and B): hybrid > FAV taker per $1 and in $; hybrid > 0 in both halves. Then proposed to the owner (his yes needed).
+
+RESULT TEST A (Zurich M26_HYBRID.txt 5051426): FAIL. 202 calm candles 09-30 17:00..10-02: hybrid -0.0072/$ (-7.55), FAV taker
++0.0211/$ (+32.44), probe-only +0.1271/$ (+35.96, 76 trades). Fallback leg alone 79 trades -0.0565/$: it enters at sec 128 @0.764
+vs FAV's sec 71 @0.721 (+0.0696/$) on the same candles - waiting costs 4.3c and flips the sign. Test B not built. RETRACTED.
+Standing read: in calm-FAV the ENTRY TIME dominates; the passive probe is the best execution measured (+0.127/$, real fills).
