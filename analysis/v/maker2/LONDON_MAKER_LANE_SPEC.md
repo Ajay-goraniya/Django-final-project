@@ -51,3 +51,9 @@ The maker brain must plug into the EF lane's EXISTING plumbing, not run beside i
  6. ACCURACY / metrics: metrics.ef (accuracy, wins, losses, real vs shadow, local_pnl) computed from maker fills the same way.
  7. Dashboard last-fill card, health, alerts unchanged.
 Show each of 1-7 passing in the test report before V asks the owner for "go".
+
+## OWNER ADDENDUM 10-02 ~14:2x - STOP LIMITS (answers decision 1): "for the limit set the textbox, I'll set by myself what limit I want"
+ 8. Trade control gets TEXT BOXES for the maker lane's loss limits: "daily loss limit $" and "lifetime loss limit $". The owner types
+    the value. EMPTY = no limit (default; London's no-coded-stop rule holds until he types one). When hit: the maker lane stops
+    posting (EF lane off for the day / for good), never master, never a halt of other lanes; the stop is visible on the dashboard.
+    Validated input (positive number or empty), persisted across restarts, logged in the audit table like other trade-control changes.
