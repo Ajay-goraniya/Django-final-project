@@ -26,7 +26,14 @@ _UNUSED   = int(sys.argv[4]) if len(sys.argv) > 4 else 0      # was TOP_BASE; th
                                                              # to save tokens). Arg kept so the
                                                              # arm line and watch.args still fit.
 REM_BASE  = int(sys.argv[5]) if len(sys.argv) > 5 else 0      # remainder-cancels already seen
-REJECT_ALERT = 12          # a burst of post-only rejects since the restart
+# 10-02 11:3x: this was REJECT_ALERT = 12 counted CUMULATIVELY since arming, which is not a burst
+# detector - it fires eventually no matter the rate. It duly fired on 12 rejects spread over 14.1 h
+# (0.8/h, max 3 in any 30 min, all ordinary crosses-book, zero cash rejects). Now a real rate.
+# Calibrated against the incident it exists for: the 09-30 17:00 churn was 5 rejects inside 101 s
+# (and 34 posts, which the 3-posts-per-candle cap now makes impossible). Lifetime maximum in ANY
+# window is those same 5; routine traffic never exceeds 3 in 30 min. So 5 within 5 min catches the
+# churn shape and stays silent on normal churn.
+REJECT_N, REJECT_WIN_S = 5, 300
 CAND60_FLAG  = '/home/ubuntu/maker_probe/.candles60.alerted'  # fires the 60-candle report once, ever
 CAND200_FLAG = '/home/ubuntu/maker_probe/.candles200.alerted' # M21 out-of-sample mark, once, ever
 M21_BAR = 200
@@ -113,9 +120,11 @@ while True:
         r.close()
         print(f'ALERT BALANCE_REJECT: {cash} cash reject(s); last order {row[0]} epoch {row[1]} '
               f'@ {row[2]} :: {row[3]}'); break
-    rej = q("select count(*) from orders where dry=0 and status='REJECTED' and post_ts_ms>?", (SINCE_MS,))
-    if rej >= REJECT_ALERT:
-        print(f'ALERT REJECT_RATE: {rej} post-only rejects since the restart'); break
+    rej = q("select count(*) from orders where dry=0 and status='REJECTED' and post_ts_ms>? "
+            "and post_ts_ms>?", (SINCE_MS, int((time.time() - REJECT_WIN_S) * 1000)))
+    if rej >= REJECT_N:
+        print(f'ALERT REJECT_BURST: {rej} rejects in the last {REJECT_WIN_S//60} min '
+              f'(threshold {REJECT_N}) - churn shape, check the book gate'); break
     try:
         import datetime as _dt
         hits = []
