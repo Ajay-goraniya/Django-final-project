@@ -21,3 +21,8 @@ IN-SAMPLE MECHANISM (09-11..16, logged before the forward read): of 638 FAV-wide
 wide +17.10 vs base -3.07. Paired on those 310: mean +0.065/share, t 2.52, sign-flip p 0.006, halves +14.45 / +5.73.
 Reading: base waits for the favourite to climb to 0.65 and pays for the move; buying the same favourite at ~0.60 keeps it.
 So the forward check that matters most is #3, the paired one.
+
+RESULT (Zurich, M25_FAVWIDE.txt 4854391): FAIL on checks 1-3. Forward 09-29..10-02: wide -43.02 (halves +27.57/-70.59) vs base
++45.01; paired 158 discordant candles wide -83.46; the earlier-cheaper entry that GAINED +17 in sample LOST -103 forward.
+Today: wide -72.68 vs base -64.97. RETRACTED. The band/timing knob flips sign between periods = noise; not tuned further.
+Base calm-FAV stays the reference (forward +45.01 on 09-29..10-02 incl. today's -64.97).
