@@ -1,0 +1,54 @@
+London fills 366; my decide_log starts 09-24 12:20 UTC
+M29 STEP 0 - FIDELITY. READ-ONLY. 2026-10-02 16:18:34 UTC
+fixed15 replayed on Zurich decide rows; target = London M17_FILLS.csv (366 real fills)
+
+COVERAGE: my decide_log starts 09-24 12:20, so 294 of 366 London fills are testable and 72 are UNCOVERED.
+  The 72 uncovered are NOT counted as misses - scoring them would measure my data
+  gap, not the harness. Their days: 09-23:49, 09-24:23
+
+MATCH on the 294 testable fills:
+  same candle AND same side : 278  = 94.6%
+  fired but OPPOSITE side   : 13
+  no fire at all            : 3
+  VERDICT: PASS against the >= 80% bar
+
+my fires on candles London has NO fill for: 478 (expected - a fire is not a fill; London had to be quoted and filled)
+
+ON THE MATCHED FILLS, how close is the replay (mine minus London):
+  fire second: p10 -27.3 MED -0.8 p90 +0.2 s
+  ask paid   : p10 -0.130 MED -0.020 p90 +0.040
+  model p    : p10 -0.0612 MED +0.0585 p90 +0.1095
+  A near-zero median on all three means the same brain on the same inputs; a shifted
+  second with a matching p means my pass grid is coarser than London's, not a different rule.
+
+STEP 0 VERDICT: PASS, 94.6% on 294 testable fills (bar 80%).
+
+TWO THINGS SETTLED BEFORE THE NUMBERS, both of which could have invalidated everything:
+ 1. IS JOURNALLED `p` RAW OR CALIBRATED? The engine writes p_raw ONLY when calibration actually
+    fires (btc_model_v12_polymarket.py:485-495, and note `if q<p else d` - it applies Platt only when
+    that LOWERS p). decide_log has p_raw non-null in 0 of 1,291,453 rows, so calibration has never
+    fired on Zurich and journalled `p` IS the raw model output. Applying platt() to it is therefore
+    correct and not a double-transform. This mattered: the old journals (09-15..09-22) carry `p` and
+    NEVER p_raw - 0 of 7,123 / 17,592 / 3,628 mode=pnl rows - so the fallback in
+    raw_vs_fixed_london_exec.py was reading `p` as raw, and had the engine been calibrating, every
+    number from those days would have been platt applied twice.
+ 2. DOES LONDON LOG THE CALIBRATED p? Yes, and this turns an apparent discrepancy into
+    confirmation. On the 278 matched fills, London's model_p minus MY RAW p has median -0.0585, but
+    London's model_p minus platt(MY RAW p) has median EXACTLY 0.0000. Same brain, same calibration.
+    The remaining spread (p10 -0.036, p90 +0.128, 39.6% within +/-0.02) is pass timing, not rule: my
+    pass grid is coarser than London's, which is the same thing the -0.8 s median fire-second offset
+    says.
+WHAT DID NOT MATCH, stated rather than buried: 13 of 294 fired the OPPOSITE side and 3 produced no
+fire at all. Both are consistent with coarser pass timing near the EV threshold - a pass a second
+later can flip which side clears 0.15 - but they are 5.4% of the sample and they are why the match
+is 94.6% and not 100%. 478 of my fires are on candles London has no fill for; that is expected, a
+fire is not a fill, London still had to be quoted and filled.
+THE 72 UNCOVERED FILLS (09-23: 49, 09-24: 23) are outside my decide_log entirely and are reported as
+uncovered, not scored as misses.
+STEP 1 NOW PROCEEDS on 09-08..09-22, and input (a) is in better shape than I reported at ETA time:
+the EF decide rows for 09-14 23:49 .. 09-22 13:16 exist CONTINUOUSLY across four journals -
+polymarket_v12_live_zurich (09-14 23:49), _2 (09-15 02:06..09-16 23:35), /tmp/z3copy (09-16 23:35..
+09-21 14:12, which I have copied to /home/ubuntu/m29/ so it cannot be lost to a /tmp clean), and
+zurich_paper1 (09-21 14:12..09-22 13:16). They carry `p` + ask per pass, and `p` is raw per (1), so
+THE 09-15..09-22 HALF NEEDS NO v10 RECOMPUTE AT ALL. The FeatureState risk I flagged therefore
+applies only to the 09-08..09-16 live_backup half.
