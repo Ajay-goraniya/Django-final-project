@@ -33,3 +33,7 @@ Realistic 1 s delay ("lat2"), >=5 shares traded through: m 0.15 +0.085/$ (n 3766
 12/12 days +), m 0.25 +0.243/$ (n 2513, 12/12). Even at 2 s delay m 0.20 stays +0.090/$. Combined with 09-23..10-01: the
 fair-value maker is positive on ~20 of 21 days at m 0.20 with a 1 s loop. Remaining unknowns (live paper will measure):
 real reaction time, queue priority at our price, whether thin-book prints below our bid would really have reached us.
+
+LIVE CONTRADICTION (10-02, PROBE_FILLS_ANATOMY.txt C.3): on 97 real probe fills, M19 fair-minus-price > 0.10 paid -0.31/$ and
+0..0.10 paid -0.02/$, while <= 0 paid +0.15..+0.25/$. The fair model's "bargain" = the market already moved against that side.
+M19's sim edge was adverse selection; the 6 h paper (-0.012/$, win% matched) agrees. M19 is NOT a candidate for live.
