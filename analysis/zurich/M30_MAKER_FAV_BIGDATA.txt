@@ -237,3 +237,101 @@ is what the probe did for 88 candles and is the only fill evidence here that pro
 One more thing the grid does say, for what it is worth at this n: the no-vol-gate null returns
 +0.1122 per $1 against the gated rule's +0.1649 on the same print model, so the calm gate improves
 the maker leg per dollar too - the same direction the FAV arms show, from independent data.
+
+================================================================================
+M30 ADDENDUM - MAKER ON BOTH BLOCKS. V was right and my data sweep was wrong.
+The 09-11..09-16 bids ARE on the branch: learner/live_backup/polybook.sqlite3.gz, table pb,
+1 Hz. My earlier sweep globbed *.sqlite3 and so never opened a .gz, and I reported the file as
+absent on that basis. It is present, it is 1,184 candles with a live-websocket book, and 1,182
+of them are graded by venues.outcome. The prints for those candles came from
+data-api.polymarket.com/trades, market by market, via the same derive-maker-from-takerOnly
+method tape_rec.py uses - the API DOES reach back to 09-11, so no part of this block is
+reconstructed. Only status='live websocket' rows are used; a reconnecting or absent book is a
+stale read and the live rule refuses to post off one.
+
+THE FIDELITY GATE IS UNCHANGED AND STILL FAILS. It can only be measured where we really traded,
+which is block B: print-at/through 44.7%, print-strictly-through 39.5%, book model 75.4%, all
+against the 85% bar, because the probe's own 108 fills appear in the tape only 38 times. More
+candles do not repair a fill model that cannot see its own ground truth, so EVERYTHING BELOW IS
+STILL MARKED UNRELIABLE. What the extra block buys is a check on whether the narrow block was a
+fluke - and on the best available model it is not, it is the same small positive number.
+
+   block / fill model                     n       W/L      $@10   per $1      SE      t    maxDD   green  fill%
+   -- A 09-11..09-16  (1184 book candles, 1180 with prints)
+   book: ask <= our bid                 332   228/104    +39.75  +0.0120  0.0380  +0.31  -164.55     3/6  76.7%  
+   book model +1c                       128     81/47   -113.49  -0.0887  0.0621  -1.43  -138.29     0/6  82.1%  
+   print at/through bid                 167    156/11   +570.08  +0.3414  0.0295 +11.58   -10.83     6/6  38.6%  
+   print strictly through               146    135/11   +478.65  +0.3278  0.0332  +9.86   -10.83     6/6  33.7%  
+   book model, NO vol gate (null)       823   549/274   -189.59  -0.0230  0.0244  -0.94  -375.02     2/6  78.6%  
+   -- B 09-30..10-02  (1208 book candles, 737 with prints)
+   book: ask <= our bid                 309    212/97    +44.07  +0.0143  0.0396  +0.36  -153.88     3/5  78.6%  
+   book model +1c                       152    107/45    +35.67  +0.0235  0.0547  +0.43   -70.72     3/5  70.4%  
+   print at/through bid                  99     79/20   +150.31  +0.1518  0.0600  +2.53   -31.11     3/3  45.8%  
+   print strictly through                86     67/19   +104.75  +0.1218  0.0663  +1.84   -37.01     3/3  39.8%  
+   book model, NO vol gate (null)       889   600/289    -26.63  -0.0030  0.0235  -0.13  -232.17     2/5  82.4%  
+
+   -- POOLED A+B
+   book: ask <= our bid                 641   440/201    +83.82  +0.0131  0.0274  +0.48  -164.55    6/11  77.6%  
+   book model +1c                       280    188/92    -77.82  -0.0278  0.0412  -0.68  -138.29    3/11  75.3%  
+   print at/through bid                 266    235/31   +720.40  +0.2708  0.0295  +9.18   -31.11     9/9  41.0%  
+   print strictly through               232    202/30   +583.40  +0.2515  0.0328  +7.66   -37.01     9/9  35.7%  
+   book model, NO vol gate (null)      1712  1149/563   -216.22  -0.0126  0.0169  -0.75  -375.02    4/11  80.5%  
+
+   PER DAY, pooled, book model (the one with the least-bad gate):
+   day          $@10
+   09-11      -69.78
+   09-12       -4.63
+   09-13      -12.22
+   09-14      +30.04
+   09-15      +54.96
+   09-16      +41.37
+   09-28       +9.35
+   09-29      +72.10
+   09-30      -19.58
+   10-01      +82.12
+   10-02      -99.91
+   GREEN DAYS: 6 of 11 = 55%
+
+MAKER VERDICT ACROSS BOTH BLOCKS - STILL NO PASS, AND STILL FOR THE SAME TWO REASONS.
+  pooled book model: +83.82 at $10, +0.0131 per $1 +/- 0.0274, t +0.48, n 641, 6 of 11 green days, maxDD -164.55
+  at +1c costs     : -77.82, -0.0278 per $1 - NEGATIVE, so the edge does not survive one tick
+  block A +0.0120 (n 332) vs block B +0.0143 (n 309) - same sign, which is the one genuinely new piece of information: the narrow block was not a fluke.
+  the no-vol-gate null returns -0.0126 per $1 on n 1712, so the calm gate HELPS the maker leg per dollar.
+  1. the fidelity gate fails (75.4% best, 85% bar), so none of these numbers is load-bearing;
+  2. even taken at face value the pooled t is +0.48 - inside 2 SE, not an edge you can
+     prove on 11 days, and the green-day count is under the owner's every-day bar.
+So the conclusion from M30 does not move: the FAV calm gate has a measurable shape, the maker
+rule cannot be validated off-line on this box, and the fix for that is recording our own resting
+order state plus 1 Hz top of book while it runs live - not another backtest.
+
+THE TWO PRINT MODELS IN THIS TABLE ARE INVALID AND MUST NOT BE READ AS A RESULT. I am leaving them
+printed because the prereg names them, but +0.27 per $1 at 235W/31L and t +9.18 is not an edge, it
+is a selection artefact, and here is the measurement that identifies it: splitting the print-model
+fills by how far the matching print sat BELOW our resting bid,
+    print AT our bid (within 0.5c)   n=63   win 100.0%
+    0.5-5c below                     n=36   win  91.7%
+    5-25c below                      n=18   win  72.2%
+    more than 25c below              n= 4   win  50.0%
+63 of 63 is impossible as trading and gives the mechanism away: a print lands at the favourite's bid
+price only while that bid is STILL 0.60-0.80, i.e. in candles where the favourite did not weaken -
+which is very nearly the set of candles the favourite goes on to win. The fill event is conditioned
+on the outcome. As the matching print moves away from our bid the win rate falls monotonically back
+towards a coin flip, which is exactly what a conditioning artefact looks like when you relax the
+condition. Applying the documented 2.2 s data-api lag (passive_fav.py / pfav.py; I had omitted it
+on the first run, which was its own error) moved the number from +0.2803 to +0.2708 and so was NOT
+the cause.
+A real resting bid is hit when the price comes DOWN to it. The book model encodes that and gets
+69% wins and no edge; matching prints at our own bid price encodes the opposite and flatters the
+rule. That is a second, independent reason the print fill models fail on this box, alongside the
+tape missing 70 of the probe's 108 real fills.
+
+SO THE MAKER READ RESTS ON THE BOOK MODEL, AND ACROSS BOTH BLOCKS IT IS THE SAME SMALL NOTHING:
+  block A 09-11..09-16  +39.75 at $10, +0.0120 per $1 +/- 0.0380, t +0.31, n 332, 3 of 6 green
+  block B 09-30..10-02  +44.07 at $10, +0.0143 per $1 +/- 0.0396, t +0.36, n 309, 3 of 5 green
+  POOLED                +83.82 at $10, +0.0131 per $1 +/- 0.0274, t +0.48, n 641, 6 of 11 green
+The one genuinely new thing the extra 1,184 candles buy is that the narrow block was not a fluke -
+two blocks 19 days apart, on two different book recorders, give the same sign and nearly the same
+size. What they do not buy is a pass: t +0.48 is inside 2 SE, 55% green days is under the owner's
+every-day bar, and at +1c costs the pooled number goes NEGATIVE (-77.82, -0.0278), so the whole
+apparent edge is less than one tick. The calm gate still helps - the no-vol-gate null is -0.0126
+per $1 on n 1,712 against the gated +0.0131 - which is the same direction the FAV arms show.
