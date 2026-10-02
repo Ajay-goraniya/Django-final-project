@@ -17,3 +17,9 @@ PREDICTIONS on fills AFTER 10-02 10:27 UTC, evaluated at 200 distinct graded can
 PASS for P1-P3: holds out of sample, better level n >= 60, both OOS halves same sign, random-subset null p < 0.05.
 If pass -> propose that rule change to the owner (Yes/No). If fail -> probe stays as is. No change without his confirmation.
 No cell is read before the 200-candle mark. Zurich reports the whole grid, never the best cell.
+
+AMENDMENT 10-02 10:4x (before any OOS read; Zurich ack c914a35, armed at 78/200 candles, evaluator refuses to run early):
+- In-sample random-subset null: P1 p=0.016, P2 p=0.074, P3 p=0.053. P2/P3 were never significant in sample, so an OOS
+  FAIL on them means "was never there", not "reversed". P1 is the only prediction with in-sample support.
+- P4 came from the ex-17:00 table; with the 09-30 17:00 candle in, 15 winners touched 0.10. One such candle fails P4 alone.
+- Null permutes the bucket label only, never the outcome. Group sizes kept.
