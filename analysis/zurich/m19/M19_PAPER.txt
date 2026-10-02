@@ -1,0 +1,33 @@
+M19 FAIR-VALUE MAKER - LIVE PAPER SHADOW ON ZURICH. PLACES NO ORDERS.
+Started 10-02 00:32 UTC, self-stops after 48 h (argv is the run length in seconds).
+Process /home/ubuntu/m19_paper/m19_paper.py, db m19_paper.sqlite3, log m19.log, heartbeat
+m19.heartbeat. Supervised by cron + flock -n, the same pattern the other Zurich shadows use, so a
+death is recovered within a minute and a live process blocks a second copy. Read-only everywhere:
+the gamma mirror for tokens and settlement, two public websockets, one public REST endpoint.
+Nothing touches the maker probe or the v12 engine, and there is no trading key in the process.
+
+RULE, as briefed: p_up = Phi(ln(S/O) / (1.4*sig*sqrt(tau))); O = mean Binance price over
+[open, open+60), running before sec 60; sig = std of 1 s log returns over the prior 300 s; tau =
+seconds left; recomputed every 200 ms. Virtual bids on BOTH tokens at floor((fair - m)*100)/100 for
+m = 0.15 and 0.20, only 0.05-0.90, sec 30-270, 5 shares, at most one fill per side per candle.
+k = 1.4 is M19's TRAIN-fitted value, frozen; it is never re-fitted here.
+REACTION DELAY is the experiment: a quote derived from a Binance tick at T is not live until T + D,
+for D = 300, 700, 1000, 1500 ms, so a print arriving before then cannot fill it. 8 arms total.
+FILL = a real Polymarket print on that token STRICTLY below our live bid, with >= 5 shares traded
+below it inside one second. Hold to settlement, graded on the venue's own resolution, maker fee 0.
+
+WHAT THE SMOKE TEST CAUGHT BEFORE THE RUN (both would have produced quiet, wrong output):
+1. Cold start: sigma needs 240 of the 300 seconds BEFORE the candle opened, so a fresh process
+   quoted NOTHING for five minutes and the db looked like "no opportunities" rather than "no data".
+   Fixed by warm-starting the 1 s series from the engine's bn_flow recorder (read-only) and by
+   forward-filling print-less seconds up to 10 s, exactly as poly_fav.FavBrain._series() does.
+2. The RTT probe returned code -1 on every call: the CLOB refuses urllib's default User-Agent.
+   Fixed with a UA; now 200 at p50 ~76 ms. The HTTP code is stored so a silent failure cannot be
+   read as a fast round trip.
+FILL RULE TESTED BOTH WAYS against the real module: no fill on a print AT the bid, no fill under 5
+shares through it, a fill once cumulative >= 5 in the second, one fill per side per candle, the two
+sides independent, and - the point of the whole run - the D=1500 arm does NOT fill on a print that
+arrives while its quote is still in flight.
+MEASUREMENT CAVEAT: the per-minute RTT is a READ round trip. A live maker also needs a signed write,
+which is slower, so the measured p50 is a FLOOR on the achievable D, not an estimate of it.
+Reports to V at 6 h and 24 h via m19_report.py. Page: :8788/maker has an /m19 section, read-only.

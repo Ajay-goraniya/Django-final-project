@@ -30,6 +30,7 @@ PIDF   = '/home/ubuntu/maker_probe/watch.args'
 REPO   = '/home/ubuntu/claude-work/repo'
 BN_DB  = '/home/ubuntu/pm_multi/bn_flow.sqlite3'
 GAMMA  = '/home/ubuntu/pm_ef3/gamma_zurich.sqlite3'
+M19DB  = '/home/ubuntu/m19_paper/m19_paper.sqlite3'   # the M19 PAPER shadow, read-only
 PW     = os.environ.get('DASHBOARD_PASSWORD', '')
 DAY_STOP, LIFE_STOP, BAR = -10.0, -20.0, 60
 VOL_CUT = 0.304          # the frozen calm cut; same number poly_fav uses
@@ -115,6 +116,39 @@ def live_vol(now_s):
         return None
 
 
+def m19_state():
+    """The M19 fair-value paper shadow, read-only. It places NO orders; nothing here is money."""
+    out = dict(ok=False, arms=[], rtt=None, graded=0, open=0, quotes=0, trades=0, hb='')
+    try:
+        c = sqlite3.connect(f'file:{M19DB}?mode=ro', uri=True); c.row_factory = sqlite3.Row
+    except Exception:
+        return out
+    try:
+        g = [dict(r) for r in c.execute('select * from fills where pnl is not null')]
+        out['graded'] = len(g)
+        out['open'] = c.execute('select count(*) from fills where pnl is null').fetchone()[0]
+        h = c.execute('select * from health order by ts_ms desc limit 1').fetchone()
+        if h: out['quotes'], out['trades'] = h['quotes'], h['poly_trades']
+        rt = sorted(r[0] for r in c.execute('select ms from rtt where code=200'))
+        if rt: out['rtt'] = (len(rt), rt[len(rt) // 2], rt[min(len(rt) - 1, int(0.9 * len(rt)))])
+        for m in (0.15, 0.20):
+            for D in (300, 700, 1000, 1500):
+                s_ = [x for x in g if abs(x['m'] - m) < 1e-9 and x['delay_ms'] == D]
+                w = sum(1 for x in s_ if x['pnl'] > 0); l = sum(1 for x in s_ if x['pnl'] < 0)
+                dep = sum(x['spent'] for x in s_); pnl = sum(x['pnl'] for x in s_)
+                out['arms'].append((m, D, len(s_), w, l, pnl, pnl / dep if dep else 0.0))
+        out['ok'] = True
+    except Exception as e:
+        out['hb'] = f'{type(e).__name__}'
+    finally:
+        c.close()
+    try:
+        out['hb'] = open('/home/ubuntu/m19_paper/m19.heartbeat').read().strip()
+    except OSError:
+        pass
+    return out
+
+
 def hhmm(ts): return dt.datetime.fromtimestamp(ts, dt.UTC).strftime('%H:%M')
 def hms(ts):  return dt.datetime.fromtimestamp(ts, dt.UTC).strftime('%m-%d %H:%M:%S')
 
@@ -195,6 +229,24 @@ def page(s):
                     f"<td class={cls}>{res}</td>"
                     f"<td class='num {cls}'>{money(f['pnl'])}</td></tr>")
     advtxt = (f"{s['adv_n']} of {len(s['adv'])}" if s['adv'] else 'no venue-timed fills yet')
+    m9 = m19_state()
+    if not m9['ok']:
+        m19html = '<div class=sub>no M19 database yet</div>'
+    else:
+        rows19 = ''.join(
+            f"<tr><td class=mut>m{m:.2f}</td><td class=num>{D}</td><td class=num>{n}</td>"
+            f"<td class=num>{w}/{l}</td><td class='num {'on' if pnl>0 else ('off' if pnl<0 else 'mut')}'>"
+            f"{pnl:+.2f}</td><td class='num {'on' if per>0 else ('off' if per<0 else 'mut')}'>{per:+.4f}</td>"
+            f"<td class=mut>{'insufficient' if n < 60 else ''}</td></tr>"
+            for m, D, n, w, l, pnl, per in m9['arms'])
+        rtt = ('<span class=mut>no successful probe yet</span>' if not m9['rtt'] else
+               f"n {m9['rtt'][0]} &middot; p50 {m9['rtt'][1]:.0f} ms &middot; p90 {m9['rtt'][2]:.0f} ms")
+        m19html = f"""<div class=row><span class=k>graded / unsettled</span><span class=v>{m9['graded']} / {m9['open']}</span></div>
+<div class=row><span class=k>virtual quote changes</span><span class=v>{m9['quotes']}</span></div>
+<div class=row><span class=k>venue trade prints seen</span><span class=v>{m9['trades']}</span></div>
+<div class=row><span class=k>CLOB read round-trip</span><span class=v>{rtt}</span></div>
+<table><tr><th>margin</th><th class=num>delay ms</th><th class=num>n</th><th class=num>W/L</th><th class=num>pnl</th><th class=num>pnl/$1</th><th></th></tr>{rows19}</table>
+<div class=sub style="margin-top:6px">{m9['hb']}</div>"""
     return f"""<!doctype html><html><head><meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1"><meta http-equiv=refresh content=20>
 <title>Zurich maker probe</title><style>{CSS}</style></head><body>
@@ -213,6 +265,10 @@ def page(s):
 <div class=row><span class=k>live vol (trailing 5 min, NOT the gate)</span><span class=v>{livetxt}</span></div>
 <div class=sub style="margin-top:6px">The gate uses only the 5 minutes BEFORE this candle opened, read once when the order is posted; it cannot change inside the candle. The live number below it moves all the time and decides nothing - 8787's &quot;engine live vol&quot; is that kind of reading, not this gate.</div>
 <div class=row><span class=k>resting order</span><span class=v>{rest}</span></div></div>
+
+<div class=card><h2>M19 paper shadow &mdash; NO ORDERS, virtual money</h2>
+<div class=sub>a fair-value two-sided maker quoted against the real book to measure REACTION SPEED. It places nothing, holds nothing, and risks nothing. Separate process and database from the probe above.</div>
+{m19html}</div>
 
 <div class=card><h2>Totals</h2>
 <div class=row><span class=k>fills</span><span class=v>{len(s['fills'])} <span class=mut>over {s['candles']} candles</span></span></div>
