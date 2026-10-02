@@ -39,3 +39,9 @@ reconstruction error; (B) would add recompute error to a test that already faile
 Dumps harness vs engine's own journalled p on 09-15..16: 5,147 passes, mean |dp| 0.0245, within 0.02 on 58%, opposite side on 235
 (4.4%). No Chainlink for 09-08..16, so open-relative features use the Binance TWAP60 proxy, not the settlement line. Same fidelity as
 the tape1s harness, not better. 1A (zero reconstruction error) stays decisive; 1B is reported as supporting evidence only.
+
+## RESULT (A)+(B), 15 days 09-08..09-22, 799 fires (Zurich 0ec2dcb, analysis/zurich/M29_EF_MONTH.txt) - CLOSED FAIL
+13-24 minus 00-13, taker: FIXED -0.047 +/-0.109 (t -0.43), RAW -0.123 +/-0.103 (t -1.19). No session effect distinguishable from zero.
+Correction to V's 1A framing to the owner: the inverted SIGN is noise too - neither session is better. London's 13-24 chart was luck.
+Only significant cells: maker/ask-touch leg, NEGATIVE - FIXED -0.213/$ (t -2.78), RAW -0.228/$ (t -3.32); FIXED 71W/120L on fills.
+Raw EF + resting-order fill fix = adverse selection, worse not better. Do not re-open the EF session filter.
