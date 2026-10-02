@@ -216,3 +216,263 @@ still missing is Binance depth, and the 396-pass test puts that at 0.013-0.015, 
 Labels for (B) are already in hand: the venues copy carries 2,232 outcomes over 09-08 15:25..09-16
 17:15. ~320 MB zipped across the 8 days against 11 GB free, streamed and aggregated rather than
 stored. So cost is no longer a reason to skip (B); it is held pending V's answer, not blocked.
+
+================================================================================
+M29 STEP 1 (B) - 09-08..09-16 FROM THE BINANCE DAILY DUMPS. READ-ONLY. 2026-10-02 17:12:43 UTC
+Run on V's override of 'stop here': 14,384,896 individual spot and futures trades fed to v10's
+own FeatureState, 2,059 candles decided, 567 fires. Asks and labels from the live_backup venues
+copy (q, ~5 s grid; outcome = Polymarket's own resolution, 2,059 epochs carrying a label).
+
+STEP 1 (B) FIDELITY GATE - the dumps harness against the ENGINE'S OWN journalled p
+Measured on the 09-15..09-16 overlap, where both the dumps AND (A)'s journals exist, so
+this is the SAME gap the depth test measured for the tape1s harness - but it also includes
+the ref_src=0 substitution, which the depth test did not cover.
+  comparable passes: 5147   (side disagreed on a further 235)
+  mine minus journalled : p10 -0.0452  MED +0.0000  p90 +0.0473  mean|d| 0.0245  within 0.02: 58%
+  (medians are structurally 0.0000 - v10's p is quantised by its isotonic calibration,
+   3,405 distinct values over 2,033,761 rows - so mean|d| is the informative figure.)
+
+(B) fires 567 over 330 candles; 423 on the 245 days NEW to (B) (09-08..09-14 23:49) and 144 on the 85 candles that overlap (A).
+The overlap is used for the gate above and is EXCLUDED from the combined total below,
+so no candle is counted twice.
+
+== STEP 1 (B), 09-08..09-14, 8 days new to the test - WHOLE WINDOW
+   arm / exec                 n      W/L     pnl $   per $1  flag
+   FIXED / taker            193    99/94     -3.15  -0.0033  
+   FIXED / ask-touch        121    49/72    -90.15  -0.1490  
+     ask-touch fill rate  121/193 = 62.7%
+   RAW / taker              230  105/125    -65.63  -0.0571  
+   RAW / ask-touch          158   56/102   -166.11  -0.2103  
+     ask-touch fill rate  158/230 = 68.7%
+
+== STEP 1 (B), 09-08..09-14, 8 days new to the test - 13-24 UTC vs 00-13 UTC, the prediction
+
+== 13-24 UTC
+   arm / exec                 n      W/L     pnl $   per $1  flag
+   FIXED / taker            117    62/55     +9.24  +0.0158  
+   FIXED / ask-touch         72    33/39    -13.04  -0.0362  
+     ask-touch fill rate  72/117 = 61.5%
+   RAW / taker              134    61/73    -41.61  -0.0621  
+   RAW / ask-touch           90    34/56    -72.53  -0.1612  
+     ask-touch fill rate  90/134 = 67.2%
+
+== 00-13 UTC
+   arm / exec                 n      W/L     pnl $   per $1  flag
+   FIXED / taker             76    37/39    -12.39  -0.0326  
+   FIXED / ask-touch         49    16/33    -77.11  -0.3147  INSUFFICIENT (<60)
+     ask-touch fill rate  49/76 = 64.5%
+   RAW / taker               96    44/52    -24.02  -0.0500  
+   RAW / ask-touch           68    22/46    -93.58  -0.2752  
+     ask-touch fill rate  68/96 = 70.8%
+
+== STEP 1 (B), 09-08..09-14, 8 days new to the test - BOTH HALVES BY TIME
+
+== first half
+   arm / exec                 n      W/L     pnl $   per $1  flag
+   FIXED / taker             93    50/43    +10.30  +0.0222  
+   FIXED / ask-touch         60    26/34    -32.99  -0.1100  
+     ask-touch fill rate  60/93 = 64.5%
+   RAW / taker              114    52/62    -34.91  -0.0612  
+   RAW / ask-touch           80    29/51    -79.29  -0.1982  
+     ask-touch fill rate  80/114 = 70.2%
+
+== second half
+   arm / exec                 n      W/L     pnl $   per $1  flag
+   FIXED / taker            100    49/51    -13.45  -0.0269  
+   FIXED / ask-touch         61    23/38    -57.16  -0.1874  
+     ask-touch fill rate  61/100 = 61.0%
+   RAW / taker              116    53/63    -30.72  -0.0530  
+   RAW / ask-touch           78    27/51    -86.81  -0.2226  
+     ask-touch fill rate  78/116 = 67.2%
+
+== STEP 1 (B), 09-08..09-14, 8 days new to the test - PER DAY x SESSION, FIXED/taker then RAW/taker (per $1, n)
+   day                   Asia             Europe                 US               Late
+   09-08                    -                  -  -0.100/6 +0.057/6  -0.103/5 -0.008/7
+   09-09   +0.090/6 +0.179/10  -0.255/8 -0.342/9 +0.130/25 -0.061/27  -0.552/3 -0.525/8
+   09-10   -0.224/10 -0.158/12 +0.041/15 +0.026/16 +0.248/10 +0.093/12  +0.361/7 +0.058/9
+   09-11   -0.393/10 -0.292/13  -0.392/8 -0.122/9 -0.231/31 -0.141/32  -0.134/2 +0.005/2
+   09-12    -0.532/5 -0.610/6  +1.146/2 +0.703/4                  -  +0.732/1 +0.732/1
+   09-13    +0.524/1 -0.238/2  -0.034/2 -1.000/2  +0.896/1 +0.896/1  -0.212/5 -0.344/6
+   09-14    +1.126/5 +0.602/8  +0.500/4 +0.273/5 +0.213/18 +0.063/18  -0.200/3 -0.118/5
+   days positive, FIXED/taker: 5 of 7
+   days positive, FIXED/ask-touch: 3 of 7
+   days positive, RAW/taker: 3 of 7
+   days positive, RAW/ask-touch: 3 of 7
+
+== (A)+(B) COMBINED, 09-08..09-22, 15 days - WHOLE WINDOW
+   arm / exec                 n      W/L     pnl $   per $1  flag
+   FIXED / taker            363  184/179    -24.95  -0.0137  
+   FIXED / ask-touch        191   71/120   -203.58  -0.2132  
+     ask-touch fill rate  191/363 = 52.6%
+   RAW / taker              436  198/238   -121.05  -0.0555  
+   RAW / ask-touch          253   87/166   -288.26  -0.2279  
+     ask-touch fill rate  253/436 = 58.0%
+
+== (A)+(B) COMBINED, 09-08..09-22, 15 days - 13-24 UTC vs 00-13 UTC, the prediction
+
+== 13-24 UTC
+   arm / exec                 n      W/L     pnl $   per $1  flag
+   FIXED / taker            211  107/104    -35.29  -0.0334  
+   FIXED / ask-touch        108    42/66    -98.46  -0.1823  
+     ask-touch fill rate  108/211 = 51.2%
+   RAW / taker              250  108/142   -134.88  -0.1079  
+   RAW / ask-touch          145    48/97   -192.85  -0.2660  
+     ask-touch fill rate  145/250 = 58.0%
+
+== 00-13 UTC
+   arm / exec                 n      W/L     pnl $   per $1  flag
+   FIXED / taker            152    77/75    +10.33  +0.0136  
+   FIXED / ask-touch         83    29/54   -105.11  -0.2533  
+     ask-touch fill rate  83/152 = 54.6%
+   RAW / taker              186    90/96    +13.83  +0.0149  
+   RAW / ask-touch          108    39/69    -95.40  -0.1767  
+     ask-touch fill rate  108/186 = 58.1%
+
+== (A)+(B) COMBINED, 09-08..09-22, 15 days - BOTH HALVES BY TIME
+
+== first half
+   arm / exec                 n      W/L     pnl $   per $1  flag
+   FIXED / taker            183    93/90    -14.62  -0.0160  
+   FIXED / ask-touch        113    43/70   -115.34  -0.2041  
+     ask-touch fill rate  113/183 = 61.7%
+   RAW / taker              218   99/119    -70.42  -0.0646  
+   RAW / ask-touch          148    51/97   -175.38  -0.2370  
+     ask-touch fill rate  148/218 = 67.9%
+
+== second half
+   arm / exec                 n      W/L     pnl $   per $1  flag
+   FIXED / taker            180    91/89    -10.34  -0.0115  
+   FIXED / ask-touch         78    28/50    -88.23  -0.2262  
+     ask-touch fill rate  78/180 = 43.3%
+   RAW / taker              218   99/119    -50.63  -0.0465  
+   RAW / ask-touch          105    36/69   -112.87  -0.2150  
+     ask-touch fill rate  105/218 = 48.2%
+
+== (A)+(B) COMBINED, 09-08..09-22, 15 days - PER DAY x SESSION, FIXED/taker then RAW/taker (per $1, n)
+   day                   Asia             Europe                 US               Late
+   09-08                    -                  -  -0.100/6 +0.057/6  -0.103/5 -0.008/7
+   09-09   +0.090/6 +0.179/10  -0.255/8 -0.342/9 +0.130/25 -0.061/27  -0.552/3 -0.525/8
+   09-10   -0.224/10 -0.158/12 +0.041/15 +0.026/16 +0.248/10 +0.093/12  +0.361/7 +0.058/9
+   09-11   -0.393/10 -0.292/13  -0.392/8 -0.122/9 -0.231/31 -0.141/32  -0.134/2 +0.005/2
+   09-12    -0.532/5 -0.610/6  +1.146/2 +0.703/4                  -  +0.732/1 +0.732/1
+   09-13    +0.524/1 -0.238/2  -0.034/2 -1.000/2  +0.896/1 +0.896/1  -0.212/5 -0.344/6
+   09-14    +1.126/5 +0.602/8  +0.500/4 +0.273/5 +0.213/18 +0.063/18  -0.200/3 -0.118/5
+   09-15    +0.330/7 +0.581/9  +0.053/6 +0.053/6 -0.378/24 -0.438/26  -0.143/7 -0.165/8
+   09-16    -0.463/7 -0.530/8  +0.396/3 +0.040/6  -0.684/6 -0.378/7  -1.000/1 -1.000/1
+   09-17    -0.190/5 +0.116/8  -0.432/6 -0.220/7  +0.483/4 +0.510/7  +0.571/1 +0.237/3
+   09-18    +0.321/6 -0.009/8 -0.254/8 -0.234/11 +0.086/18 +0.037/21  -0.316/5 -0.437/7
+   09-19    +0.262/3 -0.053/4                  -                  -                  -
+   09-21                    -                  - -0.028/20 -0.158/23 +0.543/8 -0.050/13
+   09-22   +0.384/14 +0.335/15 +0.132/11 +0.558/8                  -                  -
+   days positive, FIXED/taker: 8 of 14
+   days positive, FIXED/ask-touch: 5 of 14
+   days positive, RAW/taker: 5 of 14
+   days positive, RAW/ask-touch: 4 of 14
+
+== STEP 1 (B) 09-08..09-14: per $1 with its OWN standard error, and 13-24 minus 00-13
+   arm / exec           set          n    per $1      SE        t
+   FIXED / taker        all        193   -0.0033  0.0731    -0.04
+   FIXED / taker        13-24      117   +0.0158  0.0925    +0.17
+   FIXED / taker        00-13       76   -0.0326  0.1198    -0.27
+                        DIFF             +0.0484  0.1513    +0.32   not distinguishable from 0
+   FIXED / ask-touch    all        121   -0.1490  0.0977    -1.53
+   FIXED / ask-touch    13-24       72   -0.0362  0.1285    -0.28
+   FIXED / ask-touch    00-13       49   -0.3147  0.1486    -2.12
+                        DIFF             +0.2785  0.1965    +1.42   not distinguishable from 0
+   RAW / taker          all        230   -0.0571  0.0697    -0.82
+   RAW / taker          13-24      134   -0.0621  0.0910    -0.68
+   RAW / taker          00-13       96   -0.0500  0.1090    -0.46
+                        DIFF             -0.0121  0.1420    -0.09   not distinguishable from 0
+   RAW / ask-touch      all        158   -0.2103  0.0871    -2.41
+   RAW / ask-touch      13-24       90   -0.1612  0.1166    -1.38
+   RAW / ask-touch      00-13       68   -0.2752  0.1314    -2.09
+                        DIFF             +0.1141  0.1757    +0.65   not distinguishable from 0
+
+== (A)+(B) COMBINED 09-08..09-22: per $1 with its OWN standard error, and 13-24 minus 00-13
+   arm / exec           set          n    per $1      SE        t
+   FIXED / taker        all        363   -0.0137  0.0531    -0.26
+   FIXED / taker        13-24      211   -0.0334  0.0683    -0.49
+   FIXED / taker        00-13      152   +0.0136  0.0846    +0.16
+                        DIFF             -0.0470  0.1087    -0.43   not distinguishable from 0
+   FIXED / ask-touch    all        191   -0.2132  0.0766    -2.78
+   FIXED / ask-touch    13-24      108   -0.1823  0.1017    -1.79
+   FIXED / ask-touch    00-13       83   -0.2533  0.1171    -2.16
+                        DIFF             +0.0709  0.1551    +0.46   not distinguishable from 0
+   RAW / taker          all        436   -0.0555  0.0508    -1.09
+   RAW / taker          13-24      250   -0.1079  0.0662    -1.63
+   RAW / taker          00-13      186   +0.0149  0.0790    +0.19
+                        DIFF             -0.1228  0.1031    -1.19   not distinguishable from 0
+   RAW / ask-touch      all        253   -0.2279  0.0686    -3.32
+   RAW / ask-touch      13-24      145   -0.2660  0.0886    -3.00
+   RAW / ask-touch      00-13      108   -0.1767  0.1084    -1.63
+                        DIFF             -0.0893  0.1400    -0.64   not distinguishable from 0
+
+================================================================================
+STEP 1 (B) VERDICT, AND IT CHANGES HOW (A) SHOULD BE READ.
+
+FIRST, A CORRECTION TO MY OWN CLAIM THAT GOT (B) APPROVED. I told V the dumps would carry LESS
+reconstruction error than the tape1s harness. Half right, and the half I missed cancels the gain:
+individual trades do remove the per-second aggregation error, but no Chainlink sample exists for
+these days, so on_ref_price is never fed, ref_src is 0.0 and EVERY open-relative feature measures
+from the Binance spot TWAP60 proxy instead of the settlement line the engine had live. The depth
+test never covered that, so it was not inside the 0.013-0.015 I quoted. Measured against the
+engine's own journalled p on the 09-15..09-16 overlap: mean|dp| 0.0245 on 5,147 comparable passes,
+within 0.02 on 58%, and the reconstruction picks the OPPOSITE SIDE on a further 235 passes (4.4%).
+That is the same error as the tape1s harness (0.022-0.034), not better. (B) is therefore a WEAKER
+test than (A), which used the journalled rows and carried none of this. Reported as such.
+
+SECOND, (B) ON ITS OWN POINTS THE OTHER WAY FROM (A) - FOR ONE ARM, BY A HAIR.
+  FIXED/taker  13-24 +0.0158 (n 117)   00-13 -0.0326 (n 76)
+On the arithmetic that is the prereg's prediction satisfied: 13-24 > 00-13 and 13-24 > 0. It fails
+on RAW/taker (13-24 -0.0621, worse than 00-13's -0.0500 and negative). I am not going to call that
+a pass. +0.0158 per $1 is 1.6 cents on the dollar from a harness whose p is wrong by 0.0245 and
+whose side flips on 4.4% of passes - the claimed edge is smaller than the measurement error that
+produced it.
+
+THIRD, AND THIS IS THE REAL RESULT: PUT THE SE ON IT AND THE SESSION EFFECT IS NOT THERE AT ALL.
+The 13-24 minus 00-13 difference, with its own standard error, on 15 days and every arm x execution:
+  COMBINED FIXED/taker      -0.0470 +/- 0.1087   t -0.43
+  COMBINED RAW/taker        -0.1228 +/- 0.1031   t -1.19
+  COMBINED FIXED/ask-touch  +0.0709 +/- 0.1551   t +0.46
+  COMBINED RAW/ask-touch    -0.0893 +/- 0.1400   t -0.64
+  (B) alone, all four arms:  |t| 0.09 to 1.42
+Not one difference clears |t| 1.96. Every taker cell is also indistinguishable from zero in its own
+right (|t| <= 1.63 everywhere, combined FIXED/taker -0.0137 +/- 0.0531). So the honest reading is
+not that the session effect inverts - it is that THERE IS NO MEASURABLE SESSION EFFECT IN EITHER
+DIRECTION, and the taker rule itself is a coin flip after fees across 363 FIXED fires on 15 days.
+THIS TEMPERS MY OWN (A) WRITE-UP. (A)'s inversion (13-24 -0.0947 vs 00-13 +0.0598) is arithmetically
+exactly what I reported, and it does kill the prediction - a finding that needed 13-24 > 0 got a
+negative number on unseen days. But I leaned on the INVERSION as though the reversed sign were
+itself the result, and at t -0.43 combined it is not. The prediction fails; the opposite claim is
+not thereby established. London's 13-24 +151.26 / all-hours -84.10 was nine days of noise, and so
+is any session verdict drawn from 15 days at this fire count.
+
+FOURTH, THE ONE THING THAT IS SIGNIFICANT ACROSS ALL 15 DAYS IS THE MAKER LEG, AND IT LOSES.
+  COMBINED FIXED/ask-touch  -0.2132 +/- 0.0766   t -2.78
+  COMBINED RAW/ask-touch    -0.2279 +/- 0.0686   t -3.32
+  COMBINED RAW/ask-touch, 13-24 only            t -3.00
+Those are the only cells in the whole study that clear 2 SE, and all of them are negative. The
+mechanism is unchanged and now measured on 15 days: FIXED is 184W/179L as a taker but 71W/120L on
+the subset that filled. A resting bid trades when the ask comes down to it, and the ask comes down
+when the side is going wrong. Fourth independent sighting of that signature (probe vs FAV, the M26
+fallback, (A), and now (B)+combined) and the first time it is significant rather than suggestive.
+ONE ARTEFACT TO DISCOUNT BEFORE COMPARING FILL RATES: (B) fills 62.7%/68.7% against (A)'s
+41.2%/46.1%, but that is grid resolution, not a better book - q samples every ~5 s while the
+engine's passes are ~10 s apart, so (B) gets roughly twice the chances to touch inside the same 30 s.
+The combined 52.6%/58.0% is a blend of two grids and should not be read as one number. Both remain
+far under London's 81% live.
+
+COVERAGE AND BOOKKEEPING, so the combined total can be checked:
+  (B) decided 2,059 candles and fired on 330. 423 fires fall on the 245 candles of 09-08..09-14
+  23:49 that are NEW to the test; 144 fall on the 85 candles that overlap (A). The overlap is used
+  ONLY for the fidelity gate and is EXCLUDED from the combined total, so no candle is counted twice:
+  combined = (A)'s 376 fires + (B)'s 423 new = 799, over 15 calendar days (09-20 has no data).
+  Per V's split: 09-08..09-10 is venue-ask-only and 09-11..09-16 has the 1 Hz book, but that
+  distinction never bites here - (B) reads asks from q for the whole window and feeds no book at
+  all, by design, since depth is zeroed throughout.
+
+BOTTOM LINE ON M29: the EF session finding does not survive a month. It fails on (A), the clean
+half, and on (B), the reconstructed half, it produces a 1.6-cent effect smaller than the harness
+error. Pooled over 15 days no session difference is distinguishable from zero on any arm or either
+execution. The only robust result is negative and it is about EXECUTION, not the clock: posting at
+ask-0.01 and waiting is adversely selected, at t -2.8 to -3.3.
