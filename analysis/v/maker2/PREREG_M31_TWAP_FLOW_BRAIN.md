@@ -28,3 +28,6 @@ Variants, in THIS order, each a stop/go on STEP 0 (beats M1 = market + TWAP math
   V3 perp-minus-spot move last 5/15 s (perp leads)   V4 vol-scaled TWAP remainder probability vs market (pure math)
 Speed: run each on the first 3 days first; if clearly flat (no logloss gain) stop it there and move on; only a variant that
 shows gain gets the full window + STEP 1. All variants tried are reported (count them - 4 tries means 4 chances of luck).
+AMENDMENT 2 (owner 02:5x: "first the hardest dataset"): the 3-day quick test uses the WORST days for our models inside the
+Chainlink window, not the first 3: 09-23 (FAV_mid -163.89, FAV -34.79), 09-25 (FAV -65.94 worst day, FAV_mid -100.33),
+10-02 (every FAV arm negative, London maker fresh lows). A variant must show gain on these before it gets the full window.
