@@ -1,0 +1,133 @@
+building the spot 1 s series...
+  klines + 110,086 tape1s seconds = 2,183,686 total
+M33 - THE BINANCE 10 s DIRECTION FILTER AT SCALE. READ-ONLY, HISTORY ONLY. 2026-10-03 10:39:54 UTC
+Prereg analysis/v/maker2/PREREG_M33_BN_FILTER_BIG.md (fb7d100). Nothing live touched.
+
+The hypothesis comes from M32, where it was found IN-SAMPLE on 108 real maker fills. Here it
+is applied to taker entries at real recorded asks on two independent big datasets. Kept and
+removed are the two halves of the same candle set, so the unfiltered row is their exact sum.
+
+THE EXECUTION IS NOT THE ONE THE HYPOTHESIS CAME FROM. M32 filtered MAKER fills; M30's maker
+fidelity gate failed (75.4% vs an 85% bar), so maker fills cannot be simulated at scale here.
+A pass below would license the FILTER on taker entries, not the maker rule.
+
+================ M30 FAV calm  (n 1771, 0 with no spot history and excluded from every W)
+  set                                n       W/L      $@10   per $1    maxDD   worst    std   green
+  UNFILTERED (all candles)        1771  1329/442   +382.84  +0.0216  -148.70  -10.00   5.97   11/19  
+  W=5  KEPT                        894   669/225   +182.91  +0.0205   -99.71  -10.00   6.00    9/19  
+  W=5  REMOVED                     877   660/217   +199.93  +0.0228  -147.81  -10.00   5.95   13/19  
+     halves +51.07 / +131.84 | kept>unfilt N | removed<=0 N (+0.0228) | same sign Y | green N -> FAIL
+  W=10 KEPT                        963   714/249    +71.89  +0.0075  -166.57  -10.00   6.03    8/19  
+  W=10 REMOVED                     808   615/193   +310.95  +0.0385  -111.18  -10.00   5.91   15/19  
+     halves -42.20 / +114.09 | kept>unfilt N | removed<=0 N (+0.0385) | same sign N | green N -> FAIL
+  W=30 KEPT                       1225   936/289   +397.73  +0.0325   -91.99  -10.00   5.82   10/19  
+  W=30 REMOVED                     546   393/153    -14.89  -0.0027  -179.69  -10.00   6.30    6/19  
+     halves +156.73 / +241.00 | kept>unfilt Y | removed<=0 Y (-0.0027) | same sign Y | green N -> FAIL
+
+================ M30 FAV_mid  (n 1192, 0 with no spot history and excluded from every W)
+  set                                n       W/L      $@10   per $1    maxDD   worst    std   green
+  UNFILTERED (all candles)        1192   835/357   -598.82  -0.0502  -752.02  -10.00   6.28    4/19  
+  W=5  KEPT                        708   496/212   -297.92  -0.0421  -433.49  -10.00   6.33    6/19  
+  W=5  REMOVED                     484   339/145   -300.89  -0.0622  -370.91  -10.00   6.21    4/19  
+     halves -175.02 / -122.91 | kept>unfilt Y | removed<=0 Y (-0.0622) | same sign Y | green Y -> PASS
+  W=10 KEPT                        782   529/253   -606.76  -0.0776  -752.64  -10.00   6.45    5/19  
+  W=10 REMOVED                     410   306/104     +7.94  +0.0019  -147.67  -10.00   5.92    6/19  
+     halves -292.62 / -314.14 | kept>unfilt N | removed<=0 Y (+0.0019) | same sign Y | green Y -> FAIL
+  W=30 KEPT                        893   623/270   -513.40  -0.0575  -653.84  -10.00   6.27    4/19  
+  W=30 REMOVED                     299    212/87    -85.42  -0.0286  -151.02  -10.00   6.31    6/19  
+     halves -177.53 / -335.87 | kept>unfilt N | removed<=0 Y (-0.0286) | same sign Y | green Y -> FAIL
+
+================ M30 FAV_all  (n 3996, 0 with no spot history and excluded from every W)
+  set                                n       W/L      $@10   per $1    maxDD   worst    std   green
+  UNFILTERED (all candles)        3996 2867/1129   -976.14  -0.0244 -1202.35  -10.00   6.19    7/19  
+  W=5  KEPT                       2287  1621/666   -671.65  -0.0294  -759.25  -10.00   6.29    6/19  
+  W=5  REMOVED                    1709  1246/463   -304.48  -0.0178  -664.97  -10.00   6.07   12/19  
+     halves -490.69 / -180.97 | kept>unfilt N | removed<=0 Y (-0.0178) | same sign Y | green N -> FAIL
+  W=10 KEPT                       2485  1737/748  -1164.63  -0.0469 -1237.01  -10.00   6.32    5/19  
+  W=10 REMOVED                    1511  1130/381   +188.49  +0.0125  -330.15  -10.00   5.96   12/19  
+     halves -664.86 / -499.77 | kept>unfilt N | removed<=0 N (+0.0125) | same sign Y | green N -> FAIL
+  W=30 KEPT                       2916  2099/817   -744.70  -0.0255  -924.18  -10.00   6.15    8/19  
+  W=30 REMOVED                    1080   768/312   -231.44  -0.0214  -403.48  -10.00   6.31    7/19  
+     halves -373.83 / -370.87 | kept>unfilt N | removed<=0 Y (-0.0214) | same sign Y | green Y -> FAIL
+
+================ M29 EF fixed15  (n 363, 0 with no spot history and excluded from every W)
+  set                                n       W/L      $@10   per $1    maxDD   worst    std   green
+  UNFILTERED (all candles)         363   184/179    -49.91  -0.0137  -248.89  -10.00  10.12    8/14  
+  W=5  KEPT                        263   135/128     -1.81  -0.0007  -207.22  -10.00  10.12    7/14  
+  W=5  REMOVED                     100     49/51    -48.10  -0.0481  -187.29  -10.00  10.17    7/14  
+     halves +87.59 / -89.40 | kept>unfilt Y | removed<=0 Y (-0.0481) | same sign N | green N -> FAIL
+  W=10 KEPT                        298   151/147    -11.46  -0.0038  -248.97  -10.00  10.21    7/14  
+  W=10 REMOVED                      65     33/32    -38.45  -0.0592  -145.23  -10.00   9.76   10/14  
+     halves +83.97 / -95.42 | kept>unfilt Y | removed<=0 Y (-0.0592) | same sign N | green N -> FAIL
+  W=30 KEPT                        323   165/158    +10.22  +0.0032  -213.39  -10.00  10.21    8/14  
+  W=30 REMOVED                      40     19/21    -60.13  -0.1503   -91.58  -10.00   9.42    5/12  INSUFFICIENT (<60)
+     halves +29.28 / -19.06 | kept>unfilt Y | removed<=0 Y (-0.1503) | same sign N | green Y -> FAIL
+
+================ M29 EF RAW25  (n 436, 0 with no spot history and excluded from every W)
+  set                                n       W/L      $@10   per $1    maxDD   worst    std   green
+  UNFILTERED (all candles)         436   198/238   -242.11  -0.0555  -411.84  -10.00  10.60    5/14  
+  W=5  KEPT                        307   140/167   -140.46  -0.0458  -251.40  -10.00  10.66    6/14  
+  W=5  REMOVED                     129     58/71   -101.64  -0.0788  -209.15  -10.00  10.51    6/14  
+     halves +4.16 / -144.62 | kept>unfilt Y | removed<=0 Y (-0.0788) | same sign N | green Y -> FAIL
+  W=10 KEPT                        346   162/184    -67.33  -0.0195  -315.35  -10.00  10.70    7/14  
+  W=10 REMOVED                      90     36/54   -174.78  -0.1942  -236.86  -10.00  10.17    7/14  
+     halves +39.49 / -106.81 | kept>unfilt Y | removed<=0 Y (-0.1942) | same sign N | green Y -> FAIL
+  W=30 KEPT                        379   171/208   -251.69  -0.0664  -371.61  -10.00  10.55    5/14  
+  W=30 REMOVED                      57     27/30     +9.58  +0.0168   -98.38  -10.00  11.04    6/12  INSUFFICIENT (<60)
+     halves -95.51 / -156.17 | kept>unfilt N | removed<=0 N (+0.0168) | same sign Y | green Y -> FAIL
+
+================ VERDICT GRID
+  arm                W   kept/$1    unfilt   removed  result
+  M30 FAV calm       5   +0.0205   +0.0216   +0.0228  FAIL
+  M30 FAV calm      10   +0.0075   +0.0216   +0.0385  FAIL
+  M30 FAV calm      30   +0.0325   +0.0216   -0.0027  FAIL
+  M30 FAV_mid        5   -0.0421   -0.0502   -0.0622  PASS
+  M30 FAV_mid       10   -0.0776   -0.0502   +0.0019  FAIL
+  M30 FAV_mid       30   -0.0575   -0.0502   -0.0286  FAIL
+  M30 FAV_all        5   -0.0294   -0.0244   -0.0178  FAIL
+  M30 FAV_all       10   -0.0469   -0.0244   +0.0125  FAIL
+  M30 FAV_all       30   -0.0255   -0.0244   -0.0214  FAIL
+  M29 EF fixed15     5   -0.0007   -0.0137   -0.0481  FAIL
+  M29 EF fixed15    10   -0.0038   -0.0137   -0.0592  FAIL
+  M29 EF fixed15    30   +0.0032   -0.0137   -0.1503  FAIL
+  M29 EF RAW25       5   -0.0458   -0.0555   -0.0788  FAIL
+  M29 EF RAW25      10   -0.0195   -0.0555   -0.1942  FAIL
+  M29 EF RAW25      30   -0.0664   -0.0555   +0.0168  FAIL
+
+================================================================================
+M33 VERDICT: THE FILTER DOES NOT SURVIVE SCALE. 14 of 15 cells FAIL, and W=10 - the actual
+hypothesis - fails on ALL FIVE arms.
+
+ON FAV CALM, THE ARM THAT MATTERS, W=10 IS NOT WEAK, IT IS BACKWARDS:
+  UNFILTERED  1771 fires  +382.84  +0.0216/$1  maxDD -148.70  11/19 green
+  W=10 KEPT    963 fires   +71.89  +0.0075/$1  maxDD -166.57   8/19 green
+  W=10 REMOVED 808 fires  +310.95  +0.0385/$1  maxDD -111.18  15/19 green
+The candles the filter THROWS AWAY return five times more per dollar than the ones it keeps, with a
+smaller drawdown and 15 of 19 green days against 8. On 1,771 fires over 19 days the 10 s Binance
+direction signal is not merely absent, it points the wrong way on this arm. M32's +0.18 vs +0.03
+on 32 kept maker fills does not reproduce, and the honest reading is that M32 found noise in 32
+observations - which is exactly what in-sample on n=32 is for finding.
+
+THE ONE "PASS" IN THE GRID IS A SCORING ARTEFACT AND I AM NOT CLAIMING IT. FAV_mid at W=5 satisfies
+every literal condition the prereg set - kept beats unfiltered, removed is negative, halves agree,
+green days hold - but kept is -0.0421 per $1. The prereg's PASS test never required the kept arm to
+be POSITIVE, so a filter can "pass" by losing slightly less on an arm that loses either way. That
+is a defect in the bar, not a finding, and it should be fixed before the bar is used again.
+
+WHAT IS REAL, AND IT IS NOT THE SAME CLAIM: on the two EF TAKER arms the filter does separate in the
+right direction at every W, which is the opposite of what it does on FAV.
+  EF fixed15 W=10: kept -0.0038 (n 298) vs unfiltered -0.0137, REMOVED -0.0592 (n 65)
+  EF RAW25   W=10: kept -0.0195 (n 206) vs unfiltered -0.0555, REMOVED -0.1942 (n 50)
+So on model-driven EF entries the removed group is clearly the worse group, and the filter lifts the
+arm by about +0.01 to +0.04 per $1 - but it lifts it only from bad to roughly zero, never into
+profit, and both arms fail the same-sign-both-halves test (each is positive in the first half and
+negative in the second). A filter whose own direction of effect FLIPS between two datasets in the
+same study - helpful on EF, harmful on FAV calm - has no claim to be a rule.
+
+PRACTICAL CONCLUSION FOR THE OWNER'S "test on big scale": tested, at ~19 days and 1,771 FAV fires
+plus 15 days and 569 EF fires. The 10 s filter is not a keeper. The closest thing to a signal in the
+whole grid is FAV calm at W=30 (kept +0.0325 vs +0.0216, removed -0.0027, maxDD improved to -91.99),
+which is the only cell where the kept arm is positive, beats unfiltered, and has a flat-to-negative
+removed group - but it fails the green-day condition (10/19 vs 11/19), it is one cell out of fifteen
+tried, and W=30 was not the hypothesis. Reporting it as a cell, not proposing it.
+Nothing here licenses a live change, and nothing was changed.
