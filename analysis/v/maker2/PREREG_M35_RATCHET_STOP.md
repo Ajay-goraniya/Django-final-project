@@ -10,3 +10,11 @@ FEES: owner says all resting -> PRIMARY column zero fee on entry and exit; secon
 DATA: (1) Zurich: M29 fixed15 15 days, entry = ask-touch resting fill (primary) and taker-at-ask (second), exits on 1 Hz bid.
       (2) London: its own REAL fixed-EF fills (all fixed-EF lanes since 09-23 incl. 13.2.x resting), exits on its 1 Hz book.
 REPORT vs HOLD on identical entries: n, W/L/stopped-out, $, per $1, maxDD, worst trade, green days, halves.
+
+## AMENDMENT 10-03 11:2x (owner corrected step 5): "if stop is hit, then it's our new marked price and rebuy if book comes back
+## to that price and cross 10% above"
+On a stop at price S: SELL at S, and S becomes the NEW MARK. RE-BUY (at the ask) when the price rises back through S to >= 1.10*S.
+After the re-buy the same ratchet runs on mark S: price is already >= 1.10*S so stop = 1.05*S; once bid >= 1.20*S stop = 1.10*S.
+Next stop hit -> that stop price is the new mark, and so on until sec 270; held position at 270 -> settlement.
+Realistic arming (London's fix): the first stop at P arms only once the bid has reached P (taker fills start ~1c under).
+Report this corrected rule (fee and zero-fee) next to the first version.
