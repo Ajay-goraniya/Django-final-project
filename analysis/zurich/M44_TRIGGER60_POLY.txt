@@ -1,0 +1,56 @@
+M44 - THE 60-TRIGGER RULE ON ZURICH'S OWN POLYMARKET 1 Hz BID+ASK. READ-ONLY.
+2026-10-03 12:26:29 UTC. leg() copied VERBATIM from m44_trigger60.py; only the
+loader and the reporting are mine (no pandas on this box). Thresholds T=0.60, d=0.10, cut=295.
+
+Polymarket has no buy-stop - a resting BUY at 0.60 with the ask near 0.50 fills at once -
+so the rule is: first time a side's ask reaches 0.60, buy it as a taker. Both sides can
+trigger. TRAIL = stop at peak_bid - 0.10; OWN = the owner's % ratchet. R0 no re-buy, R1 re-buy
+at ask >= 0.60. Stops sell at the triggering bid. Held at 295 settles on venues.outcome/gamma.
+POLYMARKET ONLY: polybook + pm_multi btc5; no Predict.fun data read.
+
+2547 candles over 12 days
+
+== POLYMARKET 12 days, taker fee both ways: 2547 candles  (per candle $, 1 share per buy)
+  TRAIL R0: per candle -0.0448 t-10.50 halves -0.0441/-0.0454 green 1/12 buys/candle 1.56 | ASIA -0.044 | EU -0.036 | US -0.053 | LATE -0.048
+  TRAIL R1: per candle -0.1956 t-17.67 halves -0.1750/-0.2162 green 0/12 buys/candle 5.98 | ASIA -0.219 | EU -0.169 | US -0.225 | LATE -0.148
+  OWN   R0: per candle -0.0467 t-10.27 halves -0.0490/-0.0444 green 1/12 buys/candle 1.56 | ASIA -0.045 | EU -0.041 | US -0.053 | LATE -0.050
+  OWN   R1: per candle -0.1828 t-16.41 halves -0.1645/-0.2010 green 0/12 buys/candle 5.49 | ASIA -0.209 | EU -0.161 | US -0.200 | LATE -0.143
+
+== POLYMARKET 12 days, zero fee: 2547 candles  (per candle $, 1 share per buy)
+  TRAIL R0: per candle +0.0022 t +0.54 halves +0.0023/+0.0020 green 4/12 buys/candle 1.56 | ASIA +0.002 | EU +0.011 | US -0.004 | LATE -0.002
+  TRAIL R1: per candle -0.0269 t -3.04 halves -0.0187/-0.0351 green 5/12 buys/candle 5.98 | ASIA -0.051 | EU -0.006 | US -0.034 | LATE -0.007
+  OWN   R0: per candle -0.0000 t -0.00 halves -0.0026/+0.0026 green 4/12 buys/candle 1.56 | ASIA +0.001 | EU +0.006 | US -0.004 | LATE -0.004
+  OWN   R1: per candle -0.0242 t -2.70 halves -0.0167/-0.0317 green 3/12 buys/candle 5.49 | ASIA -0.051 | EU -0.007 | US -0.023 | LATE -0.008
+
+================================================================================
+M44 VERDICT: EVERY CELL LOSES WITH FEES, AND THE ZERO-FEE COLUMN SAYS WHY - THE 0.60 TRIGGER HAS
+NO EDGE AT ALL, SO THERE IS NOTHING FOR A STOP TO PROTECT.
+
+WITH THE REAL TAKER FEE, which is the only column that describes a trade you could place:
+  TRAIL R0  -0.0448 per candle  t -10.50  green 1/12   buys/candle 1.56
+  OWN   R0  -0.0467             t -10.27  green 1/12   buys/candle 1.56
+  TRAIL R1  -0.1956             t -17.67  green 0/12   buys/candle 5.98
+  OWN   R1  -0.1828             t -16.41  green 0/12   buys/candle 5.49
+No session is positive in any of them (best is EU at -0.036, worst US at -0.053 on TRAIL R0).
+
+THE ZERO-FEE COLUMN IS THE DIAGNOSIS: TRAIL R0 is +0.0022 per candle at t +0.54 and OWN R0 is
+-0.0000 at t -0.00. That is break-even to four decimal places on 2,547 candles. Buying a 5-minute
+binary at 0.60 the moment it reaches 0.60 is a FAIRLY PRICED bet - the market's 0.60 is right - so
+the entry contributes nothing, positive or negative, and the entire loss in the fee column is the
+fee. One entry at 0.60 costs 0.07*0.6*0.4 = 0.0168 in fee, and at 1.56 buys a candle plus the exit
+fee that is about 0.047 - which is exactly the gap between +0.0022 and -0.0448.
+So the answer to the owner is not "your stop is wrong". It is that there is no edge at the entry for
+any exit rule to work on: a stop can only protect profit that the entry generates, and at 0.60 the
+entry generates none.
+
+RE-BUYING IS THE ONE THING THAT IS ACTIVELY WRONG, AND IT IS NOT JUST THE FEE. R1 is negative even
+at ZERO fee - TRAIL R1 -0.0269 at t -3.04, OWN R1 -0.0242 at t -2.70 - so re-entering at 0.60 after
+being stopped out is a losing decision in its own right, before any cost. It also quadruples the
+turnover (1.56 to 5.98 buys a candle), which is why it is four times worse once fees are charged.
+That is the same conclusion M32, M36 and M42 reached by three other routes: re-entry is where this
+family of ideas loses its money.
+HIS % RATCHET IS NOT THE PROBLEM EITHER, and he should hear that: OWN tracks TRAIL almost exactly
+(-0.0467 vs -0.0448 with fees, -0.0000 vs +0.0022 without). His ratchet is neither better nor worse
+than the points trail - both are managing a position that has no expected profit to manage.
+POLYMARKET ONLY: polybook + pm_multi btc5, venues.outcome and gamma labels, leg() verbatim from the
+prereg script. No Predict.fun data read. Nothing live was touched.
