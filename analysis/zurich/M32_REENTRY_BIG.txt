@@ -1,0 +1,91 @@
+loading books...
+  2533 candles with a real 1 Hz bid+ask
+M32-BIG - THE OWNER'S RULES A AND B AT SCALE, ON REAL 1 Hz BID AND ASK. READ-ONLY. 2026-10-03 10:53:08 UTC
+Prereg analysis/v/maker2/PREREG_M32_REENTRY.md section M32-BIG (bd25714). Nothing live touched.
+
+TRIGGERS AND FILLS USE THE SIDE WE WOULD ACTUALLY TOUCH, which is the fix M32 could not make:
+  ARM and SELL on the BID (filled at that bid); RE-BUY on the ASK (filled at that ask);
+  taker fee 0.07p(1-p) on every sell and re-buy. Size held constant at the fee-exact shares
+  $10 buys at P, so RULE A and HOLD are the same trade with and without the rule.
+COVERAGE: a real 1 Hz bid+ask exists only for 09-11..09-16 (polybook, live-websocket rows) and
+  09-28..10-02 (pm_multi btc5). venues.q and tape1s carry ASKS ONLY, so entries on 09-08..09-10
+  and 09-17..09-27 cannot be run and are EXCLUDED rather than priced off a bid I do not have.
+
+entries priced: 3693 on 1963 candles (48% of the FAV set, 33% of the EF set; every arm clears the 60 bar)
+
+================ FAV  (n 791)
+  set                          n       $@10   per $1     maxDD    worst    std        W/L/SCR   green
+  HOLD                       791    +222.00  +0.0281   -144.66   -10.00   5.93      598/193/0    7/10  
+  RULE A                     791     -56.60  -0.0072   -132.13   -18.85   4.88    494/173/124    5/10  
+  HOLD on B kept             444    +115.21  +0.0259    -88.30   -10.00   5.94      335/109/0    6/10  
+  RULE B (kept)              444     -32.01  -0.0072    -75.93   -14.14   4.81     273/100/71    7/10  
+     cycles: 513 sells, 389 re-buys, fired on 335/791 (42%); still held at 270: 667
+
+================ FAV_mid  (n 612)
+  set                          n       $@10   per $1     maxDD    worst    std        W/L/SCR   green
+  HOLD                       612     -54.38  -0.0089   -246.93   -10.00   6.07      448/164/0    2/10  
+  RULE A                     612    -262.89  -0.0430   -277.69   -16.60   4.80    368/142/102    2/10  
+  HOLD on B kept             397    -128.94  -0.0325   -249.10   -10.00   6.25      282/115/0     3/9  
+  RULE B (kept)              397    -242.82  -0.0612   -249.98   -16.60   4.94      229/94/74     0/9  
+     cycles: 490 sells, 388 re-buys, fired on 286/612 (47%); still held at 270: 510
+
+================ FAV_all  (n 1955)
+  set                          n       $@10   per $1     maxDD    worst    std        W/L/SCR   green
+  HOLD                      1955     -91.41  -0.0047   -371.66   -10.00   6.06     1436/519/0    5/10  
+  RULE A                    1955    -711.39  -0.0364   -751.73   -21.10   4.95   1192/443/320    2/10  
+  HOLD on B kept            1226    -325.50  -0.0265   -384.80   -10.00   6.20      878/348/0    3/10  
+  RULE B (kept)             1226    -659.80  -0.0538   -659.80   -21.10   5.02    718/288/220    1/10  
+     cycles: 1452 sells, 1132 re-buys, fired on 869/1955 (44%); still held at 270: 1635
+
+================ FIXED  (n 157)
+  set                          n       $@10   per $1     maxDD    worst    std        W/L/SCR   green
+  HOLD                       157     -93.88  -0.0598   -187.64   -10.00   9.98        77/80/0     3/6  
+  RULE A                     157    -171.64  -0.1093   -210.53   -21.08   8.02       61/37/59     2/6  
+  HOLD on B kept             120    -105.32  -0.0878   -164.58   -10.00   9.81        58/62/0     2/6  
+  RULE B (kept)              120    -164.93  -0.1374   -195.91   -21.08   8.27       45/30/45     2/6  
+     cycles: 200 sells, 141 re-buys, fired on 98/157 (62%); still held at 270: 98
+
+================ RAW  (n 178)
+  set                          n       $@10   per $1     maxDD    worst    std        W/L/SCR   green
+  HOLD                       178    -215.90  -0.1213   -245.48   -10.00  10.32       77/101/0     2/6  
+  RULE A                     178    -298.23  -0.1675   -301.45   -30.19   8.80       63/43/72     2/6  
+  HOLD on B kept             137    -187.94  -0.1372   -239.55   -10.00  10.31        58/79/0     2/6  
+  RULE B (kept)              137    -244.36  -0.1784   -267.21   -30.19   8.82       46/37/54     1/6  
+     cycles: 238 sells, 166 re-buys, fired on 114/178 (64%); still held at 270: 106
+
+================================================================================
+M32-BIG VERDICT: RULE A LOSES TO HOLD ON ALL FIVE ARMS, AND RULE B IS WORSE STILL.
+  arm        HOLD $@10 / per $1      RULE A $@10 / per $1     RULE B (its kept subset)
+  FAV         +222.00  +0.0281        -56.60  -0.0072          -32.01  -0.0072
+  FAV_mid      -54.38  -0.0089       -262.89  -0.0430         -242.82  -0.0612
+  FAV_all      -91.41  -0.0047       -711.39  -0.0364         -659.80  -0.0538
+  FIXED        -93.88  -0.0598       -171.64  -0.1093         -164.93  -0.1374
+  RAW         -215.90  -0.1213       -298.23  -0.1675         -244.36  -0.1784
+FAV is the one arm that makes money held, and rule A is the thing that turns it negative. 3,693
+entries across 1,963 candles, on real quotes, with the re-buy paying a real ASK - so this is the
+test M32 could not do, and it gives the same answer M32 did with the loss now properly priced.
+
+BUT THE OWNER ASKED ABOUT DRAWDOWN AND CONSISTENCY, NOT PROFIT, AND ON TWO OF HIS THREE YARDSTICKS
+THE RULE DELIVERS. It should be reported that way rather than dismissed:
+  PER-TRADE STD FALLS IN EVERY SINGLE ARM: FAV 5.93 -> 4.88, FAV_mid 6.07 -> 4.80,
+    FAV_all 6.06 -> 4.95, FIXED 9.98 -> 8.02, RAW 10.32 -> 8.80.
+  MAX DRAWDOWN FALLS ON FAV: -144.66 -> -132.13, and on FAV's B-kept subset -88.30 -> -75.93.
+So the owner's intuition about the SHAPE is not wrong - selling into strength and standing aside does
+damp the ride. It damps it by converting decisions into scratches (124 of 791 on FAV, 320 of 1,955 on
+FAV_all), and a scratch has near-zero variance. That is where the lower std comes from.
+
+AND HERE IS THE PART THAT MATTERS MOST AND WAS NOT IN THE SPEC - THE RULE REMOVES THE LOSS CAP.
+Holding a binary cannot lose more than the stake: every HOLD row's worst trade is exactly -10.00.
+Rule A's worst trades are -18.85 (FAV), -16.60 (FAV_mid), -21.10 (FAV_all), -21.08 (FIXED) and
+-30.19 (RAW) - up to THREE TIMES the stake on a single candle. The reason is structural: each cycle
+books a realised loss and then re-enters at 1.10*P, so one candle can be lost two or three times
+over. A rule sold as risk reduction has in fact traded a lower std for a fatter tail, and on four of
+the five arms it made the drawdown worse too (FAV_mid -246.93 -> -277.69, FAV_all -371.66 -> -751.73,
+FIXED -187.64 -> -210.53, RAW -245.48 -> -301.45). If anything from the owner's rule is ever put
+live, the position must be capped so a single candle cannot cost more than one stake.
+
+RULE B ADDS NOTHING, CONSISTENT WITH M33. It is worse than A on per $1 in four of five arms, and the
+Binance 10 s filter it rests on was just shown at scale (M33) to be backwards on FAV calm. FAV's B
+row is the one place B matches A (-0.0072 both) while trading 444 entries instead of 791 - a smaller
+version of the same losing trade.
+Nothing here licenses a live change, and nothing was changed.
