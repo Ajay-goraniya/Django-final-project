@@ -65,3 +65,42 @@ CAVEATS, and they are heavy: n 32 against n 52, IN-SAMPLE on the same fills PROB
 fitted on, and the probe is stopped so this cannot be extended here. It is a hypothesis for London's
 live fills out of sample, nothing more. The answer to "were the skipped ones the losers?" is NO -
 the skipped fills were still profitable to hold (+4.75 and +3.53); the kept ones were simply better.
+
+================================================================================
+M32 ADD-ON - THE OWNER'S YARDSTICKS: DRAWDOWN, CONSISTENCY, WORST TRADE, W/L/SCRATCH.
+READ-ONLY, 2026-10-03 10:33:37 UTC. Same 108 graded fills, same pricing.
+The owner expects less profit but lower drawdown and better consistency, so these are the
+columns that decide it rather than the $ total.
+
+  arm                       n         $   per $1    maxDD    worst    best     std   W/L/SCR (disp)   W/L/SCR (mag)   green
+  HOLD all                108   +26.318  +0.0768   -23.30   -3.950  +2.000   2.127          81/27/0         81/27/0     1/3
+  RULE A all              108  -204.052  -0.5955  -204.05  -11.202  +2.000   3.713         43/45/20         43/59/6     0/3
+  HOLD on B's fills        32   +18.036  +0.1821   -11.20   -3.900  +2.000   2.013           26/6/0          26/6/0     2/3
+  RULE B kept              32   -69.831  -0.7050   -69.83  -11.202  +2.000   4.497           17/9/6         17/15/0     0/3
+
+  PER DAY ($), the consistency column the owner actually asked about:
+  arm                         09-30      10-01      10-02
+  HOLD all                  +36.600     -5.062     -5.219
+  RULE A all               -141.643    -34.966    -27.443
+  RULE B kept               -61.412     -1.544     -6.875
+
+HOW TO READ IT, and it does NOT rescue rule A on any of the owner's own measures:
+  DRAWDOWN is the headline he cares about and it goes the WRONG way by an order of magnitude:
+  HOLD -23.30 against rule A -204.05. The rule was
+  supposed to cut drawdown and it multiplied it, because every cycle books a real loss instead
+  of leaving an unrealised position to resolve.
+  CONSISTENCY is worse too: per-trade std 2.127 for HOLD against
+  3.713 for rule A, and green days 1/3 against 0/3.
+  WORST SINGLE TRADE: HOLD -3.950, rule A -11.202.
+  THE SCRATCH COUNT IS THE ONE PLACE RULE A LOOKS LIKE ITS DESIGN. Counting a sell at the mark
+  as a scratch rather than a loss moves rule A's record substantially, which is why V asked for
+  it - but the scratches are not free: each one is a position closed at the mark that then had
+  to be re-bought 10% higher, and that cost shows up in the $ and the drawdown, not in the W/L.
+  So the fairer count makes the tally look better while the money gets worse, and the money is
+  what the drawdown is measured in.
+  AND THE FILTER SHOWS UP HERE TOO, which is the only encouraging line in the add-on: holding B's
+  32 kept fills gives maxDD -11.20 against -23.30 for holding all 108, per-trade std 2.013 against
+  2.127, and 2 of 3 green days against 1 of 3 - lower drawdown, slightly steadier, better days, on
+  less than a third of the trades. That is precisely the trade the owner said he wanted (less
+  profit, lower drawdown, more consistency) and it comes from the ENTRY FILTER, not from the
+  re-entry rule. n 32 in-sample on three days; a hypothesis for London, not a result.
