@@ -29,3 +29,5 @@ POLY FIXED: stopped buys whose side WON at settlement: 47%
 PRED FIXED: buys 1847 avg entry 0.639 | stopped 75% avg -0.157 (exit bid avg 0.493; stopped trades that WOULD have won: see below) | held 25% win 96% avg +0.301 | TOTAL per buy -0.0410
 PRED TRAIL: buys 1847 avg entry 0.639 | stopped 90% avg -0.066 (exit bid avg 0.584; stopped trades that WOULD have won: see below) | held 10% win 98% avg +0.314 | TOTAL per buy -0.0281
 PRED FIXED: stopped buys whose side WON at settlement: 50%
+
+OWNER 12:5x 'then buy both sides at 50-50 or 55': same rule, T=0.50/0.55 (local Poly 1d + Predict 6d). All rows negative with fees; zero-fee ~0 (fair price). Re-buy always worse.
