@@ -1,0 +1,9 @@
+M37 (V, 10-03 11:5x) owner: 'test it on predict, it is based on exchange side'. Ratchet family (M36 192-cell grid) on PREDICT.FUN's own 1 Hz book
+(book1s 09-11..09-16, ~1,350 candles). Label = Binance close>=open (Predict rule; last book1s price vs open, approx of candles.actual). Fee 2% shares on winners; exits = buy opposite at its ask, charged 2%.
+Entries: RAND (random side/sec 15-150) and BN_s (side Binance is on at sec s). VERDICT: FAIL - 5/960 cells >0 (all BN_90, t<0.25, halves flip), 0 with t>=2, 0 both halves.
+Ratchet beats HOLD by <=+0.01/$1 on BN_60/BN_120, never on RAND. Same as Polymarket: exits cut exposure, add no edge.
+BN_120  n958 HOLD -0.0334 | best a5 g15 R0 T0 -0.0238 t-1.50 halves -0.0229/-0.0247 | cells>0 0/192
+BN_30   n1121 HOLD -0.0575 | best a20 g5 R0 T0 -0.0563 t-3.08 halves -0.0273/-0.0851 | cells>0 0/192
+BN_60   n1108 HOLD -0.0306 | best a20 g5 R0 T0 -0.0204 t-1.19 halves -0.0181/-0.0227 | cells>0 0/192
+BN_90   n1052 HOLD +0.0042 | best a20 g20 R0 T0 +0.0045 t+0.23 halves +0.0172/-0.0083 | cells>0 5/192
+RAND    n1128 HOLD +0.0191 | best a20 g20 R0 T0 -0.0101 t-0.42 halves -0.0098/-0.0103 | cells>0 0/192
