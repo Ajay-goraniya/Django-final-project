@@ -5,3 +5,7 @@ DATA: M29 harness, 15 days 09-08..09-22 (A journalled + B reconstructed), graded
 EXECUTION: taker at the real ask (+fee) as primary; ask-touch resting fill column beside it (M29's model).
 REPORT: n, W/L, $@10, per $1, maxDD, worst trade, green days, both halves; beside it the same rule without the Binance check and
 without the session cut (so the effect of each piece is visible). n<60 = INSUFFICIENT. File analysis/zurich/M34_EF_BN_SESSION.txt.
+
+## RESULT (Zurich f56d493) - FAIL. Owner rule taker n185 -0.0071/$ (t -0.10), 7/12 green; ask-touch -0.123/$. Pieces: plain -0.0137,
++BN -0.0038, +session -0.0334 (session makes it worse), both -0.0071. Halves +0.093 (reconstructed days) / -0.116 (journalled, clean).
+V's quick check on London's real 183 fixed-EF 13-24 fills: BN check keeps 168 (+0.066/$) and skips 15 that were +0.48/$ -> hurts.
