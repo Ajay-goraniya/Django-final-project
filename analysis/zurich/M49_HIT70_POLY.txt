@@ -1,0 +1,67 @@
+M49 - THE OWNER'S EXACT HIT-70-BUY-BOTH RULE ON POLYMARKET. READ-ONLY. 2026-10-03 12:41:45 UTC
+leg() and the trigger expression byte-identical to m49_hit70_both.py; only the candle dict,
+the session split and the reporting are mine (no pandas on this box).
+First second either ask reaches 0.70 (by sec 280) -> buy BOTH sides $1 each at their asks.
+Each side marks its own buy price, stops at mark-0.10 on the bid, re-buys at ask >= mark+0.10
+with stake x1.10, to sec 295; held legs settle. HOLD both = the same entry with no stops.
+Polymarket only; venues.outcome + gamma labels; no Predict.fun data.
+
+  POLY fee  OWNER EXACT x1.10: candles 2543 $/candle -0.1890 per $ staked -0.0610 t -7.70 halves -0.1220/-0.2559 green 1/12 buys 2.98 worst -6.21 maxDD -484.7 | 70-side won 72%
+  POLY fee  flat stake       : candles 2543 $/candle -0.1868 per $ staked -0.0627 t -7.88 halves -0.1211/-0.2524 green 1/12 buys 2.98 worst -5.01 maxDD -479.0 | 70-side won 72%
+  POLY fee  HOLD both        : candles 2543 $/candle -0.1109 per $ staked -0.0555 t -5.63 halves -0.0693/-0.1525 green 2/12 buys 2.00 worst -1.05 maxDD -285.0 | 70-side won 72%
+
+  POLY 0fee OWNER EXACT x1.10: candles 2543 $/candle -0.0409 per $ staked -0.0132 t -1.72 halves +0.0215/-0.1033 green 5/12 buys 2.98 worst -5.70 maxDD -146.7 | 70-side won 72%
+  POLY 0fee flat stake       : candles 2543 $/candle -0.0424 per $ staked -0.0142 t -1.84 halves +0.0191/-0.1039 green 5/12 buys 2.98 worst -4.57 maxDD -149.1 | 70-side won 72%
+  POLY 0fee HOLD both        : candles 2543 $/candle -0.0419 per $ staked -0.0209 t -2.13 halves -0.0003/-0.0834 green 4/12 buys 2.00 worst -0.98 maxDD -146.0 | 70-side won 72%
+
+  BY SESSION ($/candle)
+  row                                       ASIA |               EU |               US |             LATE
+  POLY fee  OWNER EXACT x1.10     -0.1529 n742 |     -0.2472 n685 |     -0.1428 n699 |     -0.2351 n417
+  POLY fee  flat stake            -0.1498 n742 |     -0.2413 n685 |     -0.1459 n699 |     -0.2317 n417
+  POLY fee  HOLD both             -0.0897 n742 |     -0.1078 n685 |     -0.0946 n699 |     -0.1812 n417
+  POLY 0fee OWNER EXACT x1.10     -0.0079 n742 |     -0.0944 n685 |     +0.0076 n699 |     -0.0931 n417
+  POLY 0fee flat stake            -0.0083 n742 |     -0.0927 n685 |     +0.0007 n699 |     -0.0928 n417
+  POLY 0fee HOLD both             -0.0207 n742 |     -0.0388 n685 |     -0.0255 n699 |     -0.1122 n417
+ONE-SIDED CONTROL, not in the spec but it is the number his rule throws away:
+  n 2543; mean ask of the 70-side at the trigger 0.7230; it won 72.4%
+  break-even win rate at that ask = 72.3%, so the gap is +0.13%
+  BUY ONLY THE 70-SIDE, hold to settle, fee:    per $1 -0.0173  t -1.40
+  BUY ONLY THE 70-SIDE, hold to settle, 0 fee:  per $1 +0.0021  t +0.17
+  mean COMBINED ask at the trigger (what buy-both pays for a payout of exactly 1.00): 1.0134
+  -> buy-both starts -0.0134 per candle on $2 staked, i.e. -0.0132 per $ staked, guaranteed
+
+================================================================================
+M49 VERDICT: HIS RULE LOSES -0.1890 PER CANDLE WITH FEES, AND IT IS WORSE THAN DOING NOTHING TO THE
+SAME POSITION - HOLD BOTH IS -0.1109. THE STOP-AND-RE-BUY MACHINERY DESTROYS VALUE ON TOP OF AN
+ENTRY THAT ALREADY CANNOT WIN.
+
+  OWNER EXACT x1.10, fees   $/candle -0.1890  per $ staked -0.0610  t -7.70  1/12 green  worst -6.21
+  flat stake,        fees            -0.1868               -0.0627  t -7.88  1/12 green  worst -5.01
+  HOLD both,         fees            -0.1109               -0.0555  t -5.63  2/12 green  worst -1.05
+  OWNER EXACT x1.10, 0 fee           -0.0409               -0.0132  t -1.72  5/12 green  worst -5.70
+  HOLD both,         0 fee           -0.0419               -0.0209  t -2.13  4/12 green  worst -0.98
+Note the worst-candle column: his rule's worst candle is -6.21 against HOLD both's -1.05. Buying
+both sides caps the loss at the spread; adding stops and 10%-bigger re-buys removes that cap and
+makes the tail six times deeper. The stake growth again earns nothing - x1.10 and x1.00 are within
+0.002 per candle of each other - while taking the worst candle from -5.01 to -6.21.
+
+THE ENTRY IS A GUARANTEED LOSS BEFORE ANY RULE RUNS, and the number is in the file: at the trigger
+the mean COMBINED ask is 1.0134 for a position that pays exactly 1.00, because the two sides are
+complementary. So buy-both starts -0.0132 per dollar staked with certainty - worse than M41's
+-0.0105 at sec 180, because when one side is running to 0.70 the book is wider. That -0.0132 is
+almost exactly the zero-fee result (-0.0132 per $ staked for OWNER EXACT), which is the proof that
+the entry is the whole story and the stops are noise around it.
+
+AND THE 72% DOES NOT MEAN WHAT IT LOOKS LIKE - I checked rather than assume it. The side that
+reaches 0.70 goes on to win 72.4% of the time, which sounds like an edge against a 0.70 price. It is
+not: the mean ask actually PAID on that side is 0.7230, not 0.70, because the trigger fires on the
+first ask at or above 0.70 and the book has usually moved past it. Break-even at 0.7230 is 72.3%,
+and it won 72.4% - a gap of thirteen hundredths of a percentage point. Buying ONLY the 70-side and
+holding gives +0.0021 per $1 at zero fee (t +0.17) and -0.0173 with the fee. The market's 0.72 is
+right to within a rounding error, which is the same answer M44 and M47 gave at 0.60.
+SO THE CONSTRUCTIVE VERSION OF HIS IDEA IS STILL NOT TRADEABLE, but it is closer: buy only the
+70-side and hold, and you are at break-even before costs instead of -1.3 cents guaranteed. Buying
+both sides is the part that converts a fair bet into a certain loss.
+Sessions: every cell negative with fees; even free, only US is positive (+0.0076) and EU and LATE
+are clearly negative (-0.094, -0.093), so there is no session rescue here either.
+Polymarket only, leg() and the trigger byte-identical to the prereg script, nothing live touched.
