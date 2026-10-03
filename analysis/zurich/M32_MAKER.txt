@@ -61,3 +61,18 @@ M32-MAKER (a) VERDICT - TWO SEPARATE ANSWERS, AND THEY POINT DIFFERENT WAYS.
    THE ONLY TEST THAT SETTLES IT IS PART (b) - London's REAL maker fills since 10-02 15:04, where
    the fills are facts rather than a model. Part (a) says the hypothesis is worth that test; it
    cannot say more, and I am not proposing a live change on it.
+
+--------------------------------------------------------------------------------
+NOTE ON THE CANDLE COUNT, since the spec says 2,392 and this file says 2,539 - neither is wrong.
+The prereg's 2,392 was M30's count when M30 ran on 10-02 (block A 1,184 + block B 1,208). Block B
+is pm_multi/multi_market, which is a LIVE recorder and has kept appending btc5 book since: it now
+holds 1,355 candles, so the union is 2,539 (2,535 of them with both bids present). The extra ~147
+candles are real new book between M30's run and this one, carrying the entry set up to 10-03.
+So the denominator grew because the data grew, not because the filter changed. Checked rather than
+assumed: block A 1,184 live-websocket candles of which 1,180 carry both bids; block B 1,355, all of
+which do. The entry rule itself requires both bids, so the candles without them can never produce an
+entry and the difference does not affect any number above.
+
+STATUS: part (a) is COMPLETE as specified. V's 11:0x stop arrived about a minute after this file was
+already pushed (472029b) and was cancelled at 11:1x; nothing was reverted in between, so the result
+below is the original run, not a re-run, and the figures are unchanged.
