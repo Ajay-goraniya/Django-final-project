@@ -1,0 +1,66 @@
+M41 - THE BOTH-POINTS RULE ON ZURICH'S OWN POLYMARKET 1 Hz BID+ASK. READ-ONLY.
+2026-10-03 12:12:09 UTC.  Rule transcribed from m41_both_points.py leg(), unchanged.
+
+POLYMARKET ONLY: book = branch polybook (09-11..09-16, live-websocket rows) + pm_multi
+books market=btc5 (09-28..10-03), both the Polymarket CLOB. Labels = venues.outcome and the
+gamma mirror, i.e. Polymarket's own resolution. Fee = the Polymarket taker 0.07p(1-p) on every
+buy and sell. NO Predict.fun data is read; venues.q's pred_up/pred_dn are never selected.
+
+candles: 2532  days: 12
+
+V's grid:
+  POLY fee     d= 5.0c n 2338 per$1 -0.1086 t-20.26 halves -0.1100/-0.1072 green 0/12 win% 29% buys/candle 4.1 maxDD -253.87
+  POLY fee     d=10.0c n 2338 per$1 -0.0799 t-14.89 halves -0.0757/-0.0842 green 0/12 win% 27% buys/candle 3.3 maxDD -187.58
+    PER DAY (d=10c, fee): 09-11 -18.90  09-12 -3.01  09-13 -13.64  09-14 -11.69  09-15 -20.32  09-16 -14.66  09-28 -3.85  09-29 -20.54  09-30 -22.44  10-01 -28.74  10-02 -25.22  10-03 -3.85
+  POLY fee     d=15.0c n 2338 per$1 -0.0670 t-12.25 halves -0.0608/-0.0731 green 0/12 win% 26% buys/candle 2.9 maxDD -158.19
+  POLY 0fee    d= 5.0c n 2338 per$1 -0.0324 t -7.40 halves -0.0353/-0.0294 green 1/12 win% 39% buys/candle 4.1 maxDD -79.87
+  POLY 0fee    d=10.0c n 2338 per$1 -0.0230 t -4.86 halves -0.0196/-0.0264 green 2/12 win% 34% buys/candle 3.3 maxDD -57.74
+    PER DAY (d=10c, fee): 09-11 -6.79  09-12 -1.42  09-13 -0.91  09-14 -0.74  09-15 -7.64  09-16 -5.10  09-28 +0.35  09-29 -4.60  09-30 -8.48  10-01 -11.28  10-02 -8.83  10-03 +1.67
+  POLY 0fee    d=15.0c n 2338 per$1 -0.0204 t -4.04 halves -0.0147/-0.0261 green 2/12 win% 33% buys/candle 2.9 maxDD -54.24
+
+the script's own grid, for reference (so the choice of d is visible):
+  POLY fee     d= 2.0c n 2338 per$1 -0.1462 t-29.54 halves -0.1546/-0.1378 green 0/12 win% 21% buys/candle 5.4 maxDD -341.81
+  POLY fee     d= 3.0c n 2338 per$1 -0.1327 t-25.89 halves -0.1366/-0.1287 green 0/12 win% 24% buys/candle 4.8 maxDD -310.18
+  POLY fee     d= 3.5c n 2338 per$1 -0.1225 t-23.11 halves -0.1271/-0.1178 green 0/12 win% 26% buys/candle 4.5 maxDD -286.21
+  POLY fee     d= 7.0c n 2338 per$1 -0.0923 t-17.08 halves -0.0905/-0.0940 green 0/12 win% 28% buys/candle 3.7 maxDD -216.56
+  POLY 0fee    d= 2.0c n 2338 per$1 -0.0457 t-12.44 halves -0.0556/-0.0359 green 0/12 win% 36% buys/candle 5.4 maxDD -108.44
+  POLY 0fee    d= 3.0c n 2338 per$1 -0.0420 t-10.64 halves -0.0478/-0.0362 green 0/12 win% 40% buys/candle 4.8 maxDD -101.21
+  POLY 0fee    d= 3.5c n 2338 per$1 -0.0383 t -9.13 halves -0.0448/-0.0319 green 1/12 win% 40% buys/candle 4.5 maxDD -93.84
+  POLY 0fee    d= 7.0c n 2338 per$1 -0.0259 t -5.60 halves -0.0255/-0.0262 green 2/12 win% 37% buys/candle 3.7 maxDD -64.20
+
+  HOLD BOTH SIDES, no stops, fee: n2338 per$1 -0.0274 green 0/12   <- buying both sides costs the spread, so this is the floor the rule must beat
+  HOLD BOTH SIDES, no stops, fee  : n2338 per$1 -0.0274 green 0/12
+  HOLD BOTH SIDES, no stops, 0fee : n2338 per$1 -0.0103 green 0/12
+  mean (ask_UP + ask_DOWN) at sec 180 = 1.0105  -> you pay that for a guaranteed payout of exactly 1.00
+
+================================================================================
+M41 VERDICT: EVERY CELL LOSES, AND THE STARTING POSITION IS A GUARANTEED LOSS BEFORE ANY STOP RUNS.
+
+THE ARITHMETIC THAT DECIDES THIS, AND IT IS NOT A SAMPLE EFFECT: at sec 180 the mean
+ask_UP + ask_DOWN is 1.0105. Buying BOTH sides therefore pays 1.0105 for a position that pays out
+exactly 1.00 whatever happens - the two legs are complementary, one settles at 1 and the other at 0.
+So the trade starts 1.05 cents in the hole per dollar before a single stop is considered, and the
+Polymarket taker fee on both legs takes it to -0.0274. That is the floor the rule has to beat:
+  HOLD BOTH SIDES, no stops, fee   -0.0274 per $1, 0 of 12 green days
+  HOLD BOTH SIDES, no stops, 0 fee -0.0103 per $1, 0 of 12 green days
+
+V's GRID, 2,338 candles over 12 days - the rule makes the floor WORSE at every d under fees:
+  d= 5c  fee -0.1086  t -20.26  green 0/12   |  0 fee -0.0324  t -7.40  green 1/12
+  d=10c  fee -0.0799  t -14.89  green 0/12   |  0 fee -0.0230  t -4.86  green 2/12
+  d=15c  fee -0.0670  t -12.25  green 0/12   |  0 fee -0.0204  t -4.04  green 2/12
+With fees the rule is 2.4x to 4x worse than simply holding both legs. Without fees it is still worse
+than the 0-fee floor at d=5c and only roughly level with it at d=10-15c. Not one of the 14 cells run
+(V's three plus the script's five, each in two fee columns) is positive, and the t-statistics are
+-4 to -29.5, so these are not close calls - they are decisive losses on 2,338 candles.
+
+THE SHAPE IS THE SAME ONE THIS PROJECT KEEPS FINDING: wider d is always less bad (-0.1462 at 2c
+rising monotonically to -0.0670 at 15c, with buys/candle falling 5.4 -> 2.9). The optimum of the
+family is the cell that trades least, which is "do not run the rule". Every round trip pays the
+spread twice and the fee twice on a position whose total payout is fixed at 1.00, so churn cannot
+help - there is no price move to capture, only costs to pay.
+
+PROVENANCE, since that was the owner's actual question: this is POLYMARKET end to end. Book from the
+branch polybook (09-11..09-16, live-websocket rows) and pm_multi books market='btc5' (09-28..10-03),
+both the Polymarket CLOB at 1 Hz. Labels from venues.outcome and the gamma mirror, i.e. Polymarket's
+own resolution. Fee is the Polymarket taker 0.07p(1-p). No Predict.fun table is opened anywhere in
+this run, and venues.q's pred_up/pred_dn columns are never selected. Nothing live was touched.
