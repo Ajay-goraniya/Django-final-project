@@ -19,3 +19,13 @@ M44 (V, 10-03 12:4x) owner: 60-60 orders at open, stop 10 pts below, trailing. M
   OWN   R1: per candle -0.2079 t-11.85 halves -0.2437/-0.1722 green 0/6 buys/candle 5.26 | ASIA -0.262 | EU -0.171 | US -0.167 | LATE -0.225
 
 VERDICT (local): FAIL - negative in every row with fees on both venues (Polymarket 1 day t -3.2..-3.8, Predict 6 days t -7.9..-12.6, 0/6 green). Re-buy always worse. Zurich 12-day Polymarket run requested.
+
+OWNER 12:5x 'buy 60, lose 0.10 or win 0.40 - how does it lose?' Breakdown (fixed stop = his words, and trailing):
+POLY fee FIXED: buys 436 avg entry 0.654 | stopped 62% avg -0.203 (exit bid avg 0.475; stopped trades that WOULD have won: see below) | held 38% win 95% avg +0.267 | TOTAL per buy -0.0261
+POLY fee TRAIL: buys 436 avg entry 0.654 | stopped 81% avg -0.102 (exit bid avg 0.577; stopped trades that WOULD have won: see below) | held 19% win 96% avg +0.265 | TOTAL per buy -0.0315
+POLY 0fee FIXED: buys 436 avg entry 0.654 | stopped 62% avg -0.170 (exit bid avg 0.475; stopped trades that WOULD have won: see below) | held 38% win 95% avg +0.282 | TOTAL per buy -0.0000
+POLY 0fee TRAIL: buys 436 avg entry 0.654 | stopped 81% avg -0.071 (exit bid avg 0.577; stopped trades that WOULD have won: see below) | held 19% win 96% avg +0.280 | TOTAL per buy -0.0030
+POLY FIXED: stopped buys whose side WON at settlement: 47%
+PRED FIXED: buys 1847 avg entry 0.639 | stopped 75% avg -0.157 (exit bid avg 0.493; stopped trades that WOULD have won: see below) | held 25% win 96% avg +0.301 | TOTAL per buy -0.0410
+PRED TRAIL: buys 1847 avg entry 0.639 | stopped 90% avg -0.066 (exit bid avg 0.584; stopped trades that WOULD have won: see below) | held 10% win 98% avg +0.314 | TOTAL per buy -0.0281
+PRED FIXED: stopped buys whose side WON at settlement: 50%
