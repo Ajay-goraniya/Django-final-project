@@ -21,3 +21,19 @@ POLY 0fee      d= 3.5c n285 per\$1 -0.0278 t -2.05 halves -0.0366/-0.0192 green 
 POLY 0fee      d= 5.0c n285 per\$1 -0.0371 t -2.30 halves -0.0663/-0.0080 green 0/1 win% 45% buys/candle 3.2 maxDD -12.25
 POLY 0fee      d= 7.0c n285 per\$1 -0.0275 t -1.62 halves -0.0462/-0.0089 green 0/1 win% 45% buys/candle 3.0 maxDD -8.74
 VERDICT: FAIL - all 25 rows negative, t -1.6 to -21, both halves negative everywhere, 0 green days. Each stop+rebuy cycle sells ~d below the mark and buys back AT the mark: every cycle loses d + spread, ~4 buys per candle.
+
+OWNER 12:4x asked d = 5, 10, 15c:
+PRED A         d= 5.0c n1148 per\$1 -0.0739 t -9.49 halves -0.0945/-0.0534 green 0/6 win% 35% buys/candle 4.0 maxDD -85.10
+PRED A         d=10.0c n1148 per\$1 -0.0534 t -6.71 halves -0.0734/-0.0333 green 0/6 win% 38% buys/candle 3.2 maxDD -61.64
+PRED A         d=15.0c n1148 per\$1 -0.0461 t -5.43 halves -0.0623/-0.0299 green 0/6 win% 38% buys/candle 2.8 maxDD -53.97
+PRED B         d= 5.0c n1148 per\$1 -0.1023 t-12.53 halves -0.1213/-0.0834 green 0/6 win% 33% buys/candle 4.0 maxDD -117.61
+PRED B         d=10.0c n1148 per\$1 -0.0711 t -8.68 halves -0.0899/-0.0523 green 0/6 win% 35% buys/candle 3.2 maxDD -81.92
+PRED B         d=15.0c n1148 per\$1 -0.0580 t -6.70 halves -0.0730/-0.0431 green 0/6 win% 37% buys/candle 2.8 maxDD -67.50
+PRED HOLD both (no stops): per\$1 -0.0314
+POLY fee       d= 5.0c n285 per\$1 -0.1035 t -6.26 halves -0.1382/-0.0690 green 0/1 win% 36% buys/candle 3.2 maxDD -29.75
+POLY fee       d=10.0c n285 per\$1 -0.0722 t -4.22 halves -0.0854/-0.0591 green 0/1 win% 42% buys/candle 2.7 maxDD -21.05
+POLY fee       d=15.0c n285 per\$1 -0.0763 t -4.20 halves -0.0721/-0.0805 green 0/1 win% 40% buys/candle 2.5 maxDD -21.99
+POLY 0fee      d= 5.0c n285 per\$1 -0.0371 t -2.30 halves -0.0663/-0.0080 green 0/1 win% 45% buys/candle 3.2 maxDD -12.25
+POLY 0fee      d=10.0c n285 per\$1 -0.0215 t -1.27 halves -0.0305/-0.0126 green 0/1 win% 49% buys/candle 2.7 maxDD -7.30
+POLY 0fee      d=15.0c n285 per\$1 -0.0339 t -1.87 halves -0.0261/-0.0416 green 0/1 win% 46% buys/candle 2.5 maxDD -10.40
+VERDICT unchanged: FAIL at 5/10/15c, every day red, both halves negative.
