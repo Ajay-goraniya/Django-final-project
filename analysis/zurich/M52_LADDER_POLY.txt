@@ -1,0 +1,115 @@
+M52 - THE OWNER'S LADDER (60/70/80/90, stop 10 below, next level only after a stop).
+POLYMARKET. READ-ONLY. 2026-10-03 13:01:10 UTC.
+ladder() spliced byte-identical from analysis/v/maker2/m52_ladder.py (e438a57); the S60/B60/B80
+setup selection is copied from that script's run(). Candle dict, session split and reporting
+are mine. venues.outcome + gamma labels; taker 0.07p(1-p) and a zero-fee column.
+This corrects M47/M49/M50B: there the mark never moved, so one stop/re-buy pair could repeat;
+here each stop advances the level by 10c and the ladder tops out at 0.90 (max 4 buys from 0.60).
+
+  POLY fee  S60 x1.10: n 2549 $/candle -0.1017 per $ staked -0.0380 t -7.62 halves -0.0953/-0.1081 green 1/12 win-candles 54% worst -3.49 max buys/side 4 (mean 1.81) maxDD -278.2
+  POLY fee  S60 x2.00: n 2549 $/candle -0.1556 per $ staked -0.0349 t -7.25 halves -0.1460/-0.1653 green 2/12 win-candles 64% worst -9.56 max buys/side 4 (mean 1.81) maxDD -415.4
+  POLY fee  S60 x1.00: n 2549 $/candle -0.0971 per $ staked -0.0383 t -7.54 halves -0.0915/-0.1026 green 1/12 win-candles 54% worst -3.13 max buys/side 4 (mean 1.81) maxDD -266.6
+  POLY fee  B60 x2.00: n 2549 $/candle -0.2565 per $ staked -0.0450 t -7.30 halves -0.2150/-0.2979 green 1/12 win-candles 49% worst -20.68 max buys/side 6 (mean 1.86) maxDD -657.8
+  POLY fee  B60 x1.00: n 2549 $/candle -0.1879 per $ staked -0.0593 t -9.68 halves -0.1579/-0.2179 green 0/12 win-candles 40% worst -4.02 max buys/side 6 (mean 1.86) maxDD -482.8
+  POLY fee  B80 x2.00: n 2542 $/candle -0.2084 per $ staked -0.0633 t -5.39 halves -0.1635/-0.2533 green 0/12 win-candles 18% worst -13.94 max buys/side 5 (mean 1.45) maxDD -533.2
+  POLY fee  B80 x1.00: n 2542 $/candle -0.1821 per $ staked -0.0712 t -5.59 halves -0.1423/-0.2219 green 0/12 win-candles 16% worst -3.34 max buys/side 5 (mean 1.45) maxDD -471.2
+
+  POLY 0fee S60 x1.10: n 2549 $/candle -0.0039 per $ staked -0.0015 t -0.32 halves -0.0009/-0.0068 green 7/12 win-candles 59% worst -3.28 max buys/side 4 (mean 1.81) maxDD -52.6
+  POLY 0fee S60 x2.00: n 2549 $/candle -0.0197 per $ staked -0.0044 t -1.02 halves -0.0175/-0.0219 green 6/12 win-candles 70% worst -9.07 max buys/side 4 (mean 1.81) maxDD -107.0
+  POLY 0fee S60 x1.00: n 2549 $/candle -0.0027 per $ staked -0.0011 t -0.23 halves -0.0002/-0.0051 green 7/12 win-candles 57% worst -2.93 max buys/side 4 (mean 1.81) maxDD -49.4
+  POLY 0fee B60 x2.00: n 2549 $/candle -0.0247 per $ staked -0.0043 t -0.77 halves +0.0015/-0.0509 green 8/12 win-candles 63% worst -18.41 max buys/side 6 (mean 1.86) maxDD -111.9
+  POLY 0fee B60 x1.00: n 2549 $/candle -0.0320 per $ staked -0.0101 t -1.74 halves -0.0070/-0.0570 green 7/12 win-candles 50% worst -3.69 max buys/side 6 (mean 1.86) maxDD -93.2
+  POLY 0fee B80 x2.00: n 2542 $/candle -0.0739 per $ staked -0.0224 t -1.96 halves -0.0309/-0.1169 green 2/12 win-candles 18% worst -11.95 max buys/side 5 (mean 1.45) maxDD -198.3
+  POLY 0fee B80 x1.00: n 2542 $/candle -0.0710 per $ staked -0.0277 t -2.19 halves -0.0327/-0.1092 green 3/12 win-candles 17% worst -2.97 max buys/side 5 (mean 1.45) maxDD -219.6
+
+  BY SESSION ($/candle, n)
+  row                                ASIA |               EU |               US |             LATE
+  POLY fee  S60 x1.10            -0.1150 n743 |     -0.1055 n689 |     -0.0971 n700 |     -0.0794 n417
+  POLY fee  S60 x2.00            -0.1779 n743 |     -0.1601 n689 |     -0.1512 n700 |     -0.1161 n417
+  POLY fee  S60 x1.00            -0.1094 n743 |     -0.1006 n689 |     -0.0930 n700 |     -0.0763 n417
+  POLY fee  B60 x2.00            -0.2767 n743 |     -0.2708 n689 |     -0.2051 n700 |     -0.2830 n417
+  POLY fee  B60 x1.00            -0.2277 n743 |     -0.1994 n689 |     -0.1445 n700 |     -0.1707 n417
+  POLY fee  B80 x2.00            -0.1467 n740 |     -0.2506 n689 |     -0.1576 n696 |     -0.3329 n417
+  POLY fee  B80 x1.00            -0.1354 n740 |     -0.2393 n689 |     -0.1370 n696 |     -0.2460 n417
+  POLY 0fee S60 x1.10            -0.0185 n743 |     -0.0088 n689 |     +0.0076 n700 |     +0.0110 n417
+  POLY 0fee S60 x2.00            -0.0420 n743 |     -0.0256 n689 |     -0.0044 n700 |     +0.0040 n417
+  POLY 0fee S60 x1.00            -0.0163 n743 |     -0.0073 n689 |     +0.0080 n700 |     +0.0113 n417
+  POLY 0fee B60 x2.00            -0.0433 n743 |     -0.0408 n689 |     +0.0376 n700 |     -0.0695 n417
+  POLY 0fee B60 x1.00            -0.0726 n743 |     -0.0420 n689 |     +0.0148 n700 |     -0.0217 n417
+  POLY 0fee B80 x2.00            -0.0144 n740 |     -0.1141 n689 |     -0.0200 n696 |     -0.2029 n417
+  POLY 0fee B80 x1.00            -0.0255 n740 |     -0.1269 n689 |     -0.0241 n696 |     -0.1375 n417
+
+  PER DAY ($/candle), POLY fee
+  day           09-11    09-12    09-13    09-14    09-15    09-16    09-28    09-29    09-30    10-01    10-02    10-03
+  S60 x1.10   -0.197   -0.044   -0.021   -0.082   -0.126   -0.043   -0.085   -0.158   -0.089   -0.169   -0.153   +0.088
+  S60 x2.00   -0.219   +0.055   -0.041   -0.156   -0.206   -0.089   -0.121   -0.263   -0.119   -0.270   -0.199   +0.090
+  S60 x1.00   -0.193   -0.054   -0.019   -0.077   -0.120   -0.041   -0.084   -0.149   -0.086   -0.160   -0.148   +0.088
+  B60 x2.00   -0.479   +0.082   -0.143   -0.207   -0.203   -0.074   -0.105   -0.274   -0.194   -0.534   -0.335   -0.118
+  B60 x1.00   -0.278   -0.121   -0.117   -0.169   -0.109   -0.118   -0.081   -0.267   -0.126   -0.312   -0.260   -0.100
+  B80 x2.00   -0.212   -0.358   -0.178   -0.156   -0.070   -0.193   -0.225   -0.338   -0.294   -0.074   -0.171   -0.456
+  B80 x1.00   -0.037   -0.217   -0.126   -0.189   -0.118   -0.174   -0.266   -0.241   -0.308   -0.110   -0.109   -0.432
+
+  B60 THE ENTRY, before any rule: mean COMBINED ask at the trigger 1.0137 for a payout of exactly 1.00 (n 2549)
+  -> buy-both starts -0.0137 per candle on $2 = -0.0135 per $ staked, guaranteed, before fees and before stops.
+
+  B80 THE ENTRY, before any rule: mean COMBINED ask at the trigger 1.0127 for a payout of exactly 1.00 (n 2542)
+  -> buy-both starts -0.0127 per candle on $2 = -0.0125 per $ staked, guaranteed, before fees and before stops.
+
+  Stake schedule is 1, g, g^2, ... so the largest single stake on a side is g^(buys-1):
+  at max buys/side 4 that is 8 at x2.00 and 1.33 at x1.10; at 2 buys, 2 and 1.10.
+
+  === MY REFERENCE ROWS (not his rule) ===
+  LADDER MINUS HOLD, PAIRED (does his rule beat doing nothing on the same entry?)
+    S60 x1.00 fee : ladder MINUS hold, paired on the same candles: n 2549 mean -0.0706/candle t -7.01 better in 30%
+    S60 x1.00 0fee: ladder MINUS hold, paired on the same candles: n 2549 mean -0.0158/candle t -1.66 better in 33%
+    S60 x2.00 fee : ladder MINUS hold, paired on the same candles: n 2549 mean -0.1291/candle t -6.86 better in 35%
+    S60 x2.00 0fee: ladder MINUS hold, paired on the same candles: n 2549 mean -0.0328/candle t -1.91 better in 41%
+    B60 x1.00 fee : ladder MINUS hold, paired on the same candles: n 2549 mean -0.0785/candle t -4.57 better in 57%
+    B60 x1.00 0fee: ladder MINUS hold, paired on the same candles: n 2549 mean +0.0083/candle t +0.52 better in 61%
+    B60 x2.00 fee : ladder MINUS hold, paired on the same candles: n 2549 mean -0.1471/candle t -4.50 better in 70%
+    B60 x2.00 0fee: ladder MINUS hold, paired on the same candles: n 2549 mean +0.0156/candle t +0.53 better in 74%
+    B80 x1.00 fee : ladder MINUS hold, paired on the same candles: n 2542 mean -0.0454/candle t -2.68 better in 53%
+    B80 x1.00 0fee: ladder MINUS hold, paired on the same candles: n 2542 mean -0.0033/candle t -0.20 better in 54%
+    B80 x2.00 fee : ladder MINUS hold, paired on the same candles: n 2542 mean -0.0717/candle t -3.23 better in 57%
+    B80 x2.00 0fee: ladder MINUS hold, paired on the same candles: n 2542 mean -0.0063/candle t -0.31 better in 57%
+
+  HOLD REFERENCE (my row, not his rule): buy at the same trigger ask, no stops, settle.
+    S60 HOLD fee : n 2549 $/candle -0.0265 per $ staked -0.0170 t -2.61 worst -1.01
+    S60 HOLD 0fee: n 2549 $/candle +0.0131 per $ staked +0.0084 t +1.32 worst -0.98
+    B60 HOLD fee : n 2549 $/candle -0.1094 per $ staked -0.0547 t -9.14 worst -1.05
+    B60 HOLD 0fee: n 2549 $/candle -0.0403 per $ staked -0.0202 t -3.37 worst -0.98
+    B80 HOLD fee : n 2542 $/candle -0.1367 per $ staked -0.0684 t -4.51 worst -1.05
+    B80 HOLD 0fee: n 2542 $/candle -0.0676 per $ staked -0.0338 t -2.23 worst -0.98
+  
+    B60 UNDERDOG start level (floor to 10c) n 2549: 0.0:3 0.1:12 0.2:157 0.3:1152 0.4:1224 0.5:1
+    B80 UNDERDOG start level (floor to 10c) n 2542: 0.0:26 0.1:791 0.2:1719 0.3:4 0.4:2
+
+  WHY max buys/side IS 6 AND NOT 4 IN B60: the ladder itself caps at level 0.90, so from 0.60 it is
+  at most 4 buys (S60: max 4, confirmed). But the B setups - as written in m52_ladder.py run() - start
+  EACH leg from floor(its own ask to 10c), so the underdog leg starts at 0.30-0.40 in B60 and 0.10-0.20
+  in B80 and therefore has 7-9 levels above it. That is the prereg's own setup selection, not a change
+  of mine; the 1-day Polymarket sample in the prereg just never produced a deep underdog ladder.
+
+  VERDICT: FAIL on every cell. Nothing passes with fees; nothing is distinguishable from zero without.
+  1. S60 is the only survivable shape: -0.038/$ with fees, -0.0015/$ at zero fee (t -0.32) - i.e. the
+     ladder at zero fee is exactly nothing, and the fee is the whole loss. x2.00 is worse than x1.00
+     per candle (-0.1556 vs -0.0971) while looking better per $ staked (-0.0349 vs -0.0383): the same
+     martingale illusion as M50B - the big stakes land on the re-buys that run, and it stakes 3x more.
+  2. THE LADDER LOSES TO DOING NOTHING. Paired on the identical entries, S60 ladder minus hold is
+     -0.0706/candle (t -7.01) with fees and -0.0158 (t -1.66) at zero fee, better on only 30% of
+     candles. The stops are not protection here, they are a cost: each one sells 10c below the level
+     into the bid and pays the taker fee twice, and the re-buy needs the price back 10c higher.
+  3. B60/B80 are structurally dead before the rule runs: mean combined ask 1.0137 / 1.0127 for a payout
+     of exactly 1.00 = -0.0135 / -0.0125 per $ staked, guaranteed, regardless of what the ladder does.
+  4. THE ONE THING THE RULE DOES DELIVER is what the owner asked for and it is not edge: B60 x2.00 at
+     zero fee wins on 63% of candles and beats hold on 74% of them, yet the paired mean is only
+     +0.0156/candle (t +0.53) and the worst candle is -18.41. More consistency, same expectancy, a
+     much fatter tail. With fees that same cell is -0.2565/candle.
+  5. The zero-fee S60 hold reference is +0.0084/$ at t +1.32 - a fifth price level at which the
+     5-minute favourite is fairly priced, consistent with M44 (+0.0022 at 0.60), M47/M49 (+0.0021 at
+     0.70) and M50B (+0.0005 at 0.80). The entry is fair, so no stop/re-buy/stake schedule built on
+     top of it can be better than fair minus costs - which is what all 14 cells show.
+
+  DATA: 2,554 Polymarket candles with a 1 Hz book and a venue label, 12 days (09-11..09-16, 09-28..10-03);
+  polybook 09-11..09-16 + pm_multi btc5 09-28..now; labels venues.outcome + gamma mkt; taker fee
+  0.07p(1-p) both ways in the fee columns, 0 in the zero-fee columns. Read-only; no Predict.fun data.
