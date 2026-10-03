@@ -1,0 +1,54 @@
+M47 - THE OWNER'S EXACT MARK-60 RULE ON POLYMARKET. READ-ONLY. 2026-10-03 12:38:28 UTC
+leg() byte-identical to m47_mark60.py; only the candle dict and reporting are mine (no pandas).
+Buy $1 at the ask when ask >= 0.60; sell at the bid when bid <= 0.50; re-buy when ask >= 0.70
+with stake x1.10 each time, same 0.50 stop; to sec 295; held settles. Both sides independent.
+OWNER EXACT = FIXED x1.10. The other three rows are references so each piece is visible.
+Polymarket only; venues.outcome + gamma labels; no Predict.fun data.
+
+2548 candles over 12 days
+
+  POLY fee  FIXED stake x1.10 [OWNER EXACT]: $/candle -0.0936 per $ staked -0.0368 t -6.52 halves -0.0841/-0.1031 green 2/12 buys 2.43 worst -4.77 maxDD -255.2
+  POLY fee  FIXED stake x1.00 [reference  ]: $/candle -0.0899 per $ staked -0.0371 t -6.60 halves -0.0822/-0.0977 green 1/12 buys 2.43 worst -3.94 maxDD -246.5
+  POLY fee  TRAIL stake x1.10 [reference  ]: $/candle -0.2309 per $ staked -0.0414 t-14.38 halves -0.2057/-0.2561 green 1/12 buys 4.65 worst -6.32 maxDD -596.4
+  POLY fee  TRAIL stake x1.00 [reference  ]: $/candle -0.1948 per $ staked -0.0419 t-15.31 halves -0.1741/-0.2154 green 1/12 buys 4.65 worst -3.66 maxDD -506.1
+
+  POLY 0fee FIXED stake x1.10 [OWNER EXACT]: $/candle +0.0022 per $ staked +0.0009 t +0.17 halves +0.0077/-0.0033 green 7/12 buys 2.43 worst -4.19 maxDD -47.6
+  POLY 0fee FIXED stake x1.00 [reference  ]: $/candle +0.0026 per $ staked +0.0011 t +0.21 halves +0.0067/-0.0016 green 7/12 buys 2.43 worst -3.47 maxDD -44.4
+  POLY 0fee TRAIL stake x1.10 [reference  ]: $/candle -0.0283 per $ staked -0.0051 t -2.09 halves -0.0179/-0.0387 green 5/12 buys 4.65 worst -5.34 maxDD -105.2
+  POLY 0fee TRAIL stake x1.00 [reference  ]: $/candle -0.0208 per $ staked -0.0045 t -1.93 halves -0.0108/-0.0309 green 5/12 buys 4.65 worst -3.15 maxDD -85.7
+
+  BY SESSION ($/candle, OWNER EXACT and the flat-stake reference)
+  row                                ASIA |               EU |               US |             LATE
+  POLY fee  OWNER EXACT      -0.1118 n743 |     -0.0933 n683 |     -0.0853 n705 |     -0.0755 n417
+  POLY fee  flat stake       -0.1050 n743 |     -0.0904 n683 |     -0.0838 n705 |     -0.0729 n417
+  POLY 0fee OWNER EXACT      -0.0167 n743 |     +0.0013 n683 |     +0.0159 n705 |     +0.0143 n417
+  POLY 0fee flat stake       -0.0133 n743 |     +0.0010 n683 |     +0.0140 n705 |     +0.0141 n417
+================================================================================
+M47 VERDICT ON HIS EXACT RULE: -0.0936 PER CANDLE WITH FEES, t -6.52, 2 OF 12 GREEN DAYS. AND THE
+10% STAKE GROWTH IS THE ONE PIECE THAT IS PURE RISK WITH NO RETURN.
+
+  OWNER EXACT (FIXED x1.10), fees   $/candle -0.0936   per $ staked -0.0368   t  -6.52   2/12 green
+  flat stake  (FIXED x1.00), fees            -0.0899                -0.0371   t  -6.60   1/12 green
+  OWNER EXACT (FIXED x1.10), 0 fee           +0.0022                +0.0009   t  +0.17   7/12 green
+  flat stake  (FIXED x1.00), 0 fee           +0.0026                +0.0011   t  +0.21   7/12 green
+  TRAIL x1.10, fees                          -0.2309                -0.0414   t -14.38   1/12 green
+  TRAIL x1.00, fees                          -0.1948                -0.0419   t -15.31   1/12 green
+
+THE STAKE-GROWTH ANSWER IS CLEAN, so it is worth giving him first: x1.10 and x1.00 earn the SAME per
+dollar staked - -0.0368 against -0.0371 with fees, +0.0009 against +0.0011 without. Three ten-
+thousandths apart on 2,548 candles. But the worst single candle goes from -3.94 to -4.77 (+21%) and
+the maximum drawdown from -246.5 to -255.2. So increasing the stake 10% each re-buy does not improve
+the return per dollar at all; it only enlarges the position when the trade is already going against
+us, which is exactly when a bigger stake hurts. That is a risk increase bought for nothing.
+
+THE ZERO-FEE ROW REPEATS M44'S FINDING AND IS THE REAL DIAGNOSIS: his exact rule is +0.0022 per
+candle at t +0.17 with no fees - break-even. Buying the favourite at 0.60 is FAIRLY PRICED, so there
+is no edge for any stop, re-buy level or stake schedule to work on, and the entire -0.0936 in the fee
+column IS the cost of trading: 2.43 buys a candle, each paying the taker fee in and out.
+HIS TRAILING VARIANT IS THE WORST ROW AGAIN, as in M44 and M36: -0.2309 per candle, 4.65 buys a
+candle. Trailing doubles the turnover and more than doubles the loss. If he wants one thing changed,
+it is that - the FIXED stop is strictly better than the trail in every column here.
+BY SESSION, with fees every session loses (ASIA -0.1118, EU -0.0933, US -0.0853, LATE -0.0755). Even
+free, ASIA is still negative (-0.0167) while US (+0.0159) and LATE (+0.0143) are marginally positive -
+too small and too fragile to call a session effect, and consistent with M42 and M43 finding none.
+Polymarket only, leg() byte-identical to the prereg script, nothing live touched.
