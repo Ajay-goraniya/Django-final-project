@@ -1,0 +1,23 @@
+M41 (V, 10-03 12:3x) owner: both sides at minute 3, stop in POINTS trailing the peak, re-buy a sold side when its ask returns to its mark. Full d grid. History only.
+PRED A         d= 2.0c n1148 per\$1 -0.1103 t-16.45 halves -0.1263/-0.0943 green 0/6 win% 28% buys/candle 5.4 maxDD -126.86
+PRED A         d= 3.0c n1148 per\$1 -0.0914 t-13.01 halves -0.1076/-0.0753 green 0/6 win% 32% buys/candle 4.7 maxDD -105.32
+PRED A         d= 3.5c n1148 per\$1 -0.0846 t-11.55 halves -0.1016/-0.0676 green 0/6 win% 34% buys/candle 4.4 maxDD -97.55
+PRED A         d= 5.0c n1148 per\$1 -0.0739 t -9.49 halves -0.0945/-0.0534 green 0/6 win% 35% buys/candle 4.0 maxDD -85.10
+PRED A         d= 7.0c n1148 per\$1 -0.0610 t -7.70 halves -0.0832/-0.0388 green 0/6 win% 38% buys/candle 3.6 maxDD -70.53
+PRED B         d= 2.0c n1148 per\$1 -0.1568 t-21.32 halves -0.1723/-0.1412 green 0/6 win% 22% buys/candle 5.4 maxDD -179.96
+PRED B         d= 3.0c n1148 per\$1 -0.1295 t-17.13 halves -0.1446/-0.1144 green 0/6 win% 27% buys/candle 4.7 maxDD -148.86
+PRED B         d= 3.5c n1148 per\$1 -0.1186 t-15.25 halves -0.1341/-0.1031 green 0/6 win% 30% buys/candle 4.4 maxDD -136.44
+PRED B         d= 5.0c n1148 per\$1 -0.1023 t-12.53 halves -0.1213/-0.0834 green 0/6 win% 33% buys/candle 4.0 maxDD -117.61
+PRED B         d= 7.0c n1148 per\$1 -0.0841 t-10.22 halves -0.1048/-0.0633 green 0/6 win% 37% buys/candle 3.6 maxDD -96.91
+PRED HOLD both (no stops): per\$1 -0.0314
+POLY fee       d= 2.0c n285 per\$1 -0.1272 t-11.05 halves -0.1316/-0.1229 green 0/1 win% 19% buys/candle 4.1 maxDD -36.21
+POLY fee       d= 3.0c n285 per\$1 -0.1186 t -8.75 halves -0.1329/-0.1044 green 0/1 win% 27% buys/candle 3.8 maxDD -33.77
+POLY fee       d= 3.5c n285 per\$1 -0.1016 t -7.15 halves -0.1163/-0.0871 green 0/1 win% 34% buys/candle 3.5 maxDD -29.33
+POLY fee       d= 5.0c n285 per\$1 -0.1035 t -6.26 halves -0.1382/-0.0690 green 0/1 win% 36% buys/candle 3.2 maxDD -29.75
+POLY fee       d= 7.0c n285 per\$1 -0.0869 t -5.07 halves -0.1106/-0.0634 green 0/1 win% 39% buys/candle 3.0 maxDD -25.02
+POLY 0fee      d= 2.0c n285 per\$1 -0.0392 t -3.76 halves -0.0353/-0.0431 green 0/1 win% 35% buys/candle 4.1 maxDD -11.64
+POLY 0fee      d= 3.0c n285 per\$1 -0.0389 t -3.01 halves -0.0470/-0.0310 green 0/1 win% 41% buys/candle 3.8 maxDD -11.32
+POLY 0fee      d= 3.5c n285 per\$1 -0.0278 t -2.05 halves -0.0366/-0.0192 green 0/1 win% 45% buys/candle 3.5 maxDD -8.77
+POLY 0fee      d= 5.0c n285 per\$1 -0.0371 t -2.30 halves -0.0663/-0.0080 green 0/1 win% 45% buys/candle 3.2 maxDD -12.25
+POLY 0fee      d= 7.0c n285 per\$1 -0.0275 t -1.62 halves -0.0462/-0.0089 green 0/1 win% 45% buys/candle 3.0 maxDD -8.74
+VERDICT: FAIL - all 25 rows negative, t -1.6 to -21, both halves negative everywhere, 0 green days. Each stop+rebuy cycle sells ~d below the mark and buys back AT the mark: every cycle loses d + spread, ~4 buys per candle.
