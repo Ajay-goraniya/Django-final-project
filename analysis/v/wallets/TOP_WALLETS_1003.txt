@@ -40,3 +40,8 @@ V 10-03 15:3x NOTES (48 h = 10-01 13:30 .. 10-03 13:30, 576 candles):
   0d9edeca halves +13.1k / -5.4k. Neither trades in high-volatility candles specifically (median range 9.1 / 11.5 bp vs 9.6 all).
 - POPULATION CHECK (932 wallets >=30 candles, >=$2k): 42 taker leggers total +23.2k but median ROI -1.7%, 43% profitable - the total IS
   those two wallets. Legging as a style does not pay across wallets (matches M28/M42). Survivorship: top-2 of 10,829 wallets.
+
+FOLLOW-UP (owner 10-03 19:4x): last run's top 25 (09-26..28) in this window (10-01..03): 12 still profitable, 9 losing, 4 stopped.
+Few-candle big winners flipped (0x22a4827c +2558 -> -9193; 0xae3985e1 +3676 -> -6574; 0x9783f45c +8087 -> -3511).
+FAV-calm source 0xc4e21390 +4137 (138 cands) -> -1313 (255 cands). Steady makers mostly stayed positive but smaller
+(0x3048d653 +7567 -> +310, 0x7743aea5 +3395 -> +299, 0xc387c2a4 +2833 -> +1194, 0xcd30457c +2107 -> +826); 0x86b14772 +6335 -> -2026.
