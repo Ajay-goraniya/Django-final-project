@@ -11,3 +11,9 @@ ARMS, each FILTERED vs UNFILTERED on identical candles (paired - only the candle
 REPORT per arm x W: n kept / removed, $@10, per $1, maxDD, worst trade, per-trade std, green days, both halves; and the REMOVED
 group alone (its per $1). PASS for the filter on an arm = kept beats unfiltered per $1 AND the removed group is negative or ~0
 AND same sign both halves AND kept green days >= unfiltered. n < 60 = INSUFFICIENT. File: analysis/zurich/M33_BN_FILTER_BIG.txt.
+
+## RESULT (Zurich 0ecdcf5) - FAIL, M32's encouraging line RETRACTED
+W=10 fails on all 5 arms. FAV calm (1,771 fires, 19 d): unfiltered +0.0216/$ 11/19 green; KEPT +0.0075 8 green; REMOVED +0.0385
+15 green - the filter throws away the better trades. EF taker arms: removed group worse (+0.01..0.04/$ lift) but kept still <=0
+and halves flip. 14/15 cells fail; the one literal pass (FAV_mid W=5) has kept -0.042/$ - bar defect noted: PASS must also need
+kept > 0. FAV calm W=30 cell (+0.0325 kept) is 1 of 15, not the hypothesis - not proposed.
