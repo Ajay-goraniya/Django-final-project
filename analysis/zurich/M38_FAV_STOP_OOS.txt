@@ -1,0 +1,50 @@
+M38 - WALK-FORWARD OF THE ONE POSITIVE M36 PAIRING. READ-ONLY. 2026-10-03 11:55:59 UTC
+Prereg PREREG_M38_FAV_STOP_OOS.md (43922dd). Frozen cell a15 g10 R-off T-none, nothing else run.
+Stop exit = TAKER at the triggering bid + 0.07p(1-p): Polymarket has no stop orders.
+
+CORRECTION TO MY M36 SUMMARY, which V caught and which was mine: I wrote "not one cell in any
+of the 192 is positive, on any entry set". That was wrong. E2 arm FAV has 40 of 192 POSITIVE
+cells - I had inspected only the pooled, E1 and control blocks and generalised to "anywhere"
+without opening the five per-arm blocks my own script had already written. The M36 VERDICT
+still stands, for a reason I should have given instead: on arm FAV every one of those 40
+positive cells is BELOW its own HOLD (+0.0281), the best being a30 g10 R-on at +0.0258 with
+vsHOLD -17.98 and t_paired -0.31 - so none beats HOLD and the PASS rule fails on that clause,
+not on positivity. The file M36_RATCHET_GRID.txt is corrected in the same push.
+
+================ ALL 208 not in the M36 set   days ['09-29', '09-30', '10-01', '10-02', '10-03']
+  arm                                n      $@10   per $1      t    maxDD   worst    grn       h1       h2   vsHOLD  tPair
+  HOLD to settlement               208   +150.43  +0.0723  +1.86  -117.68  -10.00    4/5     +9.4   +141.0 
+  a15 g10 R-off T-none (FROZEN)    208    +75.10  +0.0361  +1.21   -71.12  -10.00    5/5    +17.9    +57.2   -75.34  -1.44
+  owner literal steps (reference)   208     -7.61  -0.0037  -0.26   -29.98  -10.00    2/5     -6.6     -1.0  -158.04  -2.07
+  stopped out 78 of 208; VERDICT on the frozen cell: FAIL  [per$1>0 True | t>=2 False | halves>0 True | green>=60% True]
+
+================ STRICTLY FORWARD (after the cut)   days ['10-02', '10-03']
+  arm                                n      $@10   per $1      t    maxDD   worst    grn       h1       h2   vsHOLD  tPair
+  HOLD to settlement               205   +145.37  +0.0709  +1.80  -117.68  -10.00    1/2     -3.5   +148.8 
+  a15 g10 R-off T-none (FROZEN)    205    +70.03  +0.0342  +1.13   -71.12  -10.00    2/2     +5.0    +65.0   -75.34  -1.44
+  owner literal steps (reference)   205     -8.96  -0.0044  -0.30   -29.78  -10.00    1/2     -8.6     -0.3  -154.33  -2.03
+  stopped out 78 of 205; VERDICT on the frozen cell: FAIL  [per$1>0 True | t>=2 False | halves>0 True | green>=60% True]
+
+
+================================================================================
+M38 VERDICT: FAIL - the frozen cell is POSITIVE out of sample but fails on strength and LOSES TO
+HOLDING, which is the clause that matters.
+  n 208 (205 of them strictly after the M36 cut, so this is effectively a clean forward test)
+  HOLD                      +150.43  +0.0723 per $1  t +1.86  maxDD -117.68  4/5 green
+  a15 g10 R-off T-none       +75.10  +0.0361         t +1.21  maxDD  -71.12  5/5 green  vsHOLD -75.34
+  owner's literal steps       -7.61  -0.0037         t -0.26  maxDD  -29.98  2/5 green  vsHOLD -158.04
+Of the four PASS conditions it clears three - per $1 > 0, both halves > 0, 5 of 5 green days - and
+fails t >= 2 at +1.21. It is also worse than doing nothing: HOLD makes twice as much per dollar and
+the paired difference is -75.34 at t_paired -1.44.
+
+WHAT THE FORWARD DAYS ACTUALLY SHOW, and it is the same thing M36's control showed by a different
+route: the ratchet gave up HALF of FAV's forward edge (+0.0723 -> +0.0361) and in exchange cut the
+drawdown by 40% (-117.68 -> -71.12) and made every day green (5/5 against 4/5). That is a risk
+trade, and a defensible one for someone who wants a smoother ride - it is NOT a profit improvement,
+and on this evidence the owner's goal of "find the version that makes profit" is not met by it.
+THE OWNER'S OWN LITERAL STEPS ARE THE WORST ROW HERE: -0.0037 per $1, 2 of 5 green days, and
+t_paired -2.07 against HOLD, i.e. significantly worse than holding. The fixed 1.05P/1.10P steps arm
+too early and too tight; the a15/g10 trailing version is strictly better than his literal rule.
+That is a concrete, testable correction to hand him rather than a flat no.
+78 of 208 entries stopped out, so the rule was genuinely active and not a near-no-op.
+Nothing live was touched.

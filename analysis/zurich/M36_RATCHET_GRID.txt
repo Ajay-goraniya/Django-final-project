@@ -1865,8 +1865,16 @@ CONTROL EXPLAINS WHY THE FAMILY LOOKED GOOD IN M35.
   E1 fixed15 taker, n 125          -0.0451            -0.0039      a10 g15 R off T none   t -0.08
   E1 fixed15 ask-touch, n 63       -0.2482            (all worse than the E1 taker figures)
   RANDOM-ENTRY CONTROL             -0.1091            -0.0683      a30 g10 R off T none   t -3.91
-Not one cell in any of the 192 is positive, on any entry set, so no cell can clear a bar that starts
-with "per $1 > 0 with t >= 2". The plateau requirement was never reached.
+CORRECTION, 10-03 11:5x, V caught this and it was my error: the sentence that stood here said "not
+one cell in any of the 192 is positive, on any entry set". THAT WAS WRONG. E2 arm FAV has 40 of 192
+POSITIVE cells. I had inspected only the pooled, E1 and control blocks and generalised to "anywhere"
+without opening the five per-arm blocks my own script had already written into this file.
+The VERDICT does not change, but the reason does, and this is the correct one: on arm FAV every one
+of those 40 positive cells is BELOW ITS OWN HOLD. FAV held returns +0.0281 per $1 (n 791, maxDD
+-144.66, 7/10 green); the best ratchet cell on it is a30 g10 R-on T-none at +0.0258 with vsHOLD
+-17.98 and t_paired -0.31. So the cells are positive only because FAV itself is positive, and none
+of them beats holding - the PASS rule fails on the "beats HOLD paired" clause, not on positivity.
+On the other four arms, on E2 pooled, on both E1 sets and on the control, 0 of 192 are positive.
 
 THE CONTROL IS THE RESULT. On RANDOM entries - random side, random second, same candles - the exit
 grid improves the book by +1,385 at $10 against its own HOLD, from -0.1091 to -0.0683 per $1. That
