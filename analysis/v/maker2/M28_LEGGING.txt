@@ -35,3 +35,8 @@ leg1 sec side   m    | candles pair%  pair$   lone$  lone win%   TOTAL$  per can
  120     up   0.05 |  1349  67.5  +78.26 -123.46    14.6    -45.20  -0.0335   0/6
  120     up   0.10 |  1349  56.3 +104.66 -139.46    25.1    -34.80  -0.0258   1/6
  120     up   0.20 |  1349  38.8 +126.10 -149.67    35.2    -23.57  -0.0175   2/6
+
+OWNER 10-03 12:1x: "how many times in a 5-min candle is the sum < 1 (legs at different times)?" - V, Polymarket 08-01 5 s grid, 284 candles:
+HINDSIGHT best pair (UP at t1 + DOWN at t2, either order): < $1 in 100% of candles, < 0.80 in 95-99%; median cheapest pair 0.45 (0.53 with
+fees, legs by sec 270). ~79 of ~108 five-second moments per candle had a later partner under $1. Catch: it exists only when the FIRST leg was
+the side that later rose; this M28 rule (pre-commit leg 1, wait for the partner) is the tradeable version and it lost (Predict book1s above).
