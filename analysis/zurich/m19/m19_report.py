@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """The 4-line M19 paper report V asked for, at 6 h and 24 h. READ-ONLY."""
+import math
 import sqlite3, sys, datetime as dt
 
 DB = '/home/ubuntu/m19_paper/m19_paper.sqlite3'
@@ -77,10 +78,26 @@ for m in MARGINS:
                  + ('  INSUFFICIENT (<60)' if len(diff) < BAR else ''))
 wr = 100 * sum(1 for x in g if x['pnl'] > 0) / max(len(g), 1)
 dep = sum(x['spent'] for x in g); pnl = sum(x['pnl'] for x in g)
+# 10-03: this block used to ASSERT "the win rate does match the sim (~33-34%)". That was true at
+# the 6 h mark and is a hardcoded string, so it kept printing as the sample grew and stopped being
+# true - at 24 h the pooled win rate is 28.7%, which is 1.7-2.1 SE BELOW the sim. A daily report
+# must not carry a conclusion it is not recomputing, so the comparison is now measured each run and
+# the independent n (candle-sides, not arm-fills) is what the SE uses.
+_SIM_WR = (33.0, 34.0)
+_nind = len(uniq) or 1
+_se = 100 * math.sqrt((wr / 100) * (1 - wr / 100) / _nind)
+_lo = (wr - _SIM_WR[0]) / _se if _se else 0.0
+_hi = (wr - _SIM_WR[1]) / _se if _se else 0.0
+_verdict = ('matches the sim' if abs(_lo) <= 1.96 and abs(_hi) <= 1.96 else
+            'is BELOW the sim' if wr < _SIM_WR[0] else 'is ABOVE the sim')
 L += ['', f'  POOLED all arms: n {len(g)}, win {wr:.1f}%, {pnl:+.2f} on ${dep:.2f} = {pnl/max(dep,1e-9):+.4f}/$1.',
       f'    The sim expected +0.058 (m0.15) to +0.112 (m0.20) per $1 at a realistic 1 s delay, so live',
-      f'    paper is NOT reproducing it yet. The win rate does match the sim (~33-34%), which says the',
-      f'    fair model is calibrated and the gap is in what we get filled on, not in the prediction.']
+      f'    paper is NOT reproducing it yet.',
+      f'    WIN RATE vs the sim, recomputed every run (not asserted): live {wr:.1f}% on {_nind} '
+      f'independent candle-sides, SE {_se:.1f}pp, sim {_SIM_WR[0]:.0f}-{_SIM_WR[1]:.0f}% '
+      f'-> {_lo:+.2f} to {_hi:+.2f} SE, so the live win rate {_verdict}.',
+      f'    (If it matches, the fair model is calibrated and the gap is in what we get filled on. If',
+      f'     it is below, the prediction is part of the problem too and not only the fills.)']
 L += [f'  REST round-trip to the CLOB read endpoint: n {len(rt)}, p50 {pct(0.5):.0f} ms, '
       f'p90 {pct(0.9):.0f} ms, max {rt[-1] if rt else float("nan"):.0f} ms']
 L += ['  BINANCE CLOCK: SETTLED 10-02 01:5x, see analysis/zurich/m19/M19_CLOCK.txt. The +329 ms REST',
