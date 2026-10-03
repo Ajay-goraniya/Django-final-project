@@ -20,3 +20,9 @@ Apply rule A (sell at mark after +10% arm, re-buy at 1.10*mark, repeat to sec 27
 first-entry check) to every FAV calm / FAV_mid / FAV_all entry (M30 data, ~19 d) and EF fixed15/RAW25 taker entry (M29, 15 d).
 Exits/re-buys at real 1 Hz bid/ask from the same tables (+fee). Report vs HOLD on identical entries: $ , per $1, maxDD, worst trade,
 std, green days, W/L/SCRATCH. File analysis/zurich/M32_REENTRY_BIG.txt.
+
+## M32-MAKER (owner 10-03 11:0x: "in the MAKER test", not FAV) - his rule A and B on the London maker strategy's entries
+(a) Zurich: maker rule entries (London 13.3.1 rule: calm, fav bid 0.60-0.80, post-only at bid, sec 60-120) on all 2,392 book
+    candles (M30 both blocks), fill = M30 book model (ask <= our bid; 75% fidelity - APPROXIMATE, say so), then rule A and B
+    exactly as frozen, exits/re-buys at real 1 Hz bid/ask, fee and zero-fee columns. vs HOLD on the same entries.
+(b) London: its own REAL live maker fills since 10-02 15:04 (read-only, its DB + its Binance/book data), rule A and B vs HOLD.
