@@ -1,0 +1,28 @@
+
+== POLYMARKET 08-01: 288 candles  (per candle $ on 1 share/leg; both% = both legs filled)
+   b    | ALL: both% one% pnl/candle green | ASIA: both% pnl | EU: both% pnl | US: both% pnl | LATE: both% pnl
+  0.30  | ALL:  29%  70% -0.0670 0/1 | ASIA:  42% +0.027 | EU:  18% -0.118 | US:  27% -0.096 | LATE:  27% -0.104
+  0.32  | ALL:  34%  66% -0.0597 0/1 | ASIA:  46% +0.031 | EU:  24% -0.104 | US:  31% -0.098 | LATE:  33% -0.087
+  0.34  | ALL:  38%  62% -0.0647 0/1 | ASIA:  54% +0.049 | EU:  25% -0.119 | US:  35% -0.112 | LATE:  35% -0.099
+  0.36  | ALL:  40%  60% -0.0779 0/1 | ASIA:  56% +0.034 | EU:  29% -0.118 | US:  36% -0.131 | LATE:  38% -0.120
+  0.38  | ALL:  42%  58% -0.0987 0/1 | ASIA:  57% -0.002 | EU:  31% -0.135 | US:  39% -0.136 | LATE:  38% -0.147
+  0.40  | ALL:  45%  55% -0.1118 0/1 | ASIA:  60% -0.019 | EU:  35% -0.150 | US:  43% -0.143 | LATE:  40% -0.163
+  0.42  | ALL:  52%  48% -0.1040 0/1 | ASIA:  68% -0.015 | EU:  43% -0.129 | US:  49% -0.137 | LATE:  44% -0.166
+  0.44  | ALL:  56%  44% -0.1131 0/1 | ASIA:  71% -0.028 | EU:  46% -0.142 | US:  52% -0.147 | LATE:  50% -0.160
+  0.46  | ALL:  61%  39% -0.1161 0/1 | ASIA:  75% -0.043 | EU:  47% -0.163 | US:  60% -0.139 | LATE:  60% -0.134
+  0.48  | ALL:  65%  35% -0.1336 0/1 | ASIA:  81% -0.059 | EU:  51% -0.185 | US:  62% -0.158 | LATE:  65% -0.144
+
+== PREDICT 09-11..16: 1160 candles  (per candle $ on 1 share/leg; both% = both legs filled)
+   b    | ALL: both% one% pnl/candle green | ASIA: both% pnl | EU: both% pnl | US: both% pnl | LATE: both% pnl
+  0.30  | ALL:  33%  66% -0.0362 1/6 | ASIA:  30% -0.043 | EU:  37% -0.025 | US:  37% -0.018 | LATE:  27% -0.079
+  0.32  | ALL:  37%  62% -0.0444 0/6 | ASIA:  32% -0.059 | EU:  41% -0.025 | US:  42% -0.021 | LATE:  29% -0.093
+  0.34  | ALL:  41%  59% -0.0502 0/6 | ASIA:  36% -0.063 | EU:  45% -0.035 | US:  44% -0.032 | LATE:  35% -0.086
+  0.36  | ALL:  45%  54% -0.0519 0/6 | ASIA:  43% -0.051 | EU:  48% -0.047 | US:  48% -0.037 | LATE:  39% -0.095
+  0.38  | ALL:  49%  50% -0.0624 0/6 | ASIA:  49% -0.052 | EU:  51% -0.066 | US:  52% -0.049 | LATE:  43% -0.109
+  0.40  | ALL:  55%  45% -0.0627 0/6 | ASIA:  54% -0.054 | EU:  55% -0.069 | US:  58% -0.049 | LATE:  51% -0.099
+  0.42  | ALL:  61%  39% -0.0620 0/6 | ASIA:  60% -0.050 | EU:  61% -0.070 | US:  64% -0.051 | LATE:  56% -0.099
+  0.44  | ALL:  66%  34% -0.0690 0/6 | ASIA:  65% -0.066 | EU:  67% -0.070 | US:  69% -0.061 | LATE:  64% -0.090
+  0.46  | ALL:  72%  28% -0.0772 0/6 | ASIA:  71% -0.081 | EU:  74% -0.070 | US:  74% -0.069 | LATE:  68% -0.099
+  0.48  | ALL:  78%  22% -0.0827 0/6 | ASIA:  77% -0.083 | EU:  80% -0.073 | US:  78% -0.089 | LATE:  78% -0.091
+
+VERDICT: FAIL everywhere except Polymarket ASIA 0.30-0.36 on ONE day (~84 candles, +0.03..+0.05/candle) - insufficient, and Predict ASIA is negative at every b. Fill model is optimistic (queue ignored). One-leg fills are the cheap side falling (adverse selection): 35-70% of candles end one-legged and those lose.
