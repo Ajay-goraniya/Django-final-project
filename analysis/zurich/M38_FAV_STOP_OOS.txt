@@ -105,3 +105,9 @@ while the CELL is +0.0117 and +0.0109 - almost identical. So the ratchet compres
 given toward the same small positive number. That is exposure reduction behaving exactly as a
 variance-cutter should, and it is why it cannot add edge: it is indifferent to how good the entries
 were. Nothing live was touched.
+
+--------------------------------------------------------------------------------
+M38 DAILY FORWARD TRACKER - the FROZEN cell a15 g10 R-off T-none re-run cumulatively
+on every FAV calm fire after the M36 cut, same PASS rule, taker exit at the triggering
+bid + fee. No new arm and no new parameter: this is M38 repeated as the sample grows.
+  2026-10-03 12:32 UTC  n   213  HOLD +0.0608  cell +0.0242  t +0.80  t_paired -1.49  halves -11.50/+63.13  green 2/2  FAIL
