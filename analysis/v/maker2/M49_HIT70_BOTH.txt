@@ -1,0 +1,10 @@
+POLY fee  OWNER EXACT x1.10: candles 284 \$/candle -0.1810 per \$ staked -0.0678 t -2.53 halves -0.1493/-0.2127 green 0/1 buys 2.61 worst -3.02 | 70-side won 74%
+POLY fee  flat stake       : candles 284 \$/candle -0.1796 per \$ staked -0.0689 t -2.55 halves -0.1447/-0.2145 green 0/1 buys 2.61 worst -2.74 | 70-side won 74%
+POLY fee  HOLD both        : candles 284 \$/candle -0.1240 per \$ staked -0.0620 t -2.00 halves -0.0198/-0.2282 green 0/1 buys 2.00 worst -1.01 | 70-side won 74%
+POLY 0fee OWNER EXACT x1.10: candles 284 \$/candle -0.0554 per \$ staked -0.0207 t -0.79 halves -0.0243/-0.0865 green 0/1 buys 2.61 worst -2.75 | 70-side won 74%
+POLY 0fee flat stake       : candles 284 \$/candle -0.0556 per \$ staked -0.0213 t -0.80 halves -0.0212/-0.0900 green 0/1 buys 2.61 worst -2.49 | 70-side won 74%
+POLY 0fee HOLD both        : candles 284 \$/candle -0.0550 per \$ staked -0.0275 t -0.88 halves +0.0492/-0.1591 green 0/1 buys 2.00 worst -0.94 | 70-side won 74%
+PRED      OWNER EXACT x1.10: candles 1148 \$/candle -0.2785 per \$ staked -0.0901 t -7.36 halves -0.3747/-0.1823 green 0/6 buys 2.97 worst -9.71 | 70-side won 71%
+PRED      flat stake       : candles 1148 \$/candle -0.2643 per \$ staked -0.0891 t -7.40 halves -0.3492/-0.1793 green 0/6 buys 2.97 worst -7.42 | 70-side won 71%
+PRED      HOLD both        : candles 1148 \$/candle -0.1063 per \$ staked -0.0531 t -3.75 halves -0.1096/-0.1029 green 1/6 buys 2.00 worst -1.00 | 70-side won 71%
+VERDICT: FAIL on both venues, every row. Note $1 per side buys ~3x more shares of the cheap side, so 'both sides' here is a net bet on the underdog, which wins ~26-29%.
