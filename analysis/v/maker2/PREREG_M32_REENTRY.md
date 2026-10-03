@@ -14,3 +14,9 @@ RULE B (frozen): rule A, but the FIRST buy only counts if Binance moved in our s
 REPORT: per rule - n, W/L, $ and per $1, vs HOLD on the same fills, number of sell/re-buy cycles, halves, maxDD.
 Plus B's skipped fills alone (were the skipped ones the losers?). One rule each, no parameter sweep. In-sample: a pass here is a
 hypothesis for London's live fills, not a result.
+
+## M32-BIG (owner 10-03 10:4x: he wanted HIS rule at scale, not the filter alone) - frozen, same rules A and B
+Apply rule A (sell at mark after +10% arm, re-buy at 1.10*mark, repeat to sec 270, then hold) and rule B (A + Binance 10 s
+first-entry check) to every FAV calm / FAV_mid / FAV_all entry (M30 data, ~19 d) and EF fixed15/RAW25 taker entry (M29, 15 d).
+Exits/re-buys at real 1 Hz bid/ask from the same tables (+fee). Report vs HOLD on identical entries: $ , per $1, maxDD, worst trade,
+std, green days, W/L/SCRATCH. File analysis/zurich/M32_REENTRY_BIG.txt.
