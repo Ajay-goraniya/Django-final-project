@@ -20,3 +20,11 @@ STEP 1 (only if step 0 passes): trade M2's side when p - ask - fee >= margin, fi
   Report per margin: n, W/L, $@10, per $1, maxDD, per-day table, green days, halves, +1c costs, nulls (M0 and M1 same rule).
 PASS = per $1 > 0 at +1c AND both halves same sign AND >= 70% green days AND beats M1-rule paired AND verify.py clean.
 n < 60 = INSUFFICIENT. Result file: analysis/zurich/M31_TWAP_FLOW_BRAIN.txt.
+
+## AMENDMENT 10-03 02:5x (owner: "do it in parts, if one fails stop and try another method, same base") - fail fast
+Base fixed for every variant: TWAP lock-in at s in {240..280}, graded on venue resolution, gate 0 first.
+Variants, in THIS order, each a stop/go on STEP 0 (beats M1 = market + TWAP math, out of sample, paired):
+  V1 order flow (OFI spot+perp 5/15/30 s)   V2 Chainlink-vs-Binance gap (feed catching up)
+  V3 perp-minus-spot move last 5/15 s (perp leads)   V4 vol-scaled TWAP remainder probability vs market (pure math)
+Speed: run each on the first 3 days first; if clearly flat (no logloss gain) stop it there and move on; only a variant that
+shows gain gets the full window + STEP 1. All variants tried are reported (count them - 4 tries means 4 chances of luck).
