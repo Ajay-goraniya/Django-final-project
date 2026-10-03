@@ -83,6 +83,8 @@ The two channels that work:
   stay mood-word only), but when he asks a DIRECT question for a number, answer it plainly.
   Incidents (1)-(3) go out with a push notification and are REPEATED every 30 min until he replies.
 - **"Don't do unnecessary or unuseful work, go in a right direction not wrong."**
+- **10-03 10:5x, owner: "Do not fuck up like that again"** - V tested its own variant instead of his rule. When the owner
+  specifies a test, test EXACTLY his rule as stated. Own ideas/variants are proposed separately and only run after he says so.
 - **"Rain or sun"**: a finding must work every day, or you identify *when* it works and switch only
   then. A regime switch is itself a threshold — define buckets FIRST, test them all, report the full
   grid, **never the best cell**.
