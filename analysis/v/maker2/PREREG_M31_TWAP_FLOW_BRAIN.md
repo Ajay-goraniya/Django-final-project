@@ -31,3 +31,10 @@ shows gain gets the full window + STEP 1. All variants tried are reported (count
 AMENDMENT 2 (owner 02:5x: "first the hardest dataset"): the 3-day quick test uses the WORST days for our models inside the
 Chainlink window, not the first 3: 09-23 (FAV_mid -163.89, FAV -34.79), 09-25 (FAV -65.94 worst day, FAV_mid -100.33),
 10-02 (every FAV arm negative, London maker fresh lows). A variant must show gain on these before it gets the full window.
+
+## RESULT (Zurich 37d0bd5, analysis/zurich/M31_TWAP_FLOW_BRAIN.txt) - STEP 0 FAILS, CLOSED, no brain built
+Gate 0 PASS 99.56% (open TWAP = mean CL [open-60, open), close [open+240, open+300)).
+Hard days 541 OOS rows, logloss vs M1 0.3410: V1 OFI 0.3546 (worse; 14 disc 4/10 p .18) | V2 CL gap 0.3385 (7 disc 4/3 p 1)
+ | V3 perp leads 0.3384 (2 disc 1/1) | V4 vol math 0.3414 (1 disc). M0 market mid alone 0.3407 = M1: TWAP math adds nothing.
+Reading: at 240-280 s the market has already priced everything we compute. Earlier seconds (15-180 s) were tested before
+(W14/W16/NC-11) and also lost to the venue price - do not re-open either without genuinely new information.
