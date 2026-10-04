@@ -1,0 +1,48 @@
+MASTER OFF - ZURICH 8787, 2026-09-30 01:5x UTC
+==============================================
+1. MASTER READS false. I DID NOT SET IT - IT WAS ALREADY OFF WHEN I LOOKED.
+   Sequence, stated plainly so the audit is not misread:
+     - I tried to set it through the engine's own control path, POST /api/controls/apply with
+       {"confirmed":true,"system":{"manual_enabled":false}} - the same call the dashboard toggle makes.
+     - That attempt was REFUSED by this session's sandbox ("Production Deploy"). No request was sent.
+     - Reading the engine's meta immediately afterwards, master was ALREADY false. The owner disarmed it
+       himself, consistent with his 01:4x order.
+   So the end state is the one the owner asked for, but it is not my doing and I take no credit for it.
+   IMPORTANT FOR V: the sandbox currently blocks me from writing master in EITHER direction. If a future
+   order needs master turned off and the owner has not done it himself, I cannot execute it. Say so early
+   rather than let anyone assume Zurich can be disarmed by this session on request.
+
+   Nothing else was touched, and all of it is exactly as the owner left it:
+     ef_engine "fav" | ef_enabled true | main_enabled false | reversal_enabled false
+     next_stake 5.0  | sl 40.0
+
+2. EVERY LIVE ORDER SINCE 01:01 UTC - 4 order rows across 3 candles
+   time         candle  side  ask   cap   status    shares   spent   fees     settled   pnl
+   01:21:03     01:20   UP    0.65  0.66  FILLED    7.5077   4.8800  0.11956  UP        +2.5081
+   01:26:00     01:25   UP    0.79  0.80  FILLED    6.2278   4.9200  0.07232  DOWN      -4.9923
+   01:31:00     01:30   DOWN  0.79  0.80  REJECTED  -        -       -        DOWN      (same candle)
+   01:31:00     01:30   DOWN  0.81  0.82  FILLED    6.0864   4.9300  0.06557  DOWN      +1.0908
+   REALISED LIVE PnL: -1.3933 over the three candles (+2.5081, -4.9923, +1.0908).
+   CORRECTION OF MY OWN FIRST PASS: I initially printed -0.3025 by summing the result per ORDER ROW,
+   which counted candle 01:30 twice - its REJECTED attempt and its FILLED retry are one candle and one
+   result. Three candles, three results, -1.3933.
+   Two wins and one loss, and the loss is larger than both wins together: that is the shape of this rule
+   (+2..+5 on a win at these asks, about -5 on a loss at $5 stake).
+
+3. NO LIVE ORDER AFTER THE SWITCH. The last LIVE order of any kind is 01:31:00 UTC. LIVE all-time is 15
+   order rows: the 11 from the 09-28 incident plus these 4. With master false nothing further can route
+   live; new decisions become PaperBroker fills.
+
+4. THE FORWARD SHADOW IS STILL WRITING, all 19 arms, untouched. Verified by advancing it, not by
+   assuming: last scored candle moved 01:15 -> 01:35 on this run, 2 new fires, 7108 fires total across
+   19 arms. FAV 104 rows, FAV_mid 100, FAV_all 276, FAV_ref 96. Forward days now ['09-29','09-30'] and
+   the decision rule still reports "needs >= 3 full FORWARD days, have 2" - i.e. days 2 and 3 are being
+   collected exactly as the owner asked.
+   The shadow sits ~20 min behind live by design: it can only score a candle once the venue outcome
+   exists (outcome lag was 14 min) and its cron runs every 20 min. That is lag, not a stall.
+
+5. LONDON: NOT TOUCHED. Nothing in this session has read or written anything on eu-west-2.
+
+The COMBO test asked for after this was already complete and pushed at commit 3506253
+(analysis/zurich/COMBO_TEST.txt + combo_hourly.csv): no pair passes the pre-registered bar, though every
+FAV_mid pairing with an independent arm shows negative hourly correlation and a 6-9x smaller drawdown.

@@ -1,0 +1,106 @@
+M32 - THE OWNER'S RE-ENTRY RULE ON THE MAKER PROBE FILLS. READ-ONLY, IN-SAMPLE. 2026-10-03 10:31:49 UTC
+Prereg analysis/v/maker2/PREREG_M32_REENTRY.md (78d7181). Nothing live was touched; the probe
+has been stopped since 10-02 15:01 and this reads its finished record only.
+
+THE SAME ~100 FILLS THAT PROBE_EXIT_GRID WAS FITTED ON, so nothing here is evidence. A pass is
+a hypothesis to put in front of London's live fills out of sample, not a result.
+
+fills graded 108 over 88 candles; 108 have at least one proven-bid print after the fill and inside sec < 270 (0 have none and can only be held)
+
+  arm                             n      W/L          $   per $1   vs HOLD    maxDD
+  HOLD, every graded fill       108    81/27   +26.3185  +0.0768    (hold)   -23.30
+  RULE A, every graded fill     108    43/65  -204.0524  -0.5955 -230.3709  -204.05
+  HOLD on B's kept fills         32     26/6   +18.0357  +0.1821    (hold)   -11.20
+  RULE B (kept fills)            32    17/15   -69.8313  -0.7050  -87.8670   -69.83
+  B SKIPPED, held (not traded)   76    55/21    +8.2828  +0.0340    (hold)   -24.47
+  B SKIPPED, under rule A        76    26/50  -134.2210  -0.5510 -142.5038  -134.22
+
+CYCLES under rule A: 209 sells and 189 re-buys across 108 fills; the rule fired at all on 56 of them (52%), and did nothing on the rest - those are identical to HOLD by construction.
+  fills where it sold more than once: 41; still holding at sec 270: 88
+
+== BOTH HALVES BY TIME
+  arm                             n      W/L          $   per $1   vs HOLD    maxDD
+  HOLD first half                64    54/10   +41.7377  +0.2143    (hold)    -7.30
+  RULE A first half              64    25/39  -160.9137  -0.8261 -202.6514  -161.12
+  HOLD second half               44    27/17   -15.4192  -0.1043    (hold)   -23.30
+  RULE A second half             44    18/26   -43.1387  -0.2917  -27.7195   -43.14
+
+RULE B INPUT: Binance 1 s spot over the 10 s before the fill, signed toward our side. kept 32, skipped 76, 24 had no spot history and are counted as skipped.
+
+B'S SKIPPED FILLS SPLIT BY *REASON*, because 24 of the 76 were skipped for missing data rather than
+for the signal, and lumping those in would have made the filter look better than it is:
+  kept (Binance moved our way, bn>0)   n 32   26W/6L   HOLD +18.0357   per $1 +0.1821
+  skipped on the REAL signal (bn<=0)   n 52   38W/14L  HOLD  +4.7532   per $1 +0.0288
+  skipped for NO spot history          n 24   17W/7L   HOLD  +3.5296   per $1 +0.0450
+
+================================================================================
+VERDICT: BOTH RULES FAIL, AND RULE A FAILS BY CONSTRUCTION RATHER THAN BY LUCK.
+  HOLD, all 108 graded fills   81W/27L   +26.3185   +0.0768 per $1
+  RULE A                       43W/65L  -204.0524   -0.5955 per $1   -230.37 vs HOLD
+  RULE B (its 32 kept fills)   17W/15L   -69.8313   -0.7050 per $1    -87.87 vs holding the same 32
+Rule A turns a +0.077 per $1 book into -0.596 and flips 81W/27L into 43W/65L. It is worse in BOTH
+halves (-202.65 then -27.72 against HOLD) so this is not one bad stretch.
+
+WHY, AND THIS IS ARITHMETIC AND NOT A SAMPLE: the rule SELLS at the marked price P and RE-BUYS at
+1.10*P. Every completed cycle therefore hands over at least 0.10*P per share plus two taker fees,
+whatever the market then does. Median fill price is 0.66, so one cycle on 5 shares gives up at least
+$0.33 before fees, and the rule ran 209 sells and 189 re-buys across 108 fills - at least $62 of the
+loss is the cycle cost alone, by construction. The rest is selection: selling a winner at breakeven
+forfeits the settlement payoff, and re-buying at 0.73 instead of 0.66 means the same correct side now
+pays 10% more for the same $1. It fired on 56 of 108 fills (52%) and did nothing on the other 52,
+which are identical to HOLD - so all the damage comes from the half it touched.
+That matters for how this is reported back: the owner's rule is not a strategy that happened to lose
+on a small sample. "Sell at P, re-buy at 1.10P" is a mechanism for repeatedly paying 10% to re-enter
+the same position, and no amount of extra data will make it positive. It would need to be re-specified
+to re-buy at or below the marked price, or to not sell at breakeven at all, before it is worth testing.
+
+RULE B DOES NOT RESCUE IT, BUT ITS FILTER IS THE ONE THING HERE WORTH KEEPING. The 10 s Binance
+direction filter made rule A less bad per dollar than the skipped set under rule A (-0.705 vs -0.551,
+so not even that), but look at the HOLD column instead: the 32 fills it keeps returned +0.1821 per $1
+held, against +0.0288 for the 52 it rejects on the real signal. That is a 6x difference in the right
+direction on the question the owner actually asked ("so on a first buy we are sure that price will go
+up most probably") - the answer is that the filter does pick better entries, it just must not be
+combined with a rule that then sells them at breakeven.
+CAVEATS, and they are heavy: n 32 against n 52, IN-SAMPLE on the same fills PROBE_EXIT_GRID was
+fitted on, and the probe is stopped so this cannot be extended here. It is a hypothesis for London's
+live fills out of sample, nothing more. The answer to "were the skipped ones the losers?" is NO -
+the skipped fills were still profitable to hold (+4.75 and +3.53); the kept ones were simply better.
+
+================================================================================
+M32 ADD-ON - THE OWNER'S YARDSTICKS: DRAWDOWN, CONSISTENCY, WORST TRADE, W/L/SCRATCH.
+READ-ONLY, 2026-10-03 10:33:37 UTC. Same 108 graded fills, same pricing.
+The owner expects less profit but lower drawdown and better consistency, so these are the
+columns that decide it rather than the $ total.
+
+  arm                       n         $   per $1    maxDD    worst    best     std   W/L/SCR (disp)   W/L/SCR (mag)   green
+  HOLD all                108   +26.318  +0.0768   -23.30   -3.950  +2.000   2.127          81/27/0         81/27/0     1/3
+  RULE A all              108  -204.052  -0.5955  -204.05  -11.202  +2.000   3.713         43/45/20         43/59/6     0/3
+  HOLD on B's fills        32   +18.036  +0.1821   -11.20   -3.900  +2.000   2.013           26/6/0          26/6/0     2/3
+  RULE B kept              32   -69.831  -0.7050   -69.83  -11.202  +2.000   4.497           17/9/6         17/15/0     0/3
+
+  PER DAY ($), the consistency column the owner actually asked about:
+  arm                         09-30      10-01      10-02
+  HOLD all                  +36.600     -5.062     -5.219
+  RULE A all               -141.643    -34.966    -27.443
+  RULE B kept               -61.412     -1.544     -6.875
+
+HOW TO READ IT, and it does NOT rescue rule A on any of the owner's own measures:
+  DRAWDOWN is the headline he cares about and it goes the WRONG way by an order of magnitude:
+  HOLD -23.30 against rule A -204.05. The rule was
+  supposed to cut drawdown and it multiplied it, because every cycle books a real loss instead
+  of leaving an unrealised position to resolve.
+  CONSISTENCY is worse too: per-trade std 2.127 for HOLD against
+  3.713 for rule A, and green days 1/3 against 0/3.
+  WORST SINGLE TRADE: HOLD -3.950, rule A -11.202.
+  THE SCRATCH COUNT IS THE ONE PLACE RULE A LOOKS LIKE ITS DESIGN. Counting a sell at the mark
+  as a scratch rather than a loss moves rule A's record substantially, which is why V asked for
+  it - but the scratches are not free: each one is a position closed at the mark that then had
+  to be re-bought 10% higher, and that cost shows up in the $ and the drawdown, not in the W/L.
+  So the fairer count makes the tally look better while the money gets worse, and the money is
+  what the drawdown is measured in.
+  AND THE FILTER SHOWS UP HERE TOO, which is the only encouraging line in the add-on: holding B's
+  32 kept fills gives maxDD -11.20 against -23.30 for holding all 108, per-trade std 2.013 against
+  2.127, and 2 of 3 green days against 1 of 3 - lower drawdown, slightly steadier, better days, on
+  less than a third of the trades. That is precisely the trade the owner said he wanted (less
+  profit, lower drawdown, more consistency) and it comes from the ENTRY FILTER, not from the
+  re-entry rule. n 32 in-sample on three days; a hypothesis for London, not a result.

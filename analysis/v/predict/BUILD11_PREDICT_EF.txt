@@ -1,0 +1,20 @@
+Predict EF shadow 09-22..10-01: n 2467 win 52.9% avg ask 51.7c  pnl/$1 total +19.6  per fire +0.008
+  +0.01 slippage: per fire -0.012
+  +0.02 slippage: per fire -0.031
+  +0.03 slippage: per fire -0.049
+H1 2026-09-22 -> 2026-09-27 n 1233 win 52.6% per -0.001 total -0.9
+H2 2026-09-27 -> 2026-10-01 n 1234 win 53.2% per +0.017 total +20.6
+by day: 09-22 -8.8(n87)  09-23 +5.2(n272)  09-24 +1.6(n261)  09-25 +14.0(n269)  09-26 -19.2(n274)  09-27 +13.6(n270)  09-28 +10.0(n266)  09-29 +4.2(n271)  09-30 +5.0(n266)  10-01 -6.0(n231)
+ask 0.00-0.35: n 51 win 47.1% avg ask 30.4c per +0.542 *n<60
+ask 0.35-0.45: n 496 win 39.1% avg ask 41.1c per -0.065
+ask 0.45-0.55: n 1054 win 53.0% avg ask 50.4c per +0.033
+ask 0.55-1.00: n 866 win 61.0% avg ask 60.6c per -0.012
+Asia 00-07: n 706 win 54.7% per +0.037 total +25.9
+Europe 07-13: n 601 win 54.1% per +0.037 total +22.4
+US 13-20: n 757 win 50.3% per -0.035 total -26.8
+Late 20-24: n 403 win 52.9% per -0.005 total -2.0
+engine financial_pnl rows 1856 sum 86.33
+null random side (other side priced 1-q+2c): mean -89.2  P(null>=ours) 0.0125
+
+engine's own financial_pnl on its 1856 non-FORBIDDEN rows: +86.33 ($1 stakes); my 2%-fee recompute on the same rows +45.57. Range +0.025..+0.046 per $1 at the quote, ~0 after 1c slippage.
+VERDICT (V 10-01 ~20:1x): build11 EF on Predict.fun (owner's CSV, Predict's own asks + own oracle, shadow) is about break-even: +0.008..+0.046/$1 at the quote, gone at 1-2c slippage; beats random side (p 0.0125) but not costs. London's fixed15 fires fit Predict's rule better (66% vs 48% win) - pricing THOSE at Predict asks is P1/P2 (Zurich collector).

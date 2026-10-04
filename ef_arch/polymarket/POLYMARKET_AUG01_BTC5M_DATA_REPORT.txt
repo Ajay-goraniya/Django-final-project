@@ -1,0 +1,92 @@
+CLAUDE CODE -> GPT-5.6 SOL
+HISTORICAL POLYMARKET BTC 5M REAL-BOOK TEST -- DATA REPORT
+Date: 2026-09-06
+
+SCOPE
+  Day:      2026-08-01 00:00:00 -> 2026-08-02 00:00:00 UTC (288 x 5-minute windows)
+  Product:  Polymarket "Bitcoin Up or Down" 5-minute markets (slug btc-updown-5m-<epoch>)
+  Purpose:  real historical order books at ARC decision times, joined to the
+            existing causal BTC replay, for a real-book backtest.
+
+SOURCES (all public, all reachable from this environment)
+  Market metadata:  https://gamma-api.polymarket.com/events?slug=btc-updown-5m-<epoch>
+                    (the /markets?slug= form returns [] for these; /events works)
+  Cross-check:      https://clob.polymarket.com/markets/<conditionId>
+  Order books:      pmxt Polymarket v2 archive, hourly parquet,
+                    https://r2v2.pmxt.dev/polymarket_orderbook_2026-08-01THH.parquet
+                    24/24 files present, 11,226 MB total, HTTP range reads supported.
+  Resolution:       Chainlink BTC/USD (https://data.chain.link/streams/btc-usd);
+                    "Up" if end price >= start price, else "Down" (ties -> Up).
+
+MARKET MAPPING  (map_markets.py -> aug01_btc5m_markets.json)
+  Windows mapped:            288 / 288   (0 missing)
+  Key:                       epoch in the slug = window OPEN in UTC seconds.
+                             Gamma's startDate is the market's CREATION time
+                             (~24 h earlier) and must not be used as the window.
+  Per window stored:         event id, conditionId, clobTokenIds [Up, Down],
+                             outcomes, outcomePrices (resolved), endDate, fee fields.
+  Resolved outcomes:         147 Up / 141 Down, all umaResolutionStatus=resolved.
+
+EXTRACTION  (pmxt_range_reader.py + extract_day.py -> books/hour_HH.parquet)
+  Method:      pyarrow over HTTP range requests (no DuckDB/fsspec here). Each
+               hourly file is sorted by (market, asset_id, timestamp_received) in
+               ~1M-row row groups with per-group `market` min/max statistics, so
+               row groups are pruned by conditionId, then filtered by asset_id.
+  Cost:        footer 2.3 MB/hour; 13-17 of 71-92 row groups read per hour;
+               ~120-160 MB fetched of ~430-560 MB per hour; ~20-26 s per hour.
+  Result:      24 hourly files, 335 MB local, 0 errors.
+               Event mix (T11 example): price_change 97.7%, book 1.5%,
+               last_trade_price 0.7%, tick_size_change <0.01%.
+  Latency:     timestamp_received - timestamp: p50 126 ms, p99 292 ms.
+
+BOOK RECONSTRUCTION  (build_ladders.py -> polymarket_btc5m_2026-08-01_books.parquet)
+  Finding:     each token carries ~1,100-1,450 FULL `book` snapshots per
+               5-minute window (one every ~0.2-0.3 s, including one at window
+               open). So no delta application is needed: at every decision time
+               T the latest `book` with source timestamp <= T is used. No
+               price_change semantics are assumed; no future event is read.
+  Snapshots:   980,381 across 288 windows.
+  Grid:        offsets 5..295 s after window open, step 5 s, both sides.
+  Rows:        33,984  (288 windows x 2 sides x 59 offsets); book coverage 100.00%.
+  Book age:    p50 208 ms, p95 1,618 ms, max 21,890 ms (one thin window).
+  Ladders:     49-50 levels per side typical; large resting walls at 0.01/0.99.
+  Spread:      p50 $0.010, p90 $0.020 (tick 0.001).
+  Executability (walk the real ask ladder):
+      stake $10    fill 98.3%   VWAP - best_ask  p50 0.0000  p90 0.0073
+      stake $100   fill 98.2%   VWAP - best_ask  p50 0.0090  p90 0.0451
+      stake $1000  fill 97.8%   VWAP - best_ask  p50 0.0736  p90 0.1897
+  Columns:     window_epoch, side, offset_s, decision_ts_ms, has_book,
+               book_ts_ms, book_recv_ms, book_age_ms, snapshots_so_far,
+               best_bid, best_ask, mid, spread, ask_depth_top5, bid_depth_top5,
+               n_ask_levels, n_bid_levels, outcome (Chainlink),
+               vwap_s10/s100/s1000, shares_*, levels_*, fill_ok_*.
+
+FEES  (measured, not assumed)
+  Gamma / CLOB metadata:  feesEnabled=True, takerBaseFee=1000, makerBaseFee=1000.
+  Official docs:          crypto taker fee = shares x 0.07 x p x (1-p), at match.
+  Venue trade stream:     470,976 last_trade_price events on this day for these
+                          markets; fee_rate_bps = 0 on ALL of them; no hour has
+                          a nonzero rate.
+  Treatment:              backtests run at r=0.00 (what the venue reported on
+                          this day) and r=0.07 (official published rate) as a
+                          stress. Both are labelled.
+
+OUTCOME SOURCE CHECK
+  Chainlink (Polymarket) vs Binance spot close>open disagree on 25 / 288
+  windows (8.7%). PnL uses the market's own resolution. Any model trained on
+  Binance labels carries that 8.7% label noise against this venue.
+
+CAVEATS
+  * Polymarket is not Predict.fun: different makers, depth, fees, latency and
+    resolution source. This is a real prediction-market liquidity surface,
+    not Predict.fun PnL.
+  * Fills are ladder walks at the decision instant; no signal-to-post latency
+    or book movement after T is modelled (see K8 in the test report).
+  * One day.
+
+ARTEFACTS
+  aug01_btc5m_markets.json                     288 market objects (Gamma)
+  polymarket_btc5m_2026-08-01_books.parquet    33,984 ladder rows (deliverable)
+  books/hour_HH.parquet                        raw filtered events, regenerable
+  map_markets.py, pmxt_range_reader.py, extract_day.py, analyze_books.py,
+  build_ladders.py, real_book_backtest.py, market_residual_test.py

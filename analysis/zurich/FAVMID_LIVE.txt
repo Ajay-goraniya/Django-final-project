@@ -1,0 +1,110 @@
+FAV_MID LIVE - Zurich 8787. READ-ONLY, nothing changed.
+
+CONFIRMED FROM THE RUNNING PROCESS (pid 301067, its own /api/state + meta), 09-30 02:4x UTC
+  master        = true        (/api/state master_enabled True, lane label "LIVE")
+  ef_engine     = "fav_mid"
+  ef_enabled    = true        main_enabled = false        reversal_enabled = false
+  stake         = $5.00 fixed (next_stake 5.0)
+  sl            = 40.0        tp = 0.0
+  daily window  104 trades, pnl -1.3934 of -40.00, halted false, resets 30 Sep 12:00 London
+  NOTHING DIFFERS from what the owner ordered. EF only, master on, $5, sl 40.
+  (Note on method: /api/state's controls block does not carry main_enabled/reversal_enabled/ef_enabled,
+   so those three are read from the engine's meta, which is the same store the dashboard writes.)
+
+FIRST LIVE FAV_MID ORDER
+  time      09-30 02:42:54 UTC          candle  02:40 (epoch 1790736000)      sec 174
+  vol       0.4084  -> inside the registered mid band [0.304, 0.466)
+  side      UP      fav ask 0.85, opp ask 0.15
+  order     FAK, quote 0.85, cap 0.851, status FILLED
+  filled    5.824496 shares, spent $4.939173, fees $0.05255
+  reason    FAV_MID:MID UP fav ask 0.85 opp 0.15 vol 0.408 in [0.304, 0.466) sec 174
+  settled   OPEN at the time of writing (that candle closes 02:45 UTC; result appended when it lands)
+  Verified against the frozen rule: replaying that candle's decide_log gives UP sec 174 ask 0.85
+  vol 0.4084 - identical to what the engine did. In-window (60-180) and in-band, both satisfied.
+
+TWO OBSERVATIONS, neither a rule breach
+1. The cap came out 0.851, not ask+1c = 0.86. FAV passes max_ask = BAND_HI = 0.85 and the lane_cap
+   rule clamps the padded price to it, so at the TOP of the band the order is effectively held to the
+   ask itself rather than ask+1c. That is stricter, not looser - it cannot overpay - but "FAK at
+   ask+1c" is only exactly true below 0.85. The realised price was ~0.848.
+2. This trade sits in the band's worst corner. At 0.85 a win returns about +$0.60 and a loss costs the
+   full ~$4.94, so it needs roughly an 89% hit rate to break even. In the pre-registered FAV_mid
+   anatomy the 0.80-0.85 ask bucket was the ONE negative cell (-0.56 per fill on 57 fills) while the
+   edge sat at the 0.65-0.75 end. The rule is frozen and this is a legitimate fire; it is flagged
+   because a first-trade result at this price says little about the rule either way.
+
+ALERTS ARMED (a one-line Routine goes to V immediately if any fires)
+  - any order from a non-EF lane                      (none since the baseline)
+  - an order outside 60-180 s or outside the mid band  (none; this one was sec 174, vol 0.4084)
+  - the $40 daily stop triggering                      (headroom -38.61 of -40.00)
+
+SETTLED RESULT - first live FAV_mid trade: WON
+  candle 02:40 (epoch 1790736000) settled actual UP; we were UP, so it won.
+  payout $5.824496, spent $4.939173, fees $0.05255  ->  net pnl +$0.8328
+  Correcting my own estimate: I said a win at 0.85 returns "about +$0.60". The actual is +$0.83,
+  because the fill landed at ~0.848 rather than 0.85 and the fee is charged on the winnings. The
+  asymmetry point still stands unchanged - a loss at this price costs the full ~$4.94, so ~86% of
+  trades at 0.85 must win to break even.
+  Daily window after it: -$0.56 of -$40 (the -1.3934 carried in, plus this +0.8328).
+
+SECOND LIVE FAV_MID ORDER (open at the time of writing)
+  time   09-30 02:46:02 UTC   candle 02:45 (epoch 1790736300)   sec 62
+  vol    0.3679 -> inside [0.304, 0.466)     side UP, fav ask 0.65, opp 0.36
+  order  FAK at 0.65 REJECTED, retry at 0.68 FILLED - one candle, two attempts, ONE position
+  filled 7.191200 shares, spent $4.890000
+  reason FAV_MID:MID UP fav ask 0.65 opp 0.36 vol 0.368 in [0.304, 0.466) sec 62
+  This one is at the GOOD end of the band (0.65-0.68), where the pre-registered anatomy put the edge,
+  in contrast to the first trade at 0.85.
+
+RUNNING TALLY since the baseline, one pnl per candle, retries never double counted
+  candle 02:40  UP @0.85  WON   +0.8328
+  candle 02:45  UP @0.68  open
+  realised +$0.8328 on 1 settled candle. Daily window -$0.56 of -$40, headroom $39.44.
+  ALERT CHECKS all clear: no non-EF lane order; both EF orders in 60-180 s (174, 62) and in the mid
+  band (0.4084, 0.3679); engine tag "fav_mid" on both; daily stop not triggered.
+
+STAKE CHANGED TO FIXED $10 - owner order "Do fixed 10" (09-30 03:5x), AUDIT ROW
+  Applied through the engine's OWN audited control path, POST /api/controls/apply with only
+  {"system":{"stake":{...}}} - not a raw DB write. HTTP 200, ok:true.
+    before  stake_settings mode fixed, fixed_stake 5.0,  current 5.0,  min 5.0,  max 5.0   next_stake 5.0
+    after   stake_settings mode fixed, fixed_stake 10.0, current 10.0, min 10.0, max 10.0  next_stake 10.0
+  min and max were moved to 10 as well because the handler rejects fixed_stake > max_stake and sets
+  next_stake = current_stake; leaving max at 5 would have failed validation or silently clamped to $5.
+  Confirmed on the RUNNING process: shared_next_stake 10.0, shared_stake mode fixed 10/10/10/10.
+  UNCHANGED by me and verified: master true, ef_engine "fav_mid", main_enabled false,
+  reversal_enabled false, tp 0.0.
+
+  sl MOVED 40 -> 50, AND IT WAS NOT ME. My payload carried only system.stake; tp/sl are a different
+  endpoint (/api/controls/daily-limits), and sl read 40.0 on my verification immediately after the
+  stake write. It reads 50.0 now in both meta and the running process, so it changed after that - the
+  owner raised it himself, which is consistent with doubling the stake.
+
+  WHAT DOUBLING THE STAKE DOES TO THE STOP: at $10 a losing trade costs about $10, not $5. With
+  sl now 50 that is ~5 losing trades in the window before new orders are blocked, against ~8 at
+  $5/$40. The stop is still a DAILY CUMULATIVE limit that blocks new orders - it does not exit an
+  open position.
+
+MORE LIVE TRADES (all still at the $5 stake - they were placed before the change)
+  02:45  UP   @0.68  sec 62  vol 0.3679  FILLED 7.191200 sh $4.890000  open
+  02:50  DOWN @0.68  sec 60  vol 0.3081  FILLED 7.191200 sh $4.890000  open
+  Both in window (62, 60) and in band (0.3679, 0.3081), engine tag fav_mid on both.
+  Note 02:50's vol 0.3081 sits just 0.004 above the 0.304 lower edge - a legitimate mid fire, but
+  that close to the boundary the calm/mid split is effectively a coin toss on the vol estimate.
+  Tally: realised +$0.8328 on 1 settled candle, 2 open. Daily window -$0.56 of -$50.
+
+REPORTING POLICY CHANGED (V, tokens rule 09-30): every live FAV_mid trade is appended HERE and pushed
+to git, with NO Routine per trade. V is pinged with ONE line only for: a non-EF lane order; an order
+outside 60-180 s or outside the mid band; the daily stop firing; engine down; feeds dead; and the daily
+FAV ledger at ~00:20 UTC. favmid_daemon.py enforces this - it appends and pushes on its own and only
+exits to raise an alert.
+  ONE CORRECTION TO V'S LIST: it says "the $40 daily stop". The stop is now 50 - the owner raised sl
+  from 40 to 50 after the stake went to $10. The daemon reads meta sl LIVE on every pass rather than
+  hardcoding a number, so it cannot fire a false alert at -40 nor miss the real one at -50.
+
+SETTLED: candle 02:45 UP @0.68 -> actual UP, pnl +$2.1916.
+  Running tally since the baseline: 2 settled candles, realised +$3.0244 (+0.8328 and +2.1916), 1 open.
+  Both winners so far, and both at the 0.65-0.85 band's opposite ends (0.85 and 0.68). Two settled
+  trades is not evidence of anything; the pre-registered bar is 60 fills.
+
+[09-30 02:59:35 UTC]
+  SETTLED candle 02:50 actual DOWN payout 7.1912 pnl +2.1916

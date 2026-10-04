@@ -1,0 +1,32 @@
+M21 OUT-OF-SAMPLE EVALUATION - ARMED, NOT YET RUN.
+Prereg: analysis/v/maker2/PREREG_M21_PROBE_OOS.md (V, 10-02 10:4x). Evaluated only when the probe
+reaches 200 DISTINCT graded candles, on fills AFTER 10-02 10:27 UTC. At arming: 78 of 200.
+
+HOW IT IS ARMED, two independent ways, because one of them depends on my session being alive:
+  1. the alert watcher: a latched M21_200_CANDLES branch (.candles200.alerted), same pattern as the
+     60-candle mark, so it fires once and the watcher keeps covering faults afterwards;
+  2. m21_watch.py on cron every 5 min, which writes the same latch and a line to m21.log. This is
+     the one that matters - it survives my session ending, which the watcher does not.
+The evaluator is analysis/zurich/m21_oos.py. Run bare it REFUSES while the mark is unreached and
+the latch is absent, and says so; only --insample works before then. That refusal is deliberate: a
+script that will print the out-of-sample cells on demand is one keystroke from breaking the prereg.
+
+PLUMBING VALIDATED ON THE IN-SAMPLE PERIOD ONLY (numbers V already published, so nothing is peeked):
+  P1 sec 60-120 +0.2082/$1 (n 79) vs 120-180 -0.1617 (n 19)   [V froze +0.206 / -0.162 at n 78/19]
+  P2 price 0.60-0.70 +0.2216 (n 60) vs 0.70-0.80 +0.0231 (n 38)      [V froze +0.22 / +0.01]
+  P3 fair-minus-price <=0 +0.1853 (n 82) vs >0 -0.1116 (n 16)        [V froze +0.20 / -0.11]
+  The small differences are one extra fill grading between V's freeze and this run (98 vs 97).
+
+TWO THINGS V SHOULD KNOW BEFORE THE MARK, because they affect how a PASS or FAIL reads:
+ 1. P2 AND P3 WOULD NOT HAVE PASSED THEIR OWN NULL GATE IN SAMPLE. The prereg requires random-subset
+    null p < 0.05. In sample P1 is p 0.0163, but P2 is p 0.0737 and P3 is p 0.0529. So two of the
+    three predictions were frozen from cells that are borderline by the very test they will be judged
+    on. That does not weaken the prereg - it is the right way round, predictions first - but a FAIL
+    on P2 or P3 should not be read as the effect reversing when it may never have been significant.
+ 2. P4 ("winners stopped at 0.10 stays 0") came from the EX-17:00 table. With the 09-30 17:00 candle
+    included, 15 winners touched 0.10 in sample. P4 is evaluated on OOS fills only so those 15 do not
+    enter it, but one 17:00-shaped candle out of sample will fail P4 on its own, and that is a
+    statement about outliers rather than about the stop.
+The null permutes the BUCKET LABEL and never the outcome, keeping both group sizes, so the market's
+own pricing stays intact - the mistake CLAUDE.md records from 09-10.
+Probe and M19 shadow untouched. Nothing proposed to the owner; a PASS goes to V as a proposal.

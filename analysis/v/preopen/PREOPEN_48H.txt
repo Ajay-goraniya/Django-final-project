@@ -1,0 +1,14 @@
+576 settled candles over the last 48.0 h; taker BUY prints before the open, per $1 = pnl / staked
+60-600s  0.45-0.55  n11815 staked $  243212  per$1 -0.008
+60-600s  <0.45      n  240 staked $    3458  per$1 +0.189
+60-600s  >0.55      n  499 staked $   30920  per$1 -0.060
+60-600s  all        n12554 staked $  277590  per$1 -0.011
+<=60s    0.45-0.55  n23830 staked $  305064  per$1 -0.048
+<=60s    <0.45      n 5364 staked $   51837  per$1 -0.083
+<=60s    >0.55      n 7736 staked $  140013  per$1 +0.012
+<=60s    all        n36930 staked $  496914  per$1 -0.035
+>600s    0.45-0.55  n  778 staked $   16299  per$1 +0.046
+>600s    >0.55      n    1 staked $     515  per$1 +0.699  INSUF
+>600s    all        n  779 staked $   16814  per$1 +0.066
+<=60s <0.45 H1 (older): candles 215, per$1 -0.232, candles positive 76
+<=60s <0.45 H2 (newer): candles 216, per$1 +0.092, candles positive 93

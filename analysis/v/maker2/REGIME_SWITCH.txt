@@ -1,0 +1,27 @@
+914 candles, 15 blocks of 6 h (the first block has no history, so the switch skips it).
+fixed passive, all regimes         n 857  $  +507.3  maxDD   91.7  P/DD  5.53  blocks+ 12/14
+fixed taker, all regimes           n 857  $  +228.8  maxDD  109.5  P/DD  2.09  blocks+ 7/14
+fixed passive, calm only           n 384  $  +391.2  maxDD   69.5  P/DD  5.63  blocks+ 13/14
+WALK-FORWARD regime switch         n 614  $  +367.1  maxDD   91.7  P/DD  4.00  blocks+ 12/14
+HINDSIGHT oracle (not tradeable)   n 662  $  +722.9  maxDD   57.2  P/DD 12.63  blocks+ 14/14
+
+per block, per regime: which model the switch picked (from the past) vs the one that actually won that block:
+  block 22 calm: picked passive won passive  mid: picked skip    won none     high: picked passive won passive
+  block 23 calm: picked passive won passive  mid: picked skip    won none     high: picked passive won none   
+  block 24 calm: picked passive won passive  mid: picked skip    won taker    high: picked passive won none   
+  block 25 calm: picked passive won passive  mid: picked skip    won taker    high: picked skip    won taker  
+  block 26 calm: picked passive won passive  mid: picked taker   won none     high: picked skip    won passive
+  block 27 calm: picked passive won passive  mid: picked skip    won passive  high: picked skip    won none   
+  block 28 calm: picked passive won passive  mid: picked skip    won passive  high: picked skip    won taker  
+  block 29 calm: picked passive won passive  mid: picked skip    won taker    high: picked passive won none   
+  block 30 calm: picked passive won passive  mid: picked skip    won passive  high: picked passive won passive
+  block 31 calm: picked passive won passive  mid: picked passive won passive  high: picked passive won passive
+  block 32 calm: picked passive won passive  mid: picked passive won passive  high: picked passive won none   
+  block 33 calm: picked passive won passive  mid: picked passive won none     high: picked passive won passive
+  block 34 calm: picked passive won none     mid: picked passive won none     high: picked passive won passive
+  block 35 calm: picked passive won passive  mid: picked passive won taker    high: picked passive won passive
+
+READ (V, 09-30): switching by regime from the past (+367, P/DD 4.0) LOSES to simply staying in passive-calm (+391, P/DD 5.6, 13/14 blocks).
+The hindsight oracle (+723, P/DD 12.6) is the illusion of "every regime has a winner" - picked after the fact. Only calm has a persistent
+winner (passive, 13 of 14 blocks); mid and high rotate between passive/taker/none block to block, so a switch there chases noise.
+Caveat: 4 days, one venue tape, fill model as in PREREG M2; the forward PFAV shadow on Zurich (from 09-30 09:25) is the real test.

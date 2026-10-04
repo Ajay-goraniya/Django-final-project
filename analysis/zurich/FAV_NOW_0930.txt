@@ -1,0 +1,39 @@
+ZURICH STATUS 09-30 07:5x UTC. READ-ONLY. shadow last scored 09-30 07:30.
+
+1) PAPER forward (shadow, $10/fill)
+   arm         DAY2 09-30 00:00->now      CUM since 09-29 00:00        cum maxDD
+               fills / $                  fills / $
+   FAV           34 /  -39.35              114 /  +22.18                 51.05
+   FAV_mid       10 /  +12.86               83 /  +91.14                 37.76
+   FAV_all       48 /  -24.35              261 /  +57.09                 89.31
+   FAV_ref       24 /  -55.99              101 /  +15.22                 64.11
+   C_fixed15      3 /   -7.64               40 /  +52.74                 40.61
+   Day 2 is negative on four of five arms; only FAV_mid is up today. Cumulative is still positive on
+   all five, so day 2 has given back part of day 1 rather than reversing it.
+
+2) LIVE 8787 since the 02:40 baseline
+   fav_mid          22 fills, 14W/8L,  -28.7008
+   v10 leak          1 fill,            -9.9995   (the pre-12.25.2 defect, candle 03:00)
+   TOTAL            23 fills,           -38.7003
+   SINCE THE FIX (03:52:06): 17 candles, ALL fav_mid, 10W/7L, -26.1067. Zero v10 leak, zero orders
+   outside 60-180 s or outside the mid band - the fix held over 17 live candles.
+   master=false now (owner turned it off), ef_engine "fav_mid", ef_enabled true, main_enabled false,
+   reversal_enabled false, next_stake 10.0, sl 50.0, tp 0.0.
+   sl window (12:00 London): -40.09 of -50, NOT halted, resets 30 Sep 12:00. Headroom is $9.91 -
+   one more $10 loss would put it within a dollar of the stop.
+
+THE COMPARISON THE OWNER WILL WANT, stated with its caveat
+   PAPER FAV_mid cumulative +91.14 against LIVE fav_mid -28.70. These are NOT the same candles:
+   ef3_shadow deliberately EXCLUDES every candle this box traded live on, because those arms are
+   counterfactuals priced off a book our own orders were standing in. So the gap is not a clean
+   paper-vs-live measurement of the same decisions. On the six candles where I could replay both
+   directly (02:40-03:25), paper was -2.15 and live -12.59, and -10.00 of that gap was the v10 leak,
+   leaving ~$0.44 of genuine execution cost across five fav_mid trades.
+   Live fav_mid is now 22 fills - still under the 60-fill bar, and the rule's own registered evidence
+   (halves flip, P/DD 0.74, one day carrying the all-time total) has not changed.
+
+RE-CHECKED 07:54:21 UTC on a second request: EVERY NUMBER ABOVE IS UNCHANGED.
+  shadow evaluated 0 new candles (last scored still 09-30 07:30); no new LIVE orders (last 07:42:17);
+  master still false. This is a genuine no-change, not a stale copy - the two reads are 90 s apart and
+  nothing moved in between. With master off nothing further can trade, so the live numbers are final
+  until it is armed again; the paper arms keep accruing as the shadow catches up on outcome lag.

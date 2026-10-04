@@ -1,0 +1,235 @@
+FAV LIVE DEPLOY - Zurich 8787
+=============================
+STATUS: DEPLOYED. MASTER IS OFF (false) AND I DID NOT TOUCH IT. Every FAV decision is a PaperBroker
+fill until the owner arms master himself.
+
+DEPLOY ROW
+  when         2026-09-30 01:01:28 UTC (engine back up)
+  box          Zurich, eu-central-2, engine pid 297292, port 8787
+  build        Polymarket v13.1.2, engine internal tag 12.25.0 for this change
+  commit       this commit
+  profile      ef_engine = "fav"   (a THIRD value beside the existing "v10" and "build11")
+  stake        $5.00 fixed - the ENGINE's own fixed stake (stake_settings fixed_stake 5.0, min 5.0,
+               max 5.0, next_stake 5.0). V said $10 as in the shadow unless the engine's fixed stake is
+               lower. It IS lower, so $5.00. No Kelly, no dynamic sizing; poly_fav never sizes anything.
+  order price  FAK at the ask capped at ask + 1 tick. NO CODE NEEDED: pad_ticks is unset on this engine
+               and defaults to 1, which is already ask+1c.
+  files        NEW  /home/ubuntu/pm_paper_zurich/poly_fav.py
+               EDIT /home/ubuntu/pm_paper_zurich/btc_model_v12_polymarket.py   (3 hunks)
+               EDIT /home/ubuntu/pm_paper_zurich/poly_lanes.py                 (2 hunks)
+               backups: btc_model_v12_polymarket.py.bak-predeploy-20260930T005446Z
+                        poly_lanes.py.bak-postdeploy-20260930T010624Z
+               diffs committed at analysis/zurich/deploy/engine.diff, poly_lanes.diff, poly_fav.py
+
+THE RULE, frozen, nothing tuned, identical to the registered shadow arm
+  vol gate   Binance 1 s trailing-5-min vol measured STRICTLY BEFORE the open, < 0.304, from bn_flow,
+             forward-filled across trade-less seconds with a 60 s cap, >= 240 of the 300 s present
+  favourite  own ask > opp ask          band  0.65 <= own ask <= 0.85
+  window     60 <= sec <= 180           once  first qualifying pass, one order per candle
+
+CHECKS, all against the RUNNING module and its own DB
+  (a) PASS  engine up after the restart: pid 297292 listening on 8787, log line "Polymarket v13.1.2 LIVE
+            credentials (master OFF = shadow paper)". Feeds live: decide_log 4 s old, tape1s 2 s old.
+            meta master=false, ef_engine="fav", ef_enabled=true, next_stake=5.0.
+  (b) PASS  byte-for-byte, twice over.
+            OFFLINE: 40 of the last 40 FAV candles replayed from the engine's own decide_log through
+            poly_fav match the shadow on candle, side, sec AND ask. 0 differed, 0 no-fire.
+            LIVE: the engine's first FAV decision, epoch 1790730600 at 01:11:00, was DOWN sec 60 ask 0.80
+            vol 0.2861, and replaying the frozen rule over that candle gives DOWN sec 60 ask 0.80
+            vol 0.2861. Identical.
+  (c) PASS  with master off, ZERO orders sent. That FAV decision became a PAPER EF order. EF orders by
+            lane are LIVE 11 / PAPER 664 - and the LIVE 11 are the 09-28 incident orders, unchanged in
+            count before and after this deploy. No new live order exists.
+
+RE-VERIFIED 01:14 UTC, 13 min after the restart, against the RUNNING module and its own DB
+  (a) PASS  master=false, ef_engine="fav", ef_enabled=true, next_stake=5.0. main_enabled=true and
+            reversal_enabled=true - MAIN and REVERSAL were NOT changed, as instructed. decide_log 4 s
+            old, tape1s 1 s old.
+  (b) PASS  the engine has made 1 FAV decision since the restart and it matches the frozen rule exactly:
+            09-30 01:11:00, epoch 1790730600, DOWN sec 60 ask 0.80 vol 0.2861. 1 matched, 0 differed.
+  (c) PASS  EF orders since the restart: PAPER 1, LIVE 0. EF by lane overall LIVE 11 / PAPER 664, and
+            the LIVE 11 are the 09-28 incident orders - unchanged. master=false.
+
+FIRST LIVE FAV DECISION ROW ON decide_log AFTER THE RESTART
+  ts_ms 1790730659973 (09-30 01:10:59 UTC)  epoch 1790730600  up_ask 0.21  dn_ask 0.80
+  side None  ask None  ev None  fire 0  reason "Warming up: 10 minutes of spot / 60 seconds of
+  perpetual trades"
+  READ THIS CAREFULLY, because it looks alarming and is not: the side/ask/ev/fire columns on decide_log
+  belong to the v10 classifier, which is still warming its spot and perp windows after the restart. FAV
+  does not use any of them. FAV reads up_ask and dn_ask from that same row - 0.21 and 0.80 - and DOWN at
+  0.80 is exactly the favourite it bought, inside the 0.65-0.85 band. So the row corroborates the
+  decision; the "Warming up / fire 0" text is the OTHER brain's state, not FAV's.
+
+STEPS 1-6 WERE ALREADY COMPLETE BEFORE V'S 01:1x MESSAGE ASKING FOR THEM (commit 3713d9a, deploy
+01:01:28 UTC). They were NOT run a second time: re-copying the module and restarting 8787 again would
+have caused a second avoidable outage on a live engine for no change whatsoever. Nothing was re-applied;
+the checks above are a fresh re-verification of the deploy that is already running.
+
+I CAUSED A 61 SECOND ENGINE OUTAGE, 01:00:27 -> 01:01:28 UTC, and it was avoidable
+  I captured only DASHBOARD_PASSWORD out of the old process environment before killing it, so the first
+  relaunch died on "Missing environment variables: POLYMARKET_PRIVATE_KEY, POLYMARKET_WALLET_ADDRESS,
+  RELAYER_API_KEY, RELAYER_API_KEY_ADDRESS" - and by then the old process was gone, taking its environ
+  with it. Recovered by relaunching from /home/ubuntu/polymarket_v12/deploy.env, which holds all five.
+  61 s of no decision passes (the next largest gap in the same window is 2.4 s, so that is the restart
+  and not jitter). Master was off throughout, so nothing was missed that could have traded.
+  The lesson for the next restart: dump the WHOLE environ of the process you are about to kill, or start
+  from deploy.env in the first place. Never capture one variable and assume it is the only one.
+
+WHAT THE OWNER SHOULD KNOW BEFORE ARMING MASTER
+1. LANE BLINDNESS FROM THE RESTART. The module's own _seed_lane_history comment says a restarted lane is
+   "BLIND for two hours" without seeding. This engine did seed ("[LANE SEED] 64 closed candles from the
+   journal; warm"), so it is warm rather than blind - but MAIN and REVERSAL are live lanes on this same
+   engine and they restarted too. The restart was 01:01 UTC.
+2. FAV REPLACES EF, IT DOES NOT TUNE IT. poly_ef.EF_MAX_ASK is 0.60 because build11 EF buys "the side the
+   book has written off"; FAV buys the FAVOURITE at 0.65-0.85, entirely above that cap. While
+   ef_engine="fav" the old EF brain does not run at all. Setting ef_engine back to "v10" restores it, is
+   read every pass, and needs no restart.
+3. ONE WALLET. Zurich and London share it. Once master is on, FAV spends from the same balance London is
+   trading on, at $5.00 a fire.
+4. THE EVIDENCE IS THIN, stated once and not argued: FAV's all-time halves FLIP sign (H1 -13.13 /
+   H2 +129.31 over six days), 09-27 alone carried its entire all-time total, max drawdown exceeds profit
+   (P/DD 0.74), and it has 2 forward days of the 3 the forward rule requires. The owner ordered the live
+   test; that is his call. The numbers belong in front of him when he flips the switch.
+
+HOW THE OWNER SWITCHES MASTER ON
+  Dashboard http://<host>:8787, the master toggle, authenticated with the box's DASHBOARD_PASSWORD.
+  That one switch moves the executor from PaperBroker to the live CLOB route; FAV then sends FAK orders
+  at ask+1c, $5.00 each, at most one per candle. Until he flips it every FAV decision stays paper.
+  To stop FAV without stopping the engine: set meta ef_enabled=false (EF only), or ef_engine="v10" to
+  hand EF back to the old brain. Both are read live, neither needs a restart, and neither touches master.
+
+NO SESSION TOUCHES MASTER. I did not arm it, did not disarm it, and it reads false now.
+
+
+========================================================================================================
+FAV_mid SECTION - owner order 09-30 02:2x "Start fav mid on Zurich 8787"
+========================================================================================================
+STATUS: DEPLOYED. Code live, profile set, engine up. MASTER NOT TOUCHED - still false.
+
+  when      engine restarted 02:26:5x UTC, profile flipped 02:27:32 UTC
+  pid       301067, port 8787, relaunched from /home/ubuntu/polymarket_v12/deploy.env (all five vars,
+            not a single captured variable - the mistake that caused the 61 s outage last time). No
+            credential error, no outage beyond the restart itself.
+  profile   ef_engine = "fav_mid"   (a FOURTH value: v10 | build11 | fav | fav_mid)
+  rule      identical to the registered shadow arm FAV_mid. The ONLY difference from calm FAV is the
+            vol band: 0.304 <= Binance 1 s trailing-5-min vol < 0.466, same bn_flow series, same
+            240-of-300-s rule, same favourite test, same 0.65-0.85 band, same 60-180 s window, same
+            arrival fill. Nothing tuned.
+  stake     $5.00 fixed (engine's own). sl=40 unchanged. MAIN off, REVERSAL off, EF on - as the owner set.
+  files     poly_fav.py - band is now a PARAMETER (vol_lo/vol_hi/label) so "fav" keeps its exact meaning
+            btc_model_v12_polymarket.py - accepts "fav_mid", builds the right brain, rebuilds on change
+            poly_lanes.py - UNCHANGED. ef_mode='fav' already covers both bands.
+            backups: *.bak-favmid-20260930T021813Z, and the FAV backups are still kept.
+            diffs: analysis/zurich/deploy/poly_fav.py, deploy/engine_favmid.diff
+
+CHECKS
+  (a) PASS  ef_engine="fav_mid", master=false (untouched), ef_enabled=true, main_enabled=false,
+            reversal_enabled=false, next_stake=5.0, sl=40.0. decide_log 2 s old, tape1s 2 s old,
+            port 8787 listening, log line "v13.1.2 LIVE credentials (master OFF = shadow paper)".
+  (b) PASS  40 of the last 40 FAV_mid candles, replayed from the ENGINE's own decide_log through the
+            new brain, match the shadow's FAV_mid byte-for-byte on candle, side, sec AND ask.
+            0 differed, 0 no-fire.
+  (c) PASS  master is off; zero orders of any kind since the restart, and LIVE all-time is still 15 -
+            the same count as before this deploy.
+
+REGRESSION TEST I RAN BECAUSE PARAMETERISING A LIVE RULE CAN CHANGE IT SILENTLY
+  The old pre-parameterisation brain and the new one, with default args, were run against the same 60
+  candles: 0 differences. The defaults (vol_lo=None, vol_hi=VOL_CUT) are arithmetically the old gate
+  v >= 0.304, and that is now demonstrated rather than asserted. Calm FAV is unchanged.
+
+ONE OPEN DISCREPANCY, PRE-EXISTING AND NOT CAUSED BY THIS CHANGE - flagged, not buried
+  Candle 09-30 01:10: the shadow's FAV row reads UP sec 99 ask 0.65, while replaying that candle's
+  decide_log gives DOWN sec 60 ask 0.80 - which is what the live engine actually decided and traded.
+  I checked the obvious cause and it was WRONG: the archive and the live decide_log are identical for
+  that candle (1158 passes, same asks at sec 59-62), so it is not archive lag. The old/new brain test
+  above proves the parameterisation is not involved either. So the shadow's own FAV selection on that
+  candle disagrees with a replay of the same data, and I do not yet know why. It affects one candle of
+  40 and it predates today's work, but it means the shadow's FAV rows are not guaranteed to equal the
+  engine's decisions, and any parity claim should say "39 of 40" for calm FAV rather than 40 of 40.
+
+PENDING AT THE TIME OF WRITING: no fav_mid decision has been recorded on the engine yet - the profile
+flipped at 02:27:32 and a candle must reach 60-180 s with a favourite in band AND mid-band vol. A
+watcher is running; the first live fav_mid decision will be appended when it lands.
+
+VERIFICATION PASS, 02:3x UTC
+  Engine pid 301067 listening on 8787; poly_fav.py, poly_lanes.py and btc_model_v12_polymarket.py all
+  parse; ef3_shadow.py --selftest still row-for-row against ef2_rows.npz; shadow 7147 fires / 19 arms.
+  master=false, ef_engine="fav_mid", LIVE all-time still 15, zero orders since the 02:26 restart.
+
+  NO fav_mid DECISION YET, AND THAT IS CORRECT, not a fault. Only two candles have passed since the
+  02:27:32 flip and the rule declines both for stated reasons:
+    02:25  vol 0.3352 (in the mid band) WOULD have fired DOWN sec 60 ask 0.71 - but sec 60 was 02:26:00,
+           BEFORE the flip, so the engine was still on calm "fav", whose band excludes 0.3352. Correct.
+    02:30  vol 0.2355 - that is a CALM candle, below 0.304, so fav_mid rightly declines; the favourite
+           ask was 0.59, outside 0.65-0.85, so it would not have qualified anyway. Correct.
+  The lane engine is warm and evaluating (131 diagnostics rows and a MAIN call since the restart; MAIN
+  shows BLOCKED because main_enabled=false, which is what the owner set).
+
+THE 09-30 01:10 DISCREPANCY IS NOW EXPLAINED, AND IT IS A REAL DEFECT IN THE SHADOW
+  Cause: ef3_shadow.load_candles selects decide_log rows
+      WHERE p IS NOT NULL AND side IS NOT NULL
+  p and side are the V10 CLASSIFIER's fields. The FAV family does not use v10 at all - it reads only
+  up_ask/dn_ask - so this is a spurious dependency, and it bites hardest straight after a restart while
+  v10 reports "Warming up: 10 minutes of spot / 60 seconds of perpetual trades".
+  On epoch 1790730600: 1158 passes exist, only 503 survive that filter, so 655 are dropped. The first
+  pass the shadow could see was sec 90, so its "first qualifying second" became sec 99 UP ask 0.65 -
+  while the engine, reading its own complete log, fired DOWN sec 60 ask 0.80 and traded it.
+  SCALE, measured not guessed - passes dropped per candle around the two restarts:
+    01:01 restart: 1790730000 835/936, 1790730300 1171/1171 (the WHOLE candle invisible),
+                   1790730600 655/1158, 1790731200 295/1117, 1790731800 460/1139, 1790732400 320/1138
+    02:26 restart: 1790735100 735/1147, 1790735400 267/267 (whole candle invisible)
+  CONSEQUENCE for the day-2/day-3 data V is collecting: around every restart the FAV arms' shadow rows
+  are biased - whole candles missing, and on partially visible candles a later sec with a different
+  side, ask and pnl than the engine actually took. The filter is legitimate for the model arms
+  (A/B/C/D/E/F/S all consume v10's p); it is wrong only for the model-free FAV family.
+  NOT FIXED HERE. Changing load_candles would alter how every registered arm's rows are built, and that
+  is not mine to do mid-experiment on a registered forward test. Flagged for V to decide.
+
+
+========================================================================================================
+FIX 12.25.2 - the v10 classifier could route orders while ef_engine was fav/fav_mid
+========================================================================================================
+STATUS: FIXED AND PROVEN. master stayed OFF throughout and reads false.
+
+THE DEFECT WAS MINE. A gate already existed for build11 and my fav/fav_mid deploy did not extend it.
+ef_engine selects which brain owns the LANE EF slot; it never silenced the v10 classifier's own fire
+path in _decide_once. So with ef_engine="fav_mid" BOTH could send live orders, and on 09-30 03:00:56
+the v10 path sent one: sec 56 (outside FAV's 60-180), cheap side at 0.39, -$9.9995 - 79% of that
+session's live loss, on a trade the fav rule would never make.
+
+THE DIFF (smallest possible: the gate's engine list, plus the predicate extracted so it is testable)
+  -            if self.ef_engine()=='build11':
+  -                d=dict(d,fire=False,reason='EF engine build11 (lane) - v10 shadow: '+...)
+  +            _efe=self.ef_engine()
+  +            if self._v10_order_blocked(_efe):
+  +                d=dict(d,fire=False,reason=f'EF engine {_efe} (lane) - v10 shadow: '+...)
+  and a new one-line predicate beside _routing_live:
+  +    LANE_EF_ENGINES=('build11','fav','fav_mid')
+  +    @classmethod
+  +    def _v10_order_blocked(cls,engine): return engine in cls.LANE_EF_ENGINES
+  The order path routes only on d['fire'], so fire=False means no order while the v10 row is still
+  WRITTEN to decide_log as a shadow - exactly what was asked. Any future lane brain must be added to
+  LANE_EF_ENGINES or v10 will silently trade again; that is why the list is named and tested.
+  Backups: btc_model_v12_polymarket.py.bak-v10gate-20260930T035000Z, test_polymarket.py.bak-v10gate-*
+
+CHECKS against the RUNNING module, master off, engine relaunched from deploy.env only (pid 304878)
+  (a) PASS  the 03:00 incident replayed through the patched gate: that candle had 107 v10 rows with
+            fire=1 under the old code; every one now yields blocked=True, final fire=False, NO ORDER.
+  (b) PASS  v10 EF candidate fires (decide_log fire=1) under fav_mid:
+              BEFORE  199 in the preceding 2 h   -> each one was eligible to route an order
+              AFTER     0 of 360 rows since the restart
+            and the v10 reason text now reads "EF engine fav_mid (lane) - v10 shadow: ...".
+  (c) PASS  fav_mid replay still matches the shadow 40/40 on candle, side, sec and ask. 0 differed.
+  (d) PASS  master=false; zero orders of any kind since the restart; ef_engine "fav_mid",
+            ef_enabled true, main_enabled false, reversal_enabled false, next_stake 10.0, sl 50.0 -
+            all unchanged by this fix.
+
+TESTS ADDED (test_polymarket.py, class V10GateTests, 4 tests; full suite 76 tests OK)
+  - every lane engine blocks the v10 order path
+  - only "v10" allows it
+  - a FIRING v10 decision under fav_mid ends with fire=False (the decisive one)
+  - a typo'd engine name does NOT look like a lane engine, so it cannot accidentally block
+
+ONE CORRECTION TO MY OWN EARLIER NUMBER: I annotated the LIVE order count as "16 before this restart".
+That was wrong. 16 was the count at ~02:5x; by this restart it was already 24 (11 from the 09-28
+incident + 4 at 01:xx + 4 at 02:xx + 5 at 03:xx). No orders were placed during or after the restart.

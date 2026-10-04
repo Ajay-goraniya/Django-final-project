@@ -1,0 +1,68 @@
+FAV_MID LIVE vs PAPER - Zurich 8787. READ-ONLY, nothing changed. master now false.
+
+THE HEADLINE THE OWNER NEEDS: 79% of the live loss was NOT the fav_mid rule.
+  LIVE total, 6 settled candles, one pnl per candle:              -12.5936
+    of which the fav_mid brain (5 candles):                        -2.5941
+    of which the v10 CLASSIFIER's own EF (1 candle, 03:00):        -9.9995
+  The 03:00 trade was not fav_mid and could not have been: it entered at sec 56 (outside FAV's
+  60-180), with fav=None, p=0.5402 (a model probability, not an ask), buying the CHEAP side at
+  0.39. That is the v10 EF signature - poly_ef.EF_MAX_ASK is 0.60 because that brain buys the side
+  the book has written off. fav_mid buys the FAVOURITE at 0.65-0.85 and refuses sec<60.
+  CAUSE: ef_engine only sets lanes.ef_enabled, i.e. it selects which brain owns the LANE EF slot.
+  The v10 classifier's own fire path in _decide_once is separate and was never gated by it, so with
+  ef_engine="fav_mid" BOTH could send orders. That is a real defect, not a setting the owner missed.
+
+1. EVERY LIVE ORDER SINCE 02:42 (9 order rows, 6 candles; a REJECTED attempt and its FILLED retry
+   are one candle and one result - never counted twice)
+   time      candle side ask  fillpx stake status   shares  spent   settled  pnl        brain
+   02:42:54  02:40  UP   0.85 0.8480 $5    FILLED   5.8245  4.9392  UP       +0.8328    fav_mid
+   02:46:02  02:45  UP   0.65 -      $5    REJECTED -       -       UP       (same)     fav_mid
+   02:46:02  02:45  UP   0.68 0.6800 $5    FILLED   7.1912  4.8900  UP       +2.1916    fav_mid
+   02:51:00  02:50  DOWN 0.68 0.6800 $5    FILLED   7.1912  4.8900  DOWN     +2.1916    fav_mid
+   03:00:56  03:00  DOWN 0.36 -      $10   REJECTED -       -       UP       (same)     v10
+   03:00:56  03:00  DOWN 0.39 0.3900 $10   FILLED  24.5897  9.5900  UP       -9.9995    v10
+   03:21:00  03:20  UP   0.80 -      $10   REJECTED -       -       UP       (same)     fav_mid
+   03:21:00  03:20  UP   0.81 0.8100 $10   FILLED  12.1728  9.8600  UP       +2.1817    fav_mid
+   03:26:00  03:25  DOWN 0.75 0.7500 $10   FILLED  13.0933  9.8200  UP       -9.9918    fav_mid
+
+2+3. SAME CANDLES, PAPER vs LIVE, and where they differ
+   The forward shadow has NO row for any of these six candles, and that is BY MY OWN DESIGN, not a
+   fault: ef3_shadow.py line 565 excludes candles this box traded LIVE on, because every arm there is
+   a counterfactual priced off the book and in those candles WE WERE IN THE BOOK. So a like-for-like
+   shadow comparison on identical candles is impossible on purpose. Instead the frozen rule is
+   replayed on the engine's own decide_log, at the same stake, which is the honest counterfactual:
+   candle  paper(side sec ask)    live(side ask)  result  paper $    live $     why they differ
+   02:40   UP  174 0.85           UP  0.85        UP      +0.8212    +0.8328    fill 0.848 vs 0.85
+   02:45   UP   62 0.65           UP  0.68        UP      +2.5084    +2.1916    0.65 REJECTED, retry 0.68
+   02:50   DOWN 60 0.68           DOWN 0.68       DOWN    +2.1918    +2.1916    same
+   03:00   NO FIRE                DOWN 0.39       UP      +0.0000    -9.9995    v10 traded, fav_mid would not
+   03:20   UP   60 0.80           UP  0.81        UP      +2.3274    +2.1817    0.80 REJECTED, retry 0.81
+   03:25   DOWN 60 0.75           DOWN 0.75       UP     -10.0000    -9.9918    same
+   SIDE AND ENTRY AGREED ON ALL FIVE fav_mid CANDLES. The only side/entry disagreement is 03:00,
+   where paper does not trade at all.
+
+4. TOTALS
+   same candles, same stakes:   PAPER -2.1512    LIVE -12.5936    difference -10.4424
+   Of that -10.44 gap, -9.9995 is the single v10 trade paper never takes. The remaining -0.44 is
+   pure execution: three FAK rejections retried one tick worse (0.65->0.68, 0.80->0.81) and one fill
+   a hair better (0.848 vs 0.85). So on the five candles it actually chose, fav_mid live (-2.5941)
+   tracked its own paper (-2.1512) to within $0.44, or about 9 cents a trade.
+   PAPER FAV_mid over the whole forward window (09-29 01:20 on, all candles incl. those live did not
+   trade): 105 decisions, 83 fills, 65 wins of fills, +$91.14 at $10.
+   PAPER FAV_mid today 09-30 only: 11 decisions, 10 fills, 8 wins of fills, +$12.86 at $10.
+
+   SO: "it does better in paper" is TRUE of the totals, and the reason is almost entirely the v10
+   trade, not fav_mid decaying live. But do not read +$91.14 paper as what live would have made -
+   the paper window contains candles where the book was never touched by our own orders, and the
+   forward sample is still 2 days against a 3-day bar.
+
+5. WHO SET THE STAKE TO $10, AND WHEN
+   It was ALREADY $10 at 03:00:56, about 51 minutes BEFORE I wrote anything. Traced from plan.budget
+   on every order: $5 at 02:01, 02:06, 02:37, 02:42, 02:46, 02:51 -> $10 from 03:00:56 onward.
+   Then at 03:51:48, on the owner's written "Do fixed 10", I set stake_settings to fixed $10 via
+   POST /api/controls/apply (audited path, HTTP 200) - and the value I read immediately BEFORE that
+   write was $5, so it had been moved 5->10 and back 10->5 by someone at the dashboard in between.
+   I am therefore NOT the source of the $10 that was in force for the two big losses at 03:00 and
+   03:25. The only stake write I made is the 03:51:48 one, and it came after both.
+   The engine's meta carries no per-key author or timestamp, so "who" cannot be proven from the DB -
+   what is provable is the effective stake per order and that my write postdates those trades.

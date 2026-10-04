@@ -1,0 +1,15 @@
+WIDER MARGINS (exploratory, the prereg grid stopped at 0.15):
+ m=0.15 TRAIN n  1570 win  36.5% pnl  +233.40 /$ +0.089 halves +156.80/ +76.60 | TEST n  1095 win  34.2% pnl  +163.65 /$ +0.096 halves +109.20/ +54.45
+ m=0.20 TRAIN n  1310 win  35.1% pnl  +324.75 /$ +0.164 halves +206.40/+118.35 | TEST n   929 win  33.0% pnl  +248.95 /$ +0.194 halves +157.25/ +91.70
+ m=0.25 TRAIN n  1050 win  35.0% pnl  +380.05 /$ +0.260 halves +220.60/+159.45 | TEST n   737 win  30.7% pnl  +216.90 /$ +0.238 halves  +94.40/+122.50
+ m=0.30 TRAIN n   821 win  34.1% pnl  +359.35 /$ +0.345 halves +171.65/+187.70 | TEST n   583 win  30.4% pnl  +200.55 /$ +0.293 halves  +75.65/+124.90
+LATENCY (m=0.15): fair from 2 s / 3 s / 5 s earlier
+ lat 1s TEST n  1095 win  34.2% pnl  +163.65 /$ +0.096 halves +109.20/ +54.45
+ lat 2s TEST n  1071 win  32.9% pnl   +96.45 /$ +0.058 halves  +77.25/ +19.20
+ lat 3s TEST n  1072 win  31.0% pnl   -44.35 /$ -0.026 halves   +6.25/ -50.60
+ lat 5s TEST n  1231 win  31.6% pnl  -212.20 /$ -0.098 halves  -58.20/-154.00
+WINDOW (m=0.15): sec 30-150 / 150-270
+ sec 30-150 TEST n   908 win  33.7% pnl   +65.50 /$ +0.045 halves  +60.25/  +5.25
+ sec 150-270 TEST n   856 win  30.3% pnl   -72.60 /$ -0.053 halves  -22.80/ -49.80
+BY DAY (m=0.15, all): 09-23:+71.5 09-24:+81.0 09-25:+40.5 09-26:+24.5 09-27:+15.8 09-28:+60.3 09-29:+18.3 09-30:+65.5 10-01:+19.5
+BY BID (m=0.15, test): 0.05-0.20 n   150 win  21.3% pnl   +60.90 /$ +0.615 halves  +45.25/ +15.65 | 0.20-0.35 n   578 win  29.1% pnl   +26.75 /$ +0.033 halves  +43.05/ -16.30 | 0.35-0.50 n   300 win  42.0% pnl   +32.60 /$ +0.055 halves   -2.60/ +35.20 | 0.50-0.91 n    67 win  71.6% pnl   +43.40 /$ +0.221 halves   +4.15/ +39.25

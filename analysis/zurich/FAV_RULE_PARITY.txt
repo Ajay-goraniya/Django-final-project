@@ -1,0 +1,183 @@
+FAVOURITE-RULE PARITY RUN  (Zurich, 09-28, owner: "no mistakes this time")
+==========================================================================
+(0) PARITY FIRST, and it passed EXACTLY. V's own code on V's own data reproduces
+    FAV_RULE_TEST.txt BYTE FOR BYTE - same md5 fdd0c761b0d8d714ab38e67159cf9e6a, all 38 lines,
+    vol cuts 0.260/0.506. No edit to either of V's scripts.
+      inputs rebuilt here: polybook.sqlite3 + venues.sqlite3 from learner/live_backup/*.gz,
+      Binance 1 s closes 09-11..16 from data.binance.vision daily archives.
+      ONE UNIT TRAP FOUND on the way in: those archives timestamp in MICROSECONDS for these dates,
+      while ef8_build.py does int(t)//1000 and expects MILLISECONDS (the REST feed V used). Left
+      unconverted, px is keyed 1000x high, every P(t) returns None and the build yields nothing.
+      Normalised in parity_build_zurich.py with the reason written next to it.
+
+THEN my data through the SAME code path - and it CHANGES MY ANSWER. I am retracting the headline
+I sent earlier today.
+
+  WHAT I SENT (first pass, my own fav_rule_zurich.py):  low 9/9 +, mid POSITIVE 6/9, all POSITIVE,
+                                                        headline cell +0.100/$1
+  WHAT V's CODE SAYS on the same box:                   low 8/9 +, mid NEGATIVE 7/9, all NEGATIVE 7/9,
+                                                        headline cell +0.043/$1
+
+  V's result, for comparison:                           low 8/9 +, mid NEGATIVE 9/9, high mixed
+
+  So through V's code my days AGREE with V: low positive 8 of 9 (identical count to V's, and in both
+  runs the single negative low cell is a 0.70-0.80 band cell), mid mostly negative, unfiltered mostly
+  negative. The mid-vol contradiction I reported was MINE, not the data's.
+
+WHY MY FIRST PASS WAS INFLATED - the mechanism, since the number alone is not the lesson.
+  I tested the fill by comparing a decide_log ask (250 ms later) against a tape1s ask (at the fire
+  second). Two independent reads of the same book. Measured: mean difference +0.0002, cheaper 27.6% of
+  the time, dearer 28.2% - NO price bias at all, which is why it looked safe. But the condition
+  "later <= own + 1 tick" is then passed partly by the ±2c of disagreement BETWEEN THE SOURCES, and
+  when it passes I paid the decide_log number, which is drawn preferentially from its cheap tail. Zero
+  mean bias, real selection bias. It inflated the headline cell 2.3x (+0.100 -> +0.043 per $1).
+  Same class as the CLAUDE.md slippage error: two fields from different reads compared as if one.
+  V's path takes the fire ask and the later ask from ONE source, which is why it is the correct one.
+
+(1)-(7) V's numbered pre-conditions, asserted on the artefacts, not asserted by me. Run on BOTH
+    datasets - the point of running them on V's data too is that a check which fails there is a broken
+    check, and one did: I wrote `a != b == c`, which Python chains into `(a != b) and (b == c)`. It
+    failed on data already proven byte-identical, which is exactly how I caught it. Now 12/12 on both.
+      (1) vol strictly pre-open: recomputed [ep-300,ep) independently, max diff 0.0e+00; constant
+          within a candle; cut days disjoint from test days, cuts taken from the first 2 days only.
+      (2) favourite = own_ask > opp_ask at the SAME second, min gap +0.19; X is float64 throughout.
+      (3) labels = venue outcome; every fire reconciles to venues.outcome (627/627, 299/299).
+      (4) one fire per candle, and it is the first qualifying second - checked on every fire.
+      (5) coverage stated below.
+      (6) zero NaN in the fire window; win is 0/1 and non-degenerate at 76.6% (a str-vs-int bug pins
+          this to exactly 0 or n, which is the 09-27 ef9v1 failure, so it is asserted not eyeballed);
+          fills non-zero 524/627.
+      (7) the whole 36-cell grid below, never the best cell.
+
+(5) COVERAGE  day    candles  with_outcome  mean sec of book /300   % candles with <60 s
+             09-22      54       54              239.0                   0.0%   (tape starts 19:30)
+             09-23     288      288              238.0                   0.0%
+             09-24     288      288              230.2                   0.0%
+             09-25     288      288              230.3                   0.0%
+             09-26     288      288              242.3                   0.0%
+             09-27     288      288              229.1                   0.0%
+             09-28     273      142              222.6                   0.0%   (dropped: no Binance
+                                                   archive yet, and only 142 labels)
+    Cut 09-22/09-23 -> vol cuts 0.304/0.466 (V: 0.260/0.506). Test 09-24..09-27, exactly 4 days, which
+    is why V's hardcoded /4 divisors stay correct and only 2 lines of the script differ.
+    5 candles this box traded LIVE on are excluded: in those we were IN the book being priced.
+    bid/size/age are NULL - tape1s never recorded them. fav_rule_test.py reads none of them. Absent,
+    not zero, not guessed.
+
+DEVIATIONS, all of them: (a) two day-list lines in fav_rule_test_zurich.py, diffed in the commit;
+    (b) microsecond->millisecond normalisation of the Binance archive; (c) NULL bid/size/age.
+    Nothing else. V's ef8_build.py ran unmodified on both boxes.
+
+STILL A CANDIDATE. 4 test days, one venue, one asset, and the low-vol edge is +0.043/$1 not +0.100.
+Nothing deployed, nothing on London, master OFF and untouched.
+
+--- V's checks ---
+  [PASS] float64 prices                     X.dtype = float64
+  [PASS] vol uses only pre-open returns     recomputed [ep-300,ep) on 131 candles, max diff 0.0e+00
+  [PASS] vol constant within a candle       checked 131 candles
+  [PASS] cuts disjoint from test days       cut ['09-11', '09-12'] vs test ['09-13', '09-14', '09-15', '09-16']
+  [PASS] cut days present in data           101,646 rows -> cuts 0.260/0.506
+  [PASS] own_ask > opp_ask on every fire    n=299, min gap +0.2300
+  [PASS] one fire per candle                299 fires, 299 candles
+  [PASS] fire is the first qualifying sec   checked every fire
+  [PASS] no NaN in the fire window          {'own_ask': 0, 'opp_ask': 0, 'vol': 0, 'win': 0, 'fill': 0, 'paid': 0}
+  [PASS] win is 0/1 and non-degenerate      224 wins of 299 = 74.9% (a str-vs-int bug pins this to 0 or n)
+  [PASS] fills non-zero                     255 of 299
+  [PASS] win agrees with venue outcome      299/299 rows reconcile to venues.outcome
+
+  ALL CHECKS PASS  (12/12)
+--- Zurich checks ---
+  [PASS] float64 prices                     X.dtype = float64
+  [PASS] vol uses only pre-open returns     recomputed [ep-300,ep) on 125 candles, max diff 0.0e+00
+  [PASS] vol constant within a candle       checked 125 candles
+  [PASS] cuts disjoint from test days       cut ['09-22', '09-23'] vs test ['09-24', '09-25', '09-26', '09-27']
+  [PASS] cut days present in data           157,220 rows -> cuts 0.304/0.466
+  [PASS] own_ask > opp_ask on every fire    n=627, min gap +0.1900
+  [PASS] one fire per candle                627 fires, 627 candles
+  [PASS] fire is the first qualifying sec   checked every fire
+  [PASS] no NaN in the fire window          {'own_ask': 0, 'opp_ask': 0, 'vol': 0, 'win': 0, 'fill': 0, 'paid': 0}
+  [PASS] win is 0/1 and non-degenerate      480 wins of 627 = 76.6% (a str-vs-int bug pins this to 0 or n)
+  [PASS] fills non-zero                     524 of 627
+  [PASS] win agrees with venue outcome      627/627 rows reconcile to venues.outcome
+
+  ALL CHECKS PASS  (12/12)
+
+=== ZURICH 09-24..27 THROUGH V's CODE PATH (36 cells) ===
+vol cuts 0.304/0.466; test days ['09-24', '09-25', '09-26', '09-27']
+window   band        vol    fires /day fill%  win%  paid   $@10    DD   days+  +1c    per day
+ 30-60   0.65-0.75  low     419   105   83    71  0.688   +23.5  135.2  2/4   -24.4  +24 -53 -61 +113
+ 30-60   0.65-0.75  mid     182    46   79    71  0.684   +29.9   63.1  2/4    +9.8  +7 +40 -12 -5
+ 30-60   0.65-0.75  high    167    42   83    61  0.679  -173.4  193.2  1/4  -190.1  -99 -70 +13 -18
+ 30-60   0.65-0.75  all     768   192   82    69  0.685  -120.0  252.2  1/4  -204.8  -67 -83 -60 +90
+ 30-60   0.70-0.80  low     367    92   81    72  0.732  -100.5  183.7  1/4  -137.4  -10 -42 -87 +38
+ 30-60   0.70-0.80  mid     155    39   82    71  0.723   -48.0   87.4  1/4   -63.9  -9 -37 +7 -10
+ 30-60   0.70-0.80  high    129    32   80    66  0.730  -117.5  137.6  1/4  -129.2  -63 -29 +8 -34
+ 30-60   0.70-0.80  all     651   163   81    71  0.730  -266.0  331.7  0/4  -330.5  -82 -107 -72 -5
+ 30-60   0.65-0.85  low     488   122   85    72  0.711    +2.8  142.0  2/4   -52.4  +11 -65 -49 +106
+ 30-60   0.65-0.85  mid     198    50   82    73  0.701   +30.0   61.8  2/4    +7.8  -9 +40 -5 +4
+ 30-60   0.65-0.85  high    186    46   80    61  0.694  -208.3  228.0  1/4  -225.7  -136 -68 +13 -17
+ 30-60   0.65-0.85  all     872   218   83    70  0.705  -175.5  320.7  1/4  -270.3  -134 -93 -41 +92
+ 30-120  0.65-0.75  low     564   141   82    71  0.683   +93.5  112.7  2/4   +28.5  +62 -41 -19 +91
+ 30-120  0.65-0.75  mid     230    58   79    69  0.682   -12.9   81.5  1/4   -37.9  -20 +44 -22 -15
+ 30-120  0.65-0.75  high    205    51   82    60  0.679  -225.3  242.9  1/4  -245.5  -143 -90 +27 -19
+ 30-120  0.65-0.75  all     999   250   81    68  0.682  -144.8  268.4  1/4  -254.9  -101 -87 -15 +58
+ 30-120  0.70-0.80  low     547   137   81    74  0.728   +13.5  139.0  2/4   -44.1  +16 -8 -12 +18
+ 30-120  0.70-0.80  mid     223    56   78    71  0.720   -52.9   91.3  0/4   -75.2  -12 -11 -3 -27
+ 30-120  0.70-0.80  high    199    50   79    66  0.720  -154.0  176.1  1/4  -172.5  -76 -73 +19 -24
+ 30-120  0.70-0.80  all     969   242   80    72  0.724  -193.4  255.6  1/4  -291.8  -72 -93 +4 -33
+ 30-120  0.65-0.85  low     626   156   83    73  0.704   +92.1   95.3  2/4   +20.6  +53 -62 -14 +114
+ 30-120  0.65-0.85  mid     242    60   81    71  0.696    -2.3   73.1  1/4   -28.9  -17 +38 -15 -9
+ 30-120  0.65-0.85  high    215    54   80    61  0.690  -231.0  249.1  1/4  -251.4  -160 -79 +27 -18
+ 30-120  0.65-0.85  all    1083   271   82    70  0.700  -141.3  273.8  1/4  -259.7  -123 -103 -2 +87
+ 60-180  0.65-0.75  low     536   134   79    73  0.686  +197.5  128.2  3/4  +136.7  +81 +65 -62 +113
+ 60-180  0.65-0.75  mid     219    55   83    68  0.686   -67.3  106.5  0/4   -91.3  -8 -18 -10 -31
+ 60-180  0.65-0.75  high    193    48   78    65  0.687  -122.3  129.8  1/4  -141.2  -108 -17 +18 -14
+ 60-180  0.65-0.75  all     948   237   80    70  0.686    +7.9  194.2  2/4   -95.8  -35 +29 -54 +68
+ 60-180  0.70-0.80  low     571   143   86    76  0.729   +94.0  140.2  2/4   +29.9  +26 -3 -26 +97
+ 60-180  0.70-0.80  mid     231    58   76    73  0.730   -32.1  115.8  1/4   -54.5  +29 -9 -25 -26
+ 60-180  0.70-0.80  high    198    50   82    68  0.723  -132.1  155.7  1/4  -151.5  -71 -57 +18 -22
+ 60-180  0.70-0.80  all    1000   250   83    74  0.728   -70.3  224.5  1/4  -176.1  -16 -70 -34 +49
+ 60-180  0.65-0.85  low     627   157   84    77  0.720  +267.7  118.8  3/4  +195.3  +86 +79 -34 +137
+ 60-180  0.65-0.85  mid     241    60   83    70  0.712   -56.7  105.6  1/4   -82.5  +7 -35 -9 -19
+ 60-180  0.65-0.85  high    210    52   80    66  0.714  -150.3  156.8  1/4  -170.4  -123 -26 +21 -21
+ 60-180  0.65-0.85  all    1078   270   83    74  0.717   +60.6  186.9  2/4   -57.7  -31 +17 -22 +96
+
+=== V's 09-13..16, REPRODUCED HERE BYTE-IDENTICAL (md5 fdd0c761b0d8d714ab38e67159cf9e6a) ===
+vol cuts 0.260/0.506; test days ['09-13', '09-14', '09-15', '09-16']
+window   band        vol    fires /day fill%  win%  paid   $@10    DD   days+  +1c    per day
+ 30-60   0.65-0.75  low     188    47   78    73  0.686   +54.0   67.2  1/4   +33.1  +88 -9 -22 -3
+ 30-60   0.65-0.75  mid     295    74   73    64  0.680  -170.0  196.4  0/4  -197.5  -12 -37 -53 -67
+ 30-60   0.65-0.75  high    146    36   67    68  0.675   -13.9   86.2  2/4   -27.4  +0 -22 +11 -3
+ 30-60   0.65-0.75  all     629   157   73    68  0.681  -130.0  255.1  1/4  -191.7  +75 -68 -64 -73
+ 30-60   0.70-0.80  low     163    41   79    77  0.730   +38.2   81.8  2/4   +21.3  +106 -23 -53 +8
+ 30-60   0.70-0.80  mid     238    60   73    73  0.719    -8.7  129.1  3/4   -31.4  +12 +7 -55 +27
+ 30-60   0.70-0.80  high    126    32   63    76  0.727   +23.0   70.0  2/4   +12.3  +0 -25 -2 +50
+ 30-60   0.70-0.80  all     527   132   72    75  0.725   +52.5  264.8  2/4    +2.2  +118 -41 -110 +85
+ 30-60   0.65-0.85  low     223    56   77    74  0.706   +50.8   83.0  2/4   +27.3  +105 -15 -42 +3
+ 30-60   0.65-0.85  mid     325    81   71    66  0.695  -179.6  212.2  0/4  -208.4  -6 -48 -75 -51
+ 30-60   0.65-0.85  high    170    42   65    70  0.700   -30.3   94.7  0/4   -44.6  -3 -19 -5 -3
+ 30-60   0.65-0.85  all     718   180   71    70  0.700  -159.0  312.5  1/4  -225.7  +97 -81 -123 -51
+ 30-120  0.65-0.75  low     268    67   80    71  0.681   +44.8   76.5  3/4   +14.4  +53 +0 +12 -20
+ 30-120  0.65-0.75  mid     373    93   72    66  0.678  -131.5  156.9  0/4  -166.9  -39 -27 -8 -58
+ 30-120  0.65-0.75  high    184    46   66    66  0.674   -66.1  124.1  1/4   -82.1  +3 -50 -7 -12
+ 30-120  0.65-0.75  all     825   206   73    68  0.678  -152.8  227.9  1/4  -234.6  +17 -77 -2 -91
+ 30-120  0.70-0.80  low     252    63   79    74  0.727    -3.7   86.4  3/4   -29.4  +46 +1 -63 +12
+ 30-120  0.70-0.80  mid     365    91   72    70  0.719  -116.0  232.5  1/4  -148.7  -12 -27 -100 +23
+ 30-120  0.70-0.80  high    196    49   65    72  0.727   -39.5  146.8  2/4   -55.5  +6 -86 -24 +64
+ 30-120  0.70-0.80  all     813   203   72    72  0.724  -159.2  412.8  2/4  -233.6  +41 -113 -187 +100
+ 30-120  0.65-0.85  low     297    74   79    72  0.698   +23.1   83.1  1/4    -9.1  +66 -0 -24 -18
+ 30-120  0.65-0.85  mid     394    98   71    67  0.693  -156.0  186.3  0/4  -191.8  -38 -49 -23 -47
+ 30-120  0.65-0.85  high    203    51   63    67  0.694   -77.7  136.9  0/4   -93.9  -3 -51 -21 -3
+ 30-120  0.65-0.85  all     894   224   72    69  0.695  -210.6  312.1  1/4  -294.9  +25 -100 -68 -68
+ 60-180  0.65-0.75  low     256    64   83    73  0.681  +120.2   80.9  4/4   +88.9  +57 +7 +22 +33
+ 60-180  0.65-0.75  mid     346    86   76    65  0.682  -186.4  229.4  0/4  -220.4  -69 -45 -50 -22
+ 60-180  0.65-0.75  high    187    47   73    70  0.691   -24.1  113.2  2/4   -42.2  +21 -28 -33 +16
+ 60-180  0.65-0.75  all     789   197   78    69  0.684   -90.4  235.9  2/4  -173.7  +9 -66 -60 +27
+ 60-180  0.70-0.80  low     270    68   81    76  0.728   +64.5   72.4  3/4   +35.5  +47 +16 -24 +26
+ 60-180  0.70-0.80  mid     369    92   76    71  0.731  -147.2  247.5  2/4  -181.2  +7 -94 -65 +5
+ 60-180  0.70-0.80  high    194    48   76    75  0.735    -3.1  105.7  2/4   -21.8  +19 -13 -65 +56
+ 60-180  0.70-0.80  all     833   208   77    73  0.731   -85.7  339.3  2/4  -167.6  +73 -91 -154 +87
+ 60-180  0.65-0.85  low     299    75   85    76  0.711  +149.2   68.6  4/4  +113.1  +75 +31 +18 +26
+ 60-180  0.65-0.85  mid     391    98   79    69  0.717  -187.1  226.6  0/4  -225.3  -58 -55 -36 -38
+ 60-180  0.65-0.85  high    208    52   76    74  0.726   -11.7  118.1  2/4   -32.0  +16 -28 -37 +37
+ 60-180  0.65-0.85  all     898   224   81    73  0.717   -49.6  229.1  2/4  -144.2  +33 -52 -55 +25

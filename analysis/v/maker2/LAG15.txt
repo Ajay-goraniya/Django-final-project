@@ -1,0 +1,8 @@
+M9: 7968 (15m candle, checkpoint) rows over 1543 15m candles
+  TRAIN g=0.03: n 783, $/1 -0.0764, $ -598.0, halves -164.6/-433.4 
+  TRAIN g=0.05: n 687, $/1 -0.0826, $ -567.1, halves -152.6/-414.6 
+  TRAIN g=0.08: n 561, $/1 -0.0804, $ -451.2, halves -170.1/-281.1 
+  TRAIN g=0.12: n 437, $/1 -0.0349, $ -152.7, halves -186.0/+33.2 
+NO g passes the train bar -> FAIL (test not run).
+
+VERDICT (V, 09-30): FAIL - no gap threshold is positive on TRAIN (-0.035..-0.083/$1 after costs); the 15m market does not lag the 5m in a way worth paying the cost for. Test half not opened.

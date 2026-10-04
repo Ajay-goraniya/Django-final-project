@@ -1,0 +1,35 @@
+{
+ "best": "logit/btc+venue",
+ "results": {
+  "logit/btc_only": {
+   "logloss_all": 0.546521020203635,
+   "logloss_book": 0.5364382486242366,
+   "brier": 0.18449189999079157,
+   "acc": 0.7201584507042254
+  },
+  "lgbm/btc_only": {
+   "logloss_all": 0.5443994571390204,
+   "logloss_book": 0.5490798870057281,
+   "brier": 0.18536576352246276,
+   "acc": 0.7088028169014085
+  },
+  "blend/btc_only": {
+   "logloss_book": 0.5329067207465937
+  },
+  "logit/btc+venue": {
+   "logloss_all": 0.5272019737623089,
+   "logloss_book": 0.5146352546831728,
+   "brier": 0.1773396890957075,
+   "acc": 0.7327904929577465
+  },
+  "lgbm/btc+venue": {
+   "logloss_all": 0.5155690619805432,
+   "logloss_book": 0.5503024509183047,
+   "brier": 0.17482790534970394,
+   "acc": 0.7207306338028169
+  },
+  "blend/btc+venue": {
+   "logloss_book": 0.5206253867853677
+  }
+ }
+}

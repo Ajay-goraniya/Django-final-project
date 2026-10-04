@@ -1,0 +1,18 @@
+M40 (V, 10-03 12:2x) owner: 'we lose maybe 5% of stake and our 5% stop loss will help identify which side is going good'. EXACT: M39 both sides at sec 180 + 5% initial stop on each leg, then his ratchet. History only.
+PRED sec120 v1 no re-buy: n1159 per\$1 -0.0662 t-17.31 halves -0.0746/-0.0577 green 0/6 worst -0.812 best +0.574
+PRED sec120 v2 re-buy: n1159 per\$1 -0.1834 t-13.24 halves -0.1904/-0.1764 green 0/6 worst -2.050 best +0.772
+PRED sec180 v1 no re-buy: n1148 per\$1 -0.0542 t-12.31 halves -0.0513/-0.0572 green 0/6 worst -0.941 best +0.772
+PRED sec180 v2 re-buy: n1148 per\$1 -0.1448 t-11.73 halves -0.1505/-0.1390 green 0/6 worst -1.485 best +0.772
+PRED sec240 v1 no re-buy: n1025 per\$1 -0.0541 t-10.24 halves -0.0639/-0.0444 green 0/6 worst -0.970 best +0.673
+PRED sec240 v2 re-buy: n1025 per\$1 -0.0906 t-8.48 halves -0.1130/-0.0682 green 0/6 worst -1.713 best +0.832
+PRED sec180 HOLD both: n1148 per\$1 -0.0314
+POLY fee sec120 v1 no re-buy: n288 per\$1 -0.0796 t-6.05 halves -0.1001/-0.0592 green 0/1 worst -0.788 best +0.764
+POLY fee sec120 v2 re-buy: n288 per\$1 -0.1002 t-3.94 halves -0.1389/-0.0615 green 0/1 worst -2.668 best +0.764
+POLY fee sec180 v1 no re-buy: n285 per\$1 -0.0727 t-5.15 halves -0.1079/-0.0378 green 0/1 worst -0.929 best +0.715
+POLY fee sec180 v2 re-buy: n285 per\$1 -0.0767 t-3.73 halves -0.1058/-0.0478 green 0/1 worst -1.297 best +0.715
+POLY fee sec240 v1 no re-buy: n276 per\$1 -0.0337 t-2.21 halves -0.0727/+0.0052 green 0/1 worst -0.994 best +0.702
+POLY fee sec240 v2 re-buy: n276 per\$1 -0.0579 t-3.12 halves -0.0915/-0.0244 green 0/1 worst -1.314 best +0.702
+POLY 0fee sec180 v1 no re-buy: n285 per\$1 -0.0307 t-2.21 halves -0.0624/+0.0008 green 0/1 worst -0.905 best +0.743
+POLY 0fee sec180 v2 re-buy: n285 per\$1 -0.0190 t-0.95 halves -0.0437/+0.0056 green 0/1 worst -1.198 best +0.743
+PRED sec180 n1148: both legs stopped 71%; WINNING leg stopped 72%; losing leg rode to 0 only 1%.
+VERDICT: FAIL, worse than M39 and worse than holding both (-0.031). The 5% stop does not pick the good side: the winning side dips 5% first in 72% of candles, so both legs get stopped and we pay the spread twice.

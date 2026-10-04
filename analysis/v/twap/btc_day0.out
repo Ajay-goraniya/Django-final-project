@@ -1,0 +1,21 @@
+binance 1 s closes: 87000
+windows scanned 96 (no market 0, no line 0)
+windows with a TRADED pair cost < 1 (both legs bought by takers within 3s): 17 of 96; of those with lines < $5 apart: 1
+payoff of the dominance pair on gamma, all windows: {1: 71, 2: 25}  (0 would break the structure)
+  09-20 12:00 gap    +9.16  cost 0.3577 at sec 207 (15m 0.290 + 5m 0.050)  trades 15m/5m 332/622  pay 1
+  09-20 04:15 gap   +12.99  cost 0.6449 at sec 202 (15m 0.500 + 5m 0.120)  trades 15m/5m 206/675  pay 1
+  09-20 07:45 gap   -13.65  cost 0.7187 at sec 228 (15m 0.200 + 5m 0.490)  trades 15m/5m 199/700  pay 1
+  09-20 01:45 gap    -6.80  cost 0.7849 at sec 186 (15m 0.140 + 5m 0.620)  trades 15m/5m 130/628  pay 1
+  09-20 09:00 gap    +9.92  cost 0.8129 at sec 130 (15m 0.670 + 5m 0.120)  trades 15m/5m 184/548  pay 1
+  09-20 17:15 gap    +8.39  cost 0.8346 at sec 196 (15m 0.332 + 5m 0.470)  trades 15m/5m 163/1229  pay 1
+  09-20 23:00 gap    -8.94  cost 0.8404 at sec 236 (15m 0.100 + 5m 0.720)  trades 15m/5m 213/962  pay 1
+  09-20 10:30 gap    -3.75  cost 0.8408 at sec 127 (15m 0.550 + 5m 0.260)  trades 15m/5m 230/942  pay 1
+  09-20 11:15 gap    +5.24  cost 0.8727 at sec 237 (15m 0.320 + 5m 0.520)  trades 15m/5m 152/692  pay 1
+  09-20 07:15 gap   +13.43  cost 0.8960 at sec   8 (15m 0.680 + 5m 0.190)  trades 15m/5m 137/477  pay 1
+  09-20 12:30 gap   +12.04  cost 0.8987 at sec 100 (15m 0.345 + 5m 0.520)  trades 15m/5m 262/771  pay 1
+  09-20 02:00 gap   +18.78  cost 0.9422 at sec  73 (15m 0.760 + 5m 0.160)  trades 15m/5m 107/272  pay 1
+  09-20 00:30 gap   -43.22  cost 0.9548 at sec   3 (15m 0.460 + 5m 0.460)  trades 15m/5m 498/417  pay 1
+  09-20 19:15 gap   -14.11  cost 0.9708 at sec 227 (15m 0.300 + 5m 0.640)  trades 15m/5m 128/780  pay 1
+  09-20 04:45 gap   +51.56  cost 0.9883 at sec 241 (15m 0.976 + 5m 0.010)  trades 15m/5m 150/896  pay 2
+  09-20 06:15 gap    -7.37  cost 0.9932 at sec  24 (15m 0.590 + 5m 0.370)  trades 15m/5m 163/624  pay 1
+  09-20 05:30 gap   -23.97  cost 0.9936 at sec 243 (15m 0.770 + 5m 0.200)  trades 15m/5m 206/858  pay 2

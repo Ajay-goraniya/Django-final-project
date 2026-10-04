@@ -1,0 +1,36 @@
+--- btc_model_v12_polymarket.py.bak-favmid-20260930T021813Z	2026-09-30 00:58:09.421014992 +0000
++++ btc_model_v12_polymarket.py	2026-09-30 02:20:42.562325017 +0000
+@@ -588,8 +588,10 @@
+         """12.22.0: which brain fires EF - 'v10' (packaged classifier) or 'build11' (EF reversal lane).
+         12.25.0: 'fav' - the calm-favourite rule (poly_fav), owner-ordered 09-30. NOT a profile of
+         build11: build11 buys the written-off side (EF_MAX_ASK 0.60), fav buys the FAVOURITE at
+-        0.65-0.85, so selecting it REPLACES the EF decision rather than tuning it."""
+-        v=self.db.get('ef_engine','v10'); return v if v in ('v10','build11','fav') else 'v10'
++        0.65-0.85, so selecting it REPLACES the EF decision rather than tuning it.
++        12.25.1: 'fav_mid' - the same rule with the MID vol band [0.304, 0.466) instead of < 0.304.
++        Owner-ordered 09-30 02:2x. Only the band differs; everything else is the frozen FAV rule."""
++        v=self.db.get('ef_engine','v10'); return v if v in ('v10','build11','fav','fav_mid') else 'v10'
+     def _routing_live(self):
+         """12.21.1: will the next order go to the venue? (Executor.route: credentials AND master ON)"""
+         try: return self.executor.route()[1]=='LIVE'
+@@ -747,11 +749,16 @@
+             # retry budget and the blocked set. Only the decision SOURCE changes. ef_mode is None for
+             # every other value, so v10/build11 behaviour is byte-identical to before.
+             _efe=self.ef_engine()
+-            self.lanes.ef_mode=('fav' if _efe=='fav' else None)
+-            if _efe=='fav' and getattr(self.lanes,'fav',None) is None:
+-                self.lanes.fav=poly_fav.FavBrain()
++            self.lanes.ef_mode=('fav' if _efe in ('fav','fav_mid') else None)
++            if _efe in ('fav','fav_mid'):
++                # 12.25.1: rebuild when the requested band changes, so flipping ef_engine between
++                # "fav" and "fav_mid" takes effect on the next pass with NO restart.
++                if getattr(getattr(self.lanes,'fav',None),'label',None)!=_efe:
++                    self.lanes.fav=(poly_fav.FavBrain(vol_lo=poly_fav.VOL_CUT,vol_hi=poly_fav.VOL_MID_CUT,
++                                                      label='fav_mid') if _efe=='fav_mid'
++                                    else poly_fav.FavBrain())
+             self.lanes.ef_epoch=ep
+-            self.lanes.ef_enabled=(_efe in ('build11','fav'))
++            self.lanes.ef_enabled=(_efe in ('build11','fav','fav_mid'))
+             # 12.24.4: the settlement line goes to the lane engine on every read, for every lane (MAIN and REVERSAL
+             # measure from it now, poly_lanes.compute), not only when the build11 EF lane is on.
+             # ref_open is fixed for the candle, so the feature build runs once per candle for MAIN/REVERSAL and on

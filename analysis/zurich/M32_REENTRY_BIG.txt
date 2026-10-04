@@ -1,0 +1,117 @@
+loading books...
+  2534 candles with a real 1 Hz bid+ask
+M32-BIG - THE OWNER'S RULES A AND B AT SCALE, ON REAL 1 Hz BID AND ASK. READ-ONLY. 2026-10-03 10:57:08 UTC
+Prereg analysis/v/maker2/PREREG_M32_REENTRY.md section M32-BIG (bd25714). Nothing live touched.
+
+TRIGGERS AND FILLS USE THE SIDE WE WOULD ACTUALLY TOUCH, which is the fix M32 could not make:
+  ARM and SELL on the BID (filled at that bid); RE-BUY on the ASK (filled at that ask);
+  taker fee 0.07p(1-p) on every sell and re-buy. Size held constant at the fee-exact shares
+  $10 buys at P, so RULE A and HOLD are the same trade with and without the rule.
+COVERAGE: a real 1 Hz bid+ask exists only for 09-11..09-16 (polybook, live-websocket rows) and
+  09-28..10-02 (pm_multi btc5). venues.q and tape1s carry ASKS ONLY, so entries on 09-08..09-10
+  and 09-17..09-27 cannot be run and are EXCLUDED rather than priced off a bid I do not have.
+
+entries priced: 3693 on 1963 candles (48% of the FAV set, 33% of the EF set; every arm clears the 60 bar)
+
+================ FAV  (n 791)
+  set                          n       $@10   per $1     maxDD    worst    std        W/L/SCR   green
+  HOLD  (fee)                791    +222.00  +0.0281   -144.66   -10.00   5.93      598/193/0    7/10  
+  HOLD  (0 fee)              791    +380.48  +0.0481   -122.90   -10.00   6.05      598/193/0    8/10  
+  RULE A (fee)               791     -56.60  -0.0072   -132.13   -18.85   4.88    494/173/124    5/10  
+  RULE A (0 fee)             791    +265.80  +0.0336    -97.79   -17.76   4.88    520/147/124    7/10  
+  HOLD on B kept (fee)       444    +115.21  +0.0259    -88.30   -10.00   5.94      335/109/0    6/10  
+  HOLD on B kept (0 fee)     444    +203.98  +0.0459    -77.11   -10.00   6.06      335/109/0    7/10  
+  RULE B kept (fee)          444     -32.01  -0.0072    -75.93   -14.14   4.81     273/100/71    7/10  
+  RULE B kept (0 fee)        444    +149.73  +0.0337    -58.99   -12.39   4.80      286/87/71    7/10  
+     cycles: 513 sells, 389 re-buys, fired on 335/791 (42%); still held at 270: 667
+
+================ FAV_mid  (n 612)
+  set                          n       $@10   per $1     maxDD    worst    std        W/L/SCR   green
+  HOLD  (fee)                612     -54.38  -0.0089   -246.93   -10.00   6.07      448/164/0    2/10  
+  HOLD  (0 fee)              612     +62.42  +0.0102   -215.76   -10.00   6.20      448/164/0    4/10  
+  RULE A (fee)               612    -262.89  -0.0430   -277.69   -16.60   4.80    368/142/102    2/10  
+  RULE A (0 fee)             612     +16.78  +0.0027   -134.01   -15.85   4.78    383/127/102    5/10  
+  HOLD on B kept (fee)       397    -128.94  -0.0325   -249.10   -10.00   6.25      282/115/0     3/9  
+  HOLD on B kept (0 fee)     397     -53.74  -0.0135   -216.49   -10.00   6.38      282/115/0     3/9  
+  RULE B kept (fee)          397    -242.82  -0.0612   -249.98   -16.60   4.94      229/94/74     0/9  
+  RULE B kept (0 fee)        397     -51.72  -0.0130   -121.85   -15.85   4.90      240/83/74     3/9  
+     cycles: 490 sells, 388 re-buys, fired on 286/612 (47%); still held at 270: 510
+
+================ FAV_all  (n 1955)
+  set                          n       $@10   per $1     maxDD    worst    std        W/L/SCR   green
+  HOLD  (fee)               1955     -91.41  -0.0047   -371.66   -10.00   6.06     1436/519/0    5/10  
+  HOLD  (0 fee)             1955    +284.13  +0.0145   -292.39   -10.00   6.19     1436/519/0    6/10  
+  RULE A (fee)              1955    -711.39  -0.0364   -751.73   -21.10   4.95   1192/443/320    2/10  
+  RULE A (0 fee)            1955    +141.91  +0.0073   -228.83   -19.55   4.93   1247/388/320    6/10  
+  HOLD on B kept (fee)      1226    -325.50  -0.0265   -384.80   -10.00   6.20      878/348/0    3/10  
+  HOLD on B kept (0 fee)    1226     -93.17  -0.0076   -247.16   -10.00   6.33      878/348/0    3/10  
+  RULE B kept (fee)         1226    -659.80  -0.0538   -659.80   -21.10   5.02    718/288/220    1/10  
+  RULE B kept (0 fee)       1226    -101.07  -0.0082   -183.18   -19.55   4.98    753/253/220    5/10  
+     cycles: 1452 sells, 1132 re-buys, fired on 869/1955 (44%); still held at 270: 1635
+
+================ FIXED  (n 157)
+  set                          n       $@10   per $1     maxDD    worst    std        W/L/SCR   green
+  HOLD  (fee)                157     -93.88  -0.0598   -187.64   -10.00   9.98        77/80/0     3/6  
+  HOLD  (0 fee)              157     -42.73  -0.0272   -179.46   -10.00  10.35        77/80/0     3/6  
+  RULE A (fee)               157    -171.64  -0.1093   -210.53   -21.08   8.02       61/37/59     2/6  
+  RULE A (0 fee)             157     -13.41  -0.0085   -124.20   -20.20   8.02       66/32/59     3/6  
+  HOLD on B kept (fee)       120    -105.32  -0.0878   -164.58   -10.00   9.81        58/62/0     2/6  
+  HOLD on B kept (0 fee)     120     -68.01  -0.0567   -158.37   -10.00  10.17        58/62/0     2/6  
+  RULE B kept (fee)          120    -164.93  -0.1374   -195.91   -21.08   8.27       45/30/45     2/6  
+  RULE B kept (0 fee)        120     -42.24  -0.0352   -118.57   -20.20   8.25       50/25/45     2/6  
+     cycles: 200 sells, 141 re-buys, fired on 98/157 (62%); still held at 270: 98
+
+================ RAW  (n 178)
+  set                          n       $@10   per $1     maxDD    worst    std        W/L/SCR   green
+  HOLD  (fee)                178    -215.90  -0.1213   -245.48   -10.00  10.32       77/101/0     2/6  
+  HOLD  (0 fee)              178    -158.46  -0.0890   -232.11   -10.00  10.71       77/101/0     2/6  
+  RULE A (fee)               178    -298.23  -0.1675   -301.45   -30.19   8.80       63/43/72     2/6  
+  RULE A (0 fee)             178     -97.75  -0.0549   -156.58   -26.58   8.74       68/38/72     2/6  
+  HOLD on B kept (fee)       137    -187.94  -0.1372   -239.55   -10.00  10.31        58/79/0     2/6  
+  HOLD on B kept (0 fee)     137    -144.39  -0.1054   -231.47   -10.00  10.71        58/79/0     2/6  
+  RULE B kept (fee)          137    -244.36  -0.1784   -267.21   -30.19   8.82       46/37/54     1/6  
+  RULE B kept (0 fee)        137     -92.35  -0.0674   -144.13   -26.58   8.79       51/32/54     2/6  
+     cycles: 238 sells, 166 re-buys, fired on 114/178 (64%); still held at 270: 106
+
+================================================================================
+M32-BIG VERDICT, WITH THE OWNER'S ZERO-FEE ("all those orders are maker orders") COLUMN BESIDE IT.
+
+                 HOLD fee   HOLD 0fee |  RULE A fee  RULE A 0fee |  A vs HOLD at 0 fee
+  FAV             +0.0281     +0.0481 |    -0.0072     +0.0336   |  still -0.0145 BEHIND
+  FAV_mid         -0.0089     +0.0102 |    -0.0430     +0.0027   |  still -0.0075 behind
+  FAV_all         -0.0047     +0.0145 |    -0.0364     +0.0073   |  still -0.0072 behind
+  FIXED           -0.0598     -0.0272 |    -0.1093     -0.0085   |  +0.0187 AHEAD
+  RAW             -0.1213     -0.0890 |    -0.1675     -0.0549   |  +0.0341 AHEAD
+A ZERO-FEE HOLD IS REPORTED TOO, AND IT HAD TO BE: rule A at zero fee against a fee-paying HOLD
+would credit the rule with an entry fee it never paid. Both columns use the same prices and the same
+entry, so the only difference inside each pair is the fee.
+
+WHAT THE ZERO-FEE COLUMN CHANGES, AND IT IS A LOT: the fees were doing most of the damage. Rule A
+ran 513 sells and 389 re-buys on FAV alone, and taking those out moves FAV from -56.60 to +265.80.
+So the owner is right that fees were the dominant cost of his rule, and three of the five arms turn
+positive once they are removed.
+AND ON HIS OWN YARDSTICK IT NOW WINS OUTRIGHT: at zero fee, MAX DRAWDOWN IMPROVES IN ALL FIVE ARMS,
+not one - FAV -122.90 -> -97.79, FAV_mid -215.76 -> -134.01, FAV_all -292.39 -> -228.83,
+FIXED -179.46 -> -124.20, RAW -232.11 -> -156.58. Per-trade std is lower in every arm as before, and
+green days are equal or better in four of five. That is exactly the trade he described wanting.
+
+WHAT IT DOES NOT CHANGE, AND THIS IS THE DECISION: EVEN FEE-FREE, RULE A STILL TRAILS HOLD ON THE
+ONLY ARM THAT MAKES MONEY. FAV at zero fee is +0.0481 held against +0.0336 under the rule. The rule
+beats HOLD only on FIXED and RAW - two arms that LOSE either way - and beating a losing arm by
+trading it less is not an edge, it is just less exposure. So the answer to "does my rule work if the
+fees go away" is: it stops being destructive, it genuinely lowers drawdown, and it still costs you
+30% of the edge on the one arm that has any.
+The loss cap is also still gone: worst single trade at zero fee is -17.76 (FAV) to -26.58 (RAW)
+against HOLD's -10.00 floor in every row. Fees were never what caused that - re-entering at 1.10*P is.
+
+THE ZERO-FEE COLUMN IS AN UPPER BOUND ON AN UPPER BOUND AND MUST NOT BE READ AS ACHIEVABLE:
+ 1. a maker order earns its zero fee by POSTING AND WAITING. This simulation takes the touch the
+    instant the trigger prints - arm/sell at the bid, re-buy at the ask - which is a TAKER action.
+    Zero fee AND an immediate fill at the touch is the best of both worlds and cannot be had at once.
+ 2. these entries are taker entries BY DEFINITION: FAV and EF both buy the ask. A zero-fee entry
+    for them is counterfactual, not a cheaper version of the same trade.
+ 3. M30's maker fidelity gate failed on this box at 75.4% against an 85% bar, so what a resting
+    order would really have filled at cannot be simulated here at all.
+To test the owner's rule as actual maker orders, the exits and re-entries would have to be POSTED and
+their fills measured live - which is the same conclusion M30 reached about the maker rule itself.
+Nothing here licenses a live change, and nothing was changed.

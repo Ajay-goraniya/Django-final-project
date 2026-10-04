@@ -1,0 +1,139 @@
+A. FILL-MODEL CALIBRATION - what the public tape did while our order was live
+   Window: post_ts -> the fill, or the cancel, or the candle end if neither. Both legs of a
+   Polymarket trade are recorded (one row per token, prices summing to 1), so the MIRROR test
+   on the complement token at >= 1-p is included and verified below, not assumed redundant.
+
+   two-leg check: 426773 of 520396 tape transactions carry >= 2 token legs (82.0%), so the mirror is usually the same trade seen from the other side.
+
+   RESOLUTION FIRST - can the tape see the interval we are asking about?
+     order lifetime post -> fill/cancel: p10 0 s, p50 3 s, p90 214 s, max 240 s. Most orders live for SECONDS.
+     of our 93 live-filled orders, a tape print at our price or its complement exists anywhere in the candle for 85 (91%).
+     The tape is a 1-minute REST cron with per-second stamps, so a window of a few seconds is
+     at the edge of what it can resolve - and our OWN fill is missing from it for 8 of 93 filled orders.
+     Therefore the tight-window table is reported WITH a candle-wide table beside it, and the
+     tight one must not be read as proof that nothing traded through us.
+
+   TIGHT: post -> fill/cancel
+     tape did      live FILLED  not filled  fill rate   win rate of the live fills  
+     thru                   11          38      22.4%   83.3% of 12 graded            INSUFFICIENT (<60)
+     touch-only              5           4      55.6%   80.0% of 5 graded             INSUFFICIENT (<60)
+     neither                77          24      76.2%   77.5% of 80 graded            
+
+   WIDE: post -> candle end
+     tape did      live FILLED  not filled  fill rate   win rate of the live fills  
+     thru                   87          60      59.2%   76.9% of 91 graded            
+     touch-only              0           2       0.0%   no graded fills               INSUFFICIENT (<60)
+     neither                 6           4      60.0%   100.0% of 6 graded            INSUFFICIENT (<60)
+
+   READ: the sim rules compared are STRICT_PFAV_CALM touch (+155/20d) and thru (-335/20d).
+   What this says is narrower than the question asked: at the few-second holding times the
+   probe actually has, the public tape cannot reliably adjudicate touch against thru, so a
+   20-day sim built on that tape is deciding the fill rule on data blind to our own fills.
+
+B. STOP LOSS on the graded fills, exit priced where a BID is PROVEN to have existed
+   The probe keeps no book history, so there is no recorded bid path. What the public tape
+   does prove is a MAKER-BUY print (is_taker=0, side BUY): a resting bid at that price was
+   hit, so a bid existed there. That is the evidence used. It is an upper bound on how well we
+   could have exited - it ignores queue position and our own size - and it is NOT the same
+   thing as a continuous bid path. Minima at sec >= 270 are excluded as settlement.
+
+   fills 97, of which 97 have any proven bid print after the fill; the other 0 are EXCLUDED, not assumed un-stoppable.
+
+   ALL graded fills with a proven bid path (n 97)
+         L W stopped      cost  L saved      gain  NET vs hold  flag
+      0.50        40    -90.03       21    +50.66       -39.37  
+      0.40        29    -78.61       21    +40.23       -38.38  
+      0.30        23    -75.04       21    +29.95       -45.09  
+      0.20        19    -68.95       21    +19.82       -49.13  
+      0.10        15    -58.91       21     +9.84       -49.07  
+
+   EXCLUDING the 09-30 17:00 candle (n 82)
+         L W stopped      cost  L saved      gain  NET vs hold  flag
+      0.50        25    -56.39       21    +50.66        -5.73  
+      0.40        14    -38.52       21    +40.23        +1.72  
+      0.30         8    -28.59       21    +29.95        +1.37  
+      0.20         4    -16.22       21    +19.82        +3.60  
+      0.10         0     +0.00       21     +9.84        +9.84  
+
+   cost of a stop = shares*(1-L) given up on a winner, plus the taker fee; gain on a loser
+   = shares*L recovered minus the fee. Fee = 0.07*L*(1-L) per share.
+
+C. ENTRY SEPARATION, losers vs winners, one-way, every level shown
+   97 graded fills: 76 W / 21 L
+
+   fill second
+              level    n     W/L  deployed       pnl   pnl/$1  flag
+             60-120   78   65/13    243.81  +50.1649  +0.2058  
+            120-180   19    11/8     59.65   -9.6464  -0.1617  INSUFFICIENT (<60)
+
+   price paid
+              level    n     W/L  deployed       pnl   pnl/$1  flag
+          0.60-0.65   44   34/10    124.21  +28.2311  +0.2273  INSUFFICIENT (<60)
+          0.65-0.70   16    13/3     50.94  +10.5855  +0.2078  INSUFFICIENT (<60)
+          0.70-0.75   17    13/4     50.60   -0.5981  -0.0118  INSUFFICIENT (<60)
+          0.75-0.80   20    16/4     77.70   +2.3000  +0.0296  INSUFFICIENT (<60)
+
+   side
+              level    n     W/L  deployed       pnl   pnl/$1  flag
+                 UP   36   23/13    116.49   -6.4988  -0.0558  INSUFFICIENT (<60)
+               DOWN   61    53/8    186.97  +47.0173  +0.2515  
+
+   Binance distance from the candle OPEN at the fill, signed IN OUR FAVOUR (bps)
+              level    n     W/L  deployed       pnl   pnl/$1  flag
+                 <0   11     9/2     32.49   +7.4968  +0.2307  INSUFFICIENT (<60)
+                0-2   39   29/10    120.07   +8.9250  +0.0743  INSUFFICIENT (<60)
+                2-5   38    31/7    117.44  +22.5467  +0.1920  INSUFFICIENT (<60)
+                 >5    9     7/2     33.45   +1.5500  +0.0463  INSUFFICIENT (<60)
+
+   M19 fair for our side at the fill second MINUS price paid
+              level    n     W/L  deployed       pnl   pnl/$1  flag
+             <-0.10   49    40/9    158.43  +23.0837  +0.1457  INSUFFICIENT (<60)
+           -0.10..0   33    28/5     98.03  +24.4369  +0.2493  INSUFFICIENT (<60)
+            0..0.10    8     5/3     25.40   -0.4000  -0.0157  INSUFFICIENT (<60)
+              >0.10    7     3/4     21.60   -6.6021  -0.3057  INSUFFICIENT (<60)
+
+
+VERDICTS (Zurich, 10-02 10:2x). Every cell except two is under 60 fills; flagged in place.
+
+A. THE TAPE CANNOT DECIDE TOUCH vs THRU AT THE TIMES WE TRADE, so neither sim number is earned.
+   Our orders live for a MEDIAN OF 3 SECONDS (p10 0 s, p90 214 s). In that window the tape shows
+   "neither" for 77 of 93 filled orders - not because nothing traded through us, but because a
+   1-minute REST cron with per-second stamps cannot resolve a 3-second interval, and our OWN fill is
+   absent from it for 8 of 93 filled orders. Widen the window to the whole candle and the
+   classification collapses the other way: 147 of 157 orders are "thru", 87 of 93 fills among them.
+   So at candle granularity everything is thru and at second granularity nothing is: the public tape
+   has no resolution where the distinction lives. STRICT_PFAV_CALM's touch (+155/20d) versus thru
+   (-335/20d) is therefore a choice between two numbers computed on data blind to our actual fills,
+   and the -335 should not be treated as a refutation of the live rule. What WOULD settle it is our
+   own order-level data: queue position and partial-fill timing from the venue, not the public tape.
+
+B. A PRICE STOP DOES NOT CUT THE LOSERS PROFITABLY. On all 97 graded fills every level loses:
+   -39.37 at 0.50, -38.38 at 0.40, -45.09 at 0.30, -49.13 at 0.20, -49.07 at 0.10, because 40
+   WINNERS dipped to 0.50 before recovering and each stop gives up shares*(1-L).
+   Excluding the 09-30 17:00 candle it flips to roughly break-even: -5.73, +1.72, +1.37, +3.60 and
+   +9.84 at L=0.10, where no winner ever traded that low and all 21 losers are caught.
+   READ IT HONESTLY: a stop only helps once you remove the single candle that produced most of the
+   probe's profit, and that candle is precisely where winners went deep before coming back - a stop
+   would have destroyed the probe's best day. The one cell that is both positive and cheap (L=0.10,
+   +9.84 over 82 fills, 0 winners stopped) is worth about 12 cents a fill and rests entirely on 21
+   losers in two days. It is not a recommendation; it is the only level that would not have cut
+   winners, and it should be re-measured over a month before anyone touches the probe.
+   The exit price here is EVIDENCE a bid existed (a maker-BUY print), not a bid path we could have
+   hit at our size - an upper bound on how well a stop could have worked.
+
+C. WHAT SEPARATES LOSERS FROM WINNERS - and it contradicts M19 directly.
+   1. SECONDS: 60-120 pays +0.2058/$1 (n 78, 65W/13L) and 120-180 pays -0.1617 (n 19). Early is
+      better, and this is the only factor whose better level clears 60 fills.
+   2. PRICE: 0.60-0.65 +0.2273, 0.65-0.70 +0.2078, 0.70-0.75 -0.0118, 0.75-0.80 +0.0296. Cheaper
+      is better across the first three; the top bucket is flat, not negative.
+   3. M19 FAIR MINUS PRICE PAID RUNS THE WRONG WAY: -0.10..0 pays +0.2493 and <-0.10 pays +0.1457,
+      while 0..0.10 pays -0.0157 and >0.10 pays -0.3057. The probe does WORST exactly where M19's
+      model says it is getting the biggest bargain. That is the clearest explanation yet of why the
+      paper shadow is flat while the probe is up: M19 buys when fair-minus-price is large, and in
+      live data that condition predicts LOSSES. It is also a warning that "fair value" here is
+      measuring something closer to "the market has already moved against this side".
+   4. SIDE: DOWN +0.2515 (n 61, 53W/8L) against UP -0.0558 (n 36, 23W/13L). I do NOT read this as
+      an edge. Two days of one direction is a regime, and a side filter is exactly the kind of
+      after-the-fact cell this project keeps being wrong about.
+   5. BINANCE DISTANCE FROM OPEN is non-monotone (+0.2307, +0.0743, +0.1920, +0.0463) - noise.
+NOTHING IS PROPOSED and nothing was changed. The probe and the M19 shadow ran untouched throughout.

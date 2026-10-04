@@ -1,0 +1,616 @@
+{
+ "seed": 20260908,
+ "n": 100,
+ "days": [
+  "2026-08-29",
+  "2026-08-30",
+  "2026-08-31",
+  "2026-09-02",
+  "2026-09-03",
+  "2026-09-04",
+  "2026-09-05",
+  "2026-09-06"
+ ],
+ "candles": [
+  {
+   "date": "2026-08-29",
+   "epoch": 1787964300,
+   "candle_open_ms": 1787964300000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-08-29",
+   "epoch": 1787979600,
+   "candle_open_ms": 1787979600000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-29",
+   "epoch": 1787981700,
+   "candle_open_ms": 1787981700000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-29",
+   "epoch": 1787990700,
+   "candle_open_ms": 1787990700000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-29",
+   "epoch": 1787991600,
+   "candle_open_ms": 1787991600000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-29",
+   "epoch": 1787994900,
+   "candle_open_ms": 1787994900000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-29",
+   "epoch": 1787999700,
+   "candle_open_ms": 1787999700000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-29",
+   "epoch": 1788000900,
+   "candle_open_ms": 1788000900000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-08-29",
+   "epoch": 1788016200,
+   "candle_open_ms": 1788016200000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-29",
+   "epoch": 1788016500,
+   "candle_open_ms": 1788016500000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-08-29",
+   "epoch": 1788034200,
+   "candle_open_ms": 1788034200000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-08-29",
+   "epoch": 1788036600,
+   "candle_open_ms": 1788036600000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-29",
+   "epoch": 1788039900,
+   "candle_open_ms": 1788039900000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-30",
+   "epoch": 1788055200,
+   "candle_open_ms": 1788055200000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-30",
+   "epoch": 1788060300,
+   "candle_open_ms": 1788060300000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-30",
+   "epoch": 1788061200,
+   "candle_open_ms": 1788061200000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-30",
+   "epoch": 1788078900,
+   "candle_open_ms": 1788078900000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-08-30",
+   "epoch": 1788083100,
+   "candle_open_ms": 1788083100000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-30",
+   "epoch": 1788089700,
+   "candle_open_ms": 1788089700000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-08-30",
+   "epoch": 1788091200,
+   "candle_open_ms": 1788091200000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-30",
+   "epoch": 1788109500,
+   "candle_open_ms": 1788109500000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-08-30",
+   "epoch": 1788111300,
+   "candle_open_ms": 1788111300000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-30",
+   "epoch": 1788111900,
+   "candle_open_ms": 1788111900000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-08-30",
+   "epoch": 1788114600,
+   "candle_open_ms": 1788114600000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-30",
+   "epoch": 1788114900,
+   "candle_open_ms": 1788114900000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-30",
+   "epoch": 1788117300,
+   "candle_open_ms": 1788117300000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-08-31",
+   "epoch": 1788140700,
+   "candle_open_ms": 1788140700000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-08-31",
+   "epoch": 1788142800,
+   "candle_open_ms": 1788142800000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-08-31",
+   "epoch": 1788145800,
+   "candle_open_ms": 1788145800000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-31",
+   "epoch": 1788150000,
+   "candle_open_ms": 1788150000000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-08-31",
+   "epoch": 1788151200,
+   "candle_open_ms": 1788151200000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-31",
+   "epoch": 1788156900,
+   "candle_open_ms": 1788156900000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-31",
+   "epoch": 1788179400,
+   "candle_open_ms": 1788179400000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-08-31",
+   "epoch": 1788189300,
+   "candle_open_ms": 1788189300000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-08-31",
+   "epoch": 1788189900,
+   "candle_open_ms": 1788189900000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-08-31",
+   "epoch": 1788215100,
+   "candle_open_ms": 1788215100000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-08-31",
+   "epoch": 1788216000,
+   "candle_open_ms": 1788216000000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-08-31",
+   "epoch": 1788217200,
+   "candle_open_ms": 1788217200000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-02",
+   "epoch": 1788326700,
+   "candle_open_ms": 1788326700000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-02",
+   "epoch": 1788338400,
+   "candle_open_ms": 1788338400000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-02",
+   "epoch": 1788341700,
+   "candle_open_ms": 1788341700000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-02",
+   "epoch": 1788347100,
+   "candle_open_ms": 1788347100000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-02",
+   "epoch": 1788348000,
+   "candle_open_ms": 1788348000000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-02",
+   "epoch": 1788360600,
+   "candle_open_ms": 1788360600000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-02",
+   "epoch": 1788377700,
+   "candle_open_ms": 1788377700000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-02",
+   "epoch": 1788378600,
+   "candle_open_ms": 1788378600000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-02",
+   "epoch": 1788380700,
+   "candle_open_ms": 1788380700000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-02",
+   "epoch": 1788389100,
+   "candle_open_ms": 1788389100000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-02",
+   "epoch": 1788392400,
+   "candle_open_ms": 1788392400000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-03",
+   "epoch": 1788397800,
+   "candle_open_ms": 1788397800000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-03",
+   "epoch": 1788400200,
+   "candle_open_ms": 1788400200000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-03",
+   "epoch": 1788411600,
+   "candle_open_ms": 1788411600000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-03",
+   "epoch": 1788419100,
+   "candle_open_ms": 1788419100000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-03",
+   "epoch": 1788424800,
+   "candle_open_ms": 1788424800000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-03",
+   "epoch": 1788429000,
+   "candle_open_ms": 1788429000000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-03",
+   "epoch": 1788436200,
+   "candle_open_ms": 1788436200000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-03",
+   "epoch": 1788440100,
+   "candle_open_ms": 1788440100000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-03",
+   "epoch": 1788443400,
+   "candle_open_ms": 1788443400000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-03",
+   "epoch": 1788447000,
+   "candle_open_ms": 1788447000000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-03",
+   "epoch": 1788447300,
+   "candle_open_ms": 1788447300000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-03",
+   "epoch": 1788447900,
+   "candle_open_ms": 1788447900000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-03",
+   "epoch": 1788466500,
+   "candle_open_ms": 1788466500000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-04",
+   "epoch": 1788486600,
+   "candle_open_ms": 1788486600000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-04",
+   "epoch": 1788500700,
+   "candle_open_ms": 1788500700000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-04",
+   "epoch": 1788510900,
+   "candle_open_ms": 1788510900000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-04",
+   "epoch": 1788526500,
+   "candle_open_ms": 1788526500000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-04",
+   "epoch": 1788530700,
+   "candle_open_ms": 1788530700000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-04",
+   "epoch": 1788536700,
+   "candle_open_ms": 1788536700000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-04",
+   "epoch": 1788543900,
+   "candle_open_ms": 1788543900000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-04",
+   "epoch": 1788546600,
+   "candle_open_ms": 1788546600000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-04",
+   "epoch": 1788551400,
+   "candle_open_ms": 1788551400000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-04",
+   "epoch": 1788553500,
+   "candle_open_ms": 1788553500000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-04",
+   "epoch": 1788559800,
+   "candle_open_ms": 1788559800000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-04",
+   "epoch": 1788562200,
+   "candle_open_ms": 1788562200000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-04",
+   "epoch": 1788566100,
+   "candle_open_ms": 1788566100000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-05",
+   "epoch": 1788574200,
+   "candle_open_ms": 1788574200000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-05",
+   "epoch": 1788585600,
+   "candle_open_ms": 1788585600000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-05",
+   "epoch": 1788586500,
+   "candle_open_ms": 1788586500000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-05",
+   "epoch": 1788595500,
+   "candle_open_ms": 1788595500000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-05",
+   "epoch": 1788598800,
+   "candle_open_ms": 1788598800000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-05",
+   "epoch": 1788606000,
+   "candle_open_ms": 1788606000000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-05",
+   "epoch": 1788612900,
+   "candle_open_ms": 1788612900000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-05",
+   "epoch": 1788622200,
+   "candle_open_ms": 1788622200000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-05",
+   "epoch": 1788629400,
+   "candle_open_ms": 1788629400000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-05",
+   "epoch": 1788633000,
+   "candle_open_ms": 1788633000000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-05",
+   "epoch": 1788635100,
+   "candle_open_ms": 1788635100000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-05",
+   "epoch": 1788641700,
+   "candle_open_ms": 1788641700000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-05",
+   "epoch": 1788646200,
+   "candle_open_ms": 1788646200000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-06",
+   "epoch": 1788655200,
+   "candle_open_ms": 1788655200000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-06",
+   "epoch": 1788656400,
+   "candle_open_ms": 1788656400000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-06",
+   "epoch": 1788661200,
+   "candle_open_ms": 1788661200000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-06",
+   "epoch": 1788663300,
+   "candle_open_ms": 1788663300000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-06",
+   "epoch": 1788663600,
+   "candle_open_ms": 1788663600000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-06",
+   "epoch": 1788669300,
+   "candle_open_ms": 1788669300000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-06",
+   "epoch": 1788675000,
+   "candle_open_ms": 1788675000000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-06",
+   "epoch": 1788676800,
+   "candle_open_ms": 1788676800000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-06",
+   "epoch": 1788686400,
+   "candle_open_ms": 1788686400000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-06",
+   "epoch": 1788694500,
+   "candle_open_ms": 1788694500000,
+   "actual": "DOWN"
+  },
+  {
+   "date": "2026-09-06",
+   "epoch": 1788718800,
+   "candle_open_ms": 1788718800000,
+   "actual": "UP"
+  },
+  {
+   "date": "2026-09-06",
+   "epoch": 1788719100,
+   "candle_open_ms": 1788719100000,
+   "actual": "UP"
+  }
+ ]
+}

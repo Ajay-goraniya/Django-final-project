@@ -1,0 +1,83 @@
+M31 - EF BRAIN v2: TWAP FIRST + EXTRA INPUTS FOR THE UNFINISHED PART. HISTORY ONLY, NOTHING LIVE.
+Prereg analysis/v/maker2/PREREG_M31_TWAP_FLOW_BRAIN.md (2f772e9) + amendment 1 (367c9fc, fail fast
+in parts) + amendment 2 (aefa1e4, quick test on the HARDEST days). No live changes, no shadow
+changes, FAV shadows untouched and still writing.
+
+RESULT IN ONE LINE: GATE 0 PASSES, STEP 0 FAILS ON ALL FOUR VARIANTS, SO NO BRAIN IS BUILT AND
+STEP 1 WAS NOT RUN - as the prereg instructs.
+
+================================================================================
+GATE 0 - does OUR computed TWAP60 direction agree with the venue's own resolution? BAR 97%.
+The windowing is not documented anywhere I can cite, so rather than assert one I computed five and
+let the venue pick. The one that matches IS the definition:
+  TWAP definition                        n  agree       %   verdict
+  A open[-60,0) close[240,300)        2522   2511  99.56%   PASS
+  D open[-60,0) close[241,301)        2522   2507  99.41%   PASS
+  C instant at open vs at close       2515   2225  88.47%   fail
+  B open[0,60)   close[240,300)       2525   2201  87.17%   fail
+  E open[-30,0) close[270,300)           0      -       -   NOT EVALUABLE - my own harness bug: the
+     mean() guard required >=50 samples and a 30 s window can never have more than 30, so E was
+     silently skipped. It is not evidence against E; it was never tested. Flagged rather than left
+     looking like a 0% result.
+GATE 0 PASSES at 99.56% on definition A: open TWAP = mean Chainlink over [open-60, open), close TWAP
+= mean over [open+240, open+300). 2,511 of 2,522 candles. That 0.44% residual is 11 candles and is
+the right size for ties and feed granularity, not for a wrong formula. Everything downstream is
+computed against THIS line, and the fact that B (open measured forward from the open) scores only
+87% is worth keeping: the lock-in window starts BEFORE the candle, which is not the intuitive read.
+
+================================================================================
+STEP 0 - stop/go. M0 = market mid only. M1 = M0 + TWAP lock-in math. M2 = M1 + the variant.
+Walk-forward BY DAY: each scored day is predicted by a logistic model fitted only on days strictly
+earlier, standardised on the training fold alone (fitting the scaler on everything would leak, and
+would flatter M2 most because M2 has the most features). Decision seconds 240/250/260/270/280.
+Amendment 2 scores the three HARDEST days - 09-23, 09-25, 10-02 - using the whole earlier history as
+the training pool. Restricting training to only those three days would have left 09-23 unscored and
+trained the rest on ~180 candles, which tests sample size rather than the variant.
+Order flow comes from tape1s's own per-second taker buy/sell quote notionals for spot AND perp. The
+prereg names the aggTrades dumps; OFI over 5/15/30 s is an aggregate of exactly those per-second
+sums, so this is the same quantity without a reconstruction step - not a substitute input.
+
+  541 out-of-sample rows over the three hard days, every variant on the identical rows.
+  model                 logloss  side-acc   gain vs M1   discordant   paired p   verdict
+  M0 market mid          0.3407    86.69%        -            -           -         -
+  M1 + TWAP math         0.3410    86.69%        -            -           -         -
+  M2 + V1 order flow     0.3546    85.58%     -0.0136     14 (4/10)     0.1796     FAIL
+  M2 + V2 CL-Binance gap 0.3385    86.88%     +0.0024      7 (4/3)      1.0000     FAIL
+  M2 + V3 perp leads     0.3384    86.69%     +0.0025      2 (1/1)      1.0000     FAIL
+  M2 + V4 vol-scaled math 0.3414   86.88%     -0.0004      1 (1/0)      1.0000     FAIL
+  (discordant = rows where M2 and M1 call DIFFERENT sides, with M2-right/M1-right beside it.)
+FOUR VARIANTS TRIED, FOUR FAILURES. Counting them as the prereg demands: four tries is four chances
+of luck, and none of them took it. The bar was a logloss gain AND paired p<0.05; V1 and V4 failed
+the gain outright, V2 and V3 got a gain of about a quarter of a percent while moving 7 and 2 side
+calls out of 541 respectively. That is calibration polish, not information - and a feature that
+changes two decisions in 541 cannot be traded whatever its logloss does.
+V1 was also run on the FIRST three days before amendment 2, with the same answer and a wider margin:
+M0 0.2956, M1 0.3167, M2 0.3592. So order flow failed on the easy days and the hard days alike.
+
+================================================================================
+THE FINDING THAT MATTERS MORE THAN THE FOUR FAILURES: M1 DOES NOT BEAT M0.
+On the hard days, market mid alone is 0.3407 / 86.69% and M1 (+ all the TWAP lock-in math) is
+0.3410 / 86.69% - a hair WORSE, and identical on side accuracy. On the first three days M0 was
+clearly better: 0.2956 against 0.3167. So the TWAP math adds nothing to the venue's own price.
+This is the real content of M31, and it reframes the whole exercise: the prereg set the bar at
+"beat M1", but M1 is not actually better than the quoted mid, so every variant was in effect being
+asked to beat the market price - and V's own rule for this study was "test only inputs that can know
+something the market price doesn't." The answer on 541 out-of-sample rows is that by second 240-280
+the ask already contains the lock-in arithmetic. Of the candle's 300 seconds, 240 are history by
+then and 48 of the 60 TWAP seconds are already fixed; it would be surprising if a market this liquid
+had NOT priced that, and it has.
+So the honest conclusion is not "order flow is useless". It is that the decision seconds the prereg
+fixed are too late for ANY of these inputs to add anything: the market has already done the sum.
+If this line of work continues, the question to put to the owner is whether to decide EARLIER - at
+60-180 s, where the remaining TWAP window is genuinely unresolved and a flow signal would have
+something left to predict - rather than to keep testing new inputs at 240-280 s. I am not proposing
+that as a new arm here; M31 as specified is finished and it is a FAIL.
+
+VERIFY NOTES, so this can be checked rather than trusted:
+ - 2,876 feature rows over 1,121 candles were built; 541 of those rows fall on the three hard days
+   and are the only ones scored. No row is scored by a model that saw its own day.
+ - Labels are the VENUE resolution throughout (gamma mirror, with the engine journals' own `actual`
+   as fallback where gamma has no row), never a Binance close.
+ - The same 541 rows are used for all four variants, so the four comparisons are paired with each
+   other as well as against M1.
+ - Nothing here touched a live process. The FAV shadows kept writing throughout.

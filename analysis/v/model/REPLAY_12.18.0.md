@@ -1,0 +1,79 @@
+# 12.18.0 lane rule replayed on existing journals (2026-09-22)
+
+Script: `analysis/v/model/replay_lane_cap.py`. First MAIN/REVERSAL decision per candle, accepted iff ask(side) <= cap,
+5-share top-up, fee 1.67%. Label: `results.actual` (Polymarket) where traded, else TWAP60 proxy. `*` = n<60, insufficient.
+
+## Mumbai 8796+8795, 09-16 20:20 -> 09-22 08:25 (774 candles: 409 exact, 365 proxy)
+MAIN 621 candles, ask med 0.83, sec med 105
+| cap | n | hit | per$1 | H1 | H2 | exact-only(n) |
+|---|---|---|---|---|---|---|
+| 0.70 | 131 | 58.8% | -0.044 | -0.022 | -0.064 | -0.094 (86) |
+| 0.80 | 273 | 68.1% | -0.025 | +0.042 | -0.081 | -0.121 (150) |
+| 0.85 | 355 | 71.5% | -0.024 | +0.041 | -0.081 | -0.126 (179) |
+| 0.90 | 458 | 74.5% | -0.033 | +0.002 | -0.065 | -0.138 (228) |
+| 0.95 | 539 | 77.2% | -0.031 | -0.000 | -0.061 | -0.128 (263) |
+| 1.00 | 621 | 79.7% | -0.030 | -0.002 | -0.059 | -0.118 (300) |
+sec bands cap 0.90: 0-90s n249 -0.036 | 90-180s n155 -0.055 | 180-300s n54* +0.049
+
+REVERSAL 153 candles, ask med 0.63, sec med 184
+| cap | n | hit | per$1 | H1 | H2 | exact-only(n) |
+|---|---|---|---|---|---|---|
+| 0.70 | 92 | 54.3% | +1.373 | +0.946 | +1.781 | +0.506 (72) |
+| 0.80 | 116 | 61.2% | +1.118 | +0.748 | +1.463 | +0.438 (87) |
+| 0.90 | 140 | 66.4% | +0.937 | +0.608 | +1.275 | +0.394 (98) |
+| 1.00 | 153 | 68.6% | +0.853 | +0.571 | +1.131 | +0.348 (109) |
+sec bands cap 0.90: 0-90s n19* +0.416 | 90-180s n52* +0.106 | 180-300s n69 +1.706
+
+## Mumbai REAL paper fills, arm 8796, kind=REVERSAL (analysis/aws/task118_drawdown_fills.csv)
+n=43*, hit 55.8%. CORRECTED 10:5x: the CSV pnl column is CANDLE-level (EF traded the same candles), so +120.99 overstated it. Per-order from Mumbai's orders table: 46 fills, spent 126.20, pnl +86.89 = +0.689/$1. H1 21: +0.792, H2 22: +1.164. Fill med 0.42, sec med 158.
+Without top-3 winners: +67.94. Days: 09-17 10 fills +18.28 | 09-18 8 +29.14 | 09-19 9 +42.56 | 09-20 9 +43.24 | 09-21 6 -18.16.
+Null (buy same side at same price, market-implied hit 37.0%): -0.027/$1. Actual hit 55.8%.
+Same window, EF: 8795 742 fills +0.222/$1, 8796 752 fills +0.220/$1 (same candle-level pnl column; 8796's EF includes REVERSAL's pnl on 43 candles, so EF 8796 is >= ~+0.18/$1, not +0.22).
+
+## Zurich 09-15 02:05 -> 09-17 12:15 (271 candles: 58 exact, 213 proxy)
+MAIN 252: cap 0.90 n171 hit 78.9% +0.011 (H1 -0.042 | H2 +0.066), exact-only +0.003 (40*); cap 1.00 -0.007.
+REVERSAL 19*: -0.34..-0.46 at every cap.
+
+## Zurich 12.18.0 paper journal 09-21 17:20 -> 09-22 10:35 (40 exact)
+MAIN 32*: cap 0.90 n26 hit 76.9% +0.032. REVERSAL 8*: hit 29% -0.58. All insufficient.
+
+## Read
+- MAIN (late favourite at ask ~0.83): negative on the 6-day sample at every cap, exact-only worse (-0.12..-0.14). Not the v11 +0.266.
+- REVERSAL (side named by Binance-based fair against MAIN, bought at 0.1-0.55 on the Polymarket book): positive in replay
+  (n140, both halves, exact-only +0.39) AND in Mumbai's real paper fills (n43*, +0.975/$1, 5 of 6 days). Null -0.03.
+  Open before it is called a finding: permutation on the row dump (requested from Mumbai), depth at cheap asks, Zurich's
+  small negative samples. Verified only on Mumbai's own journal + fills, not a reconstruction.
+
+## Verification on Mumbai's REVERSAL decision rows (1,144 diagnostics rows, 171 candles, both arms; 10:5x)
+- grading: results.actual = Polymarket resolution. PASS.
+- ask by side: ask_up+ask_dn median 1.01 (min 1.00). Quote is a real two-sided book, not stale one leg.
+- exact-labelled first decisions, cap 0.90, unique candles: n=99, hit 62.6%, +0.463/$1. H1 +0.294 (49) | H2 +0.629 (50). PASS.
+- costs: ask+0.02 -> +0.366; ask+0.05 -> +0.249. PASS.
+- permutation (shuffle SIDES, ask follows the side): null mean +0.143, p95 +0.339, real +0.374 (n170 incl. both arms), p=0.024. PASS, marginal.
+  The null itself is positive: at the moments REVERSAL fires the Polymarket book is slow - a random side bought there wins more than its price says.
+  Opposite side: -0.096. Side-pick adds ~+0.23/$1 over random.
+- by ask of the side bought (first decisions with label, all cells <60*):
+  <0.30 n30 hit 43% +1.53 | 0.30-0.50 n36 hit 58% +0.45 | 0.50-0.70 n53 hit 62% +0.05 | >=0.70 n72 hit 82% -0.04. Monotone: the edge is the cheap shares.
+- days (unique exact, cap 0.90): 09-17 n17 +0.18 | 09-18 n18 +0.54 | 09-19 n25 +0.71 | 09-20 n18 +0.93 | 09-21 n15 -0.09 | 09-22 n4 -0.24. Not rain-or-sun yet: 2 of 6 days negative, both small.
+- 8795 logged 649 REVERSAL decisions and placed 0 orders; only 8796 traded it. Not explained yet.
+- open: depth at asks <0.30 (paper filled 15-25 shares there; live depth unknown), Zurich's two small negative samples.
+Verdict: REVERSAL on Polymarket is a real positive at n=99 exact / 46 real fills, dominated by entries below 0.50. Not yet a rain-or-sun finding.
+
+## EF drawdowns, Mumbai arm 8795 (742 fills, one per candle, clean pnl), 09-16 -> 09-22
+Total hit 53.2%, +488.39 on 2199 spent = +0.222/$1. Longest losing run 11; expected longest run at 53% over 742 ~ 8.
+Top drawdowns (peak->trough): 09-21 11:50 $56 over 57 fills hit 28% | 09-19 01:50 $56 / 41 fills hit 24% | 09-20 06:00 $24 / 21 | 09-17 17:25 $23 / 15.
+Market in the two $56 windows: 09-19 quiet (|move| 3.7 bps, no late flips); 09-21 volatile (10.1 bps, 32% late flips). Opposite regimes.
+Late flips (dir at 90s != close) on losing fills 26% vs winning 22%: not what kills EF.
+Every bucket positive, whole grid:
+| fill px | n | hit | implied | per$1 |   | sec | n | hit | per$1 |   | hour UTC | n | per$1 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 0.3-0.4 | 229 | 50% | 36% | +0.33 | | 0-60 | 225 | 55% | +0.22 | | 0-4 | 104 | +0.15 |
+| 0.4-0.5 | 294 | 51% | 44% | +0.11 | | 60-120 | 288 | 49% | +0.14 | | 4-8 | 109 | +0.26 |
+| 0.5-0.6 | 186 | 61% | 53% | +0.11 | | 120-180 | 147 | 55% | +0.28 | | 8-12 | 122 | +0.18 |
+| <0.3 | 33* | 55% | 26% | +1.1 | | 180-240 | 82 | 59% | +0.43 | | 12-16 | 140 | +0.12 |
+| | | | | | | | | | | | 16-20 | 132 | +0.22 |
+| | | | | | | | | | | | 20-24 | 135 | +0.40 |
+model p: 0.5-0.6 n427 hit 47% (implied 38%) +0.21 | 0.6-0.7 n269 hit 61% (49%) +0.24 | 0.7-0.8 n43* +0.21.
+Read: EF's drawdowns are the variance of a 53%-hit bet at price 0.43, not a bucket that can be switched off; the two biggest
+came in opposite regimes. EF's p separates weakly (47% vs 61% across the two big p bands); the money is the cheap price
+(implied 38-49% vs hit 47-61%). Smaller drawdowns need a higher hit rate, i.e. a better signal, not a filter.

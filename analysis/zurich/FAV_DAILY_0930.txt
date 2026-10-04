@@ -1,0 +1,65 @@
+FAV DAILY LEDGER  2026-09-30  window 09-30 00:00 .. 24:00 UTC (exclusive)
+  last candle scored inside the window: 09-30 23:55   day is COMPLETE
+
+arm          decisions  fills  wins     $@10    maxDD   flag
+FAV               106     85    64   +17.88    51.05   
+FAV_mid            71     64    49   +21.76    45.50   
+FAV_all           244    200   149   +30.93    94.25   
+FAV_ref            84     69    50    -9.12    64.11   
+C_fixed15          78     40    20   +20.96    40.00   INSUFFICIENT (<60 fills)
+  FAV arms use the PARTIAL arrival fill (filled shares a FLOOR, depth truncated at level 1).
+  C_fixed15 uses its own registered 250 ms FAK - a different fill model, so C is context
+  beside the FAV arms, not a like-for-like row.
+
+ARRIVAL FILLS (+500 ms): 244 decisions -> 200 cleared the price cap (82%) | PRICE-MISS 44 (18%) | SIZE-MISS 16 (7%) | depth-capped 16
+
+RE-CUT 10-01 09:5x AFTER THE SHADOW BACKFILL. The first attempt at this file covered only
+09-30 00:00-12:05, because ef3_shadow had been dead since 12:05 on a positional INSERT broken by
+pfav.py adding a 16th column to the shared fires table. Fixed (columns named), 12.4 h replayed
+from decide_log, and the day now closes at 23:55. Any 09-30 figure quoted before this re-cut was
+half a day.
+
+CUMULATIVE 09-29 .. 09-30 (two full days), $10 a fill, REAL recorded ask + exact fee
+arm          decisions  fills  wins     $@10    maxDD   flag
+FAV               202    165   127   +79.42    51.05   
+FAV_mid           165    137   106  +100.05    45.50   
+FAV_all           505    413   309  +112.36    94.25   
+FAV_ref           177    146   111   +62.10    64.11   
+C_fixed15         153     77    41   +81.34    44.25   
+
+PFAV vs PFAV_THRU, same window, side by side. +1c = the same trade paying one cent more.
+arm          decisions  fills  wins     $@10   $@10+1c   maxDD   flag
+PFAV              162    121    90   -66.88   -81.24   110.36   
+PFAV_THRU         162    118    87   -74.38   -88.28   117.86   
+
+CALM-FAV BY UTC SESSION, same window (real recorded ask + fee)
+session        decisions  fills  wins     $@10    maxDD   flag
+Asia 00-07            62     54    37   -29.92    51.05   INSUFFICIENT (<60 fills)
+Europe 07-13          46     37    26   -20.26    46.03   INSUFFICIENT (<60 fills)
+US 13-20              24     19    15   +12.28    15.20   INSUFFICIENT (<60 fills)
+Late 20-24            70     55    49  +117.32    16.38   INSUFFICIENT (<60 fills)
+
+coverage: 547 candles scored across the two days (of 576).
+
+MAKER PROBE (live, separate process, NOT part of the shadow)
+  27 fills / +42.40 realised over 10 candles, venue-graded. 28th fill landed 09:50 (1.53sh @ 0.65,
+  a partial) and is unsettled, so it is excluded rather than guessed. Those 27 were invisible to the
+  probe's own ledger until 10-01: check_fill compared a maker_order_id field the SDK does not have,
+  so the fills sat inside maker_orders[] unread and both hard stops were blind. Recovered from venue
+  truth and backfilled. Do NOT read +42.40 as an edge: 10 candles, every one resolving the
+  favourite's way, ~5.6% coincidence at a 75% base rate. Effective sample is 10 candles, not 27 fills.
+
+THREE THINGS IN THIS FILE WORTH MORE THAN THE TOTALS
+ 1. PFAV AND PFAV_THRU ARE NOW BOTH NEGATIVE on Zurich's own forward data: -66.88 and -74.38, and
+    -81.24 / -88.28 once each trade pays a cent more. That is the same direction as V's strict 20-day
+    verdict, now reproduced forward here rather than argued about. The +1c column costs roughly $14
+    on ~120 fills, i.e. about 12 cents a fill, so the arm does not merely need a rebate - it is
+    under water before the rebate is discussed.
+ 2. THE SESSION CANDIDATE DID NOT HOLD. Europe 07-13 was the cell under forward watch
+    (analysis/v/maker2/SESSION_TEST.txt). Over these two days it is NEGATIVE, -20.26 on 37 fills.
+    Late 20-24 carries the whole calm-FAV total (+117.32 of +79.42, on 55 fills) while Asia and
+    Europe lose. I am not proposing Late: every session cell here is under 60 fills and marked
+    INSUFFICIENT, and picking the best of four after the fact is the thing we keep being wrong about.
+ 3. COVERAGE 547 of 576 candles. The 29 absent ones are candles this box traded LIVE on, which
+    ef3_shadow excludes by design (line 565) because every arm in it is a counterfactual priced off
+    a book our own orders were standing in. It is not missing data; it is data that would be fiction.

@@ -1,0 +1,7 @@
+calm FAV, Zurich 09-24..09-30 (history + forward), 658 trades, backtest only
+ stake%  start  end      maxDD%   (fixed-fraction of current equity, per trade)
+    1%  165.0    196.5    14.9%
+    2%  165.0    228.7    28.3%
+    3%  165.0    260.1    40.2%
+    5%  165.0    313.5    60.3%
+  fixed $5    165.0    258.0    34.1%

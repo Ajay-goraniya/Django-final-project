@@ -1,0 +1,33 @@
+M44 (V, 10-03 12:4x) owner: 60-60 orders at open, stop 10 pts below, trailing. Modelled as buy-at-ask when a side reaches 0.60 (no buy-stops on Polymarket). History only.
+
+== POLYMARKET 08-01, taker fee: 288 candles  (per candle $, 1 share per buy)
+  TRAIL R0: per candle -0.0477 t -3.18 halves -0.0765/-0.0188 green 0/1 buys/candle 1.51 | ASIA -0.121 | EU -0.011 | US -0.005 | LATE -0.049
+  TRAIL R1: per candle -0.1053 t -3.68 halves -0.1648/-0.0457 green 0/1 buys/candle 3.41 | ASIA -0.272 | EU -0.019 | US -0.014 | LATE -0.102
+  OWN   R0: per candle -0.0577 t -3.65 halves -0.0929/-0.0224 green 0/1 buys/candle 1.51 | ASIA -0.131 | EU -0.029 | US -0.018 | LATE -0.042
+  OWN   R1: per candle -0.1105 t -3.81 halves -0.1770/-0.0441 green 0/1 buys/candle 3.30 | ASIA -0.273 | EU -0.034 | US -0.021 | LATE -0.096
+
+== POLYMARKET 08-01, zero fee: 288 candles  (per candle $, 1 share per buy)
+  TRAIL R0: per candle -0.0045 t -0.32 halves -0.0310/+0.0220 green 0/1 buys/candle 1.51 | ASIA -0.071 | EU +0.028 | US +0.037 | LATE -0.009
+  TRAIL R1: per candle -0.0169 t -0.65 halves -0.0755/+0.0418 green 0/1 buys/candle 3.41 | ASIA -0.166 | EU +0.050 | US +0.071 | LATE -0.010
+  OWN   R0: per candle -0.0150 t -1.00 halves -0.0479/+0.0178 green 0/1 buys/candle 1.51 | ASIA -0.082 | EU +0.009 | US +0.024 | LATE -0.002
+  OWN   R1: per candle -0.0240 t -0.91 halves -0.0889/+0.0410 green 0/1 buys/candle 3.30 | ASIA -0.171 | EU +0.034 | US +0.063 | LATE -0.006
+
+== PREDICT 09-11..16 (2% on winning shares, exits at 1-ask_opp): 1159 candles  (per candle $, 1 share per buy)
+  TRAIL R0: per candle -0.0478 t -7.87 halves -0.0641/-0.0315 green 0/6 buys/candle 1.59 | ASIA -0.067 | EU -0.037 | US -0.031 | LATE -0.053
+  TRAIL R1: per candle -0.2208 t-12.59 halves -0.2652/-0.1764 green 0/6 buys/candle 5.64 | ASIA -0.271 | EU -0.191 | US -0.185 | LATE -0.224
+  OWN   R0: per candle -0.0580 t -9.20 halves -0.0688/-0.0472 green 0/6 buys/candle 1.59 | ASIA -0.079 | EU -0.043 | US -0.037 | LATE -0.077
+  OWN   R1: per candle -0.2079 t-11.85 halves -0.2437/-0.1722 green 0/6 buys/candle 5.26 | ASIA -0.262 | EU -0.171 | US -0.167 | LATE -0.225
+
+VERDICT (local): FAIL - negative in every row with fees on both venues (Polymarket 1 day t -3.2..-3.8, Predict 6 days t -7.9..-12.6, 0/6 green). Re-buy always worse. Zurich 12-day Polymarket run requested.
+
+OWNER 12:5x 'buy 60, lose 0.10 or win 0.40 - how does it lose?' Breakdown (fixed stop = his words, and trailing):
+POLY fee FIXED: buys 436 avg entry 0.654 | stopped 62% avg -0.203 (exit bid avg 0.475; stopped trades that WOULD have won: see below) | held 38% win 95% avg +0.267 | TOTAL per buy -0.0261
+POLY fee TRAIL: buys 436 avg entry 0.654 | stopped 81% avg -0.102 (exit bid avg 0.577; stopped trades that WOULD have won: see below) | held 19% win 96% avg +0.265 | TOTAL per buy -0.0315
+POLY 0fee FIXED: buys 436 avg entry 0.654 | stopped 62% avg -0.170 (exit bid avg 0.475; stopped trades that WOULD have won: see below) | held 38% win 95% avg +0.282 | TOTAL per buy -0.0000
+POLY 0fee TRAIL: buys 436 avg entry 0.654 | stopped 81% avg -0.071 (exit bid avg 0.577; stopped trades that WOULD have won: see below) | held 19% win 96% avg +0.280 | TOTAL per buy -0.0030
+POLY FIXED: stopped buys whose side WON at settlement: 47%
+PRED FIXED: buys 1847 avg entry 0.639 | stopped 75% avg -0.157 (exit bid avg 0.493; stopped trades that WOULD have won: see below) | held 25% win 96% avg +0.301 | TOTAL per buy -0.0410
+PRED TRAIL: buys 1847 avg entry 0.639 | stopped 90% avg -0.066 (exit bid avg 0.584; stopped trades that WOULD have won: see below) | held 10% win 98% avg +0.314 | TOTAL per buy -0.0281
+PRED FIXED: stopped buys whose side WON at settlement: 50%
+
+OWNER 12:5x 'then buy both sides at 50-50 or 55': same rule, T=0.50/0.55 (local Poly 1d + Predict 6d). All rows negative with fees; zero-fee ~0 (fair price). Re-buy always worse.

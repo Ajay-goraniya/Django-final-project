@@ -1,0 +1,16 @@
+rule                               decisions  filled  fill%    acc  price    PnL $  /trade
+--- confidence>=0.85 EV>=0.02   (187 decisions on real-book seconds)
+  TAKER pay the ask                      187     187 100.0%  84.0%  0.811  +100.69   +0.54
+  MAKER at bid, fill<= 30s               187      67  35.8%  79.1%  0.828   -31.25   -0.47
+  MAKER at bid, fill<= 60s               187      81  43.3%  71.6%  0.830  -113.25   -1.40
+  MAKER at bid, fill<= 120s              187      91  48.7%  68.1%  0.830  -167.69   -1.84
+--- confidence>=0.8 EV>=0.05   (152 decisions on real-book seconds)
+  TAKER pay the ask                      152     152 100.0%  88.2%  0.730  +344.79   +2.27
+  MAKER at bid, fill<= 30s               152      46  30.3%  80.4%  0.762   +24.44   +0.53
+  MAKER at bid, fill<= 60s               152      50  32.9%  76.0%  0.763    -2.78   -0.06
+  MAKER at bid, fill<= 120s              152      55  36.2%  70.9%  0.764   -40.45   -0.74
+--- confidence>=0.75 EV>=0.05   (196 decisions on real-book seconds)
+  TAKER pay the ask                      196     196 100.0%  83.2%  0.700  +391.41   +2.00
+  MAKER at bid, fill<= 30s               196      70  35.7%  71.4%  0.722   -14.87   -0.21
+  MAKER at bid, fill<= 60s               196      74  37.8%  68.9%  0.722   -40.88   -0.55
+  MAKER at bid, fill<= 120s              196      81  41.3%  66.7%  0.721   -65.85   -0.81

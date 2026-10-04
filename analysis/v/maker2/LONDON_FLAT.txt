@@ -1,0 +1,26 @@
+M13: 296 of 296 London real EF fills have Binance 1 s coverage (0 missing)
+
+pre-open volatility (known at the open): cuts 0.39 / 0.62
+   LOW  (flat)  n  99  win  49.5%  $   +7.71  $/1 +0.009  halves  +44.92 /  -37.21
+   MID          n  98  win  50.0%  $  +30.95  $/1 +0.037  halves  +14.33 /  +16.62
+   HIGH         n  99  win  50.5%  $  +10.16  $/1 +0.012  halves  +54.16 /  -44.00
+
+pre-open activity: seconds with a price change (known at the open): cuts 157.23 / 189.77
+   LOW  (flat)  n  99  win  49.5%  $  +43.76  $/1 +0.054  halves  +13.00 /  +30.76
+   MID          n  98  win  49.0%  $   -3.56  $/1 -0.004  halves  +11.02 /  -14.58
+   HIGH         n  99  win  51.5%  $   +8.62  $/1 +0.010  halves  +89.39 /  -80.77
+
+candle move |close-open| (known only AFTER): cuts 3.35 / 8.48
+   LOW  (flat)  n  99  win  25.3%  $ -439.96  $/1 -0.511  halves -162.10 / -277.86
+   MID          n  98  win  50.0%  $  -25.69  $/1 -0.032  halves  +38.43 /  -64.12
+   HIGH         n  99  win  74.7%  $ +514.47  $/1 +0.624  halves +237.08 / +277.39
+
+candle range high-low (known only AFTER): cuts 11.31 / 19.98
+   LOW  (flat)  n  99  win  39.4%  $ -220.27  $/1 -0.256  halves  -33.37 / -186.90
+   MID          n  98  win  48.0%  $  +11.49  $/1 +0.014  halves  -46.39 /  +57.88
+   HIGH         n  99  win  62.6%  $ +257.60  $/1 +0.311  halves +193.17 /  +64.43
+
+VERDICT (V, 09-30): the owner is right AFTER the fact - fixed15 loses on flat candles (smallest-move third: win 25%, -$440;
+biggest-move third: win 75%, +$514). But it cannot be seen BEFORE the open: pre-open volatility and activity give ~50% win in
+every bucket; the one mild cell (low pre-open activity, +$44, n 99, both halves +) is 1 of 6 and too weak for a rule (no-gates).
+"Flat" is decided after EF has fired: the loss IS the move stalling/reverting after the fire.

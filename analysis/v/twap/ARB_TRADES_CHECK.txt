@@ -1,0 +1,52 @@
+binance 1 s closes: 82835
+windows scanned 91 (no market 0, no line 0)
+windows with a TRADED pair cost < 1 (both legs bought by takers within 3s): 19 of 91; of those with lines < $5 apart: 6
+payoff of the dominance pair on gamma, all windows: {1: 68, 2: 23}  (0 would break the structure)
+  09-27 11:45 gap    -0.73  cost 0.2337 at sec 203 (15m 0.100 + 5m 0.120)  trades 15m/5m 434/752  pay 1
+  09-27 07:00 gap   +11.65  cost 0.7214 at sec 179 (15m 0.390 + 5m 0.300)  trades 15m/5m 531/785  pay 2
+  09-27 06:45 gap    +5.68  cost 0.7566 at sec 233 (15m 0.160 + 5m 0.570)  trades 15m/5m 716/778  pay 1
+  09-27 08:15 gap   -21.84  cost 0.7595 at sec 246 (15m 0.220 + 5m 0.510)  trades 15m/5m 655/898  pay 1
+  09-27 21:15 gap    -7.21  cost 0.7703 at sec  44 (15m 0.240 + 5m 0.500)  trades 15m/5m 165/236  pay 1
+  09-27 14:00 gap   -12.83  cost 0.8109 at sec  53 (15m 0.520 + 5m 0.260)  trades 15m/5m 140/454  pay 1
+  09-27 03:30 gap   +24.38  cost 0.8136 at sec 170 (15m 0.660 + 5m 0.130)  trades 15m/5m 171/464  pay 1
+  09-27 18:30 gap    +1.77  cost 0.8953 at sec 141 (15m 0.810 + 5m 0.070)  trades 15m/5m 757/410  pay 1
+  09-27 09:15 gap   -15.93  cost 0.9044 at sec 200 (15m 0.430 + 5m 0.440)  trades 15m/5m 1017/874  pay 1
+  09-28 01:00 gap    -2.45  cost 0.9079 at sec 138 (15m 0.790 + 5m 0.100)  trades 15m/5m 208/316  pay 1
+  09-27 23:30 gap    +2.77  cost 0.9145 at sec  30 (15m 0.450 + 5m 0.430)  trades 15m/5m 73/484  pay 1
+  09-27 20:30 gap   -12.32  cost 0.9306 at sec   5 (15m 0.620 + 5m 0.280)  trades 15m/5m 218/629  pay 1
+  09-27 18:45 gap   -18.74  cost 0.9399 at sec   5 (15m 0.270 + 5m 0.640)  trades 15m/5m 468/1160  pay 1
+  09-27 18:00 gap    +0.94  cost 0.9399 at sec  33 (15m 0.640 + 5m 0.270)  trades 15m/5m 366/368  pay 1
+  09-28 01:45 gap   -36.21  cost 0.9447 at sec 140 (15m 0.460 + 5m 0.450)  trades 15m/5m 214/536  pay 1
+  09-27 10:00 gap   +47.52  cost 0.9497 at sec  80 (15m 0.650 + 5m 0.270)  trades 15m/5m 901/943  pay 1
+  09-27 19:15 gap   -38.81  cost 0.9559 at sec 126 (15m 0.930 + 5m 0.020)  trades 15m/5m 376/318  pay 1
+  09-27 11:15 gap    -4.60  cost 0.9832 at sec 194 (15m 0.153 + 5m 0.810)  trades 15m/5m 185/496  pay 1
+  09-27 20:00 gap   +31.89  cost 0.9992 at sec 245 (15m 0.998 + 5m 0.001)  trades 15m/5m 41/131  pay 1
+
+=== Zurich run, 7 BTC days + SOL (09-28 ~04:55 UTC) ===
+BTC 09-20..09-26, one UTC day each, 96 windows/day = 672 windows. SOL 09-27 03:30..09-28 02:00, 91 windows.
+Outputs: btc_day0..6.out, sol.out (this directory).
+
+TRADED cost<1 (both legs lifted by takers within 3 s), per day:
+  09-20 17/96   09-21 15/96   09-22 24/96   09-23 13/96   09-24 26/96   09-25 22/96   09-26 36/96
+  total 153/672 = 22.8%.  SOL 6/91.
+So YES - it happens every single day, range 13-36 windows, never zero. Rain or sun holds on presence.
+
+PAYOFF over all 672 BTC windows: 1 -> 469, 2 -> 202, 0 -> 1.  P(band) = 202/672 = 30.1%.
+SOL 91 windows: 1 -> 60, 2 -> 31, 0 -> 0.
+
+THE ONE ZERO, and it is real - I checked it against gamma directly rather than trusting the script:
+  09-22 15:15 (15m epoch 1790090100), gap -2.33, cost 0.0214 at sec 295 (15m 0.010 + 5m 0.010), pay 0.
+  gamma: btc-updown-15m-1790090100 settled UP, btc-updown-5m-1790090700 settled DOWN.
+  With gap<0 the legs are 15m DOWN + 5m UP, so both paid 0. Payoff 0 requires X>=L15 AND X<L5, which
+  contradicts L15>L5 - so the LINE ORDERING was wrong, not the settlement rule.
+  Why: the lines here are derived from BINANCE 1 s closes as a proxy for the Chainlink reference, and that
+  proxy agrees with the venue only ~96.7% of the time (analysis/zurich/MULTI_MARKET.md, 2,232 epochs). A
+  $2.33 gap on a ~$110k price is 0.2 bps - far inside the proxy's own error. Both legs were priced at 1c
+  five seconds before settlement, i.e. the market itself believed the opposite ordering.
+  Read as: no rule change, no broken structure - an unreliable line derivation at a tiny gap.
+
+OPERATIONAL CONSEQUENCE: require a minimum line gap. The script already tracks "<$5 apart" and the single
+break sits at $2.33. The <$5 subset is 1/0/7/2/5/11 of each day's cost<1 windows (30 of 153 on BTC).
+SOL is the warning case: ALL SIX of its cost<1 windows have gaps of $0.12 or less (-0.01, -0.02, +0.03,
+-0.01, +0.12, -0.00), so on SOL essentially every apparent pair is inside the proxy's error and none of
+them should be leaned on.

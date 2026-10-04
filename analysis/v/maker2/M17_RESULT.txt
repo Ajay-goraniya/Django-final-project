@@ -1,0 +1,33 @@
+M17: 364 London fixed15 fills with full data (2 missing). train 172 (09-23..27)  test 192 (09-28..)
+TRAIN baseline: PnL +20.22  $ lost 685.24  fires 172
+TEST baseline: PnL -92.25  $ lost 949.57  fires 192
+
+feature cut | TRAIN: PnL  lost-cut%  skipped n net win% halves | TEST: PnL  lost-cut%  skipped n net win%  null-p | PASS
+F1 10% |   -46.77   +6.9%   18   +66.99  61.1  +57.29/  +9.70 |    -4.81  +19.5%   29   -87.44  34.5  0.072 | fail
+F1 20% |   -38.51  +16.7%   35   +58.73  54.3  +61.45/  -2.72 |    -8.77  +29.5%   47   -83.48  38.3  0.150 | fail
+F1 30% |   -33.44  +28.1%   52   +53.66  50.0  +44.35/  +9.31 |   -38.36  +35.6%   60   -53.89  40.0  0.347 | fail
+F2 10% |   +18.52  +11.4%   18    +1.70  50.0   -6.96/  +8.66 |  -107.70   +7.4%   16   +15.45  56.2  0.731 | fail
+F2 20% |   +33.49  +22.0%   35   -13.27  48.6   +8.46/ -21.73 |   -78.06  +15.8%   29   -14.19  48.3  0.504 | fail
+F2 30% |   +25.28  +32.1%   52    -5.06  48.1  +13.61/ -18.67 |   -55.23  +27.5%   51   -37.02  45.1  0.428 | fail
+F3 10% |    +3.76   +9.6%   18   +16.46  44.4  -22.79/ +39.25 |   +33.04  +16.3%   20  -125.29  15.0  0.003 | fail
+F3 20% |    -3.43  +19.0%   35   +23.65  48.6   +5.61/ +18.04 |   +30.00  +27.7%   43  -122.25  32.6  0.040 | fail
+F3 30% |   -18.28  +27.0%   52   +38.50  48.1   +6.06/ +32.44 |   -10.58  +33.0%   58   -81.67  41.4  0.200 | fail
+F4 10% |   +76.93  +13.8%   18   -56.71  38.9  +27.90/ -84.61 |   -51.82   +6.9%   11   -40.43  27.3  0.154 | fail
+F4 20% |   +14.51  +21.0%   36    +5.71  52.8  +26.54/ -20.83 |   -29.10  +14.3%   23   -63.15  30.4  0.128 | fail
+F4 30% |   +20.75  +30.9%   52    -0.53  51.9  +20.15/ -20.68 |   -56.46  +20.9%   41   -35.79  43.9  0.393 | fail
+F5 10% |   +37.97  +11.6%   18   -17.75  50.0  +20.67/ -38.42 |   -67.87   +8.5%   15   -24.38  40.0  0.333 | fail
+F5 20% |    +0.47  +19.4%   35   +19.75  54.3  +39.94/ -20.19 |   -82.88  +12.7%   25    -9.37  48.0  0.534 | fail
+F5 30% |    +8.24  +30.2%   52   +11.98  51.9  +59.77/ -47.79 |   -78.79  +26.4%   50   -13.46  46.0  0.557 | fail
+
+0 of 15 cells pass every pre-registered condition.
+
+DESCRIPTIVE: 2459 candles 09-23.., |move| cuts 2.9/7.6 bps; London fired on:
+  flat third      candles  819  fired 106 (12.9%)  win  20.8%  $  -559.34
+  middle          candles  821  fired 128 (15.6%)  win  44.5%  $  -140.18
+  big-move third  candles  819  fired 130 (15.9%)  win  73.8%  $  +627.49
+
+VERDICT (V, 10-01 14:0x): FAIL, 0/15. The market read inside the candle up to the fire does not separate London's winners from
+flat-candle losers reliably. Two cells look strong on the sealed test (few Polymarket prints F3: skipped fires win 15%, p 0.003;
+choppy Binance F1: win 35%) but on TRAIN the same skips were net WINNERS (+16 / +67) - sign flip, the same shape M14 hit.
+Descriptive: London fires at the same rate on flat (12.9%), middle (15.6%) and big-move (15.9%) candles - EF cannot tell them apart
+at the fire; it wins 74% on big-move candles and 21% on flat ones. Nothing proposed from M17.

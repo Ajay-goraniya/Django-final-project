@@ -1,0 +1,23 @@
+PROOF IT IS FAV_MID AND NOTHING ELSE - all from the RUNNING 8787 process (pid 301067) via its own
+/api/state, 02:36 UTC. READ-ONLY, nothing changed.
+
+1. meta ef_engine = "fav_mid", and the running process reports ef_engine "fav_mid". The CONSTRUCTED
+   brain's band is proven from runtime, not from the file: the live lanes.ef.block read
+   "vol 0.291 < 0.304". That is a LOWER-bound rejection, which only exists when vol_lo is set - calm
+   fav has vol_lo=None and would have FIRED on 0.291. So the live object is vol_lo=0.304,
+   vol_hi=0.466, label fav_mid.
+2. Path: ef_engine in (fav,fav_mid) -> ef_mode='fav' -> poly_lanes._try_ef takes the fav-brain branch
+   and never calls _ef_metrics or self.ef.watch, so build11 cannot decide; v10's EF is not consulted
+   either - ef_monitor still reads "Warming up: 10 minutes of spot / 60 seconds of perpetual trades"
+   and contributes nothing. Corroborated by the block text itself: "sec 16 outside 60-180" and
+   "vol 0.291 < 0.304" are poly_fav's own wording; build11 would say "outside window" or a gate name.
+3. EF decisions/orders since 02:27:32: NONE YET. Current candle vol 0.291 -> CALM bucket (<0.304), so
+   fav_mid correctly declines. The only two completed candles: 02:25 vol 0.3352 (mid, but sec 60 fell
+   at 02:26:00, before the flip, when calm fav was active) and 02:30 vol 0.2355 (calm, and its
+   favourite ask 0.59 was outside 0.65-0.85 anyway). Declines are the rule working, not a fault.
+4. MAIN and REVERSAL: controls main_enabled=false, reversal_enabled=false; lanes.main null, reversal
+   "idle", blocked [], pending {MAIN:false,REVERSAL:false,EF:false}. Zero orders of any kind since the
+   02:26 restart; LIVE all-time still 15. master_enabled=false, lane label "SHADOW".
+5. One naming trap, not a setting: ef_profile still reads "raw_v10_live25". That is the v10 profile and
+   it is NOT read while ef_engine="fav_mid" - it changes nothing. Do not read the profile name as the
+   active brain.

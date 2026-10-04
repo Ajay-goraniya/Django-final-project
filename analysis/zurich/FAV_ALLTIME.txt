@@ -1,0 +1,48 @@
+FAV ALL-TIME   generated 09-29 18:14 UTC
+
+PART A - FORWARD (live shadow), 09-29 01:20 .. 09-29 18:00 UTC
+arm          decisions  fills  wins     $@10    maxDD   flag
+FAV                50     43    30   -15.80    46.03   INSUFFICIENT
+FAV_mid            78     63    49   +73.15    37.76   
+FAV_all           193    160   115    -0.73    89.31   
+FAV_ref            52     43    31    +2.18    46.03   INSUFFICIENT
+C_fixed15          59     30    16   +34.46    37.20   INSUFFICIENT
+  C_fixed15 uses its OWN registered 250 ms FAK fill, not the arrival +500 ms model - the fill
+  models differ, so C is context beside the FAV arms rather than a like-for-like comparison.
+
+PART B - HISTORY, frozen rule + arrival +500 ms fill, every day with decide_log data
+day                   FAV           FAV_mid           FAV_all           FAV_ref
+            fills      $     fills      $     fills      $     fills      $
+09-24       23   +47.81       33   +35.87       99   +40.79       23   +33.76
+09-25       97   +12.56       71   -41.46      238   -27.39       95    +4.17
+09-26      201   -67.27       13   -18.66      218   -70.04      203   -88.42
+09-27      168  +134.76       41   -21.45      222   +97.37      166  +145.37
+09-28       61   +16.92       76    -6.72      222    -1.66       63    +6.70
+09-29       47   -28.60       68   +86.87      170    +4.99       47   -13.99
+
+arm          decisions  fills  wins     $@10    maxDD   days+ / days-   H1 $      H2 $     flag
+FAV               708    597   446  +116.17   156.93       4 / 2       -13.13  +129.31   
+FAV_mid           364    302   220   +34.44   135.00       2 / 4       -54.25   +88.69   
+FAV_all          1412   1169   854   +44.05   203.40       3 / 3        +4.25   +39.80   
+FAV_ref           706    597   444   +87.58   169.20       4 / 2       -52.33  +139.91   
+
+READ - what these numbers fail, not just what they total:
+
+1. THE HALVES FLIP. FAV H1 -13.13 / H2 +129.31, FAV_mid -54.25 / +88.69, FAV_ref -52.33 /
+   +139.91. A sign flip between halves is a FAIL by this repo's own verify.py halves check
+   ("SIGN FLIPS, not a finding"). Nearly all of FAV's all-time profit is in its second half.
+   On six days that is as consistent with drift as with an edge.
+2. DRAWDOWN EXCEEDS PROFIT. FAV +116.17 against a max drawdown of 156.93 (P/DD 0.74);
+   FAV_mid +34.44 against 135.00 (0.26). An arm whose worst run is larger than everything it
+   ever made is not a finding you can size.
+3. PER FILL, FAV does beat its own null: +0.195/fill on 597 fills vs FAV_all +0.038 on 1169.
+   That is the one number that points the registered way.
+4. DAYS ARE 4 UP / 2 DOWN for FAV, but 09-27 alone is +134.76 of the +116.17 total - remove
+   that single day and the arm is negative all-time. One day carries it.
+5. PART A AND PART B OVERLAP on 09-29 and must NOT be added together. They also disagree
+   (B: 47 fills -28.60, A: 43 fills -15.80) because A is the live shadow under the partial
+   model with the size gate, while B replays every candle of the day under the same rule.
+6. THE SIZE GATE IS ONLY LIVE FROM 09-28 18:13 in Part B - btc5 book sizes do not exist before
+   then - so most of the history is a PRICE-ONLY arrival fill and its fills are optimistic.
+7. SAMPLE. Part B is six days, two of them partial (09-24 has decide_log on 140 of 288 candles,
+   09-29 is today). The standing bar is rain-or-sun across many days; six is not that.

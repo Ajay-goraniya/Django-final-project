@@ -1,0 +1,127 @@
+COMBINATION TEST - PREREG analysis/v/favmid/COMBO_PREREG.md (1802b5f), followed exactly
+READ-ONLY. Live engine untouched. All figures are $ at the stated stake.
+
+DATA BASIS PER ARM
+arm                      basis                                   fills
+  FAV                    history 09-24..29 replay (arrival +500 ms partial) + forward   658
+  FAV_ref                history 09-24..29 replay (arrival +500 ms partial) + forward   650
+  FAV_mid                history 09-24..29 replay (arrival +500 ms partial) + forward   339
+  FAV_all                history 09-24..29 replay (arrival +500 ms partial) + forward  1284
+  C_fixed15              FORWARD ONLY - no history replay exists for this arm    74
+  F_z50                  FORWARD ONLY - no history replay exists for this arm    48
+  F25_z25                FORWARD ONLY - no history replay exists for this arm    66
+  F75_z75                FORWARD ONLY - no history replay exists for this arm    36
+  E3_trail_1h_q90        FORWARD ONLY - no history replay exists for this arm   110
+  S_fixed_top20          FORWARD ONLY - no history replay exists for this arm    10
+  History replay exists ONLY for the FAV family. C_fixed15, F_z50, F25_z25, F75_z75,
+  E3_trail_1h_q90 and S_fixed_top20 have NO history replay and are forward-only, as briefed.
+  FAV-family pooling is history for epochs < 09-29 01:20 then the live forward rows after it,
+  so the 09-29 overlap is NOT double counted.
+
+SINGLES at $10
+arm                      fills      $      maxDD   P/DD  days+/-      H1$      H2$  flag
+----------------------------------------------------------------------------------------
+  FAV                      658  +185.91   156.93   1.18  5/2       +23.75  +162.16  
+  FAV_ref                  650  +139.72   169.20   0.83  5/2       -36.10  +175.82  
+  FAV_mid                  339   +40.41   135.00   0.30  3/4       -47.16   +87.57  
+  FAV_all                 1284  +119.45   203.40   0.59  3/4       -85.04  +204.50  
+  C_fixed15                 74   +40.14    40.61   0.99  2/0       +35.71    +4.43  
+  F_z50                     48   +19.02    42.84   0.44  2/0        +7.90   +11.12  <60 fills
+  F25_z25                   66   +19.06    60.95   0.31  2/0        +0.10   +18.96  
+  F75_z75                   36   +30.35    56.20   0.54  2/0        -0.77   +31.12  <60 fills
+  E3_trail_1h_q90          110    +5.60    71.57   0.08  2/0        +1.79    +3.81  
+  S_fixed_top20             10   +25.49     0.00    inf  1/0       +13.13   +12.36  <60 fills
+
+PAIRS at $5+$5, each arm halved, on the COMMON window of the two arms
+pair                                       cand      $      maxDD   P/DD  days+/-      H1$      H2$   corr(hourly)  beats both P/DD
+-----------------------------------------------------------------------------------------------------------------------------------
+  FAV               +FAV_ref              686  +161.09   162.50   0.99  5/2       -12.92  +174.01   +0.967        no
+  FAV               +FAV_mid              971   +88.04   109.97   0.80  4/3       -39.57  +127.61   -0.039        no
+  FAV               +FAV_all             1216  +149.82   169.37   0.88  4/3       -18.78  +168.61   +0.790        no
+  FAV               +C_fixed15            162   +49.30    27.40   1.80  1/1        +9.08   +40.22   -0.101        yes
+  FAV               +F_z50                139   +38.74    30.59   1.27  1/1        -7.56   +46.30   -0.041        no
+  FAV               +F25_z25              155   +38.76    39.28   0.99  1/1        -3.72   +42.49   -0.041        no
+  FAV               +F75_z75              133   +44.41    35.92   1.24  1/1       -11.89   +56.30   +0.028        no
+  FAV               +E3_trail_1h_q90      179   +34.77    51.97   0.67  2/0       -10.61   +45.39   +0.013        no
+  FAV               +S_fixed_top20        103   +42.63    21.11   2.02  1/0        +0.05   +42.57   -0.151        no
+  FAV_ref           +FAV_mid              959   +87.97   116.00   0.76  3/4       -21.16  +109.13   +0.033        no
+  FAV_ref           +FAV_all             1281  +123.39   170.39   0.72  4/3       -71.14  +194.53   +0.759        no
+  FAV_ref           +C_fixed15            157   +52.23    28.17   1.85  1/1       +21.61   +30.62   -0.079        yes
+  FAV_ref           +F_z50                134   +41.67    31.36   1.33  1/1        +7.70   +33.96   -0.001        no
+  FAV_ref           +F25_z25              150   +41.69    40.04   1.04  1/1        +3.81   +37.88   -0.004        no
+  FAV_ref           +F75_z75              128   +47.34    31.36   1.51  1/1        +0.97   +46.36   +0.035        yes
+  FAV_ref           +E3_trail_1h_q90      174   +34.96    52.73   0.66  1/1        -3.84   +38.80   -0.010        no
+  FAV_ref           +S_fixed_top20        100   +47.47    21.11   2.25  1/0        +1.45   +46.02   -0.168        no
+  FAV_mid           +FAV_all             1282   +75.83   145.48   0.52  3/4       -73.15  +148.97   +0.418        no
+  FAV_mid           +C_fixed15            148   +57.53    18.64   3.09  1/1       +56.53    +1.00   -0.357        yes
+  FAV_mid           +F_z50                128   +46.97    17.34   2.71  1/1       +34.16   +12.81   -0.186        yes
+  FAV_mid           +F25_z25              143   +46.99    22.37   2.10  1/1       +44.68    +2.31   -0.250        yes
+  FAV_mid           +F75_z75              118   +52.64    15.11   3.48  1/1       +34.83   +17.81   -0.302        yes
+  FAV_mid           +E3_trail_1h_q90      180   +40.27    37.60   1.07  2/0       +45.93    -5.66   -0.050        no
+  FAV_mid           +S_fixed_top20        100   +51.89    15.00   3.46  1/0       +35.10   +16.79   -0.393        no
+  FAV_all           +C_fixed15            271   +56.10    39.89   1.41  1/1       +35.91   +20.19   -0.435        yes
+  FAV_all           +F_z50                271   +45.54    45.49   1.00  1/1       +17.01   +28.54   -0.245        yes
+  FAV_all           +F25_z25              271   +45.56    50.38   0.90  1/1       +23.11   +22.46   -0.330        yes
+  FAV_all           +F75_z75              271   +51.21    40.49   1.26  1/1       +12.67   +38.54   -0.334        yes
+  FAV_all           +E3_trail_1h_q90      279   +41.57    75.89   0.55  2/0       +20.46   +21.12   +0.121        no
+  FAV_all           +S_fixed_top20        259   +51.11    36.57   1.40  1/0       +17.37   +33.74   -0.495        no
+  C_fixed15         +F_z50                 74   +29.58    39.08   0.76  2/0       +16.80   +12.77   +0.873        no
+  C_fixed15         +F25_z25               74   +29.60    49.08   0.60  2/0       +22.90    +6.69   +0.964        no
+  C_fixed15         +F75_z75               74   +35.24    44.99   0.78  2/0       +12.47   +22.77   +0.857        no
+  C_fixed15         +E3_trail_1h_q90      150   +18.57    41.40   0.45  1/1       +17.99    +0.58   -0.040        no
+  C_fixed15         +S_fixed_top20         69   +31.63    17.26   1.83  1/0       +34.42    -2.79   +0.662        no
+  F_z50             +F25_z25               66   +19.04    50.95   0.37  2/0        -1.00   +20.04   +0.907        no
+  F_z50             +F75_z75               48   +24.69    46.86   0.53  2/0        +3.57   +21.12   +0.885        no
+  F_z50             +E3_trail_1h_q90      137    +8.01    51.37   0.16  1/1        -3.13   +11.14   -0.000        no
+  F_z50             +S_fixed_top20         49   +21.07    18.58   1.13  1/0       +15.51    +5.56   +0.432        no
+  F25_z25           +F75_z75               66   +24.71    56.86   0.43  2/0        -5.33   +30.04   +0.871        no
+  F25_z25           +E3_trail_1h_q90      145    +8.03    52.45   0.15  1/1        +2.45    +5.58   -0.050        no
+  F25_z25           +S_fixed_top20         61   +21.09    28.58   0.74  1/0       +16.62    +4.48   +0.667        no
+  F75_z75           +E3_trail_1h_q90      130   +13.68    53.04   0.26  1/1        -7.98   +21.66   +0.051        no
+  F75_z75           +S_fixed_top20         37   +26.74    26.20   1.02  1/0       +11.18   +15.56   +0.603        no
+  E3_trail_1h_q90   +S_fixed_top20        111   +13.01    27.70   0.47  1/0        +3.96    +9.04   -0.120        no
+
+PER-DAY $ (singles at $10)
+arm                       09-24     09-25     09-26     09-27     09-28     09-29     09-30
+  FAV                    +47.81    +12.56    -67.27   +134.76    +16.92    +48.74     -7.60
+  FAV_ref                +33.76     +4.17    -88.42   +145.37     +6.70    +55.04    -16.90
+  FAV_mid                +35.87    -41.46    -18.66    -21.45     -6.72    +92.00     +0.83
+  FAV_all                +40.79    -27.39    -70.04    +97.37     -1.66    +87.15     -6.76
+  C_fixed15               +0.00     +0.00     +0.00     +0.00     +0.00    +37.77     +2.36
+  F_z50                   +0.00     +0.00     +0.00     +0.00     +0.00    +16.65     +2.36
+  F25_z25                 +0.00     +0.00     +0.00     +0.00     +0.00    +16.69     +2.36
+  F75_z75                 +0.00     +0.00     +0.00     +0.00     +0.00    +27.99     +2.36
+  E3_trail_1h_q90         +0.00     +0.00     +0.00     +0.00     +0.00     +0.53     +5.08
+  S_fixed_top20           +0.00     +0.00     +0.00     +0.00     +0.00    +25.49     +0.00
+
+PASS BARS (a)-(e). (a) needs V's independent 09-13..16 too, which is not checkable here.
+  pairs meeting (b)+(c)+(d)+(e) on Zurich data: 2 of 45
+    FAV_mid+C_fixed15: $+57.53 P/DD 3.09 H1 +56.53 H2 +1.00 corr -0.357
+    FAV_mid+F25_z25: $+46.99 P/DD 2.10 H1 +44.68 H2 +2.31 corr -0.250
+
+wrote analysis/zurich/combo_hourly.csv (hour, arm, pnl@$10)
+
+====================================================================================================
+CORRECTED VERDICT - criterion (a) applied, which the block above omitted
+====================================================================================================
+(a) requires $ > 0 on EVERY set: Zurich history 09-24..29, Zurich forward, and V's 09-13..16.
+The two pairs listed above as passing (b)-(e) both pair FAV_mid with a FORWARD-ONLY arm
+(C_fixed15, F25_z25). For those pairs a Zurich HISTORY set does not exist at all, so (a) cannot
+be satisfied - not "fails", but is UNTESTABLE on the data I have. Their common window is ~1 day
+(148 and 143 candles, days+/- of 1/1), so their P/DD of 3.09 and 2.10 are one-day numbers and
+not drawdown statistics.
+
+Pairs where BOTH arms have history, and can therefore be tested on both sets:
+  FAV      +FAV_ref    $  +161.09  P/DD  0.99  H1   -12.92 H2  +174.01  corr +0.967  beats both: no
+  FAV      +FAV_mid    $   +88.04  P/DD  0.80  H1   -39.57 H2  +127.61  corr -0.039  beats both: no
+  FAV      +FAV_all    $  +149.82  P/DD  0.88  H1   -18.78 H2  +168.61  corr +0.790  beats both: no
+  FAV_ref  +FAV_mid    $   +87.97  P/DD  0.76  H1   -21.16 H2  +109.13  corr +0.033  beats both: no
+  FAV_ref  +FAV_all    $  +123.39  P/DD  0.72  H1   -71.14 H2  +194.53  corr +0.759  beats both: no
+  FAV_mid  +FAV_all    $   +75.83  P/DD  0.52  H1   -73.15 H2  +148.97  corr +0.418  beats both: no
+  Every one of these fails (c) P/DD >= 2, and the best of them, FAV+FAV_ref, correlates +0.967 hourly - very nearly the same arm, so pairing them diversifies nothing.
+
+SO: NO PAIR PASSES THE PRE-REGISTERED BAR. No change proposed, no arm added, nothing deployed.
+The mechanism the owner asked about does show up - every FAV_mid pairing with an independent arm
+has NEGATIVE hourly correlation (-0.079 to -0.393) and a much smaller drawdown than FAV_mid alone
+(135.00 -> 15-22). That is the right direction and it is worth more data. It is not yet a result:
+one day, a partner arm with no history, and (a) untestable.

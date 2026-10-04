@@ -1,0 +1,68 @@
+FAV DAILY LEDGER  2026-10-01  window 10-01 00:00 .. 24:00 UTC (exclusive)
+  last candle scored inside the window: 10-01 23:55   day is COMPLETE
+
+arm          decisions  fills  wins     $@10    maxDD   flag
+FAV               108     91    68   +44.99    36.37   
+FAV_mid            87     72    51   -29.98    82.81   
+FAV_all           274    231   164   -48.60   111.29   
+FAV_ref           118     96    74   +68.62    46.37   
+C_fixed15          88     47    20   -49.37    90.00   INSUFFICIENT (<60 fills)
+  FAV arms use the PARTIAL arrival fill (filled shares a FLOOR, depth truncated at level 1).
+  C_fixed15 uses its own registered 250 ms FAK - a different fill model, so C is context
+  beside the FAV arms, not a like-for-like row.
+
+ARRIVAL FILLS (+500 ms): 274 decisions -> 231 cleared the price cap (84%) | PRICE-MISS 43 (16%) | SIZE-MISS 13 (5%) | depth-capped 13
+
+CUMULATIVE 09-29 .. 10-01 (3 full days), $10 a fill, REAL recorded ask + exact fee
+arm          decisions  fills  wins     $@10    maxDD   flag
+FAV               310    256   195  +124.41    51.05   
+FAV_mid           252    209   157   +70.07   103.95   
+FAV_all           779    644   473   +63.76   111.29   
+FAV_ref           295    242   185  +130.71    64.11   
+C_fixed15         241    124    61   +31.97   120.00   
+
+PFAV vs PFAV_THRU, the SAME day as the table above. +1c = the same trade paying one cent more.
+arm          decisions  fills  wins     $@10   $@10+1c   maxDD   flag
+PFAV              262    198   147   -93.62   -117.58  121.08   
+PFAV_THRU         262    198   147   -93.62   -117.58  121.08   
+
+CALM-FAV BY UTC SESSION, same day (real recorded ask + fee)
+session        decisions  fills  wins     $@10    maxDD   flag
+Asia 00-07            49     41    30    +5.15    33.98   INSUFFICIENT (<60 fills)
+Europe 07-13          19     17    14   +27.58    10.00   INSUFFICIENT (<60 fills)
+US 13-20               4      3     2    +0.04    10.00   INSUFFICIENT (<60 fills)
+Late 20-24            36     30    22   +12.22    36.37   INSUFFICIENT (<60 fills)
+
+coverage: 288 candles scored on 2026-10-01 (of 288).
+
+MAKER PROBE (live, separate process, NOT part of the shadow)
+  2026-10-01: 50 graded fills over 46 distinct candles, 35W/15L, -5.0623 on $156.59 deployed (-0.0323 per $1), venue-graded
+  lifetime: 77 graded fills over 57 candles, +31.0877 of the -20 stop  INSUFFICIENT (<60 fills)
+  5 shares a post-only BUY, maker fee 0, held to settlement. Distinct CANDLES is the honest sample here, not fills: one calm candle can hand us several.
+
+WHY PFAV AND PFAV_THRU ARE THE SAME ROW TODAY - checked, not assumed.
+Identical numbers across two arms is the pattern this project keeps getting wrong, so I compared
+them row by row rather than publishing the coincidence. Both arms are live and written separately
+(each has 432 rows, both last written 10-02 00:45). On 10-01 they agree on 262 of 262 epochs: the
+trade-through condition - the print must go STRICTLY below our bid, not merely touch it - removed
+ZERO fills that day. On 09-30 it removed 3 of 162 (12:15, 17:10, 22:15, each a 0.80 bid that filled
+for PFAV and did not fill for THRU). So the filter is real but nearly inert: 3 differing rows in 424.
+That is worth knowing on its own - PFAV_THRU was built to be the pessimistic twin of PFAV, and on
+this box's forward data it is not meaningfully more pessimistic, so it cannot be used as evidence
+that PFAV's fills are achievable. The honest reading stays the one from 09-30: both are deeply
+negative, -93.62 today and -117.58 once each trade pays a cent more.
+
+THINGS IN THIS FILE WORTH MORE THAN THE TOTALS
+ 1. THE DAY SPLIT THE ARMS. FAV +44.99 and FAV_ref +68.62, but FAV_mid -29.98 and FAV_all -48.60 on
+    the same candles. The calm arm and the mid-vol arm pointed opposite ways, so FAV_all - which is
+    just both of them plus the high bucket - lost while its own calm subset won. Cumulatively over
+    three days FAV_all is +63.76 against FAV's +124.41: the aggregate arm is the worst way to hold
+    this, and that is now visible on three consecutive days rather than argued from one.
+ 2. THE SESSION SPLIT COLLAPSED TO NOTHING USABLE. All four cells are positive today (+5.15, +27.58,
+    +0.04, +12.22) which is the opposite of 09-30, when Asia and Europe lost and Late carried
+    everything. Every cell is under 60 fills and US 13-20 has THREE. A cell that changes sign
+    day to day on n=3..41 is noise, and I am not proposing any session filter.
+ 3. THE MAKER PROBE HAD ITS FIRST LOSING DAY: -5.0623 over 46 distinct candles (35W/15L), after the
+    late-evening run that took 12 out of the wallet in an hour. Lifetime is still +31.0877 against a
+    -20 stop, and the day never came near the -10 day stop. 50 graded fills on the day but only 46
+    candles, which is why the 60 bar was moved to distinct candles.
