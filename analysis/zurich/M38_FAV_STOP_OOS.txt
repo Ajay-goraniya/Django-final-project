@@ -111,3 +111,4 @@ M38 DAILY FORWARD TRACKER - the FROZEN cell a15 g10 R-off T-none re-run cumulati
 on every FAV calm fire after the M36 cut, same PASS rule, taker exit at the triggering
 bid + fee. No new arm and no new parameter: this is M38 repeated as the sample grows.
   2026-10-03 12:32 UTC  n   213  HOLD +0.0608  cell +0.0242  t +0.80  t_paired -1.49  halves -11.50/+63.13  green 2/2  FAIL
+  2026-10-04 00:20 UTC  n   325  HOLD +0.0339  cell +0.0153  t +0.61  t_paired -0.93  halves +66.16/-16.49  green 2/2  FAIL
