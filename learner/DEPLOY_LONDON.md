@@ -73,3 +73,21 @@ Expected, and printed again as the `[fast]` line at every boot, followed by `[lo
 
 Any `MISSING` or `sign=thread` = not deployed; fix it before the restart. `latency_stats` then reports
 `loop`, `sign_mode`, `keepalive_ms` (order transport), `keepalive_book_ms` (book transport) and `fire_to_wire_attempt1`.
+
+## 4. Bridge keep-alive (owner 10-05: "Make sure london stay connected 24/7")
+
+Cron watchdog, every minute + @reboot: restarts `claude remote-control` in tmux session `claude` if tmux or the
+process is gone; restarts are logged to `~/claude_keepalive.log`. Each restart is a NEW London session (new id) -
+triggers aimed at the old session id will not reach it; look the new id up with list_sessions.
+
+    cat > ~/claude_keepalive.sh <<'X'
+    #!/bin/bash
+    if ! tmux has-session -t claude 2>/dev/null || ! pgrep -f "claude remote-control" >/dev/null; then
+      tmux kill-session -t claude 2>/dev/null
+      tmux new -d -s claude "cd /home/ubuntu/pm_london && claude remote-control"
+      echo "$(date -u) restarted bridge" >> ~/claude_keepalive.log
+    fi
+    X
+    chmod +x ~/claude_keepalive.sh
+    (crontab -l 2>/dev/null | grep -v claude_keepalive; echo "* * * * * $HOME/claude_keepalive.sh"; \
+     echo "@reboot sleep 30 && $HOME/claude_keepalive.sh") | crontab -
