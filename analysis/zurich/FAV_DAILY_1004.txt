@@ -1,0 +1,148 @@
+FAV DAILY LEDGER  2026-10-04  window 10-04 00:00 .. 24:00 UTC (exclusive)
+  last candle scored inside the window: 10-04 23:55   day is COMPLETE
+
+DAY 10-04 (window 10-04 00:00 .. 24:00 UTC exclusive)
+arm          decisions  fills  wins     $@10   deployed  per $1    maxDD  green  flag
+FAV               217    183   123  -149.69    1742.29 -0.0859   154.49    -    
+FAV_mid            20     16    10   -29.78     157.13 -0.1895    46.97    -    INSUFFICIENT (<60 fills)
+FAV_all           258    215   145  -165.24    2046.17 -0.0808   197.96    -    
+FAV_ref           219    184   123  -159.69    1752.05 -0.0911   164.49    -    
+C_fixed15          43     23    13   +38.74     230.00 +0.1684    40.00    -    INSUFFICIENT (<60 fills)
+  FAV arms use the PARTIAL arrival fill (filled shares a FLOOR, depth truncated at level 1).
+  C_fixed15 uses its own registered 250 ms FAK - a different fill model, so C is context
+  beside the FAV arms, not a like-for-like row.
+
+ARRIVAL FILLS (+500 ms): 258 decisions -> 215 cleared the price cap (83%) | PRICE-MISS 43 (17%) | SIZE-MISS 14 (5%) | depth-capped 13
+
+CUMULATIVE 09-29 .. 10-04, $10 a fill, REAL recorded ask + exact fee
+arm          decisions  fills  wins     $@10   deployed  per $1    maxDD  green  flag
+FAV               853    718   527    -8.46    6813.80 -0.0012   233.33    4/6  
+FAV_mid           376    310   225    -7.39    2920.38 -0.0025   168.10    3/6  
+FAV_all          1574   1310   950  -106.92   12425.52 -0.0086   285.23    3/6  
+FAV_ref           842    702   518   +35.79    6674.27 +0.0054   238.53    3/6  
+C_fixed15         412    206   103   +61.21    2060.00 +0.0297   152.88    4/6  
+  per $1 = $ / deployed. Deployed is sh*vwap for the FAV arms (the partial model fills fewer
+  than 10/px shares when level-1 depth is thin) and a flat $10 a fill for C_fixed15, which
+  uses its own registered 250 ms FAK. green = UTC days with a positive total for that arm.
+
+PFAV vs PFAV_THRU, 10-04. +1c = the same trade paying one cent more.
+arm          decisions  fills  wins     $@10   $@10+1c   maxDD   flag
+PFAV              244    195   137  -198.20   -220.38   212.33   
+PFAV_THRU         244    193   135  -203.20   -225.07   217.33   
+
+CALM-FAV BY UTC SESSION, 10-04 (real recorded ask + fee)
+session        decisions  fills  wins     $@10    maxDD   flag
+Asia 00-07            74     61    41   -40.64    55.57   
+Europe 07-13          56     49    33   -44.25    69.38   INSUFFICIENT (<60 fills)
+US 13-20              71     60    41   -42.65    63.47   
+Late 20-24            16     13     8   -22.16    35.27   INSUFFICIENT (<60 fills)
+
+coverage: 288 candles scored on 2026-10-04 (of 288).
+
+======== DAY 7, 10-05, PARTIAL - THIS IS A SNAPSHOT OF A MOVING TABLE ========
+Scored to 10-05 14:30 UTC only, 166 of 288 candles, and LATE SETTLEMENT will still move these rows
+(that is the error I made on 10-02 and will not repeat). Asia and Europe are in, US is 3 candles,
+Late has not happened. Do not compare this block to a full day.
+DAY 10-05 (window 10-05 00:00 .. 24:00 UTC exclusive)
+arm          decisions  fills  wins     $@10   deployed  per $1    maxDD  green  flag
+FAV                57     53    42   +57.14     502.31 +0.1138    20.61    -    INSUFFICIENT (<60 fills)
+FAV_mid            55     46    35    +3.01     430.97 +0.0070    25.10    -    INSUFFICIENT (<60 fills)
+FAV_all           157    136   103   +41.20    1275.13 +0.0323    60.19    -    
+FAV_ref            53     50    40   +53.86     473.14 +0.1138    18.09    -    INSUFFICIENT (<60 fills)
+C_fixed15          43     18     9   +22.32     180.00 +0.1240    44.53    -    INSUFFICIENT (<60 fills)
+
+ARRIVAL FILLS (+500 ms): 157 decisions -> 136 cleared the price cap (87%) | PRICE-MISS 21 (13%) | SIZE-MISS 12 (8%) | depth-capped 12
+
+CUMULATIVE 09-29 .. 10-05, $10 a fill, REAL recorded ask + exact fee
+arm          decisions  fills  wins     $@10   deployed  per $1    maxDD  green  flag
+FAV               910    771   569   +48.68    7316.11 +0.0067   233.33    5/7  
+FAV_mid           431    356   260    -4.39    3351.35 -0.0013   175.50    4/7  
+FAV_all          1731   1446  1053   -65.72   13700.65 -0.0048   301.15    4/7  
+FAV_ref           895    752   558   +89.65    7147.40 +0.0125   242.34    4/7  
+C_fixed15         455    224   112   +83.52    2240.00 +0.0373   152.88    5/7  
+  (cumulative through the 10-05 snapshot, 6 full days + 14.5 h)
+
+PFAV vs PFAV_THRU, 10-05. +1c = the same trade paying one cent more.
+arm          decisions  fills  wins     $@10   $@10+1c   maxDD   flag
+PFAV              156    114    88   -27.52    -41.42    75.60   
+PFAV_THRU         156    113    87   -30.34    -44.08    75.60   
+
+CALM-FAV BY UTC SESSION, 10-05 (real recorded ask + fee)
+session        decisions  fills  wins     $@10    maxDD   flag
+Asia 00-07            21     20    17   +29.43    10.00   INSUFFICIENT (<60 fills)
+Europe 07-13          33     30    23   +28.31    20.61   INSUFFICIENT (<60 fills)
+US 13-20               3      3     2    -0.60    10.00   INSUFFICIENT (<60 fills)
+Late 20-24             0      0     0    +0.00     0.00   INSUFFICIENT (<60 fills)
+
+coverage: 166 candles scored on 2026-10-05 (of 288).
+
+VOL REGIME, the registered Binance 1 s series (fires.p on FAV_all) vs the ref_px series:
+  09-29: bn n  261 median 0.355 p90 0.621 | share <0.304  37%  || ref n   93 median 0.222
+  09-30: bn n  244 median 0.335 p90 0.896 | share <0.304  43%  || ref n   84 median 0.219
+  10-01: bn n  274 median 0.343 p90 0.725 | share <0.304  39%  || ref n  118 median 0.221
+  10-02: bn n  278 median 0.409 p90 0.869 | share <0.304  29%  || ref n   78 median 0.211
+  10-03: bn n  259 median 0.109 p90 0.240 | share <0.304  95%  || ref n  250 median 0.101
+  10-04: bn n  258 median 0.142 p90 0.399 | share <0.304  84%  || ref n  219 median 0.115
+  10-05: bn n  157 median 0.361 p90 0.710 | share <0.304  36%  || ref n   53 median 0.228
+  BTC's own 1-day candle for the same days, from a public source neither arm reads (Binance 1d):
+    09-29 range 2.14% move +0.20% | 09-30 3.22% -0.05% | 10-01 2.50% +1.50% | 10-02 3.93% -0.43%
+    10-03 0.69% +0.28% | 10-04 2.45% +2.10% | 10-05 1.83% -1.02%
+
+t ON THE CUMULATIVE PER-FILL $ (n = fills, pnl_part)
+arm        cum..10-04 (6 days)      cum..10-03 (5 days)      10-04 alone        10-05 so far
+FAV          -8.46  t -0.05         +141.23  t +1.05        -149.69 t -1.75     +57.14 t +1.42
+FAV_mid      -7.39  t -0.07          +22.38  t +0.22         -29.78 t -1.14      +3.01 t +0.08
+FAV_all    -106.92  t -0.49          +58.32  t +0.30        -165.24 t -1.78     +41.20 t +0.62
+FAV_ref     +35.79  t +0.23         +195.48  t +1.48        -159.69 t -1.85     +53.86 t +1.42
+  Six full days: every FAV arm is at zero or below and not one t is outside +-0.5.
+
+M19 PAPER SHADOW (paper only, NO orders, still running)
+  data spans 86.4 h, process up 37.2 h at 10-05 14:47 UTC; 8,797 graded arm-fills, 22 unsettled,
+  106,874 quotes posted on paper, 567,736 venue trade prints observed.
+  All eight arms still NEGATIVE: best m0.20 D300 -0.0991 per $1 (n 907), m0.15 D300 -0.1306,
+  worst m0.15 D1500 -0.1862. Honest sample 1,260 unique candle-sides, not 8,797.
+  Four days in, the sign has never changed in any arm or any parameterisation.
+
+MAKER PROBE: still stopped (10-02 15:01 UTC, owner's order). Final lifetime 108 graded fills over
+  88 distinct candles, +26.3185 against the -20 stop. No probe row.
+
+THINGS IN THIS FILE WORTH MORE THAN THE TOTALS
+ 1. 10-04 GAVE BACK MORE THAN 10-03 MADE, AND IT WAS A CALM DAY TOO. FAV -149.69 on 183 fills is its
+    worst day; 10-03 was +76.92, its best. The whole five-day +141.23 is gone: cumulative FAV is now
+    -8.46, i.e. -0.0012 per $1 at t -0.05 over six days and 718 fills. FAV_all -106.92, FAV_mid
+    -7.39, FAV_ref +35.79. Not one arm's t is outside +-0.5. After six days the honest summary of
+    this shadow is a flat line.
+ 2. THIS IS THE TEST 10-03 COULD NOT GIVE, AND THE CALM GATE FAILED IT. I wrote yesterday that
+    10-03's result was unrepresentative because 95% of candles were calm, so the gate was bypassed
+    rather than tested. 10-04 was calm by the same measure - 84% under the cut, Binance 1 s median
+    vol 0.142 against 0.109 - and inside that near-identical calm bucket FAV went from +76.92 to
+    -149.69. Two consecutive calm days, opposite signs, same rule. The gate is not selecting a
+    profitable subset; it is selecting a subset whose outcome is as variable as everything else.
+ 3. LOW 1-SECOND VOL IS NOT A QUIET MARKET, WHICH IS A FLAW IN THE LABEL ITSELF. 10-03 had a 0.69%
+    daily range; 10-04 had 2.45% with a +2.10% ONE-WAY move - the second largest drift of the
+    window - and still scored 84% calm. The vol measure is the std of 1 s log returns, so a smooth
+    trend reads as calm. "Calm" therefore conflates "not moving" with "moving smoothly", and those
+    are different trading environments. That is a property of the registered definition (V's 09-29
+    ruling, the Binance 1 s kline close series), not a bug in the code.
+ 4. I TESTED THE OBVIOUS EXPLANATION FOR 10-04 AND IT IS WRONG, SO I AM NOT PUBLISHING IT AS A
+    FINDING. The drift story would predict FAV lost by being on the wrong side of a +2.10% day.
+    Split by the side actually bought: UP n 102 won 67.6%, DOWN n 81 won 66.7% - both sides lost
+    about equally (-84.54 and -65.16) against break-evens of 74.8% and 73.4%. There is no
+    directional or side-selection effect. The favourite simply underperformed its own price
+    symmetrically, which is a bad win rate and not a mechanism.
+ 5. THE SESSION SPLIT FINALLY AGREED WITH ITSELF, BY ALL FOUR CELLS LOSING. 10-04: Asia -40.64,
+    Europe -44.25, US -42.65, Late -22.16 - the first day with no disagreement between sessions, and
+    it is the day the arm lost most. Across five daily files the cells have now taken every
+    configuration available. Still no session filter.
+ 6. PFAV HAD ITS WORST DAY (-198.20, -220.38 at +1c) the day after its first positive one (+10.18).
+    Across six days PFAV has never been positive at +1c on any day. The trade-through twin tracks it
+    to within $5. That arm is settled as far as this box can settle it.
+ 7. 10-05 SO FAR IS POSITIVE (FAV +57.14 on 53 fills) ON A DAY WHOSE VOL IS BACK TO NORMAL (median
+    0.361, 36% calm). I am not reading anything into it: 53 fills, half a day, still settling, and
+    the three preceding days have been +76.92, -149.69, +57.14. That sequence is the point.
+
+DATA/METHOD: ef3_shadow.sqlite3 fires + seen, read-only. FAV arms use pnl_part (partial arrival fill,
+filled shares a FLOOR, level-1 depth truncation, +500 ms arrival), $10 a fill, real recorded ask and
+the exact Polymarket taker fee 0.07p(1-p); C_fixed15 uses its own 250 ms FAK. Labels are the venue's
+own resolution. Coverage 288 of 288 on 10-04, 166 of 288 on the partial 10-05. No restarts, no config
+changes, nothing live. Vol figures are fires.p, which carries the arm's own gating vol.
