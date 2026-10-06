@@ -21,8 +21,9 @@ t = 0.0
 if len(s) > 1:
     v = [x[2] or 0 for x in s]
     t = (st.mean(v) / st.stdev(v) * math.sqrt(len(v))) if st.stdev(v) > 0 else 0.0
-cash = d.execute('select cash_after from nc where cash_after is not null order by epoch desc limit 1').fetchone()
-cash = cash[0] if cash else START_CASH
+_sp, _cr = d.execute("select coalesce(sum(spent),0), coalesce(sum(case when win=1 then shares else 0 end),0) "
+                     "from nc where status in ('full','partial')").fetchone()
+cash = START_CASH - (_sp or 0) + (_cr or 0)      # DERIVED, never chained - see m53nc_paper.cash_now
 sl = [x[4] for x in r if x[4] is not None]; la = [x[5] for x in r if x[5] is not None]
 print(f"M53-NC (prereg 3224c11) since epoch {NC}: signals {len(r)}, full {full} / partial {part} / "
       f"missed {missed} / skipped-no-data {nodata} (also skipped-calm {calmskip}, skipped-cash {cashskip}); "

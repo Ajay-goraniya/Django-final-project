@@ -61,8 +61,15 @@ def toks(ep):
         "select token_up,token_dn from markets where market='btc5' and epoch=?", (ep,)).fetchone()
 
 def cash_now(d):
-    r = d.execute('select cash_after from nc where cash_after is not null order by epoch desc limit 1').fetchone()
-    return r[0] if r else START_CASH
+    """BUG FIX 17:2x: DERIVE the bankroll, never chain it. The previous version read the last row's
+    cash_after, but a settlement credit is applied to a row AFTER later rows have already computed
+    their cash_before from it, so credits never propagated: the path just decremented $5 a trade from
+    $50 and reported $20 when the true figure was $54.75. Worse than a cosmetic error - the cash<$5
+    gate would soon have begun skipping candles that were affordable. Derived from the ledger it
+    cannot drift: start, minus everything spent, plus every settled win's shares at $1.00."""
+    sp, cr = d.execute("select coalesce(sum(spent),0), coalesce(sum(case when win=1 then shares else 0 end),0) "
+                       "from nc where status in ('full','partial')").fetchone()
+    return START_CASH - (sp or 0) + (cr or 0)
 
 def walk(asks, lim, budget):
     """FAK walk, cheapest level first, levels at or below the limit. Returns (shares, spent, levels).

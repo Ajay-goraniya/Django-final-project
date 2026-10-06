@@ -16,7 +16,9 @@ for ep, side, sh, sp, st in d.execute(
     if int(ep) not in UP: continue
     win = 1 if ((side == 'UP') == UP[int(ep)]) else 0
     pnl = (sh if win else 0.0) - sp
-    d.execute('update nc set win=?,pnl=?,cash_after=cash_after+?,graded_ts=? where epoch=?',
-              (win, pnl, (sh if win else 0.0), int(time.time()), ep)); n += 1
+    # cash_after is NOT mutated any more: the bankroll is derived from the ledger (see cash_now in
+    # m53nc_paper.py), so there is no chained value to keep in step.
+    d.execute('update nc set win=?,pnl=?,graded_ts=? where epoch=?',
+              (win, pnl, int(time.time()), ep)); n += 1
 d.commit()
 print(f'graded {n}', flush=True)
