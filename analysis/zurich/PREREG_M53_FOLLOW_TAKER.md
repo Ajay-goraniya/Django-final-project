@@ -212,3 +212,36 @@ introduced in section 2's fill model, not V's and not the owner's.
 arm now writes the UNCAPPED +3 s outcome as secondary columns (`fill3_unc`, `miss3_unc`, `pnl3_unc`:
 fill unless ask >= 0.99 or level-1 size short of the $5 need), backfilled for the decisions already
 taken, so BOTH readings can be graded from the same rows whichever V and the owner choose.
+
+---
+## AMENDMENT 2026-10-06 03:5x - PRIMARY ROW SWAPPED TO THE UNCAPPED ENTRY (V decision, owner approved)
+**The forward primary is now the rule the retrospective actually measured**, effective from epoch
+**1791257400** (the original switch epoch), so no decision taken so far is dropped or re-scoped.
+
+### The primary rule, restated in full
+- Band **0.60-0.80 applies to the PRINT price only** - the trigger - exactly as `PFAV_taker` did.
+- Entry = our own-side **ask at print_ts + 3 s**, $5, exact taker fee 0.07*p*(1-p), hold to venue
+  settlement, one decision per candle, no re-entry, no exit.
+- **Fill unless** the +3 s ask is **>= 0.99** or level-1 own-side size is short of the shares $5 needs.
+  There is **no 0.60-0.80 cap on the entry ask**.
+- Columns: `fill3_unc` / `miss3_unc` / `pnl3_unc` are now **PRIMARY**. The 0.80-capped variant
+  (`fill3` / `miss3` / `pnl3`) is retained as a **SECONDARY** column and is no longer the verdict row.
+  The column NAMES are deliberately unchanged so that every row written since 1791257400 keeps its
+  meaning; what changed is which pair the pass rule reads. Anyone auditing this should take the
+  `_unc` pair as primary and ignore the suffix, which is now historical.
+- The +0 s / +2 s / +10 s rows stay secondary-only. **The five-part pass rule is otherwise unchanged**
+  and is now evaluated on the primary (uncapped) row.
+
+### Why - and the basis of the decision, stated so it cannot be misread later
+Fidelity to the row that motivated the test. The retrospective +3 s result (+0.1381 per $1, n 1,009)
+excluded only `ask >= 0.99`; I nonetheless froze a forward fill model that ALSO capped the entry ask
+at 0.80, making the forward arm a stricter and different rule. That was my error, caught by V and
+recorded at **081e276**. This amendment makes the forward test measure the rule it was always meant
+to test.
+
+**This was decided on RULE-MATCH, not on forward outcomes.** At the time of the decision the forward
+arm had 3 decisions, all unsettled, with $0.00 and per $1 +0.0000 on both readings - there was no
+forward P&L to select on, and none was used. The retrospective split (>0.80 being 10.6% of decisions
+at +0.1117 per $1) is evidence about which rule the retrospective WAS, not evidence that the uncapped
+rule earns more going forward. Nothing here has been tuned to a result, and the pass rule has not
+been loosened: it is the same five bars, read off the matching rule.
