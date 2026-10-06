@@ -136,3 +136,24 @@ NOTES ON THE TABLE
 DATA: ef3_shadow.sqlite3 (fires), m19_paper.sqlite3 (fills), shadow_{eth,sol}{,_platt}.sqlite3
 (orders+results), pair_paper.sqlite3 (pairs), ef2_shadow.sqlite3 (fires), pm_multi multi_market
 (1 Hz btc5 book), venues.outcome + gamma mkt for labels. Polymarket, not Predict.fun. All read-only.
+
+AMENDMENT, same day: M38 WAS MISSING FROM THE TABLE ABOVE AND V ASKED FOR IT BY NAME.
+V's request listed "FAV, FAV_mid, FAV_all, FAV_ref, C_fixed15, M19 arms, M38, any others". I gave
+every other one a row and left M38 out, because I had been treating it as a daily tracker line
+rather than an arm. It is a standing forward test and it belongs in the ranking. Numbers below are
+the TRACKER'S OWN arithmetic (m38_daily.py, STAKE 10, per $1 = sum / (10 x n)), not a parallel
+method of mine, so they reconcile with the dated lines in M38_FAV_STOP_OOS.txt.
+
+group             arm                    start      n         $   per $1      t  green flag
+M38 forward test  HOLD (no stop)         10-02    676    +23.87  +0.0035  (base)   4/5 |t|<2 NOT PROVEN
+M38 forward test  a15 g10 R-off T-none   10-02    676     -6.84  -0.0010  -0.06    4/5 |t|<2 NOT PROVEN
+  t_paired (cell MINUS hold, the test that matters) -0.31. Deployed $6,760 both rows, same entries.
+  SNAPSHOT, NOT A CLOSED DAY: at the 00:20 tracker run this was n 664, HOLD +0.0004, cell -0.0021,
+  t -0.12, green 3/4; twelve more fires have settled since, which is why the figures moved. Quoting
+  a settling table without saying so is the 10-02 error and I am not repeating it.
+  WHERE IT RANKS: both rows sit between FAV (+0.0010) and FAV_mid (-0.0003) - i.e. in the dead zone
+  with everything else we built. It does not change section 1's answer: still exactly one arm clears
+  both bars, and it is still PFAV_taker, and it is still not a strategy.
+  The frozen cell has now been below its own HOLD on every reading since 10-04 and t_paired has
+  never been positive beyond +0.06. The owner's stop adds nothing to a hold that has itself
+  stopped paying - which is the same verdict as M35, M36 and M38's own walk-forward.
