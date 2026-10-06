@@ -1,0 +1,52 @@
+M53 DIAGNOSTIC - WHY FORWARD (-0.117/$1) DIVERGES FROM RETROSPECTIVE (+0.138). READ-ONLY.
+2026-10-06 07:48:28 UTC. Arm untouched and still running. 37 forward candles since 03:30Z that
+carry a qualifying retrospective print. $5 stake both sides so $ and per $1 are comparable.
+
+SAME FORWARD CANDLES SINCE 03:30Z - tape candles with a qualifying retrospective print: 37
+A) RETROSPECTIVE PIPELINE (data-api tape, pfav selection), priced as the retrospective did:
+  entry at ep+fires.sec+3  == print_ts + 0.8 s (pfav LAG 2.2 baked in): n  37  $   -6.31  per $1 -0.0341  t -0.32
+  entry at print_ts + 3.0 s (what the forward arm does)              : n  37  $   -7.75  per $1 -0.0419  t -0.40
+B) THE LIVE FORWARD ARM on the same candles:
+  ws detection, entry at print_ts + 3.0 s                            : n  37  $  -10.77  per $1 -0.0582  t -0.52
+C) DID BOTH PIPELINES PICK THE SAME FIRST PRINT?
+  candles in both: 37  same print (same side, same px +-0.005, ts within 6s): 17 (46%)  different: 20
+     SAME-print subset, retrospective pricing (ts+0.8): n  17  $   +4.32  per $1 +0.0508  t +0.34
+     SAME-print subset, forward pricing   (ts+3.0)    : n  17  $   +2.72  per $1 +0.0320  t +0.22
+     SAME-print subset, LIVE ARM                        : n  17  $   +3.26  per $1 +0.0383  t +0.26
+     DIFF-print subset, retrospective pricing        : n  20  $  -10.63  per $1 -0.1063  t -0.70
+     DIFF-print subset, forward arm                   : n  20  $  -14.02  per $1 -0.1402  t -0.86
+   ts offset on same-print candles: median +3.0s
+     03:40 retro ts 1791258103 UP 0.610 | fwd ts 1791258064 UP 0.600
+     03:45 retro ts 1791258408 UP 0.602 | fwd ts 1791258398 UP 0.600
+     03:55 retro ts 1791259054 DOWN 0.613 | fwd ts 1791258960 UP 0.650
+     04:05 retro ts 1791259627 UP 0.780 | fwd ts 1791259560 UP 0.620
+     04:10 retro ts 1791259885 DOWN 0.600 | fwd ts 1791259860 DOWN 0.630
+     04:35 retro ts 1791261384 UP 0.780 | fwd ts 1791261360 UP 0.670
+D) ASK PAID: retrospective timing mean 0.6922 vs forward timing mean 0.6862; mean difference -0.0059 over 37 candles
+
+VERDICT: PREDOMINANTLY REGIME, with a real but secondary print-selection divergence.
+ 1. NOT a pricing-pipeline mismatch. On the 17 candles where both pipelines picked the SAME print,
+    retrospective pricing (+0.0508), forward pricing (+0.0320) and the LIVE ARM (+0.0383) agree to
+    within 0.02 per $1. Given the same trade, the two pipelines value it the same way.
+ 2. REGIME IS THE BULK OF IT. The retrospective METHOD, run on these same forward candles, is
+    -0.0341 per $1 - not +0.1381. That accounts for ~0.17 of the ~0.26 gap. The candles changed,
+    not the arithmetic.
+ 3. THE PIPELINES DISAGREE ON WHICH PRINT IS FIRST IN 54% OF CANDLES, and that is a genuine finding:
+    data-api timestamps run a MEDIAN +3.0 s BEHIND the CLOB ws match time (that offset is what
+    pfav.py's empirical LAG=2.2 was compensating for). A 3 s shift changes which print lands first
+    inside sec 60-180, so the live arm frequently triggers on an earlier, lower-priced print. The
+    loss concentrates there - diff-print subset -0.1063 retrospective, -0.1402 live - while the
+    same-print subset is positive on all three readings.
+ 4. MY LAG HYPOTHESIS WAS WRONG AND I AM RECORDING THAT. I expected the entry-timing difference to
+    explain the gap, because the retrospective's "+3s" is really ts+0.8 once LAG is baked in. It is
+    worth almost nothing: -0.0341 at ts+0.8 vs -0.0419 at ts+3.0, i.e. 0.008 per $1. Mean ask paid
+    differs by -0.0059. Entry timing is not the story; print SELECTION is.
+ 5. POWER WARNING: n 37, and every t here is inside +-0.9. This diagnosis identifies WHERE the gap
+    sits, not a significant effect. Nothing in it justifies a rule change, and I propose none.
+
+WHAT THIS DOES NOT SETTLE: whether the retrospective +0.1381 was itself real. Point 3 raises a
+specific way it might not have been - if the +3 s data-api timestamp offset systematically selected
+a LATER, higher-priced print on historical candles, the retrospective was measuring entries taken
+with 3 s more information than a live arm can have. That is testable on the 09-30..10-06 tape by
+re-running the selection on ws-equivalent timestamps, but I have no ws capture for those days, so it
+cannot be settled retrospectively on this box. It can only be settled forward, which M53 is doing.
