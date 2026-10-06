@@ -1,0 +1,48 @@
+M53 ON CALM vs NOT-CALM - owner request 10-06 13:4x, "test it on calm market". READ-ONLY.
+2026-10-06 13:49:21 UTC. M53 arm untouched and still running. $5 stake throughout.
+Both buckets are reported side by side everywhere; no bucket is presented alone.
+
+FROZEN CALM DEFINITION: calm == Binance 1 s log-return std over [open-300, open) x1e4 < 0.304 (ef3_shadow FAV_CUT_LOW), needing >=240 of 300 seconds; fewer => NO fire, never a fallback.
+
+(1) FORWARD M53, candles since 2026-10-06 03:30Z
+  PRIMARY uncapped: settled 104
+    CALM (vol<0.304)       n   63  37W-26L  $  -57.56  per $1 -0.1827  t -2.07  green 0/1
+    NOT-CALM               n   41  28W-13L  $   -7.10  per $1 -0.0346  t -0.32  green 0/1  INSUFFICIENT (n<60)
+  0.80-capped secondary: settled 82
+    CALM (vol<0.304)       n   50  31W-19L  $  -30.32  per $1 -0.1213  t -1.22  green 0/1  INSUFFICIENT (n<60)
+    NOT-CALM               n   32  21W-11L  $  -15.24  per $1 -0.0952  t -0.80  green 0/1  INSUFFICIENT (n<60)
+
+(2) RETROSPECTIVE 09-29..10-05, same rule - ** LOOK-AHEAD-BIASED data-api version **
+    (its prints are the data-api tape, whose timestamps run a median +3.0 s behind the ws
+     match time, so it may select a later, better-informed print than any live arm can see)
+  retrospective +3s: n 1008
+    CALM (vol<0.304)       n  580  485W-95L  $ +479.63  per $1 +0.1654  t +7.43  green 7/7
+    NOT-CALM               n  428  339W-89L  $ +216.56  per $1 +0.1012  t +3.60  green 6/7
+
+(3) RETROSPECTIVE-ON-FORWARD-CANDLES (the honest comparison from M53_DIAG_1006)
+  retro method on forward candles: n 92
+    CALM (vol<0.304)       n   55  40W-15L  $   +6.48  per $1 +0.0236  t +0.27  green 1/1  INSUFFICIENT (n<60)
+    NOT-CALM               n   37  29W-8L  $  +17.80  per $1 +0.0962  t +0.98  green 1/1  INSUFFICIENT (n<60)
+
+VERDICT: CALM DOES NOT HELP. Forward, it is the WORSE bucket, and the retrospective says the
+opposite - which is itself the most useful thing in this table.
+ 1. FORWARD, primary: calm -0.1827 per $1 (n 63, t -2.07) vs not-calm -0.0346 (n 41, t -0.32).
+    The 0.80-capped secondary agrees in sign on both sides (calm -0.1213, not-calm -0.0952).
+    Restricting follow-the-taker to calm candles makes the forward result worse, not better.
+ 2. THE RETROSPECTIVE RANKS CALM BEST, THE FORWARD RANKS IT WORST. Retrospective 09-29..10-05 has
+    calm +0.1654 (t +7.43) ABOVE not-calm +0.1012 (t +3.60); both forward measurements put calm
+    BELOW not-calm. A rank reversal between the look-ahead-biased history and the live arm is
+    exactly the signature expected if the bias is LARGER in calm markets - and mechanically it
+    should be: in a quiet book the ask moves less per second, so a print selected with ~3 s of
+    hindsight is relatively more informative about the eventual winner than the same print is in a
+    fast market. That makes the retrospective's calm advantage the least trustworthy cell in it.
+ 3. ON THE HONEST MIDDLE CASE (retro method, forward candles) calm is also the weaker half:
+    +0.0236 (n 55) vs +0.0962 (n 37). Same ordering as the live arm.
+ 4. WHAT I AM NOT CLAIMING. The t -2.07 on forward calm is the first |t|>=2 anywhere in the forward
+    data, and I am NOT treating it as a finding: it is one cell of six in this table, it sits on a
+    single UTC day (green days 0/1 is uninformative at one day), and n 63 only just clears the bar.
+    Four of the eight forward/honest cells are n<60 and flagged INSUFFICIENT above.
+ 5. NOTHING TUNED. The calm flag is ef3_shadow's OWN _vol_bn against its OWN FAV_CUT_LOW (0.304),
+    called rather than re-implemented; no threshold was searched and no cut was chosen by me. The
+    M53 rule, its primary, and its pass rule are unchanged, and I propose no change on the strength
+    of this. A calm filter would be a NEW parameter and would need its own prereg.
