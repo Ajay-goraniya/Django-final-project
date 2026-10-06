@@ -32,7 +32,20 @@ sys.path.insert(0, '/home/ubuntu/claude-work/repo/analysis/zurich')
 with contextlib.redirect_stdout(io.StringIO()):
     import ef3_shadow as S
     S.ALL52, S.STRICT = None, None
-    BN = S._bn_1s()
+
+# BUG FIX 16:2x: the 1 s series MUST be reloaded as the process runs. Loading it once at start meant
+# every candle after startup had no data for its own [open-300, open) window, so _vol_bn returned
+# None and the arm logged skipped-no-data - it lost the 16:15 and 16:20 candles (real vols 0.3516
+# and 0.5651, both NOT-CALM and both tradeable). A reload costs 2.5 s, which is nothing against the
+# 60 s of slack before the window opens. The frozen DEFINITION is untouched; it was being starved of
+# data, not redefined.
+_BN = {'t': 0.0, 'v': None}
+def bn():
+    if time.time() - _BN['t'] > 120:
+        with contextlib.redirect_stdout(io.StringIO()):
+            _BN['v'] = S._bn_1s()
+        _BN['t'] = time.time()
+    return _BN['v']
 
 DDL = """CREATE TABLE IF NOT EXISTS nc(
  epoch INT PRIMARY KEY, print_ts REAL, print_sec INT, print_px REAL, side TEXT,
@@ -105,8 +118,10 @@ def skip(d, ep, why, vol=None):
 
 async def main():
     d = db()
+    bn()
     print(f'{dt.datetime.now(dt.UTC):%F %T} M53-NC up - PAPER ONLY, places nothing. prereg 3224c11, '
-          f'counts from epoch {START}, bankroll ${cash_now(d):.2f}', flush=True)
+          f'counts from epoch {START}, bankroll ${cash_now(d):.2f}, vol series refreshed every 120 s',
+          flush=True)
     while True:
         try:
             ep = int(time.time() // 300 * 300); nxt = ep + 300
@@ -153,7 +168,7 @@ async def main():
                             px = float(ev['price']); s = pts - e
                             if not (SEC0 <= s <= SEC1) or not (LO <= px <= HI): continue
                             done.add(e)
-                            vol = S._vol_bn(BN, e)
+                            vol = S._vol_bn(bn(), e)
                             if vol is None: skip(d, e, 'skipped-no-data'); continue
                             if vol < S.FAV_CUT_LOW: skip(d, e, 'skipped-calm', vol); continue
                             tok = a
