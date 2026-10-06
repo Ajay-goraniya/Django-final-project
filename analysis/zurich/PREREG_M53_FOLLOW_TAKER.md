@@ -118,3 +118,32 @@ from this box by `rtds.py`, which had to force AF_INET because there is no IPv6 
 authenticated CLOB REST `/trades`. Swapping the detection path is not a change to the rule, but it
 changes what the arm can see, so I am not doing it on my own initiative - it needs sign-off, and
 until then M53 has no executable path and I am not reporting progress against its checkpoints.
+
+### MEASURED, 02:5x - the lag is 132-342 s, NOT the "1-3 min" I first estimated
+The estimate above came from one active candle. This is the controlled version, and it supersedes it.
+Method: prime the seen-set at sec 21 of a live candle, poll every second to sec 200, then re-snapshot
+the SAME candle twice after the fact. Candle 1791254700 (02:45 UTC):
+- the primed live probe polled every second from sec 21 to sec 200 and observed **0** new prints;
+- at sec 246 - 66 s AFTER the arm's window had closed - the feed showed **21** prints for that
+  candle and **0** inside sec 60-180; its newest print was at sec **-33**, i.e. before the candle;
+- at sec 396 the same query returned **500** prints (the limit cap), **327** of them inside
+  sec 60-180, newest at sec 265;
+- the 500 prints that appeared in those 150 s carried timestamps from sec 55 to 265 and so were
+  visible only **132-342 s after their own timestamps**.
+So 327 qualifying-window prints existed on that candle and the live arm could see none of them.
+This is the clean proof; the arm's three "no qualifying print" lines (candles 02:35, 02:40, 02:45)
+are all explained by it.
+
+**Also correcting an intermediate mistake of mine rather than burying it:** mid-diagnosis I briefly
+read candles 02:40 and 02:45 as "genuinely quiet, so the arm was right to pass". That was wrong and
+was my own timing error - I queried the 02:45 candle at 02:43, before it had even started, and the
+02:40 candle while it was still live at sec 210. Both looked empty because of WHEN I sampled them,
+not because they were quiet: 02:45 in fact carried 327 in-window prints. The lesson is the same one
+that invalidated my first probe - with a lagged feed, any pull taken before the lag has elapsed
+measures the sampling time, not the market.
+
+**Status: M53 has no executable detection path and will record n = 0 on this feed.** The arm is left
+running exactly as specified (unmodified, paper, ~122 polls per candle) so the blocker keeps being
+documented, but it provably cannot fire, so I recommend pausing it pending the detection-source
+decision rather than spending ~35k requests a day on a guaranteed-empty result. That is V's and the
+owner's call, not mine, and I have changed nothing about the frozen rule or the pass rule.
