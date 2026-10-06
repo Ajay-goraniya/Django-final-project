@@ -77,3 +77,44 @@ Green day = positive total for that UTC day. Halves by candle epoch.
 No stake, no arming, no live order, no change to any running arm, no London contact. A PASS is
 evidence to put to the owner and V, nothing more. Kelly/dynamic staking is out of scope and
 remains behind two separate owner confirmations.
+
+---
+## EXECUTION NOTE 2026-10-06 02:4x - MEASURED BLOCKER. The frozen rule above is UNCHANGED.
+The arm was built, started (cron + `flock`, pid 946788, paper only, places nothing) and immediately
+measured the one thing this prereg existed to measure. Result:
+
+**The `data-api.polymarket.com/trades?takerOnly=true` feed is lagged by roughly 1-3 minutes, so a
+print that happens in sec 60-180 cannot be SEEN inside sec 60-180.**
+Evidence, candle 1791254100 (02:35 UTC):
+- pulled after the fact, that candle contained **101** qualifying prints (BUY, sec 60-180,
+  price 0.60-0.80);
+- the live arm polled it **60 times** during the window and saw **none** of them;
+- at 02:40:52 the newest print visible anywhere in that feed was **145 s old** (sec 207 of a candle
+  that had already ended); the same measurement on two earlier candles gave 58 s and ~200 s.
+
+### What this does and does not mean
+- It does NOT falsify the retrospective +0.1376 per $1. That number stands as a measurement of
+  *what informed takers achieved*.
+- It DOES mean the rule is **not executable on this detection path**: entry at print_ts+3 s requires
+  knowing about the print within 3 s, and this feed delivers it in 60-200 s. Acting on what we can
+  actually see would mean buying 1-3 minutes after the print, which is not the rule and is not
+  covered by the +0/+2/+10 s secondary rows either.
+- My first latency probe was INVALID and I am recording that rather than quietly replacing it: I
+  started polling at sec 211 with an empty seen-set, so every print already in the feed counted as
+  "newly observed" and I measured my own start time (205-210 s), not the feed. The numbers above come
+  from the corrected method - compare what a completed candle actually contained against what the
+  live arm saw during the window.
+
+### Consequence for the test
+The arm stays up and keeps logging, but it will produce **n ~ 0** on this path: it records
+"no qualifying print" for candles that in fact had 101. A verdict on 10-13 would therefore be a
+verdict on nothing. The pass rule is untouched and no parameter has been changed.
+
+### The one thing that would unblock it, for V and the owner to decide
+Find a taker-print source with sub-second delivery and re-point the arm's DETECTION at it, leaving
+the frozen rule identical. Candidates, in order of likelihood: the CLOB websocket market/trade
+channel; the `ws-live-data.polymarket.com` activity topic (that host is already proven reachable
+from this box by `rtds.py`, which had to force AF_INET because there is no IPv6 route); the
+authenticated CLOB REST `/trades`. Swapping the detection path is not a change to the rule, but it
+changes what the arm can see, so I am not doing it on my own initiative - it needs sign-off, and
+until then M53 has no executable path and I am not reporting progress against its checkpoints.
