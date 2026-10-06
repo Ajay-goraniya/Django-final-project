@@ -245,3 +245,57 @@ forward P&L to select on, and none was used. The retrospective split (>0.80 bein
 at +0.1117 per $1) is evidence about which rule the retrospective WAS, not evidence that the uncapped
 rule earns more going forward. Nothing here has been tuned to a result, and the pass rule has not
 been loosened: it is the same five bars, read off the matching rule.
+
+---
+## AMENDMENT 2026-10-06 16:0xZ - NEW ARM **M53-NC**, NOT-CALM ONLY, LIVE-FILL REALISM
+Owner instruction via V: "Keep running not calm side and make sure it's tested as per live fills and
+consideration." **PAPER ONLY - no live orders, no deploy, nothing on London or Tokyo, no key.**
+This is a NEW arm with its own counter. The existing M53 (+3 s, uncapped, all candles) keeps running
+unchanged as the legacy reference and is NOT replaced.
+
+**COUNT FROM: the first candle that OPENS AFTER this commit.** The exact epoch is written to
+`/home/ubuntu/m53/nc_start_epoch` at start and printed in the hourly line.
+**The not-calm result that prompted this (n 64, +0.0149) is the ORIGIN of the idea and is explicitly
+NOT COUNTED.** Selecting a bucket on its own forward result and then continuing to count it would be
+the same error as picking a best cell; the counter restarts from zero.
+
+### Filter (frozen)
+NOT-CALM ONLY, by the frozen FAV definition called from `ef3_shadow`: Binance 1 s log-return std over
+`[open-300, open)` x1e4 **>= 0.304** (`FAV_CUT_LOW`), requiring **>= 240** of those 300 seconds.
+Insufficient data => **SKIP, and log it** as `skipped-no-data`; never a fallback to another series.
+
+### Signal (unchanged from the M53 primary)
+First taker BUY print on the CLOB ws `last_trade_price` channel with candle second **60..180** and
+print price **0.60..0.80**; follow THAT SAME side. One decision per candle, no re-entry, no exit,
+hold to settlement.
+
+### Live-fill realism (this is what is new)
+- **Fire at websocket receipt + an order round-trip**, and take the book snapshot AT THAT MOMENT -
+  explicitly NOT at print+3 s.
+- **Round-trip = 250 ms, conservative, and here is why it is not a measured London number:** I do not
+  have a measured London ORDER-PLACEMENT latency. What this box has measured is M19's REST round trip
+  to the CLOB *read* endpoint (p50 44 ms, p90 79 ms, max 228 ms) and the maker probe's reject-path
+  bound, which could only establish "under ~1 s" because its stamps are truncated whole seconds. A
+  read round trip is not a write round trip, so I am using the owner's conservative 250 ms rather
+  than dressing up a read number as an order number.
+- **Order: $5 FAK buy, limit = seen ask + 0.01, capped at 0.99.** Walk the live book's ask levels at
+  or below the limit, cheapest first, until the $5 budget (fees included) is exhausted.
+- **Partial fills count at the dollars actually spent.** If the walk yields **< 5 shares**, it is
+  **no trade** (`missed`).
+- **Fee 0.07*p*(1-p) per share at each level's own price**, not at a blended price.
+- Settlement unchanged: the venue's own resolution (Chainlink-settled `venues.outcome`, else gamma).
+- **Bankroll path: start $50, stake $5, SKIP the candle if cash < $5** (logged as `skipped-cash`).
+- Logged per decision: slippage vs the seen ask, levels walked, shares, dollars spent, and the
+  partial / missed / skipped counts.
+
+### Decision rule (fixed now, before any data)
+- **Evaluate at n = 200 settled. PASS if per $1 > 0 AND t >= 2.0.**
+- **Early stop if per $1 <= -0.05 at n >= 100.**
+- A PASS is a PAPER result only. Anything live still requires the owner's explicit confirmation, and
+  this prereg confers none.
+
+### Book reconstruction
+Level-1 from the 1 Hz `books` table is not enough to walk a book, so M53-NC maintains its own live
+depth per token from the CLOB ws `book` snapshots plus `price_change` deltas on the same socket that
+carries the trade prints. If the maintained book is stale or empty at the fire moment the decision is
+logged as `missed` with that reason rather than being filled off level-1.
