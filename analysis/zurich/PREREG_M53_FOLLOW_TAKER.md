@@ -147,3 +147,46 @@ running exactly as specified (unmodified, paper, ~122 polls per candle) so the b
 documented, but it provably cannot fire, so I recommend pausing it pending the detection-source
 decision rather than spending ~35k requests a day on a guaranteed-empty result. That is V's and the
 owner's call, not mine, and I have changed nothing about the frozen rule or the pass rule.
+
+---
+## AMENDMENT 2026-10-06 03:2x - DETECTION RE-POINTED (V sign-off). RULE UNCHANGED.
+**New detection source: the Polymarket CLOB websocket market channel,
+`wss://ws-subscriptions-clob.polymarket.com/ws/market`, `last_trade_price` events.**
+Only DETECTION changed. The frozen rule, the +3 s primary, the +0/+2/+10 s secondaries, the fill
+model, the control and the five-part pass rule are all exactly as committed in 0c859d8.
+
+**SWITCH EPOCH = 1791257400 (2026-10-06 03:30:00Z). Forward n counts only from that candle on.**
+Everything the data-api path produced before it (3 candles, n = 0) is void and counts for nothing.
+
+### Confirmation required by V, run BEFORE counting anything - both gates PASS
+Captured 2 full candles live (1791255900 and 1791256200) and cross-checked each after the data-api
+lag had elapsed:
+1. **Sub-second delivery: PASS.** n 2,508 events, latency (our receive time minus the event's own
+   timestamp) **p50 0.013 s, p90 0.061 s, max 1.046 s**. The first qualifying in-band BUY was seen at
+   lag 0.01 s on both candles (sec 60 and sec 86). Against the old path's 132-342 s, this is the
+   difference between a rule that can run and one that cannot.
+2. **Same taker-side convention: PASS, and proved two ways.**
+   - On every event whose `transaction_hash` also appears in the data-api `takerOnly=true` set, the
+     `side` string agrees: **499/499** on each candle.
+   - The count ratio settles what the feed actually emits. Paging data-api past its 500-row cap gives
+     **1281** taker trades inside candle 1791255900; the websocket captured **1282** events on the
+     same candle - **ratio 1.00**. So the channel emits ONE event per taker trade and its `side` is
+     the TAKER's side. It is not emitting both sides of each fill, which was the risk worth ruling
+     out: had it done so we would have followed the maker half and inverted the signal.
+   - Qualifying in-band BUY counts: ws 147 vs data-api 142 on that candle. I am stating the 5-event
+     gap rather than rounding it away - it comes from the boundary, ws timestamps being milliseconds
+     (so a trade at sec 59.8 or 180.3 can fall either side) while data-api reports whole seconds.
+     It cannot affect which side we follow, only occasionally which print is "first".
+
+### Operational facts found during confirmation, recorded so they are not rediscovered
+- The server CLOSES the socket with `1000 (OK) all subscribed assets resolved` as soon as the
+  subscribed market settles. A long-lived single connection is therefore impossible; the arm
+  reconnects and re-subscribes per candle. My first confirmation pass died on exactly this.
+- `AF_INET` must be forced: this host has no IPv6 route and Polymarket resolves v6-first. Same
+  lesson already recorded in `rtds.py`.
+- Token ids come from `pm_multi.markets`, written by the recorder ~5 min AHEAD of each candle, so the
+  arm can subscribe before the candle opens (it subscribed at sec -1 in confirmation). Gamma's `mkt`
+  table must NOT be used - it is a settlement mirror and only ever holds closed candles.
+- A quiet or already-resolved market emits very few `last_trade_price` events (7 in 75 s on one
+  settled candle) while an active one emits ~1,250 per candle. Low event counts are not evidence of
+  a throttled feed.
