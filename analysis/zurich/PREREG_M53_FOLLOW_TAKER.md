@@ -190,3 +190,25 @@ lag had elapsed:
 - A quiet or already-resolved market emits very few `last_trade_price` events (7 in 75 s on one
   settled candle) while an active one emits ~1,250 per candle. Low event counts are not evidence of
   a throttled feed.
+
+---
+## NOTE 2026-10-06 03:4x - V CAUGHT A MISMATCH BETWEEN MY FROZEN FILL MODEL AND THE RETROSPECTIVE
+V asked whether the retrospective +3 s row capped the ENTRY ask at 0.80. It did not, and that makes
+the forward primary a different (stricter) rule than the number that motivated this test. My error,
+introduced in section 2's fill model, not V's and not the owner's.
+- The retrospective `build(delay)` excluded only `ask >= 0.99`. The 0.60-0.80 band was applied to the
+  **PRINT price** alone. Re-run to confirm: n 1,009, per $1 **+0.1381**.
+- Split by the forward arm's cap:
+  - +3 s ask inside 0.60-0.80: n 814, **80.7%** of decisions, per $1 **+0.1587**, t +8.43, win 82.9%
+  - +3 s ask **>0.80**: n 107, **10.6%**, per $1 **+0.1117**, t +3.89, win 93.5%  <- the cap discards
+    a slice that was clearly PROFITABLE, and it is profitable for the obvious reason: the price gapped
+    up because the taker was right.
+  - +3 s ask <0.60: n 88, 8.7%, per $1 -0.0204, t -0.22 - discarding this one costs nothing.
+- Forward evidence after 3 decisions: capped NO-FILL 3 of 3, uncapped FILL 3 of 3 (prints 0.790 /
+  0.780 / 0.600 against +3 s asks of 0.87 / 0.85 / 0.57). The frozen primary is currently measuring
+  almost nothing, which is exactly the failure mode V's question was aimed at.
+
+**No rule change made** - V said not yet, and the primary stays as frozen. Per V's instruction the
+arm now writes the UNCAPPED +3 s outcome as secondary columns (`fill3_unc`, `miss3_unc`, `pnl3_unc`:
+fill unless ask >= 0.99 or level-1 size short of the $5 need), backfilled for the decisions already
+taken, so BOTH readings can be graded from the same rows whichever V and the owner choose.
