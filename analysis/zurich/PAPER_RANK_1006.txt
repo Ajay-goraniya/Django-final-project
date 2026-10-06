@@ -1,0 +1,138 @@
+EVERY PAPER / SHADOW ARM RUNNING ON ZURICH, RANKED - owner's question 10-06 02:06 via V:
+"Which model did better so far in all running models we have on paper?"
+READ-ONLY. Nothing live, nothing restarted, no config touched. 2026-10-06.
+
+HOW TO READ THIS: ranked by per $1 inside each group, because the groups do not share a fill model
+or a stake. NOT PROVEN is flagged on n<60 or |t|<2 as V asked. I am NOT crowning a best arm, and
+the reason is in section 2 - the single arm that clears both bars is not a strategy we designed.
+
+EVERY PAPER / SHADOW ARM ON ZURICH, ranked by per $1 inside each group
+group             arm                    start      n         $   per $1      t  green flag                         fill model
+
+ef3 shadow        PFAV_taker             09-30    994  +1591.88  +0.1601  +8.95    7/7                              AON $10/fill
+ef3 shadow        S_fixed_top20          09-24     54    +45.93  +0.0851  +0.48   7/12 n<60 NOT PROVEN,|t|<2 NOT PROVEN AON $10/fill
+ef3 shadow        B_raw25_S60            09-24    516   +289.29  +0.0561  +1.08   8/13 |t|<2 NOT PROVEN             AON $10/fill
+ef3 shadow        C_fixed15              09-24    351    +96.20  +0.0274  +0.45   7/12 |t|<2 NOT PROVEN             AON $10/fill
+ef3 shadow        S_raw_top20            09-24    101    +19.88  +0.0197  +0.15   6/12 |t|<2 NOT PROVEN             AON $10/fill
+ef3 shadow        A_v0_m02_S150          09-24   2009   +249.93  +0.0124  +0.93  10/13 |t|<2 NOT PROVEN             AON $10/fill
+ef3 shadow        FAV_ref                09-29    813    +74.21  +0.0096  +0.44    5/8 |t|<2 NOT PROVEN             partial arrival fill
+ef3 shadow        E2_nightly_q95         09-25    698    +62.90  +0.0090  +0.35   7/12 |t|<2 NOT PROVEN             AON $10/fill
+ef3 shadow        E3_trail_1h_q90        09-25   1285    +67.26  +0.0052  +0.27   7/12 |t|<2 NOT PROVEN             AON $10/fill
+ef3 shadow        FAV                    09-29    836     +7.92  +0.0010  +0.05    5/8 |t|<2 NOT PROVEN             partial arrival fill
+ef3 shadow        E4_trail_1h_q90_strict 09-25    961     +4.42  +0.0005  +0.02   8/12 |t|<2 NOT PROVEN             AON $10/fill
+ef3 shadow        FAV_mid                09-29    379     -1.22  -0.0003  -0.01    4/8 |t|<2 NOT PROVEN             partial arrival fill
+ef3 shadow        D2_ef4gb_q95           09-25    633     -4.70  -0.0007  -0.03   6/12 |t|<2 NOT PROVEN             AON $10/fill
+ef3 shadow        F_z50                  09-24    208     -7.56  -0.0036  -0.04   5/12 |t|<2 NOT PROVEN             AON $10/fill
+ef3 shadow        FAV_all                09-29   1547    -80.37  -0.0055  -0.34    4/8 |t|<2 NOT PROVEN             partial arrival fill
+ef3 shadow        F25_z25                09-24    283    -16.79  -0.0059  -0.08   7/12 |t|<2 NOT PROVEN             AON $10/fill
+ef3 shadow        E1_nightly_q90         09-25    972    -81.76  -0.0084  -0.37   5/12 |t|<2 NOT PROVEN             AON $10/fill
+ef3 shadow        E5_causal_q90_strict   09-25    965    -93.50  -0.0097  -0.43   5/12 |t|<2 NOT PROVEN             AON $10/fill
+ef3 shadow        D_ef4gb_t000           09-24   1343   -161.20  -0.0120  -0.63   3/13 |t|<2 NOT PROVEN             AON $10/fill
+ef3 shadow        F75_z75                09-24    137    -64.74  -0.0473  -0.44   6/12 |t|<2 NOT PROVEN             AON $10/fill
+ef3 shadow        PFAV                   09-30   1094   -582.70  -0.0533  -3.14    1/7                              AON $10/fill
+ef3 shadow        PFAV50                 09-30   1080   -594.69  -0.0551  -3.22    1/7                              AON $10/fill
+ef3 shadow        PFAV_THRU              09-30   1079   -610.66  -0.0566  -3.31    1/7                              AON $10/fill
+
+M19 paper maker   m0.20 D300             10-02   1016   -146.00  -0.0951  -2.18    1/5                              post-only, own bid
+M19 paper maker   m0.15 D300             10-02   1226   -248.30  -0.1189  -3.28    1/5                              post-only, own bid
+M19 paper maker   m0.20 D1500            10-02   1217   -310.55  -0.1596  -4.19    1/5                              post-only, own bid
+M19 paper maker   m0.15 D700             10-02   1326   -381.35  -0.1612  -4.84    1/5                              post-only, own bid
+M19 paper maker   m0.20 D700             10-02   1134   -292.60  -0.1637  -4.11    1/5                              post-only, own bid
+M19 paper maker   m0.20 D1000            10-02   1182   -313.15  -0.1659  -4.30    1/5                              post-only, own bid
+M19 paper maker   m0.15 D1000            10-02   1372   -421.30  -0.1698  -5.26    1/5                              post-only, own bid
+M19 paper maker   m0.15 D1500            10-02   1393   -449.55  -0.1774  -5.56    0/5                              post-only, own bid
+
+ETH/SOL shadow    sol_platt              09-27   1304   -347.97  -0.0579  -1.45   3/10 |t|<2 NOT PROVEN             engine taker
+ETH/SOL shadow    sol                    09-27   1606   -478.42  -0.0646  -1.59   4/10 |t|<2 NOT PROVEN             engine taker
+ETH/SOL shadow    eth                    09-27   1573   -774.38  -0.1044  -2.62   3/10                              engine taker
+ETH/SOL shadow    eth_platt              09-27   1032   -682.37  -0.1408  -3.00   1/10                              engine taker
+
+pair bot          v12_2 pair 15m/5m      09-28     40    +64.16  +0.0922  +2.16    8/8 n<60 NOT PROVEN              paper, stake 20
+
+ef2 shadow        margin arms (DEAD)     09-28     16     +0.00  +0.0000  +0.00    0/1 STOPPED,n<60 NOT PROVEN,|t|<2 NOT PROVEN no pnl column
+
+NOTES ON THE TABLE
+  - ef3 FAV* arms are on the registered PARTIAL arrival fill (the convention in all seven FAV_DAILY
+    files); every other ef3 arm is its AON $10-a-fill column. Per $1 = $ / deployed.
+  - M19's eight arms quote the SAME candles, so they are one sample seen eight ways: the honest n is
+    1,391 unique candle-sides, not the per-arm 1,000-1,400.
+  - ef2_shadow is listed because it is still on disk and would otherwise look alive: it has 16 fires,
+    all on 09-28, and has written nothing in 8 days. It is STOPPED. The maker probe is also stopped
+    (10-02 15:01, owner's order, final +26.3185).
+  - pm_pair (v12_2 15m/5m legging, stake 20) is live, pid 218870, 40 pairs, 8/8 green - but n 40.
+
+1. THE HONEST ANSWER TO THE OWNER'S QUESTION
+   Of 36 running arms, exactly ONE clears both of V's bars (n>=60 and |t|>=2) on the positive side:
+   PFAV_taker, +0.1601 per $1 on n 994, t +8.95, 7/7 green days. Everything else positive is
+   |t|<2 - i.e. not distinguishable from zero - and that includes every FAV arm (best FAV_ref
+   +0.0096 at t +0.44) and the engine arms (best B_raw25_S60 +0.0561 at t +1.08 on 516 fills).
+   Everything that clears the bars on the NEGATIVE side is real: all 8 M19 maker arms (-0.095 to
+   -0.177), the three PFAV resting arms (-0.053 to -0.057, t -3.1 to -3.3), eth (-0.1044) and
+   eth_platt (-0.1408).
+   So: nothing we built as a trading rule has shown an edge. The one arm that has is not one.
+
+2. WHY I AM NOT CROWNING PFAV_taker, AND WHAT IT ACTUALLY IS
+   PFAV_taker was never a strategy. pfav.py:129-139 built it as a PAIRING REFERENCE: it takes the
+   FIRST taker BUY print on the tape inside sec 60-180 whose price is in 0.60-0.80, on whichever
+   token that print happened to be on, and grades it against the winner. Its "entry price" is the
+   price somebody else got. Three sibling arms on the same candles with the same window and band
+   (PFAV, PFAV50, PFAV_THRU) are all at -0.053 to -0.057. An arm that is the mirror image of its
+   own family with t +8.95 is the shape this project has repeatedly found to be an artefact, so I
+   checked it before reporting it rather than after.
+
+3. WHAT THE CHECKS FOUND - IT DID NOT DISSOLVE, AND HERE IS THE DECOMPOSITION
+   a) PRICE IS REACHABLE. The arm books 0.6898; the own-side ASK at that same second is 0.6897,
+      at +1s 0.6959, +2s 0.7013, +10s 0.7085. The price is not a phantom.
+   b) TIMING IS NOT THE EXPLANATION. PFAV_taker and PFAV share the window (60-180) and band
+      (0.60-0.80) and their median entry seconds are 84.5 and 83.0. The 14-point spread between
+      them is price and selection, not information arriving later. (PFAV's own price is the path
+      MAXIMUM bid in the band, pfav.py:100 - which makes PFAV look worse than a real resting
+      strategy would be. Worth knowing separately.)
+   c) MY FIRST CONTROL WAS CONTAMINATED AND I AM REPORTING THAT. Restricting "buy the favourite at
+      the first in-band ask" to the candles PFAV_taker fired on gave +5.38pp, which contradicted
+      M44/M52. It contradicted them because the subset itself was selected on the print existing.
+   d) THE CLEAN CONTROL REPRODUCES M44/M52 EXACTLY. Same rule on the FULL universe since PFAV_taker
+      started - 1,454 candles with a book and a label, no print condition anywhere:
+        gap -0.42pp, per $1 -0.0061, t -0.35.  Fairly priced, as six prior studies found.
+      And the print condition SPLITS that fairly-priced universe almost symmetrically:
+        candles WITH an in-band taker print (n 992):  +5.38pp   per $1 +0.0770  t +3.89
+        candles WITHOUT one          (n 462):        -12.90pp   per $1 -0.1845  t -5.48
+      A fairly-priced whole that splits +5.4 / -12.9 on an observable condition is information, not
+      noise. The favourite nobody lifts is badly overpriced; the favourite somebody lifts is cheap.
+   e) THE EXECUTABLE FORM SURVIVES REALISTIC LATENCY. Act ON the print, pay the ask d seconds later,
+      taker fee included:
+        +0s +11.22pp per $1 +0.1751 t +9.14 | +1s +10.62 +0.1558 | +2s +10.10 +0.1412
+        +3s  +9.99pp per $1 +0.1376 t +7.79 | +5s  +9.68 +0.1297 | +10s +9.39 +0.1191
+      The documented data-api trade lag is 2.2 s, so +3s is the realistic row: +0.1376 per $1,
+      t +7.79, halves +0.1070/+0.1681, 7/7 green days, every single day positive INCLUDING 10-04,
+      the day FAV lost 149.69.
+   f) THE FLAG IS THE VENUE'S OWN. is_taker comes from Polymarket's takerOnly=true subset and side
+      comes straight from the API (tape_rec.py:41-49, 75), so the signal does not rest on any
+      classification of mine. Maker is the derived side, and this finding does not use it.
+
+4. WHY THIS IS COHERENT RATHER THAN SUSPICIOUS
+   It is the mirror image of the one result that has run through this entire project. Every passive
+   test here has lost to adverse selection - our resting bid fills precisely when the side is going
+   wrong (PFAV -2.86pp; ask-touch fill rates 41-46%; M43; the London maker). If the taker who lifts
+   the favourite is the informed one, then FOLLOWING that taker must win by the same amount that
+   RESTING against it loses. PFAV at -2.86pp and PFAV_taker at +11.22pp are one fact seen from both
+   sides, measured on identical candles. That is why I am reporting it instead of discarding it.
+
+5. WHAT WOULD HAVE TO BE TRUE BEFORE ANYONE TRADES THIS - NOT YET ESTABLISHED
+   i.   It has NEVER been run forward. Everything above is a reconstruction from the recorded tape.
+   ii.  DEPTH IS UNTESTED. I assumed we can buy at the recorded ask. On FAV, 16% of decisions miss on
+        price and 5-6% on size, and depth truncation is why the partial model exists. This is the
+        single most likely way the +9.99pp shrinks, and it is exactly where every previous
+        promising number on this box has died.
+   iii. DETECTION LATENCY IS UNMEASURED. I show the gap survives to +10s, but nobody has measured
+        how fast this box can see a data-api print and act on it. The 2.2 s figure is the feed's
+        documented lag, not a measured round trip for this path.
+   iv.  n 994 over SEVEN days, one market, one venue, no out-of-sample split. 7/7 green is 7 days.
+   My recommendation is a prereg and a paper arm, not a stake: register the rule (first in-band
+   taker BUY print, sec 60-180, band 0.60-0.80, buy that side at the then-ask, $10, taker fee),
+   run it forward with the real feed and a real depth check, and let it earn its own n. I am not
+   proposing any change to anything live, and I have not touched a single running process.
+
+DATA: ef3_shadow.sqlite3 (fires), m19_paper.sqlite3 (fills), shadow_{eth,sol}{,_platt}.sqlite3
+(orders+results), pair_paper.sqlite3 (pairs), ef2_shadow.sqlite3 (fires), pm_multi multi_market
+(1 Hz btc5 book), venues.outcome + gamma mkt for labels. Polymarket, not Predict.fun. All read-only.
