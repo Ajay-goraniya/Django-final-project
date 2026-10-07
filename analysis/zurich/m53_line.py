@@ -24,11 +24,17 @@ if len(s) > 1:
 _sp, _cr = d.execute("select coalesce(sum(spent),0), coalesce(sum(case when win=1 then shares else 0 end),0) "
                      "from nc where status in ('full','partial')").fetchone()
 cash = START_CASH - (_sp or 0) + (_cr or 0)      # DERIVED, never chained - see m53nc_paper.cash_now
+# V 10-07: the bankroll is CASH, not mark-to-market equity, so during active hours it sits ~$5 x open
+# positions below (start + PnL). That is correct, not a double-count: bankroll == 50 + PnL - open
+# stakes, exactly. Annotating the open stake here so the number no longer needs explaining.
+_op, _os = d.execute("select count(*), coalesce(sum(spent),0) from nc where status in ('full','partial') "
+                     "and win is null").fetchone()
 sl = [x[4] for x in r if x[4] is not None]; la = [x[5] for x in r if x[5] is not None]
 print(f"M53-NC (prereg 3224c11) since epoch {NC}: signals {len(r)}, full {full} / partial {part} / "
       f"missed {missed} / skipped-no-data {nodata} (also skipped-calm {calmskip}, skipped-cash {cashskip}); "
       f"settled {len(s)}, {w}W-{len(s)-w}L, ${pnl:+.2f}, per $1 {(pnl/dep if dep else 0):+.4f}, "
-      f"t {t:+.2f}, bankroll ${cash:.2f} (from ${START_CASH:.0f}); median slip "
+      f"t {t:+.2f}, bankroll ${cash:.2f} (from ${START_CASH:.0f}; = 50 + PnL - ${_os or 0:.2f} "
+      f"stake tied up in {_op or 0} open), median slip "
       f"{(st.median(sl) if sl else 0):+.4f}, median latency {int(st.median(la)) if la else 0}ms")
 
 # ---------------- legacy reference ----------------
