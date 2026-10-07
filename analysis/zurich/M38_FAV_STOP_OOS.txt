@@ -114,3 +114,4 @@ bid + fee. No new arm and no new parameter: this is M38 repeated as the sample g
   2026-10-04 00:20 UTC  n   325  HOLD +0.0339  cell +0.0153  t +0.61  t_paired -0.93  halves +66.16/-16.49  green 2/2  FAIL
   2026-10-05 00:20 UTC  n   543  HOLD -0.0049  cell -0.0039  t -0.20  t_paired +0.06  halves +78.84/-100.09  green 2/3  FAIL
   2026-10-06 00:20 UTC  n   664  HOLD +0.0004  cell -0.0021  t -0.12  t_paired -0.17  halves +44.91/-58.68  green 3/4  FAIL
+  2026-10-07 00:20 UTC  n   826  HOLD -0.0084  cell +0.0006  t +0.04  t_paired +0.64  halves -2.37/+7.33  green 4/5  FAIL
