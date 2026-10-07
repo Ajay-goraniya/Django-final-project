@@ -1,0 +1,95 @@
+M53-NC ON HISTORICAL DATA - owner request 10-07 "test not calm test on historical data". READ-ONLY.
+The M53-NC prereg, its filter, its forward arm and its frozen decision rule are untouched by this
+file. Paper only. Exploratory: nothing here is a verdict on the forward test.
+
+HISTORY COVERED: 09-30 09:25 .. 10-07 00:45 UTC
+  NOTE: the data-api tape starts 09-30 09:25, so 09-29 and most of 09-30 have NO print data and cannot be tested. V asked for 09-29 onward; this is what exists.
+  websocket prints available from epoch 1791257400 (10-06 03:30), 233 candles - version B uses those in place of the tape.
+
+A) ORIGINAL RETROSPECTIVE (data-api ts, entry at print+3 s, no size test, no slippage)
+    NOT-CALM  n  519  420W-99L  $  +312.56  per $1 +0.1204  t +4.81
+    CALM      n  724  600W-124L  $  +508.10  per $1 +0.1404  t +6.99
+    bankroll path on the NOT-CALM trades only, $50 start / $5 stake: END $362.56
+
+B) BIAS-CORRECTED (ts -3 s to match time, entry at +250 ms, +0.016 slippage, $5 must fit L1)
+    NOT-CALM  n  522  410W-112L  $  +270.14  per $1 +0.1035  t +3.89
+    CALM      n  720  574W-146L  $  +415.54  per $1 +0.1154  t +5.20
+    bankroll path on the NOT-CALM trades only, $50 start / $5 stake: END $320.14
+
+PER-DAY, NOT-CALM ONLY, version A
+  09-30: n  71  58W-13L  $  +46.20  per $1 +0.1301
+  10-01: n 114  82W-32L  $   +0.42  per $1 +0.0007
+  10-02: n 120  94W-26L  $  +53.73  per $1 +0.0896
+  10-03: n   9  9W-0L  $  +19.60  per $1 +0.4356
+  10-04: n  30  26W-4L  $  +38.41  per $1 +0.2561
+  10-05: n  92  80W-12L  $  +81.00  per $1 +0.1761
+  10-06: n  82  70W-12L  $  +70.21  per $1 +0.1712
+  10-07: n   1  1W-0L  $   +2.98  per $1 +0.5958
+
+PER-DAY, NOT-CALM ONLY, version B
+  09-30: n  69  56W-13L  $  +45.49  per $1 +0.1319
+  10-01: n 110  80W-30L  $  +17.65  per $1 +0.0321
+  10-02: n 114  88W-26L  $  +49.32  per $1 +0.0865
+  10-03: n   9  9W-0L  $  +17.23  per $1 +0.3828
+  10-04: n  30  26W-4L  $  +37.79  per $1 +0.2519
+  10-05: n  92  80W-12L  $  +84.79  per $1 +0.1843
+  10-06: n  97  70W-27L  $  +14.14  per $1 +0.0292
+  10-07: n   1  1W-0L  $   +3.72  per $1 +0.7443
+
+OVERLAP WITH THE FORWARD ARM: 16 of 522 version-B not-calm trades sit at epoch >= 1791303000, i.e. in the window the live arm is already counting.
+  Those are NOT independent of the forward arm and must not be added to its n.
+  hour-of-day of version-B not-calm trades (UTC): 00:18 01:10 02:14 03:18 04:18 05:19 06:18 07:19 08:29 09:22 10:26 11:21 12:29 13:29 14:43 15:38 16:38 17:20 18:21 19:22 20:14 21:2 22:13 23:21
+
+=====================================================================================
+THE CHECK THAT DECIDES IT - AND IT SAYS VERSION B IS STILL BIASED
+Version B looks like a strong edge (+0.1035 per $1 on 522 not-calm trades, t +3.89). It contradicts
+the live legacy arm, which ran the SAME signal rule over the recent part of this window and returned
+-0.0833 per $1 on n 217. Both cannot be right, so I isolated the one window where the INPUT matches
+what a live listener can actually see: the candles with websocket prints (epoch >= 1791257400).
+    entry +250 ms (B / live NC arm)  NOT-CALM  n   91  $   +9.77  per $1 +0.0215  t +0.30
+    entry +250 ms (B / live NC arm)  CALM      n  140  $ -106.17  per $1 -0.1517  t -2.52
+    entry +3 s   (legacy arm)        NOT-CALM  n   91  $   -3.56  per $1 -0.0078  t -0.12
+    entry +3 s   (legacy arm)        CALM      n  140  $ -107.05  per $1 -0.1529  t -2.44
+
+READ THAT TABLE AND VERSION B's +0.1035 DISSOLVES:
+ * On WEBSOCKET prints - the only live-equivalent input - NOT-CALM is +0.0215 per $1 at t +0.30,
+   i.e. indistinguishable from zero, and CALM is -0.1517 at t -2.52. Weighted together those give
+   about -0.08, which is the live legacy arm's -0.0833. The live arm and the ws-print backtest agree.
+ * So version B's +0.1035 comes almost entirely from the DATA-API-ONLY days (09-30..10-06 03:30).
+   Shifting the data-api timestamps by -3 s corrects WHEN the print is stamped; it does NOT correct
+   WHICH prints the feed contains or how informative the set is. The bias survives the shift.
+ * That is also why B's own per-day rows break where the input changes: B is +0.1843 on 10-05
+   (data-api only) and +0.0292 on 10-06 (the day ws prints take over). The discontinuity is in the
+   DATA SOURCE, not in the market.
+ * Residual pricing optimism measured directly, on the 15 forward fills where both exist: the 1 Hz
+   level-1 ask that backtest B reads is 0.0237 cheaper than the vwap the live arm actually paid after
+   walking the book. B's flat +0.016 slippage covers two thirds of that, leaving ~+0.0077 per share
+   (~0.011 per $1) still optimistic. Small next to the source effect, but it points the same way.
+
+VERDICT: NO - version B does NOT show a surviving not-calm edge. Once the input is restricted to
+prints a live listener could actually have seen, not-calm is +0.0215 per $1 at t +0.30 (n 91) -
+zero - and calm is clearly NEGATIVE at -0.1517 (t -2.52). The historical +0.10 to +0.14 in both
+versions is a property of the data-api print set, not of the strategy, and the -3 s correction does
+not remove it.
+
+WHAT IS GENUINELY SUPPORTED, AND IT IS SMALL
+ 1. NOT-CALM BEATS CALM on live-equivalent data: +0.0215 vs -0.1517, a gap of ~0.17 per $1. That is
+    the one thing the historical work and the forward arm agree on, and it is why the owner's
+    not-calm instinct was worth testing. But the not-calm side itself is zero, not positive - the
+    gap is made of calm being bad, not of not-calm being good.
+ 2. EARLIER ENTRY IS WORTH SOMETHING: on not-calm ws prints, +250 ms gives +0.0215 against +3 s at
+    -0.0078, so ~0.029 per $1 sits in those few seconds. Consistent with the earlier latency sweep.
+ 3. OVERLAP, so nobody double-counts: 16 of the 522 version-B not-calm trades sit at or after the
+    forward arm's start epoch (1791303000). They are NOT independent of the live arm's n and must
+    not be added to it. The ws-window figures above likewise overlap the live arms by construction.
+
+CAVEATS I AM NOT HIDING
+ * 09-29 and most of 09-30 CANNOT be tested: the data-api tape begins 09-30 09:25. V asked for 09-29
+   onward; this is the history that exists.
+ * The ws window is only n 91 not-calm / n 140 calm. The not-calm cell is flagged INSUFFICIENT on the
+   project's own 60-fill bar only barely, and t +0.30 would not survive any bar at all.
+ * Version A is reported as asked but should be read as the biased reference, not as a result: it
+   uses raw data-api timestamps, no size test and no slippage.
+ * Bankroll paths are shown on the NOT-CALM trades only, $50 start / $5 stake, and inherit whatever
+   bias their version carries - A ends $362.56 and B $320.14, and on the evidence above BOTH of those
+   curves are artefacts of the data-api print set rather than achievable paths.
