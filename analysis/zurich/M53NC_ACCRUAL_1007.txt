@@ -1,0 +1,91 @@
+M53-NC ACCRUAL NOTE - NOT-CALM SHARE BY UTC HOUR, EXPECTED FILLS/DAY, ETA TO n=100 AND n=200
+Requested by V 10-07. READ-ONLY. Paper only. Nothing changed: the not-calm filter, the signal rule
+and the decision rule all stay frozen as prereged (3224c11).
+
+I ASKED FOR THIS NOTE BECAUSE I THOUGHT ACCRUAL WAS BROKEN. IT IS NOT, AND THE FIRST THING THIS
+NOTE DOES IS CORRECT ME. In the day-8 report I told V that at the observed rate "n = 200 is
+effectively unreachable". That was wrong, and wrong in a specific way: I extrapolated from the arm's
+first eight hours without checking what hours they were. The arm started 16:10Z and then ran straight
+through 20:00-23:00Z, which the table below shows are the four LEAST not-calm hours of the day
+(26.0%, 12.5%, 28.1%, 30.2%). I measured a trough and called it the level.
+
+NOT-CALM SHARE BY UTC HOUR, 09-29..10-06 (2304 candles; frozen cut: Binance 1 s std >= 0.304)
+  hour  candles  not-calm   calm  no-data   not-calm%
+  00:00       96        36     60        0    37.5%
+  01:00       96        45     51        0    46.9%
+  02:00       96        47     49        0    49.0%
+  03:00       96        29     67        0    30.2%
+  04:00       96        39     57        0    40.6%
+  05:00       96        36     60        0    37.5%
+  06:00       96        44     52        0    45.8%
+  07:00       96        51     45        0    53.1%
+  08:00       96        56     40        0    58.3%
+  09:00       96        40     56        0    41.7%
+  10:00       96        41     55        0    42.7%
+  11:00       96        37     59        0    38.5%
+  12:00       96        57     39        0    59.4%
+  13:00       96        62     34        0    64.6%
+  14:00       96        72     24        0    75.0%
+  15:00       96        76     20        0    79.2%
+  16:00       96        66     30        0    68.8%
+  17:00       96        47     49        0    49.0%
+  18:00       96        45     51        0    46.9%
+  19:00       96        40     56        0    41.7%
+  20:00       96        25     71        0    26.0%
+  21:00       96        12     84        0    12.5%
+  22:00       96        27     69        0    28.1%
+  23:00       96        29     67        0    30.2%
+  ALL       2304      1059   1245        0    46.0%   (no-data 0.0% of all candles)
+
+PER DAY
+  09-29: candles 288  not-calm 178 (61.8%)  calm 110  no-data   0
+  09-30: candles 288  not-calm 169 (58.7%)  calm 119  no-data   0
+  10-01: candles 288  not-calm 175 (60.8%)  calm 113  no-data   0
+  10-02: candles 288  not-calm 204 (70.8%)  calm  84  no-data   0
+  10-03: candles 288  not-calm  14 ( 4.9%)  calm 274  no-data   0
+  10-04: candles 288  not-calm  46 (16.0%)  calm 242  no-data   0
+  10-05: candles 288  not-calm 159 (55.2%)  calm 129  no-data   0
+  10-06: candles 288  not-calm 114 (39.6%)  calm 174  no-data   0
+
+OBSERVED SINCE THE ARM STARTED (1791303000, 99 candles elapsed)
+  signals 89 = 90% of candles produced a qualifying print
+  of those: not-calm (traded) 14, calm 73, no-data 2
+  fill rate given a not-calm signal: 14/14 = 100% (0 partial, 0 missed so far)
+  observed not-calm share of signals: 16.1%
+
+EXPECTED FILLS/DAY on the 8-day historical not-calm share (46.0%): 119.0
+    n=100: need 86 more -> 0.7 days -> ETA 2026-10-07
+    n=200: need 186 more -> 1.6 days -> ETA 2026-10-08
+EXPECTED FILLS/DAY on the share observed since the arm started (16.1%): 41.7
+    n=100: need 86 more -> 2.1 days -> ETA 2026-10-09
+    n=200: need 186 more -> 4.5 days -> ETA 2026-10-11
+
+WHAT THE NUMBERS ACTUALLY SAY
+ 1. ACCRUAL IS FINE. On the 8-day historical not-calm share (46.0%) the arm should take ~119 fills a
+    day, putting n=100 at 10-07 and n=200 at 10-08. Even on the pessimistic rate observed so far
+    (16.1%, i.e. assuming the quiet window repeats forever) it is ~42 fills a day, n=100 on 10-09 and
+    n=200 on 10-11. Either way the early-stop check at n>=100 and the n=200 verdict are both days
+    away, not unreachable. My "effectively unreachable" line should be struck.
+ 2. THE SAMPLING SKEW IS REAL THOUGH, and it is the part worth keeping. Not-calm share runs from
+    12.5% at 21:00Z to 79.2% at 15:00Z - a 6x swing across the day, with a clear block of high hours
+    12:00-16:00Z (59.4 / 64.6 / 75.0 / 79.2 / 68.8%) and a clear trough 20:00-23:00Z. So M53-NC's
+    fills WILL cluster in the European afternoon / US morning and under-sample the late-evening and
+    early-Asia hours. That is not a defect - it is what the frozen filter does - but n=200 will be a
+    sample of those hours rather than of the day, and the verdict should be read with that in view.
+ 3. THE FILTER IS ALSO A VOLATILITY-REGIME FILTER ACROSS DAYS, not just hours: 09-29..10-02 ran
+    58.7-70.8% not-calm, then 10-03 collapsed to 4.9% and 10-04 to 16.0%, then 10-05 recovered to
+    55.2%. Those are the same two days the FAV dailies flagged as the quiet-market outlier (10-03
+    BTC range 0.69%). So the arm's fill rate will swing with the regime as well as the clock, and a
+    week that happens to contain another 10-03 will accrue much more slowly.
+ 4. NO DATA GAP: 0 of 2,304 candles over the eight days lacked a vol reading, so the frozen >=240 of
+    300 seconds requirement is not the constraint. The 2 skipped-no-data rows in the arm's own log
+    were my stale-cache defect (fixed, 5115572), not a property of the feed.
+ 5. FILL QUALITY, for completeness: 14 of 14 not-calm signals filled FULL, 0 partial, 0 missed, so
+    at a $5 stake level-1 depth has not yet bound. 90% of candles produce a qualifying print, so the
+    not-calm share - not the signal rule - is what sets the pace.
+
+HOW THESE ETAs WERE BUILT: expected fills/day = 288 candles x P(qualifying signal) x P(not-calm),
+with P(signal) = 0.90 measured on the arm's own 99 elapsed candles and P(not-calm) taken two ways,
+the 8-day history and the arm's own observation, which bracket the answer. Fill rate given a
+not-calm signal is 100% so far and is not discounted; if partials start appearing the ETAs lengthen.
+Nothing here is a forecast of the arm's P&L and nothing in it touches the frozen rule.
