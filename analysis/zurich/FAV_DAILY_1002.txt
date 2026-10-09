@@ -1,0 +1,90 @@
+FAV DAILY LEDGER  2026-10-02  window 10-02 00:00 .. 24:00 UTC (exclusive)
+  last candle scored inside the window: 10-02 23:55   day is COMPLETE
+
+arm          decisions  fills  wins     $@10    maxDD   flag
+FAV                80     70    48   -60.10   127.31   
+FAV_mid            92     77    51   -60.92   101.15   
+FAV_all           278    233   163   -97.50   185.14   
+FAV_ref            78     64    46   -26.76    93.97   
+C_fixed15         109     48    25   +13.04   105.94   INSUFFICIENT (<60 fills)
+  FAV arms use the PARTIAL arrival fill (filled shares a FLOOR, depth truncated at level 1).
+  C_fixed15 uses its own registered 250 ms FAK - a different fill model, so C is context
+  beside the FAV arms, not a like-for-like row.
+
+ARRIVAL FILLS (+500 ms): 278 decisions -> 233 cleared the price cap (84%) | PRICE-MISS 45 (16%) | SIZE-MISS 18 (6%) | depth-capped 18
+
+CUMULATIVE 09-29 .. 10-02 (4 full days), $10 a fill, REAL recorded ask + exact fee
+arm          decisions  fills  wins     $@10    maxDD   flag
+FAV               390    326   243   +64.31   140.62   
+FAV_mid           344    286   208    +9.15   136.40   
+FAV_all          1057    877   636   -33.73   216.74   
+FAV_ref           373    306   231  +103.95   103.48   
+C_fixed15         350    172    86   +45.01   152.88   
+
+PFAV vs PFAV_THRU, the SAME day as the table above. +1c = the same trade paying one cent more.
+arm          decisions  fills  wins     $@10   $@10+1c   maxDD   flag
+PFAV              273    189   137  -151.99   -173.78  185.09   
+PFAV_THRU         273    186   134  -160.50   -181.80  190.76   
+
+CALM-FAV BY UTC SESSION, same day (real recorded ask + fee)
+session        decisions  fills  wins     $@10    maxDD   flag
+Asia 00-07            23     19    14    -3.53    31.88   INSUFFICIENT (<60 fills)
+Europe 07-13          19     16     8   -61.44    70.45   INSUFFICIENT (<60 fills)
+US 13-20               4      4     3    -1.11    10.00   INSUFFICIENT (<60 fills)
+Late 20-24            34     31    23    +5.98    41.44   INSUFFICIENT (<60 fills)
+
+coverage: 288 candles scored on 2026-10-02 (of 288).
+
+MAKER PROBE (live, separate process, NOT part of the shadow)
+  2026-10-02: 35 graded fills over 35 distinct candles, 23W/12L, -5.2192 on $117.67 deployed (-0.0444 per $1), venue-graded
+  lifetime: 108 graded fills over 88 candles, +26.3185 of the -20 stop  INSUFFICIENT (<60 fills)
+  5 shares a post-only BUY, maker fee 0, held to settlement. Distinct CANDLES is the honest sample here, not fills: one calm candle can hand us several.
+  NOTE ON THE PROBE LINE ABOVE: the probe is no longer live. It was STOPPED on 10-02 at 15:01 UTC
+  on the owner's order ("Stop Zurich and start london"), so 10-02 is its FINAL day and the lifetime
+  figure is final too: 108 graded fills over 88 distinct candles, +26.3185 against the -20 stop,
+  never having come near the -10 day stop. The cron grader was deliberately left running so that
+  anything filled-but-unsettled would settle; nothing is outstanding. 35 fills on 35 distinct
+  candles on the last day, which is the first day the two counts agreed.
+
+M19 PAPER SHADOW (paper only, NO orders, still running)
+  data spans 24.1 h, process up 22.9 h at 10-03 00:27 UTC; 2,112 graded arm-fills, 16 unsettled,
+  71,200 quotes posted on paper, 394,646 venue trade prints observed.
+  Every one of the eight arms is NEGATIVE: best m0.15 D300 -0.0722 per $1 (n 300), m0.20 D300
+  -0.0727 (n 210), worst m0.15 D1500 -0.1585 (n 305). The honest sample is 310 unique candle-sides,
+  not 2,112 - the eight arms quote the SAME candles, so this is one sample seen eight ways.
+  A fair-value two-sided maker has now had a full day on this box and has not been positive in any
+  parameterisation, which is worth as much as the FAV numbers above.
+
+RECONCILING MY 21:30 CUMULATIVE WITH THIS FILE - THREE DIFFERENCES, AND ONE OF THEM IS MINE.
+At 21:30 I told V "FAV 281 fills, +37.18 cumulative 09-29..now". This file says FAV 326 fills,
++64.31. Neither is wrong; they are different measurements, and here they are separated:
+  1. FILL MODEL. My 21:30 query used the ALL-OR-NOTHING columns - a row counts as a fill when
+     `fill` (the AON fill PRICE) is non-null, and the money comes from `pnl`, which is
+     STAKE * per1(win, q) at V's literal 10/px depth gate. This file uses the fav_daily convention:
+     the PARTIAL arrival fill, `pnl_part`, counting a fill when `sh` > 0, with filled shares as a
+     FLOOR and depth truncated at level 1. On the IDENTICAL window 09-29..10-03 00:00 the two give
+     FAV: AON 305 fills +55.67, partial 326 fills +64.31. So the fill model alone is worth 21 extra
+     fills and +8.64 - the partial model is the more generous of the two, as it is built to be.
+  2. WINDOW. Mine ended at 21:30 on a day still in progress; this ends at 24:00 on a closed day.
+  3. LATE SETTLEMENT, which is my own error to own: re-running my OWN 21:30 query against the same
+     21:30 cutoff NOW returns 283 fills and +45.47, not the 281 and +37.18 I sent. The rows had not
+     finished settling when I read them, so I reported a mid-day snapshot of a table that was still
+     moving and did not label it as one. The figure to quote for 09-29..10-02 is this file's +64.31.
+
+THINGS IN THIS FILE WORTH MORE THAN THE TOTALS
+ 1. EVERY FAV ARM LOST ON 10-02 AND THE CALM ARM LOST MOST IN PROPORTION. FAV -60.10 on 70 fills,
+    FAV_mid -60.92 on 77, FAV_all -97.50 on 233, FAV_ref -26.76 on 64. On 10-01 the day SPLIT the
+    arms (FAV +44.99 against FAV_mid -29.98); on 10-02 they all went the same way. That matters
+    because the case for the calm gate has rested on the arms separating, and on this day they did
+    not. Cumulatively FAV is still +64.31 and FAV_all still -33.73, so the four-day ordering holds -
+    but it held through a day that gave it no support.
+ 2. PFAV AND PFAV_THRU ARE NO LONGER THE SAME ROW. On 10-01 they agreed on 262 of 262 epochs and I
+    flagged the trade-through filter as "real but nearly inert". On 10-02 they differ: 189 fills
+    against 186, -151.99 against -160.50. So the filter did bite this time, in the pessimistic
+    direction, and the inertness I reported was a property of that day and not of the arm. Both
+    remain heavily negative, which is the part that has not changed on any day.
+ 3. THE SESSION SPLIT FLIPPED AGAIN, AS IT DOES EVERY DAY. 10-01 had all four cells positive; 10-02
+    has three of four negative, with Europe 07-13 alone at -61.44 on SIXTEEN fills and US 13-20 at
+    FOUR fills. Three days, three different shapes, every cell under 60. This is the third daily
+    file to say the same thing: there is no session filter here, only noise, and I am not proposing
+    one. (M29 reached the same verdict independently on 15 days - no session difference clears 2 SE.)

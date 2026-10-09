@@ -1,0 +1,9 @@
+POLY fee  OWNER x2  : n 288 \$/candle -0.1989 per \$ staked -0.0536 t -2.22 halves -0.2488/-0.1491 green 0/1 win-candles 49% worst -9.30 best +5.69 max buys/side 4 maxDD -57.7
+POLY fee  flat stake: n 288 \$/candle -0.1702 per \$ staked -0.0617 t -2.84 halves -0.1890/-0.1514 green 0/1 win-candles 41% worst -3.24 best +5.69 max buys/side 4 maxDD -49.1
+POLY fee  HOLD both : n 288 \$/candle -0.1161 per \$ staked -0.0581 t -2.99 halves -0.0522/-0.1801 green 0/1 win-candles 34% worst -0.80 best +5.07 max buys/side 1 maxDD -37.2
+POLY 0fee OWNER x2  : n 288 \$/candle -0.0366 per \$ staked -0.0099 t -0.43 halves -0.0867/+0.0135 green 0/1 win-candles 58% worst -8.09 best +5.78 max buys/side 4 maxDD -22.5
+POLY 0fee flat stake: n 288 \$/candle -0.0348 per \$ staked -0.0126 t -0.60 halves -0.0546/-0.0149 green 0/1 win-candles 49% worst -2.86 best +5.78 max buys/side 4 maxDD -12.5
+POLY 0fee HOLD both : n 288 \$/candle -0.0472 per \$ staked -0.0236 t -1.22 halves +0.0168/-0.1112 green 0/1 win-candles 34% worst -0.73 best +5.14 max buys/side 1 maxDD -21.8
+PRED      OWNER x2  : n 1158 \$/candle -0.3568 per \$ staked -0.0708 t -5.42 halves -0.5335/-0.1801 green 1/6 win-candles 57% worst -36.02 best +4.85 max buys/side 8 maxDD -421.0
+PRED      flat stake: n 1158 \$/candle -0.2175 per \$ staked -0.0703 t -7.35 halves -0.2679/-0.1672 green 0/6 win-candles 44% worst -4.78 best +3.87 max buys/side 8 maxDD -259.6
+PRED      HOLD both : n 1158 \$/candle -0.1119 per \$ staked -0.0560 t -7.02 halves -0.1255/-0.0983 green 0/6 win-candles 38% worst -0.96 best +4.96 max buys/side 1 maxDD -133.6

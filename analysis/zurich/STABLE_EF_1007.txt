@@ -1,0 +1,210 @@
+STABLE-EF RE-RUN 2026-10-07 (V standing job). READ-ONLY, frozen grid and gates, nothing live.
+Run: PYTHONPATH=analysis/h1 python analysis/zurich/stable_ef.py   (verify.py = analysis/h1/verify.py)
+
+EF fires rebuilt from diagnostics: 271 across both profiles, 157 candles, 10 days
+grading: gamma venue resolution 48, engine results.actual 223
+  RAW   147 fires, 10 days, win 42.9%, ask p50 0.45, edge p50 +0.0823
+  FIXED 124 fires, 10 days, win 46.8%, ask p50 0.48, edge p50 +0.1117
+
+============================================================================================================================================
+1. SELECTIVITY by calibrated edge, top X% WITHIN EACH DAY - RAW
+============================================================================================================================================
+  cell                                    n    /day    win%   paper   LONDON  dayStd worstDay   maxDD    pos%      H1      H2
+  top   5% by edge                       12 *   1.2   50.0%  +0.090   -0.076    11.9    -20.0    20.0     60%  +0.203  -0.024
+  top  10% by edge                       17 *   1.7   47.1%  -0.004   -0.137     9.5    -10.2    30.0     50%  -0.252  +0.217
+  top  20% by edge                       31 *   3.1   51.6%  +0.078   -0.074    19.8    -23.6    39.3     50%  -0.097  +0.242
+  top  40% by edge                       59 *   5.9   52.5%  +0.097   -0.066    23.9    -30.0    95.4     60%  -0.150  +0.335
+  top 100% by edge                      147    14.7   42.9%  -0.082   -0.238    46.5    -58.6   258.4     40%  -0.187  +0.022
+
+  context: ASK BUCKET (RAW)
+  ask 0.00-0.25                             (none)
+  ask 0.25-0.35                           6 *   2.0   16.7%  -0.480   -0.594     8.1    -20.0    50.0      0%  -0.954  -0.005
+  ask 0.35-0.45                          67     6.7   35.8%  -0.115   -0.283    36.8    -65.6   167.0     50%  -0.310  +0.073
+  ask 0.45-0.55                          57 *   6.3   54.4%  +0.070   -0.088    27.5    -38.6    50.0     56%  +0.066  +0.074
+  ask 0.55-1.00                          17 *   2.1   41.2%  -0.316   -0.429     7.3    -14.0    66.1     25%  -0.171  -0.444
+
+  context: FIRE SECOND (RAW)
+  sec 0-60                               16 *   2.0   31.2%  -0.238   -0.381    15.1    -29.9    55.3     38%  -0.424  -0.052
+  sec 60-120                             56 *   5.6   44.6%  -0.057   -0.211    24.0    -30.0    91.9     40%  -0.127  +0.012
+  sec 120-180                            36 *   4.0   38.9%  -0.191   -0.327    19.6    -35.4    97.6     44%  -0.364  -0.017
+  sec 180-240                            39 *   4.3   48.7%  +0.049   -0.113    22.8    -46.0    76.0     56%  +0.152  -0.049
+  sec 240-300                               (none)
+
+============================================================================================================================================
+1. SELECTIVITY by calibrated edge, top X% WITHIN EACH DAY - FIXED
+============================================================================================================================================
+  cell                                    n    /day    win%   paper   LONDON  dayStd worstDay   maxDD    pos%      H1      H2
+  top   5% by edge                       11 *   1.1   54.5%  +0.186   +0.024    12.9    -20.0    20.0     60%  +0.437  -0.024
+  top  10% by edge                       15 *   1.5   46.7%  -0.008   -0.143     9.7    -12.4    29.1     50%  -0.022  +0.005
+  top  20% by edge                       26 *   2.6   46.2%  -0.015   -0.165    18.4    -30.2    60.3     50%  -0.391  +0.360
+  top  40% by edge                       49 *   4.9   51.0%  +0.016   -0.141    17.8    -23.1    61.0     50%  -0.146  +0.170
+  top 100% by edge                      124    12.4   46.8%  -0.072   -0.225    46.7    -68.9   233.4     50%  -0.245  +0.102
+
+  context: ASK BUCKET (FIXED)
+  ask 0.00-0.25                             (none)
+  ask 0.25-0.35                           7 *   1.8   14.3%  -0.548   -0.700     7.0    -20.0    50.0      0%  -0.954  -0.243
+  ask 0.35-0.45                          37 *   3.7   37.8%  -0.058   -0.231    23.2    -40.0    86.0     40%  -0.042  -0.073
+  ask 0.45-0.55                          44 *   4.9   56.8%  +0.126   -0.020    30.6    -41.3    62.3     67%  -0.100  +0.352
+  ask 0.55-1.00                          36 *   4.0   50.0%  -0.235   -0.347    11.7    -30.0    98.9     22%  -0.215  -0.255
+
+  context: FIRE SECOND (FIXED)
+  sec 0-60                                5 *   1.7   20.0%  -0.694   -0.758     2.8    -16.0    36.0      0%  -0.292  -0.959
+  sec 60-120                             40 *   4.0   47.5%  -0.032   -0.189    21.1    -30.0    68.5     50%  -0.020  -0.045
+  sec 120-180                            39 *   4.9   43.6%  -0.161   -0.296    29.5    -50.0   110.7     50%  -0.480  +0.141
+  sec 180-240                            40 *   5.0   52.5%  +0.054   -0.083    13.6    -20.0    56.9     62%  +0.111  -0.003
+  sec 240-300                               (none)
+
+============================================================================================================================================
+2. HYBRID STAKING. Every arm normalised to deploy the same total as fixed $10.
+============================================================================================================================================
+
+  --- RAW, all fires: 147 fires, 14.7/day ---
+  staking arm                                    n    /day    win%   paper   LONDON  dayStd worstDay   maxDD    pos%      H1      H2
+  A fixed $10                           147    14.7   42.9%  -0.082   -0.238    46.5    -58.6   258.4     40%  -0.187  +0.022
+       total $-124.51 on $1527 deployed | maxDD $258.36 | return/maxDD -0.48 | worst 3 h $-86.35 | London total $-219.1
+  B tiered 5/10/20 by edge tercile      147    14.7   42.9%  -0.009   -0.164    49.5    -54.7   243.8     40%  -0.177  +0.156
+       total $-13.99 on $1526 deployed | maxDD $243.80 | return/maxDD -0.06 | worst 3 h $-100.42 | London total $-149.7
+  C half-Kelly on calibrated p (cap 3x)  147    14.7   42.9%  -0.089   -0.243    45.8    -67.3   265.0     40%  -0.202  +0.022
+       total $-136.37 on $1526 deployed | maxDD $264.96 | return/maxDD -0.51 | worst 3 h $-90.71 | London total $-223.6
+  F de-risk below MA(10)                147    14.7   42.9%  -0.049   -0.209    43.9    -62.0   222.8     40%  -0.114  +0.001
+       total $-75.48 on $1527 deployed | maxDD $222.85 | return/maxDD -0.34 | worst 3 h $-62.30 | London total $-191.9
+
+  --- RAW, top 20%/day: 31 fires, 3.1/day ---
+  staking arm                                    n    /day    win%   paper   LONDON  dayStd worstDay   maxDD    pos%      H1      H2
+  A fixed $10                            31 *   3.1   51.6%  +0.078   -0.074    19.8    -23.6    39.3     50%  -0.097  +0.242
+       total $+24.95 on $321 deployed | maxDD $39.32 | return/maxDD +0.63 | worst 3 h $-30.00 | London total $-14.2
+  B tiered 5/10/20 by edge tercile       31 *   3.1   51.6%  +0.045   -0.103    20.0    -22.9    38.1     50%  -0.097  +0.171
+       total $+14.49 on $321 deployed | maxDD $38.09 | return/maxDD +0.38 | worst 3 h $-29.06 | London total $-19.8
+  C half-Kelly on calibrated p (cap 3x)   31 *   3.1   51.6%  +0.078   -0.074    19.8    -23.6    39.3     50%  -0.097  +0.242
+       total $+24.95 on $321 deployed | maxDD $39.32 | return/maxDD +0.63 | worst 3 h $-30.00 | London total $-14.2
+  F de-risk below MA(10)                 31 *   3.1   51.6%  +0.080   -0.072    21.5    -25.7    34.0     50%  -0.099  +0.231
+       total $+25.76 on $321 deployed | maxDD $33.96 | return/maxDD +0.76 | worst 3 h $-32.63 | London total $-13.9
+
+  --- RAW, top 10%/day: 17 fires, 1.7/day ---
+  staking arm                                    n    /day    win%   paper   LONDON  dayStd worstDay   maxDD    pos%      H1      H2
+  A fixed $10                            17 *   1.7   47.1%  -0.004   -0.137     9.5    -10.2    30.0     50%  -0.252  +0.217
+       total $-0.68 on $176 deployed | maxDD $30.00 | return/maxDD -0.02 | worst 3 h $-30.00 | London total $-14.7
+  B tiered 5/10/20 by edge tercile       17 *   1.7   47.1%  -0.004   -0.137     9.5    -10.2    30.0     50%  -0.252  +0.217
+       total $-0.68 on $176 deployed | maxDD $30.00 | return/maxDD -0.02 | worst 3 h $-30.00 | London total $-14.7
+  C half-Kelly on calibrated p (cap 3x)   17 *   1.7   47.1%  -0.004   -0.137     9.5    -10.2    30.0     50%  -0.252  +0.217
+       total $-0.68 on $176 deployed | maxDD $30.00 | return/maxDD -0.02 | worst 3 h $-30.00 | London total $-14.7
+  F de-risk below MA(10)                 17 *   1.7   47.1%  -0.004   -0.137     9.5    -10.2    30.0     50%  -0.252  +0.217
+       total $-0.68 on $176 deployed | maxDD $30.00 | return/maxDD -0.02 | worst 3 h $-30.00 | London total $-14.7
+
+  --- FIXED, all fires: 124 fires, 12.4/day ---
+  staking arm                                    n    /day    win%   paper   LONDON  dayStd worstDay   maxDD    pos%      H1      H2
+  A fixed $10                           124    12.4   46.8%  -0.072   -0.225    46.7    -68.9   233.4     50%  -0.245  +0.102
+       total $-92.04 on $1284 deployed | maxDD $233.39 | return/maxDD -0.39 | worst 3 h $-74.09 | London total $-172.8
+  B tiered 5/10/20 by edge tercile      124    12.4   46.8%  -0.096   -0.245    49.1    -67.8   265.4     40%  -0.314  +0.140
+       total $-123.47 on $1283 deployed | maxDD $265.35 | return/maxDD -0.47 | worst 3 h $-115.70 | London total $-188.9
+  C half-Kelly on calibrated p (cap 3x)  124    12.4   46.8%  -0.072   -0.225    46.7    -68.9   233.4     50%  -0.245  +0.102
+       total $-92.04 on $1284 deployed | maxDD $233.39 | return/maxDD -0.39 | worst 3 h $-74.09 | London total $-172.8
+  F de-risk below MA(10)                124    12.4   46.8%  -0.001   -0.158    50.1    -61.3   183.0     50%  -0.182  +0.126
+       total $-1.16 on $1284 deployed | maxDD $183.00 | return/maxDD -0.01 | worst 3 h $-50.48 | London total $-121.1
+
+  --- FIXED, top 20%/day: 26 fires, 2.6/day ---
+  staking arm                                    n    /day    win%   paper   LONDON  dayStd worstDay   maxDD    pos%      H1      H2
+  A fixed $10                            26 *   2.6   46.2%  -0.015   -0.165    18.4    -30.2    60.3     50%  -0.391  +0.360
+       total $-4.13 on $269 deployed | maxDD $60.27 | return/maxDD -0.07 | worst 3 h $-40.00 | London total $-26.8
+  B tiered 5/10/20 by edge tercile       26 *   2.6   46.2%  -0.015   -0.165    18.4    -30.2    60.3     50%  -0.391  +0.360
+       total $-4.13 on $269 deployed | maxDD $60.27 | return/maxDD -0.07 | worst 3 h $-40.00 | London total $-26.8
+  C half-Kelly on calibrated p (cap 3x)   26 *   2.6   46.2%  -0.015   -0.165    18.4    -30.2    60.3     50%  -0.391  +0.360
+       total $-4.13 on $269 deployed | maxDD $60.27 | return/maxDD -0.07 | worst 3 h $-40.00 | London total $-26.8
+  F de-risk below MA(10)                 26 *   2.6   46.2%  -0.010   -0.160    17.8    -23.7    53.5     50%  -0.316  +0.325
+       total $-2.69 on $269 deployed | maxDD $53.50 | return/maxDD -0.05 | worst 3 h $-29.55 | London total $-25.9
+
+  --- FIXED, top 10%/day: 15 fires, 1.5/day ---
+  staking arm                                    n    /day    win%   paper   LONDON  dayStd worstDay   maxDD    pos%      H1      H2
+  A fixed $10                            15 *   1.5   46.7%  -0.008   -0.143     9.7    -12.4    29.1     50%  -0.022  +0.005
+       total $-1.20 on $155 deployed | maxDD $29.05 | return/maxDD -0.04 | worst 3 h $-20.00 | London total $-13.6
+  B tiered 5/10/20 by edge tercile       15 *   1.5   46.7%  -0.008   -0.143     9.7    -12.4    29.1     50%  -0.022  +0.005
+       total $-1.20 on $155 deployed | maxDD $29.05 | return/maxDD -0.04 | worst 3 h $-20.00 | London total $-13.6
+  C half-Kelly on calibrated p (cap 3x)   15 *   1.5   46.7%  -0.008   -0.143     9.7    -12.4    29.1     50%  -0.022  +0.005
+       total $-1.20 on $155 deployed | maxDD $29.05 | return/maxDD -0.04 | worst 3 h $-20.00 | London total $-13.6
+  F de-risk below MA(10)                 15 *   1.5   46.7%  -0.008   -0.143     9.7    -12.4    29.1     50%  -0.022  +0.005
+       total $-1.20 on $155 deployed | maxDD $29.05 | return/maxDD -0.04 | worst 3 h $-20.00 | London total $-13.6
+
+============================================================================================================================================
+3. RANKED ON STABILITY, not total PnL: share of positive days first, then return/maxDD
+============================================================================================================================================
+  arm                                                           n   pos%   ret/DD   paper   LONDON   worst3h   maxDD
+  RAW top 20%/day / F de-risk below MA(10)                     31    50%    +0.76  +0.080   -0.072    -32.63    34.0  *n<60
+  RAW top 20%/day / A fixed $10                                31    50%    +0.63  +0.078   -0.074    -30.00    39.3  *n<60
+  RAW top 20%/day / C half-Kelly on calibrated p (cap 3x)      31    50%    +0.63  +0.078   -0.074    -30.00    39.3  *n<60
+  RAW top 20%/day / B tiered 5/10/20 by edge tercile           31    50%    +0.38  +0.045   -0.103    -29.06    38.1  *n<60
+  FIXED all fires / F de-risk below MA(10)                    124    50%    -0.01  -0.001   -0.158    -50.48   183.0
+  RAW top 10%/day / A fixed $10                                17    50%    -0.02  -0.004   -0.137    -30.00    30.0  *n<60
+  RAW top 10%/day / B tiered 5/10/20 by edge tercile           17    50%    -0.02  -0.004   -0.137    -30.00    30.0  *n<60
+  RAW top 10%/day / C half-Kelly on calibrated p (cap 3x)      17    50%    -0.02  -0.004   -0.137    -30.00    30.0  *n<60
+  RAW top 10%/day / F de-risk below MA(10)                     17    50%    -0.02  -0.004   -0.137    -30.00    30.0  *n<60
+  FIXED top 10%/day / A fixed $10                              15    50%    -0.04  -0.008   -0.143    -20.00    29.1  *n<60
+  FIXED top 10%/day / B tiered 5/10/20 by edge tercile         15    50%    -0.04  -0.008   -0.143    -20.00    29.1  *n<60
+  FIXED top 10%/day / C half-Kelly on calibrated p (cap 3x)    15    50%    -0.04  -0.008   -0.143    -20.00    29.1  *n<60
+  FIXED top 10%/day / F de-risk below MA(10)                   15    50%    -0.04  -0.008   -0.143    -20.00    29.1  *n<60
+  FIXED top 20%/day / F de-risk below MA(10)                   26    50%    -0.05  -0.010   -0.160    -29.55    53.5  *n<60
+  FIXED top 20%/day / A fixed $10                              26    50%    -0.07  -0.015   -0.165    -40.00    60.3  *n<60
+  FIXED top 20%/day / B tiered 5/10/20 by edge tercile         26    50%    -0.07  -0.015   -0.165    -40.00    60.3  *n<60
+  FIXED top 20%/day / C half-Kelly on calibrated p (cap 3x)    26    50%    -0.07  -0.015   -0.165    -40.00    60.3  *n<60
+  FIXED all fires / A fixed $10                               124    50%    -0.39  -0.072   -0.225    -74.09   233.4
+  FIXED all fires / C half-Kelly on calibrated p (cap 3x)     124    50%    -0.39  -0.072   -0.225    -74.09   233.4
+  RAW all fires / B tiered 5/10/20 by edge tercile            147    40%    -0.06  -0.009   -0.164   -100.42   243.8
+  RAW all fires / F de-risk below MA(10)                      147    40%    -0.34  -0.049   -0.209    -62.30   222.8
+  FIXED all fires / B tiered 5/10/20 by edge tercile          124    40%    -0.47  -0.096   -0.245   -115.70   265.4
+  RAW all fires / A fixed $10                                 147    40%    -0.48  -0.082   -0.238    -86.35   258.4
+  RAW all fires / C half-Kelly on calibrated p (cap 3x)       147    40%    -0.51  -0.089   -0.243    -90.71   265.0
+
+  * = under 60 fires, not a reading. Ranked on stability as ordered; nothing here is selected
+    as "the best cell" - the whole grid is above and the London column is the one that matters.
+
+============================================================================================================================================
+4. verify.py on the arm I would put forward: RAW, top 20% by edge per day
+============================================================================================================================================
+  sweep over tiers [5, 10, 20, 40, 100]%: +0.090 -0.004 +0.078 +0.097 -0.082
+==============================================================================
+FINDING: EF RAW, top 20% by calibrated edge per day
+==============================================================================
+  [FAIL] grading provenance   sources share no keys - cannot compare
+  [PASS] quote age            rule=same-instant, max age 0.0s from diagnostics pnl rows (executor read)
+  [FAIL] sample size          under the 60 bar: {'top 20% by edge per day': 31}
+  [FAIL] both halves          h1 -0.097 / h2 +0.242  <- SIGN FLIPS, not a finding
+  [FAIL] permutation control  edge-ranked +0.078 vs SAME COUNT PER DAY chosen at random: mean -0.080 (p95 +0.203), p=0.172 over 1000 draws
+  [FAIL] cost sensitivity     +0c:+0.078 +2c:+0.034 +5c:-0.025  <- dies once you pay realistically
+  [PASS] beats the null       mine +0.078 vs buy the other side instead -0.090
+  [FAIL] sweep shape          NON-monotone: [ 0.09  -0.004  0.078  0.097 -0.082]  <- peaks at an interior point, classic overfit
+------------------------------------------------------------------------------
+  VERDICT: NOT A FINDING - failed: grading provenance, sample size, both halves, permutation control, cost sensitivity, sweep shape
+
+
+  verdict(): False
+
+=====================================================================================
+WHY THIS RE-RUN CANNOT ACCUMULATE, WHICH MATTERS MORE THAN THE FAIL
+The standing job is framed as "as soon as data allows". On the current source it never will:
+ * stable_ef.py rebuilds fires from the engine's `diagnostics` pnl rows. That table spans
+   09-30 12:00 .. 10-07 12:34 ONLY - the engine PRUNES it on a rolling ~7-day window. (The script's
+   "10 days" counts 339 junk rows stamped 01-01 plus two partial days; the honest figure is ~7.)
+ * So n in the top-20% tier sits at 31 against the 60 bar and is a STEADY STATE, not a partial
+   sample. Waiting another week leaves it at ~31.
+ * The hourly archive (pm_archive/zurich_research_archive.sqlite3), built precisely to outlive these
+   prunes, holds decide_log back to 09-24 - about 13 days, roughly double the window. Rebuilding
+   fires from decide_log instead of diagnostics would plausibly take the top-20% tier to ~60.
+   That is a DATA-SOURCE change to a frozen script, so I am not making it unilaterally.
+ * Related, same cause: the `grading provenance` gate failed with "sources share no keys" because
+   BTC5 = /tmp/poly/btc5.sqlite3 is the gamma mirror from SEP 27 and shares no epochs with the
+   09-30+ window. Grading therefore fell back to engine results.actual on 223 of 271 fires. A fresh
+   mirror exists at pm_ef3/gamma_zurich.sqlite3 with the identical schema and would fix that gate -
+   again a source change, again not mine to make.
+
+WHAT WOULD STILL FAIL EVEN WITH MORE DATA
+Four of the five failures are not sample-size artefacts: both halves SIGN FLIP (-0.097 / +0.242),
+the permutation control is p=0.172 (edge-ranked +0.078 against random-same-count-per-day -0.080, so
+the EDGE RANKING is not doing demonstrable work), cost sensitivity dies by +5c (+0.078 -> -0.025),
+and the tier sweep is non-monotone and peaks at an interior point (+0.090 / -0.004 / +0.078 /
++0.097 / -0.082). More fires would fix the n bar and the grading bar; they would not fix those.
+Note also the column that matters: LONDON execution is NEGATIVE in every RAW tier.
+
+THE TWO HINTS, re-checked with their n - both still unsupported
+ * ask 0.25-0.35 (RAW): n 6, win 16.7%, paper -0.480, London -0.594. Six fires; not a reading.
+ * sec 180-240 (RAW): n 39, win 48.7%, paper +0.049, London -0.113. Best sec bucket on paper and
+   the only positive one, but NEGATIVE once London execution is applied, and under the 60 bar.
+Neither hint has strengthened since the last run and neither is close to its own bar.

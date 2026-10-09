@@ -1,0 +1,53 @@
+ZURICH 8787 LIVE SETTINGS - READ-ONLY SNAPSHOT, 2026-09-30 01:2x UTC
+====================================================================
+Nothing was changed. Every value below is read from the RUNNING engine's meta and its own DB
+(pid 297292, port 8787, polymarket_v12_zurich_live4.sqlite3).
+
+MASTER          true          <- ARMED. The engine is on the live CLOB route; lane label reads LIVE.
+LANES           MAIN      main_enabled     = false
+                REVERSAL  reversal_enabled = false
+                EF        ef_enabled       = true
+                -> matches the owner's "only ef on".
+EF BRAIN        ef_engine = "fav"   (the calm-favourite rule deployed at 01:01:28 UTC)
+STAKE           next_stake = 5.0; stake_settings mode "fixed", fixed_stake 5.0, min 5.0, max 5.0
+                -> fixed $5.00, no Kelly, no dynamic sizing.
+STOP LOSS       field `sl` = 40.0      (set via /api/controls/daily-limits, param stop_loss)
+                paired field `tp` = 0.0 (take profit, off)
+ef_cash_floor   NOT SET (absent from meta) -> no cash floor, as the owner ordered on 09-23.
+
+WHAT `sl` ACTUALLY MEANS IN THE CODE - and it is NOT what "in trade" implies
+  poly_dashboard.py daily():   p = sum(results.pnl) over the engine's day window
+                               halted = (tp>0 and p>=tp) or (sl>0 and p<=-sl)
+  poly_dashboard.py allowed(): returns False when daily()['halted'] -> btc_model calls
+                               self.ui.allowed(kind) before every order, so a halt BLOCKS the lane.
+  So it IS enforced, and three properties matter:
+  1. IT IS A DAILY CUMULATIVE LOSS LIMIT, NOT A PER-TRADE EXIT. Nothing closes or exits an open
+     position at -$40. It stops NEW orders once the day's summed realised PnL reaches -$40. A single
+     $5 trade can never trigger it; it takes about eight full losses in one window.
+  2. THE WINDOW STARTS AT 12:00 LONDON, NOT MIDNIGHT (day(): hour=12, minus a day if now is earlier).
+     The window in force right now is 09-29 12:00 BST -> 09-30 12:00 BST.
+  3. IT HALTS EVERY LANE, not only EF - allowed() applies it to MAIN and REVERSAL too. With those two
+     already off it currently only bites EF.
+  It counts the `pnl` column, which is REAL money only: in this window 95 result rows sum to
+  pnl +0.00 while shadow_pnl is -2.81, i.e. the paper/shadow trades from before master was armed do
+  NOT count toward the stop. Headroom right now is the full -40.00.
+
+LIVE ORDERS SINCE 01:01 UTC - ONE, and it is FAV's first real trade
+  time     01:21:03 UTC   candle epoch 1790731200 (09-30 01:20)   sec 63
+  side     UP             fav ask 0.65, opp ask 0.36, vol 0.2631 < 0.304
+  order    FAK, quote 0.65, cap 0.66  (= ask + 1 tick, as specified)
+  filled   YES - FILLED, 7.507691 shares at 0.65
+  money    spent $4.879999, fees $0.11956, budget $5.00
+  engine   "fav", how CALM_FAVOURITE, reason "FAV:CALM UP fav ask 0.65 opp 0.36 vol 0.263 < 0.304 sec 63"
+  result   not settled yet at the time of this snapshot (that candle closes 01:25 UTC)
+  LIVE order count all-time is now 12: the 11 from the 09-28 incident plus this one.
+  PAPER orders since the restart: 2.
+
+DIFFERENCES FROM WHAT THE OWNER DESCRIBED
+  "stop loss of 40 set in trade" -> `sl`=40 is a DAILY cumulative realised-loss limit on a
+  12:00-London window that blocks new orders; it is not an in-trade stop and will not exit a losing
+  position. At $5 a trade it needs ~8 losses in the window to fire.
+
+ONE MORE THING WORTH KNOWING, not a discrepancy
+  ef_profile is still "raw_v10_live25". That is the v10 EF profile and FAV does not read it - while
+  ef_engine="fav" the profile has no effect. Nobody should tune it expecting FAV to change.

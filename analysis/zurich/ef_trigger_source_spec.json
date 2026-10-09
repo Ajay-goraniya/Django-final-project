@@ -1,0 +1,118 @@
+{
+  "name": "ef_trigger_source",
+  "version": 1,
+  "produced_by": "Zurich (eu-central-2) 2026-09-28, analysis/zurich/ef_trigger_source.py",
+  "purpose": "Split EF fires by WHAT MOVED since the previous decide pass, so London can check whether its own 69%-fill bucket (attempt-1 on a book <50 ms old) is where its money actually is. This is a MEASUREMENT SPEC, not a filter: the filter version failed verify.py on Zurich and must not be deployed anywhere.",
+  "not_a_filter": {
+    "verdict": "NOT A FINDING",
+    "failed_gates": [
+      "permutation p=0.966 with permuted mean +0.319 above real +0.177",
+      "paired McNemar p=1.000, 66 of 67 candles identical",
+      "|dask| sweep non-monotone: 0t -0.097, 1t -0.045, 2t -0.110, >=3t -0.116",
+      "per-day sample 22/32/10/19/3, all under 60"
+    ],
+    "passed_gates": [
+      "grading provenance (two gamma pulls agree 140/140)",
+      "quote age at-or-after",
+      "cost sensitivity to +2c",
+      "beats the null"
+    ]
+  },
+  "inputs_required_per_pass": {
+    "epoch": "candle epoch, to group passes",
+    "ts_ms": "pass time in ms, to order within the candle",
+    "side": "the side the engine chose on this pass, UP or DOWN",
+    "up_ask": "book ask on the UP token at this pass",
+    "dn_ask": "book ask on the DOWN token at this pass",
+    "p": "the model probability for `side` on this pass (RAW p; apply your own calibration separately)"
+  },
+  "rule": {
+    "compare_with": "the immediately preceding pass in the SAME candle, ordered by ts_ms",
+    "own_ask_now": "up_ask if side==UP else dn_ask, on THIS pass",
+    "own_ask_prev": "up_ask if side==UP else dn_ask, on the PREVIOUS pass - read OUR side on both rows so a side change does not corrupt the ask comparison",
+    "dask": "own_ask_now - own_ask_prev",
+    "dp": "p_now - p_prev, and ONLY when prev.side == side",
+    "tick": 0.01,
+    "book_moved": "abs(dask) >= tick - 1e-9",
+    "model_moved": "abs(dp) >= 0.01",
+    "classes": {
+      "BOOK-dn": "book_moved and not model_moved and dask < 0",
+      "BOOK-up": "book_moved and not model_moved and dask > 0",
+      "MODEL": "not book_moved and model_moved",
+      "BOTH-dn": "book_moved and model_moved and dask < 0",
+      "BOTH-up": "book_moved and model_moved and dask > 0",
+      "NEITHER": "not book_moved and not model_moved",
+      "FLIP-mv": "prev.side != side and book_moved",
+      "FLIP-still": "prev.side != side and not book_moved",
+      "FIRST": "no previous pass in the candle, or no usable previous quote on our side"
+    },
+    "do_not_convert_dp_across_a_side_flip": "measured on Zurich, p is not symmetric across a flip: residual mean +0.0715, 0.0% of flips within 0.02, because the flip is itself selected on p having moved"
+  },
+  "zurich_reference_numbers": {
+    "population": {
+      "days": 5,
+      "graded_candles": 1015,
+      "passes": 785924,
+      "labels": "the venue's own resolution (gamma outcomePrices)"
+    },
+    "note": "SIMULATED fills (FAK at ask+1 tick filling iff the +250 ms ask is within a tick, at that ask)",
+    "raw25_first_qualifying_pass_per_candle": {
+      "ALL": {
+        "fires": 325,
+        "fill_pct": 42.2,
+        "win_pct": 43.8,
+        "per_1": 0.071,
+        "ask_reversion_c": 6.02
+      },
+      "BOOK-dn": {
+        "fires": 17,
+        "fill_pct": 82.4,
+        "win_pct": 42.9,
+        "per_1": -0.007,
+        "ask_reversion_c": 0.06
+      },
+      "BOOK-up": {
+        "fires": 0
+      },
+      "MODEL": {
+        "fires": 58,
+        "fill_pct": 36.2,
+        "win_pct": 57.1,
+        "per_1": 0.234,
+        "ask_reversion_c": 6.29
+      },
+      "BOTH-up": {
+        "fires": 41,
+        "fill_pct": 43.9,
+        "win_pct": 22.2,
+        "per_1": -0.556,
+        "ask_reversion_c": 3.39
+      },
+      "FLIP-mv": {
+        "fires": 114,
+        "fill_pct": 36.0,
+        "win_pct": 39.0,
+        "per_1": -0.002,
+        "ask_reversion_c": 6.39
+      },
+      "FLIP-still": {
+        "fires": 86,
+        "fill_pct": 44.2,
+        "win_pct": 52.6,
+        "per_1": 0.398,
+        "ask_reversion_c": 7.92
+      }
+    },
+    "consistency_checks_that_should_reproduce": [
+      "BOOK-up and NEITHER are both exactly 0 among first-qualifying fires: a pass whose only change is the ask moving AWAY cannot be the first to cross an EV bar, and neither can a pass where nothing moved",
+      "side flips are ~62% of raw25 fires, because a fire is usually the pass where the engine switches to the side that just crossed the bar",
+      "the logged ask equals the own-side book ask on 852162/852162 Zurich rows"
+    ]
+  },
+  "what_london_should_measure": [
+    "split REAL fills (not attempts) by class, and report fill% and per $1 per class",
+    "cross the class against London's own book-age bucket (<50 ms vs older) - Zurich has NO quote-age column, so this is the one thing Zurich cannot do and London can",
+    "the prediction to test: the 69% bucket is the BOOK-triggered population, and Zurich says it pays -0.007/$1 while the 36%-fill MODEL population pays +0.234"
+  ],
+  "if_the_prediction_holds": "then raising the fill rate is not an improvement by itself, and the <50 ms attempt-1 result should not be used as a reason to chase fills"
+}

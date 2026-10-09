@@ -1,0 +1,118 @@
+FAV DAILY LEDGER  2026-10-06  window 10-06 00:00 .. 24:00 UTC (exclusive)
+  last candle scored inside the window: 10-06 23:55   day is COMPLETE
+
+DAY 10-06 (window 10-06 00:00 .. 24:00 UTC exclusive)
+arm          decisions  fills  wins     $@10   deployed  per $1    maxDD  green  flag
+FAV               162    134    89  -108.85    1214.64 -0.0896   152.51    -    
+FAV_mid            60     46    32   -12.56     434.73 -0.0289    40.46    -    INSUFFICIENT (<60 fills)
+FAV_all           263    209   141  -148.17    1934.21 -0.0766   198.32    -    
+FAV_ref           159    131    88   -92.64    1185.21 -0.0782   156.30    -    
+C_fixed15          47     15     9   +35.14     150.00 +0.2343    50.00    -    INSUFFICIENT (<60 fills)
+  FAV arms use the PARTIAL arrival fill (filled shares a FLOOR, depth truncated at level 1).
+  C_fixed15 uses its own registered 250 ms FAK - a different fill model, so C is context
+  beside the FAV arms, not a like-for-like row.
+
+ARRIVAL FILLS (+500 ms): 263 decisions -> 209 cleared the price cap (79%) | PRICE-MISS 54 (21%) | SIZE-MISS 22 (8%) | depth-capped 21
+
+CUMULATIVE 09-29 .. 10-06, $10 a fill, REAL recorded ask + exact fee
+arm          decisions  fills  wins     $@10   deployed  per $1    maxDD  green  flag
+FAV              1137    963   698   -97.72    9092.47 -0.0107   346.16    5/8  
+FAV_mid           515    423   307   -23.18    3988.41 -0.0058   187.23    3/8  
+FAV_all          2101   1746  1260  -224.73   16512.38 -0.0136   402.50    4/8  
+FAV_ref          1118    938   685   -25.21    8864.99 -0.0028   323.11    4/8  
+C_fixed15         526    249   125  +105.52    2490.00 +0.0424   152.88    6/8  
+  per $1 = $ / deployed. Deployed is sh*vwap for the FAV arms (the partial model fills fewer
+  than 10/px shares when level-1 depth is thin) and a flat $10 a fill for C_fixed15, which
+  uses its own registered 250 ms FAK. green = UTC days with a positive total for that arm.
+
+PFAV vs PFAV_THRU, 10-06. +1c = the same trade paying one cent more.
+arm          decisions  fills  wins     $@10   $@10+1c   maxDD   flag
+PFAV              263    215   149  -252.70   -276.61   278.73   
+PFAV_THRU         263    211   145  -262.70   -286.00   286.23   
+
+CALM-FAV BY UTC SESSION, 10-06 (real recorded ask + fee)
+session        decisions  fills  wins     $@10    maxDD   flag
+Asia 00-07            54     40    28    -7.37    29.60   INSUFFICIENT (<60 fills)
+Europe 07-13          32     27    17   -43.01    46.11   INSUFFICIENT (<60 fills)
+US 13-20              33     32    20   -53.30    60.34   INSUFFICIENT (<60 fills)
+Late 20-24            43     35    24    -5.16    41.70   INSUFFICIENT (<60 fills)
+
+coverage: 279 candles scored on 2026-10-06 (of 288).
+
+VOL REGIME, the registered Binance 1 s series (fires.p on FAV_all) vs the ref_px series:
+  09-29: bn n  261 median 0.355 p90 0.621 | share <0.304  37%  || ref n   93 median 0.222
+  09-30: bn n  244 median 0.335 p90 0.896 | share <0.304  43%  || ref n   84 median 0.219
+  10-01: bn n  274 median 0.343 p90 0.725 | share <0.304  39%  || ref n  118 median 0.221
+  10-02: bn n  278 median 0.409 p90 0.869 | share <0.304  29%  || ref n   78 median 0.211
+  10-03: bn n  259 median 0.109 p90 0.240 | share <0.304  95%  || ref n  250 median 0.101
+  10-04: bn n  258 median 0.142 p90 0.399 | share <0.304  84%  || ref n  219 median 0.115
+  10-05: bn n  264 median 0.317 p90 0.692 | share <0.304  46%  || ref n  117 median 0.211
+
+t ON THE CUMULATIVE PER-FILL $ (n = fills, pnl_part)
+arm        cum 09-29..10-06       10-06             10-05
+FAV         -97.72 t -0.52 n963  -108.85 t -1.44   +19.59 t +0.31
+FAV_mid     -23.18 t -0.19 n423   -12.56 t -0.30    -3.23 t -0.07
+FAV_all    -224.73 t -0.89 n1746 -148.17 t -1.60   +30.36 t +0.34
+FAV_ref     -25.21 t -0.14 n938   -92.64 t -1.25   +31.64 t +0.53
+  Eight days. Every FAV arm is now NEGATIVE cumulatively and no |t| exceeds 0.9.
+
+THE FAIR-PRICE CHECK, cumulative and unchanged in kind by this day
+  FAV     n 965  win 72.54%  mean ask PAID 0.7233  break-even 73.73%  gap -1.20 pp
+  FAV_all n 1748 win 72.20%  mean ask PAID 0.7213  break-even 73.54%  gap -1.34 pp
+  The gap was -0.29 pp at day 7 and is -1.20 pp at day 8; it has not changed sign, and the
+  favourite remains priced at or just through fair once the taker fee is paid.
+
+M19 PAPER SHADOW (paper only, NO orders, still running)
+  data spans 120.0 h, process up 70.8 h at 10-07 00:22 UTC; 11,951 graded arm-fills, 19 unsettled,
+  183,941 quotes posted on paper, 1,084,603 venue trade prints observed.
+  All eight arms NEGATIVE: best m0.20 D300 -0.0840 per $1 (n 1,230), m0.15 D300 -0.0995, worst
+  m0.15 D1500 -0.1645. Honest sample 1,735 unique candle-sides, not 11,951.
+  Five days, eight parameterisations, still not one sign change.
+
+M38 TRACKER (frozen a15 g10 R-off T-none cell on FAV calm fires after the M36 cut)
+  2026-10-07 00:20 UTC  n 826  HOLD -0.0084  cell +0.0006  t +0.04  t_paired +0.64
+                        halves -2.37/+7.33  green 4/5  FAIL
+  MILESTONE fired at 00:20 today: n CROSSED 800. Both HOLD and the cell remain at zero; the cell is
+  now a hair ABOVE a HOLD that is itself negative, t_paired +0.64, and it still FAILS the frozen rule.
+
+M53-NC (not-calm, live-fill realism; prereg 3224c11, counting from epoch 1791303000 = 10-06 16:10Z)
+  signals 88, fills 14, settled 14, 11W-3L, $+10.05 at $5 a stake, per $1 +0.1435, t +0.85,
+  bankroll $60.05 from $50; skipped-calm 72, skipped-no-data 2, partial 0, missed 0.
+  INSUFFICIENT (<60 fills) - and see the sampling note below, which matters more than the number.
+
+LEGACY M53 (uncapped, all candles, +3 s entry, from 10-06 03:30Z)
+  At n = 200 settled: -0.1098 per $1, which is the figure V asked for. Now at n 217, 140W-77L,
+  -$90.34, per $1 -0.0833, t -1.69.
+  ONE CORRECTION TO HOW THAT IS LABELLED: n = 200 is a WAYPOINT, not this arm's final. Its own
+  frozen prereg sets the verdict at 7 full days (through 10-13) OR n >= 300, whichever is LATER, so
+  I am recording -0.1098 as the n=200 reading rather than as a verdict. Calling it final would be
+  reading a result at a point the prereg did not authorise, which is the same error as stopping on a
+  good run - just pointing the other way.
+
+VERDICT: eight days, and the direction of travel is unchanged. FAV is cumulatively negative on every
+arm (FAV -0.0107 per $1, t -0.52) with the win rate 1.20 pp BELOW the break-even implied by the ask
+actually paid; M19 is negative in all eight parameterisations with no sign change in five days; the
+M38 stop cell is at zero and still fails; legacy M53 is -0.0833 per $1 at n 217. The only positive
+cell on the box is M53-NC at +0.1435 per $1 on FOURTEEN fills, which is why it is flagged
+insufficient and why I am not treating it as anything yet.
+
+SAMPLING PROBLEM WITH M53-NC, WHICH IS NOW THE REAL ISSUE WITH THAT TEST
+  The last four hourly lines took ZERO fills: 40 consecutive signals, every one skipped-calm. The arm
+  has been stuck on 14 fills since 20:22Z while the legacy arm added ~40 settlements over the same
+  span, so the market was running and the filter was simply excluding all of it. 72 of 88 signals
+  (82%) have been skipped as calm.
+  Two consequences, both of which should be known BEFORE the n=200 checkpoint rather than after:
+   1. At this rate n = 200 is not weeks away, it is effectively unreachable.
+   2. Whatever n it does reach will be drawn from whichever hours happen to be not-calm, so it will
+      be a time-of-day sample rather than a market sample.
+  I have changed NOTHING - the filter and the decision rule are frozen as prereged and I am not
+  touching them on the strength of a 14-fill positive. But a checkpoint that cannot be reached is not
+  a decision rule, so this needs V's and the owner's judgement, not mine. If it would help I will
+  quantify the hour-of-day distribution of not-calm candles over the eight days as a separate
+  read-only note.
+
+DATA/METHOD: ef3_shadow.sqlite3 fires + seen, m53.sqlite3 (dec, nc), m19_paper.sqlite3, read-only.
+FAV arms on pnl_part (partial arrival fill, filled shares a FLOOR, level-1 depth truncation, +500 ms
+arrival), $10 a fill, real recorded ask and the exact Polymarket taker fee 0.07p(1-p); C_fixed15 on
+its own 250 ms FAK; M53-NC at $5 with its own FAK walk. Labels are the venue's own resolution
+(Polymarket, not Predict.fun). No restarts, no config changes, nothing live.

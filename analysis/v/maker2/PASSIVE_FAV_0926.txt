@@ -1,0 +1,45 @@
+== SH 14 (09-26..28)
+576 candles; vol known on 576. $10/fire, one per candle, sec 60-180, band 0.6-0.8.
+arm      vol             n  win%     $tot   maxDD  P/DD   6h+      H1      H2    px
+passive  all           517  72.1   +309.9    76.4  4.06  8/9   +0.068  +0.051 0.670
+taker    all           517  72.0   +147.7   109.5  1.35  6/9   +0.040  +0.017 0.680
+   paired all: 514 candles, passive +302.2 vs taker +139.9; same outcome 505/514
+passive  calm<0.304    259  76.1   +276.6    63.9  4.33  9/9   +0.045  +0.168 0.680
+taker    calm<0.304    258  75.6   +182.1    92.4  1.97  8/9   +0.006  +0.135 0.690
+   paired calm<0.304: 257 candles, passive +271.5 vs taker +179.0; same outcome 256/257
+passive  mid           131  67.9     -3.2    75.8 -0.04  3/8   -0.060  +0.054 0.670
+taker    mid           131  68.7    -18.4    72.2 -0.25  4/8   -0.034  +0.006 0.660
+   paired mid: 130 candles, passive -5.7 vs taker -20.7; same outcome 127/130
+passive  high>=0.466   127  68.5    +36.4    54.6  0.67  5/9   +0.009  +0.048 0.650
+taker    high>=0.466   128  68.0    -16.0    91.9 -0.17  5/9   -0.041  +0.016 0.660
+   paired high>=0.466: 127 candles, passive +36.4 vs taker -18.3; same outcome 122/127
+== SH 50 (09-26..28)
+576 candles; vol known on 576. $10/fire, one per candle, sec 60-180, band 0.6-0.8.
+arm      vol             n  win%     $tot   maxDD  P/DD   6h+      H1      H2    px
+passive  all           503  71.4   +186.4   106.4  1.75  7/9   +0.038  +0.037 0.680
+taker    all           517  72.0   +147.7   109.5  1.35  6/9   +0.040  +0.017 0.680
+   paired all: 501 candles, passive +181.3 vs taker +95.3; same outcome 490/501
+passive  calm<0.304    249  75.1   +192.4    90.2  2.13  8/9   +0.016  +0.138 0.700
+taker    calm<0.304    258  75.6   +182.1    92.4  1.97  8/9   +0.006  +0.135 0.690
+   paired calm<0.304: 248 candles, passive +189.7 vs taker +149.1; same outcome 247/248
+passive  mid           128  67.2    -29.5    94.5 -0.31  3/8   -0.100  +0.053 0.680
+taker    mid           131  68.7    -18.4    72.2 -0.25  4/8   -0.034  +0.006 0.660
+   paired mid: 127 candles, passive -32.0 vs taker -32.2; same outcome 122/127
+passive  high>=0.466   126  68.3    +23.5    54.9  0.43  4/9   +0.012  +0.025 0.660
+taker    high>=0.466   128  68.0    -16.0    91.9 -0.17  5/9   -0.041  +0.016 0.660
+   paired high>=0.466: 126 candles, passive +23.5 vs taker -21.6; same outcome 121/126
+== SH 150 (09-26..28)
+576 candles; vol known on 576. $10/fire, one per candle, sec 60-180, band 0.6-0.8.
+arm      vol             n  win%     $tot   maxDD  P/DD   6h+      H1      H2    px
+passive  all           451  74.9   +352.0    69.2  5.08  9/9   +0.104  +0.052 0.700
+taker    all           517  72.0   +147.7   109.5  1.35  6/9   +0.040  +0.017 0.680
+   paired all: 451 candles, passive +352.0 vs taker +8.1; same outcome 412/451
+passive  calm<0.304    216  79.2   +269.3    64.2  4.19  7/9   +0.043  +0.207 0.710
+taker    calm<0.304    258  75.6   +182.1    92.4  1.97  8/9   +0.006  +0.135 0.690
+   paired calm<0.304: 216 candles, passive +269.3 vs taker +77.1; same outcome 199/216
+passive  mid           118  71.2    +47.5    57.7  0.82  4/8   +0.050  +0.030 0.690
+taker    mid           131  68.7    -18.4    72.2 -0.25  4/8   -0.034  +0.006 0.660
+   paired mid: 118 candles, passive +47.5 vs taker -52.3; same outcome 106/118
+passive  high>=0.466   117  70.9    +35.1    43.3  0.81  7/9   +0.037  +0.023 0.690
+taker    high>=0.466   128  68.0    -16.0    91.9 -0.17  5/9   -0.041  +0.016 0.660
+   paired high>=0.466: 117 candles, passive +35.1 vs taker -16.7; same outcome 107/117

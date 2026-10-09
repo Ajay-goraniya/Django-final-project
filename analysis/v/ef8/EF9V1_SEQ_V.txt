@@ -1,0 +1,9 @@
+samples 218186, candles 1178, test days [np.str_('09-13'), np.str_('09-14'), np.str_('09-15'), np.str_('09-16')]
+# 09-13: train 41477 test 51928 pred p50 -0.0574 p90 +0.0863
+# 09-14: train 93405 test 47330 pred p50 -0.0489 p90 +0.1564
+# 09-15: train 140735 test 41030 pred p50 -0.0315 p90 +0.1058
+# 09-16: train 181765 test 36421 pred p50 -0.0285 p90 +0.1003
+E5 pin=none n893 /day 223 paid 0.53 $ -178.8 DD 289.4 days+ 1/4 | -196 +158 -69 -73 | +1c -448.7 +2c -611.8 | FAV null -53.4
+E5 pin=phys n742 /day 186 paid 0.67 $ -66.6 DD 198.2 days+ 2/4 | -39 -90 +33 +28 | +1c -199.3 +2c -270.3 | FAV null -226.7
+E4 pin=none n898 /day 224 paid 0.53 $ -464.2 DD 527.0 days+ 1/4 | -267 +142 -19 -320 | +1c -748.3 +2c -907.3 | FAV null -123.8
+E4 pin=phys n752 /day 188 paid 0.67 $ -57.7 DD 154.3 days+ 2/4 | +21 -43 +15 -51 | +1c -202.3 +2c -277.7 | FAV null -326.4

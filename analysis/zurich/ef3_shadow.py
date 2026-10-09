@@ -1,0 +1,815 @@
+#!/usr/bin/env python3
+"""EF-3 pre-registered shadow. PAPER ONLY - there is no order path in this file, and no network client.
+
+V pre-registered this at 09-28 14:0x, BEFORE any further tables, and the decision rule below is fixed:
+
+    A = EF-2 v0, m=0.02, S0=150, pinned to the model's side (pw >= 0.5)
+    B = raw25, S0=60
+    C = fixed15 exactly as London runs it                     <- the control
+
+    After >= 3 FULL days an arm qualifies only if ALL of: $ total > C, worst drawdown <= C's,
+    positive on >= 2 of 3 days, fill% >= C's, and V's opposite-ask flip p < 0.05.
+    Then it goes to the owner. Nothing reaches London without his confirmation of that exact arm.
+
+HOW IT CANNOT TRADE
+  It opens the engine database read-only, opens no socket, imports no broker, and writes only to its own
+  file. It is an evaluator, not a bot: it replays already-resolved candles out of decide_log. The most it
+  can do if it goes wrong is write a wrong number into /home/ubuntu/pm_ef3/ef3_shadow.sqlite3.
+
+WHY IT REPLAYS INSTEAD OF WATCHING LIVE
+  The per-pass FAK simulator needs the row at >= t+250 ms, which only exists after the fact, and the grade
+  needs the venue's resolution. Replaying resolved candles gives numbers identical to EF-3's, on the same
+  code path. A live watcher would have to approximate both and would not be comparable to the control.
+
+THE MODEL IS FROZEN
+  Arm A scores with ef2_fits.npz fit #3 - trained on 09-24..09-27, 1,583,160 rows - which was computed
+  BEFORE this shadow was designed and so cannot have been tuned for it. It is copied once to
+  ef3_model_A.json with its sha256 and this script refuses to run if that file ever changes.
+"""
+import sys, os, json, time, sqlite3, hashlib, collections, datetime as dt, numpy as np
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from ef2_model import ROWS, per1, cost, be
+from ef3 import platt, pad_cost, STAKE
+from london_z import london_z_at
+
+ARCH = '/home/ubuntu/pm_archive/zurich_research_archive.sqlite3'
+LIVE = '/home/ubuntu/pm_paper_zurich/polymarket_v12_zurich_live4.sqlite3'
+# /tmp/poly/* froze at 09-28 01:42 and this shadow grades every arm off them, so it scored nothing
+# after the 01:30 candle. gamma_zurich.sqlite3 is Zurich's own mirror (gamma_outcomes.py, V authorised
+# 09-28), same table shape, read alongside rather than instead: the frozen files are another session's
+# and stay untouched, and keeping both means a disagreement between them would surface rather than hide.
+GAMMA_DBS = ['/tmp/poly/btc5.sqlite3', '/tmp/poly/btc5b.sqlite3',
+             '/home/ubuntu/pm_ef3/gamma_zurich.sqlite3']
+FITS, ROWS = '/home/ubuntu/pm_ef2/ef2_fits.npz', '/home/ubuntu/pm_ef2/ef2_rows.npz'
+DB = '/home/ubuntu/pm_ef3/ef3_shadow.sqlite3'
+MODEL = '/home/ubuntu/pm_ef3/ef3_model_A.json'
+MODEL_D = '/home/ubuntu/pm_ef3/ef4_model_D.json'
+SEC_LO, SEC_HI, TICK, DELAY_MS = 15, 240, 0.01, 250
+DYN = (1000, 5000, 30000)
+ARMS = ('A_v0_m02_S150', 'B_raw25_S60', 'C_fixed15', 'D_ef4gb_t000', 'D2_ef4gb_q95',
+        'E1_nightly_q90', 'E2_nightly_q95', 'E3_trail_1h_q90',
+        'E4_trail_1h_q90_strict', 'E5_causal_q90_strict', 'S_fixed_top20', 'S_raw_top20',
+        'F_z50', 'F25_z25', 'F75_z75', 'FAV', 'FAV_mid', 'FAV_all', 'FAV_ref')
+# ---- ARM F, registered 09-28 21:4x, rule frozen before its first forward row (V, after EF-14).
+# fixed15's OWN fire, skipped when |z| < 0.50 with LONDON'S EXACT z (ef14.london_z_at). F25 and F75 are
+# REFERENCE arms: logged so the sweep's shape is watched forward rather than re-picked. The backfill sweep
+# is non-monotone - +48.6 / +64.7 / +2.4 / +16.6 at .25/.50/.75/1.00 - so a forward run that keeps only the
+# cell that won the backfill would be measuring my hindsight, not the rule.
+F_CUTS = {'F_z50': 0.50, 'F25_z25': 0.25, 'F75_z75': 0.75}
+# ---- ARM FAV, registered 09-28 23:5x, rule frozen before its first forward row (V, after the parity run).
+# The favourite-buyer wallet's style as a rule: per candle, the FIRST pass in 60-180 s where OUR side is the
+# favourite (own ask > opp ask) with own ask in 0.65-0.85, taken only when the candle's trailing-5-min vol at
+# the open sits in the LOW tercile. Cuts are FROZEN from 09-22/23 and are not recomputed forward.
+#   FAV      vol <  0.281                 (the registered rule)
+#   FAV_mid  0.281 <= vol < 0.418         REFERENCE only
+#   FAV_all  every favourite, no vol cut  REFERENCE only - the null the rule has to beat
+# FAV_mid and FAV_all exist so the SHAPE is watched forward. The vol effect came out monotone on my days
+# and non-monotone on V's, and that disagreement is unresolved; logging only the winning bucket would hide
+# whichever way it resolves.
+#
+# WHICH vol SERIES. These cuts (0.281/0.418) are the CHAINLINK ref_px terciles. The parity grid that
+# validated the rule used Binance 1 s closes, whose terciles are 0.304/0.466 - same definition, different
+# series, so the numbers are not interchangeable. ref_px is used here for two reasons: V froze 0.281, and
+# it is the only one of the two available FORWARD (the Binance 1 s daily archives lag a day, and ref_px is
+# also the settlement reference). Flagged to V; if V means the Binance series the cut must become 0.304.
+#
+# NO CROSS-SOURCE FILL HERE. own and q both come out of build_rows, i.e. one source, which is exactly the
+# mistake that inflated my first-pass replication 2.3x (a decide_log ask tested against a tape1s ask).
+# vol comes from the ref tape, but vol is a regime label and never a price comparison, so it cannot
+# reintroduce that selection.
+# ARRIVAL FILL (owner, 09-28: "be sure about fills at the time the order reaches Polymarket").
+# The decision instant is not the tradable instant: London's round trip is ~245 ms and the crypto taker
+# hold has been 150 ms since 09-04, so the book that matters is ~400 ms later. FAV is judged at
+# decision + FAV_LAG_MS on the next decide_log pass at or after that instant, NEVER an earlier one, and
+# only fills if the size at that level covers our shares. This is deliberately NOT the shared DELAY_MS
+# used by arms A-F: changing that global would silently re-grade every other registered arm.
+FAV_LAG_MS = 500
+FAV_BOOKS = '/home/ubuntu/pm_multi/multi_market.sqlite3'
+FAV_SEC = (60, 180)
+FAV_BAND = (0.65, 0.85)
+# RE-FROZEN 09-29 00:0x (V): the rule is defined on the series it was VALIDATED on - BINANCE 1 s closes,
+# not the Chainlink reference. This is a DEFINITION FIX, not a retune: no forward row existed under the
+# old definition when the change was made, and the single backfill row written at 09-28 23:30 was deleted
+# rather than carried across (see --refreeze-fav). Nothing was re-picked from a result.
+#   FAV      Binance vol <  0.304                  the registered rule
+#   FAV_mid  0.304 <= Binance vol < 0.466          REFERENCE
+#   FAV_all  every favourite, no vol cut           REFERENCE, the null FAV must beat
+#   FAV_ref  ref_px  vol <  0.281                  REFERENCE, kept to learn whether the SETTLEMENT series
+#                                                  works as well as the one the rule was validated on
+# The Binance terciles were taken from 09-22/23 archive kline closes (0.3028/0.4679 -> V froze
+# 0.304/0.466). tape1s.spot_px gives 0.3198/0.4916 on the same days - about 5% higher - so the cut IS
+# source-dependent and the source matters. bn_flow's last-trade-per-second is the right one: measured
+# 99.99% IDENTICAL to official 1 s kline closes over 17,549 overlapping seconds, mean |diff| $0.0004.
+# So the live feed is the same construction the cut came from, which is why 0.304 transfers.
+FAV_CUT_LOW, FAV_CUT_MID = 0.304, 0.466
+FAV_REF_CUT, FAV_VOL_MIN_PTS = 0.281, 60
+FAV_BN = '/home/ubuntu/pm_multi/bn_flow.sqlite3'
+FAV_BN_MIN_PTS = 240        # of the 300 s before the open; under this the candle gets NO FAV fire
+FAV_BN_FF_MAX_S = 60        # longest trade-less run the 1 s series will bridge (see _bn_1s)
+
+
+def _vol_open(ref, ep):
+    """Trailing-5-min vol at the open: 1 s log-return std over [ep-300, ep), x1e4. STRICTLY pre-open."""
+    w = [ref[t] for t in range(ep - 300, ep) if t in ref]
+    if len(w) < FAV_VOL_MIN_PTS: return None
+    return float(np.std(np.diff(np.log(np.asarray(w, dtype=np.float64)))) * 1e4)
+
+
+def _bn_1s():
+    """Binance spot at 1 s: the last trade in each second from bn_flow's 250 ms buckets, then FORWARD
+    FILLED across trade-less seconds, capped at FAV_BN_FF_MAX_S.
+
+    WHY THE FORWARD FILL. CONFIRMED BY V 09-29 00:1x - this is settled, not an open question, and it is
+    not to be "simplified" back to raw last-trade later. V's ruling: the rule's definition IS the 1 s
+    KLINE CLOSE series it was validated on, and "last trade per 1 s" was shorthand for that series rather
+    than a different definition. V specified it two ways: by DEFINITION ("Binance 1 s closes", the series
+    the 0.304 cut was taken from) and by MECHANIC ("last trade per 1 s"). Those disagree on trade-less
+    seconds: a real Binance 1 s kline still exists
+    for such a second and carries close = previous close, whereas the raw last-trade mechanic leaves a
+    hole. Measured against official 1 s klines over the recorder's whole span: forward-filled is 99.80%
+    identical (mean |diff| $0.02), and on the trade-LESS seconds alone 98.61% identical. So the fill
+    reproduces the kline series rather than approximating it.
+    Following the mechanic literally instead put FAV on a DIFFERENT series from its own cut, which is the
+    exact mistake V had just corrected by moving off ref_px - and it was not harmless: with holes, the
+    240 s gate blocked 34% of LOW-vol candles against only 7% of the rest (corr(coverage, vol) = +0.451),
+    because trade-less seconds and low realised vol have the same cause - a quiet market. The gate was
+    stripping precisely the bucket FAV trades.
+
+    THE CAP MATTERS. Filling across a genuine recorder outage would invent a long run of identical
+    prices, i.e. an artificially ZERO-vol candle, which would land straight in FAV's low bucket and look
+    like the rule's best case. So the fill only bridges gaps up to FAV_BN_FF_MAX_S; anything longer stays
+    a hole, and V's 240 s gate then does what a coverage gate is for - it refuses the candle. Observed
+    gap runs are median 1 s, p90 2 s, max 41 s, so 60 s bridges the market and not an outage.
+    """
+    try:
+        c = sqlite3.connect(f'file:{FAV_BN}?mode=ro', uri=True)
+        raw = {}
+        for tms, px in c.execute("SELECT ts_ms, px FROM flow WHERE stream='spot' AND px IS NOT NULL "
+                                 "ORDER BY ts_ms"):
+            raw[int(tms) // 1000] = float(px)
+    except Exception:
+        return {}
+    if not raw: return {}
+    out, last, held = {}, None, 0
+    for t in range(min(raw), max(raw) + 1):
+        if t in raw:
+            last, held = raw[t], 0
+        else:
+            held += 1
+            if held > FAV_BN_FF_MAX_S: continue      # real outage: leave the hole for the 240 s gate
+        if last is not None: out[t] = last
+    return out
+
+
+def _vol_bn(bn, ep):
+    """FAV's vol: Binance 1 s log-return std over [ep-300, ep), x1e4. Returns None - meaning NO FIRE -
+    when fewer than 240 of those 300 s are present. V was explicit: never fall back to ref_px, because a
+    silent fallback would grade some candles on a series the cut was not taken from."""
+    w = [bn[t] for t in range(ep - 300, ep) if t in bn]
+    if len(w) < FAV_BN_MIN_PTS: return None
+    return float(np.std(np.diff(np.log(np.asarray(w, dtype=np.float64)))) * 1e4)
+
+
+def _fav_books():
+    """btc5 best ask + size at 1 s, for FAV's size gate. Empty dict if the recorder is not running."""
+    try:
+        c = sqlite3.connect(f'file:{FAV_BOOKS}?mode=ro', uri=True)
+        return {int(t): (ua, us, da, ds) for t, ua, us, da, ds in c.execute(
+            "SELECT ts, up_ask, up_ask_sz, dn_ask, dn_ask_sz FROM books WHERE market='btc5'")}
+    except Exception:
+        return {}
+
+
+def _fav_fill(rs, r0):
+    """PARTIAL-FILL model (V, 09-29): a FAK does not reject when the top level is short - it takes every
+    share at price <= cap and cancels the rest. Returns a dict; NaN px means no fill at all.
+
+        px    the arrival ask (decision + FAV_LAG_MS, next pass at or after, never earlier)
+        want  shares $10 actually buys at that price, fee-exact: STAKE / be(px)
+        got   min(want, size available at levels <= cap)
+        vwap  level-weighted price paid
+        pnl   got * (win - be(vwap))    - money scales with the shares actually filled
+        aon   the OLD all-or-nothing price, kept as a reference column so both are visible
+
+    DEPTH LIMIT - SETTLED BY V 09-29 01:4x: leave the truncation at level 1 and keep labelling filled
+    shares a FLOOR. With 0 genuine size shortfalls in 15 decisions it does not warrant an owner
+    decision; revisit ONLY if forward rows show depth actually binding (the `cap` count in
+    fav_status.py is the trip-wire). Do not quietly drop the FLOOR label while this stands.
+
+    Why it is a lower bound rather than V's exact model. V's rule counts
+    every level at price <= cap, and cap = ask + 1c reaches the NEXT level. The book recorder persists
+    only the TOP level - it holds the whole book in memory but writes one level - so no historical or
+    current row can answer "how much sits at the second level". Extending it was denied (shared
+    resource), so `got` is truncated at level 1. That UNDERSTATES fills: real depth at <= cap is at
+    least what level 1 shows. Reported as a floor, not as V's model.
+
+    TWO SHARE COUNTS, deliberately. `want` uses the fee-exact STAKE / be(px), which is what $10 really
+    buys, so a complete fill reproduces STAKE * per1(win, px) exactly. The `aon` reference keeps V's
+    literal STAKE / px from the registered gate, which is stricter. They are not interchangeable and the
+    difference is why the two columns can disagree.
+
+    Where the recorder has no row for that second, depth is unknown and the fill is allowed in full on
+    price alone - absent, not zero.
+    """
+    out = dict(px=float('nan'), want=0.0, got=0.0, vwap=float('nan'), aon=float('nan'), capped=False)
+    rs = sorted(rs, key=lambda r: r[0])
+    ts_a = np.array([r[0] for r in rs])
+    j = int(np.searchsorted(ts_a, r0['ts'] + FAV_LAG_MS, side='left'))
+    if j >= len(rs): return out
+    a = float(rs[j][3] if r0['up'] else rs[j][4])
+    if not (0.01 < a < 0.99) or a > r0['own'] + TICK + 1e-12: return out
+    want = STAKE / be(a)
+    out.update(px=a, want=want, got=want, vwap=a, aon=a)
+    b = FAV_BK.get(int(ts_a[j] // 1000))
+    if b is not None:
+        bask, bsz = (b[0], b[1]) if r0['up'] else (b[2], b[3])
+        if bask is not None and bsz is not None:
+            # bask > a means the BOOKS RECORDER and decide_log disagree about the best ask - two
+            # different feeds, measured mean +0.0027 with p10 -0.010 / p90 +0.020. It does NOT mean
+            # there is no liquidity at our price. Treating it as a rejection was a cross-source
+            # comparison, the same error retracted on 09-28, and it manufactured 4 fake "size
+            # rejections" out of 15 decisions with ZERO genuine shortfalls behind them. When the feeds
+            # disagree, depth at our price is UNKNOWN from this source, so the fill is allowed on price
+            # alone - absent, not zero, exactly as for a missing book row.
+            if bask <= a + 1e-12:
+                out['got'] = min(want, float(bsz))
+                out['capped'] = float(bsz) < want
+                if float(bsz) < STAKE / a:  # V's registered all-or-nothing gate, literal 10/px
+                    out['aon'] = float('nan')
+    return out
+
+
+def _fav_pnl(d, win):
+    """$ on the partial fill: shares actually filled x (payout - fee-exact cost). A complete fill
+    reproduces STAKE * per1(win, px) exactly, so the two models agree wherever depth is sufficient."""
+    if d['got'] <= 0 or d['vwap'] != d['vwap']: return 0.0
+    return float(d['got']) * (float(win) - be(float(d['vwap'])))
+
+
+# ---- ARM S, registered 09-28 18:5x, rule written BEFORE its first forward row (V, owner's NC-12
+# "stable version", STABLE_EF.md). Take the profile's OWN fire pass in a candle and keep it only when its
+# calibrated edge sits in the top 20% of the edges of that profile's fires over the TRAILING 24 h,
+# strictly before this fire. Fewer than 30 fires in that window -> no fire, so the rule never ranks
+# against a handful of points. This is the causal form of "top 20% per day": a day-bucket version would
+# need the day's later fires to rank the morning's.
+#   edge, FIXED  = platt(p_side) - be(own_ask)      (profile fixed15, ev >= 0.15 at ask+1 tick)
+#   edge, RAW    = p_side        - be(own_ask)      (profile raw_v10_live25, ev >= 0.25)
+# Both logged; FIXED is primary. Same FAK sim and the same forward decision rule as every other arm.
+S_WINDOW_MS, S_Q, S_MIN = 24 * 3600_000, 0.80, 30
+# RETIRED from the decision 09-28 17:3x (V, NC-19 c8a460d): E1 and E3 use a plain sample quantile as the
+# threshold, which for a stump model IS one of its ~545 distinct output values - so `pred >= thr` fires on
+# EQUALITY (8,415 of 09-27's rows sit exactly on it) and which pass wins is decided by ties. They keep
+# logging as history; they are not candidates. E4/E5 are the SAME two cells under the strict threshold.
+RETIRED = {'E1_nightly_q90', 'E3_trail_1h_q90'}
+STRICT_F = '/home/ubuntu/pm_ef3/ef5_thr_strict.json'
+# E3, registered by V 09-28 16:4x ON A RELAXED ENTRY BAR: the best-day-share <50% entry test was ill-posed
+# on three days (unbounded when the total is small; its floor moves with the day count). V relaxed the
+# ENTRY bar only and said so on the record. The FORWARD decision rule is unchanged and binds E3 exactly
+# like every other arm. Entry was relaxed; nothing about how it will be judged was.
+E3_W_MS, E3_Q, E3_GRID_MS = 3600_000, 0.90, 60_000
+EDIR = '/home/ubuntu/pm_ef3'      # arm E: one model per day, written by ef5_nightly.py at 00:05 UTC
+Q_D2 = 0.95      # D2 = the SAME frozen model as D, only the threshold rule differs (EF-5, V 09-28 15:5x)
+ALL52 = None            # set in run_once from the frozen row table's name list
+FAV_BK = {}             # btc5 ask sizes, set in run_once
+FAV_BN1 = {}            # Binance 1 s last-trade series, set in run_once
+
+# The frozen arm-A model was trained on 09-24..09-27, so those days are IN-SAMPLE for it and 09-28 was
+# already on the table when V wrote the decision rule. The rule says "from now". Everything up to and
+# including this day is therefore backfill - kept because reproducing EF-3's numbers is a useful check on
+# the evaluator, and excluded from the decision by code rather than by my remembering to.
+PREREG_DAY = '09-28'
+
+
+def outcomes():
+    out = {}
+    for p in GAMMA_DBS:
+        try:
+            c = sqlite3.connect(f'file:{p}?mode=ro', uri=True)
+            out.update({int(e): o for e, o in c.execute(
+                "SELECT epoch,outcome FROM mkt WHERE asset='btc' AND outcome IS NOT NULL")})
+        except Exception: pass
+    return out
+
+
+def load_D():
+    """Arm D - registered 09-28 15:4x with a NEGATIVE prior. NOT a qualifying candidate.
+
+    V authorised arm D if EF-4 beat C on $ and drawdown. Walk-forward it did: EF-4gb t=0.00 S0=0 was
+    +$164.0 / DD $75.5 / 4-of-4 days against C's +$16.3 / $85.3. Frozen into a SINGLE model - the only
+    form that could ever run forward - it does not reproduce: -$138.1 / DD $226.7 / 1-of-5 days on the
+    same candles, -$72.4 on the four walk-forward days where the grid said +$164.0.
+
+    That is not a bug. The scorer was checked against ef4.gb_reg_pred (max abs diff 0.0) and the feature
+    map drops exactly the six level columns. The cause is the threshold: predictions have sd 0.130 about
+    a base of -0.0996, so "pred >= 0" is a cut about 0.76 sd into the upper tail, and WHERE that cut
+    lands depends on each fit's calibration offset. A walk-forward model trained on 213k rows and one
+    trained on 1.58M put it in different places, so the grid's success was partly a per-day quantile
+    accident rather than a rule.
+
+    It stays in the shadow as a FALSIFICATION CHECK, not a candidate: the prediction on record is that
+    it runs negative forward. V can drop it at will - it costs nothing, this is paper with no order
+    path. It must not be read as qualifying under the A/B/C decision rule.
+    """
+    if not os.path.exists(MODEL_D): return None
+    M = json.load(open(MODEL_D))
+    body = {k: M[k] for k in M if k not in ('sha256', 'frozen_at')}
+    h = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()
+    if h != M['sha256']:
+        raise SystemExit(f'REFUSING TO RUN: {MODEL_D} has changed since it was frozen '
+                         f'({M["sha256"][:16]} -> {h[:16]}). Arm D must not move.')
+    return M
+
+
+def score_D(X, M):
+    """X must be the 52-wide row; the level columns are dropped to match the frozen 46."""
+    idx = [ALL52.index(n) for n in M['names']]
+    Z = (X[:, idx] - np.array(M['mean'])) / np.array(M['sd'])
+    F = np.full(len(Z), M['base'])
+    for j, thr, vl, vr in M['trees']:
+        F += np.where(Z[:, int(j)] <= thr, vl, vr)
+    return F
+
+
+def strict_above(sorted_v, qq):
+    """smallest DISTINCT value strictly greater than the sample quantile; inf if none."""
+    if len(sorted_v) < 500: return float('inf')
+    qv = float(np.quantile(sorted_v, qq))
+    i = int(np.searchsorted(sorted_v, qv, side='right'))
+    return float(sorted_v[i]) if i < len(sorted_v) else float('inf')
+
+
+def load_E(day):
+    """Arm E, pre-registered by V 09-28 16:1x. Tonight's model scores today only - a day with no model
+    file simply does not fire, which is what every day before the first nightly run should do."""
+    p = f'{EDIR}/ef5_model_{day}.json'
+    if not p or not os.path.exists(p): return None
+    M = json.load(open(p))
+    body = {k: M[k] for k in M if k not in ('sha256', 'fitted_at')}
+    h = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()
+    if h != M['sha256']:
+        raise SystemExit(f'REFUSING TO RUN: {p} changed after it was written ({M["sha256"][:16]} -> '
+                         f'{h[:16]}). A nightly model must not be edited once the day has started.')
+    if M['for_day'] != day:
+        raise SystemExit(f'{p} says for_day={M["for_day"]} but was loaded for {day}')
+    return M
+
+
+def score_E(X, M):
+    idx = [ALL52.index(n) for n in M['names']]
+    Z = (X[:, idx] - np.array(M['mean'])) / np.array(M['sd'])
+    F = np.full(len(Z), M['base'])
+    for j, thr, vl, vr in M['trees']:
+        F += np.where(Z[:, int(j)] <= thr, vl, vr)
+    return F
+
+
+def freeze_model():
+    """Copy fit #3 out of ef2_fits.npz once, then never again. Refuse to run if it has changed."""
+    f = np.load(FITS, allow_pickle=True)
+    body = dict(coef=f['coef'][3].tolist(), mean=f['mean'][3].tolist(), sd=f['sd'][3].tolist(),
+                names=[str(s) for s in f['names']], fitted_for=str(f['fitted'][3]),
+                source='ef2_fits.npz fit #3, trained on 09-24..09-27 (1,583,160 rows)')
+    blob = json.dumps(body, sort_keys=True)
+    h = hashlib.sha256(blob.encode()).hexdigest()
+    if os.path.exists(MODEL):
+        old = json.load(open(MODEL))
+        if old['sha256'] != h:
+            raise SystemExit(f'REFUSING TO RUN: {MODEL} no longer matches ef2_fits.npz fit #3.\n'
+                             f'  frozen {old["sha256"][:16]}  now {h[:16]}\n'
+                             f'  The pre-registered model must not move. Investigate before deleting this file.')
+        return old
+    body['sha256'] = h
+    body['frozen_at'] = dt.datetime.now(dt.timezone.utc).isoformat(timespec='seconds')
+    json.dump(body, open(MODEL, 'w'), indent=1)
+    print(f'froze arm A model -> {MODEL}  sha256 {h[:16]}')
+    return body
+
+
+def build_rows(rs, ep, out, keys_n):
+    """VERBATIM the inner loop of ef2_rows.py. --selftest proves it row-for-row against ef2_rows.npz."""
+    rs = sorted(rs, key=lambda r: r[0])
+    ts_a = np.array([r[0] for r in rs])
+    ua_a = np.array([r[3] for r in rs]); da_a = np.array([r[4] for r in rs])
+    R = []
+    for i, (ts, side_l, p_l, ua, da, fire, v) in enumerate(rs):
+        j = int(np.searchsorted(ts_a, ts + DELAY_MS, side='left'))
+        lo30 = int(np.searchsorted(ts_a, ts - DYN[2], side='left'))
+        back = [int(np.searchsorted(ts_a, ts - d, side='right')) - 1 for d in DYN]
+        for side in ('UP', 'DOWN'):
+            own = ua if side == 'UP' else da
+            opp = da if side == 'UP' else ua
+            if not (0.01 < own < 0.99): continue
+            oa = ua_a if side == 'UP' else da_a
+            dyn = [own - oa[b] if 0 <= b < len(oa) else 0.0 for b in back]
+            w = oa[lo30:i + 1]
+            dip = own - float(w.min()) if len(w) else 0.0
+            q = None
+            if j < len(rs):
+                lat = float(ua_a[j] if side == 'UP' else da_a[j])
+                if 0.01 < lat < 0.99 and lat <= own + TICK + 1e-12: q = lat
+            x = v + [own, opp, dyn[0], dyn[1], dyn[2], dip, float((ts // 1000) - ep),
+                     (p_l if side == side_l else 1.0 - p_l)]
+            # opp is stored as well as fed into x: arm FAV needs "is our side the favourite", and reading
+            # it back out of x by index (x[-7]) would break silently the next time a feature is added.
+            R.append(dict(x=np.array(x, dtype=np.float32), own=own, opp=opp,
+                          q=(q if q is not None else float('nan')),
+                          win=(1.0 if side == out else 0.0), sec=int((ts // 1000) - ep), ts=ts,
+                          up=(1 if side == 'UP' else 0), pe=x[-1]))
+    return R
+
+
+def load_candles(eps=None, min_epoch=None):
+    a = sqlite3.connect(f'file:{LIVE}?mode=ro', uri=True)
+    keys = json.loads(a.execute("SELECT v FROM meta WHERE k='decide_log_features'").fetchone()[0])
+    nk = len(keys)
+    vo = outcomes()
+    cand = collections.defaultdict(list)
+    seen_ts = collections.defaultdict(set)
+    for src in (ARCH, LIVE):
+        try: c = sqlite3.connect(f'file:{src}?mode=ro', uri=True)
+        except Exception: continue
+        q = ('SELECT ts_ms,epoch,side,p,ask,up_ask,dn_ask,fire,feats FROM decide_log '
+             'WHERE p IS NOT NULL AND side IS NOT NULL AND up_ask IS NOT NULL AND dn_ask IS NOT NULL')
+        args = ()
+        if min_epoch is not None:            # incremental: only candles we have not already scored
+            q += ' AND epoch > ?'; args = (min_epoch,)
+        try: cur = c.execute(q + ' ORDER BY ts_ms', args)
+        except Exception: continue
+        for ts, ep, side, p, ask, ua, da, fire, fs in cur:
+            if ep not in vo: continue
+            if eps is not None and ep not in eps: continue
+            sec = (ts // 1000) - ep
+            if not (SEC_LO <= sec <= SEC_HI): continue
+            v = None
+            if fs:
+                try:
+                    raw = json.loads(fs)
+                    if len(raw) == nk: v = raw
+                except Exception: pass
+            if v is None: continue
+            # dedup on ts alone: ARCH and LIVE overlap, and a pass is uniquely identified by its
+            # millisecond. `row not in cand[ep]` was O(n^2) on ~1500 rows a candle and dominated runtime.
+            if ts in seen_ts[ep]: continue
+            seen_ts[ep].add(ts)
+            cand[ep].append((ts, side, float(p), float(ua), float(da), int(fire or 0), v))
+    return cand, vo, nk
+
+
+def score_A(X, M):
+    mu, sd = np.array(M['mean']), np.array(M['sd'])
+    w = np.array(M['coef'])
+    Z = (X - mu) / np.where(sd > 0, sd, 1.0)
+    z = Z @ w[1:] + w[0]
+    return 1.0 / (1.0 + np.exp(-np.clip(z, -30, 30)))
+
+
+def pick(rows, pA, pD=None, thr_d2=None, pE=None, thrE=None, e3thr=None, e5thr=None):
+    """The three arms, each taking its FIRST qualifying row in the candle. One fire per candle, max."""
+    out = {}
+    for i, r in enumerate(rows):
+        if 'A_v0_m02_S150' not in out and r['sec'] >= 150 and pA[i] >= 0.5 \
+                and (pA[i] / be(r['own']) - 1) >= 0.02:
+            out['A_v0_m02_S150'] = (r, float(pA[i]))
+        if 'B_raw25_S60' not in out and r['sec'] >= 60 and r['pe'] >= 0.5 \
+                and (r['pe'] / be(r['own']) - 1) >= 0.25:
+            out['B_raw25_S60'] = (r, r['pe'])
+        if 'C_fixed15' not in out and r['pe'] >= 0.5 \
+                and (platt(r['pe']) / pad_cost(r['own']) - 1) >= 0.15:
+            out['C_fixed15'] = (r, r['pe'])
+        if '_RAW0' not in out and r['pe'] >= 0.5 and (r['pe'] / be(r['own']) - 1) >= 0.25:
+            out['_RAW0'] = (r, r['pe'])
+        if pD is not None and 'D_ef4gb_t000' not in out and r['pe'] >= 0.5 and pD[i] >= 0.0:
+            out['D_ef4gb_t000'] = (r, r['pe'])
+        if pD is not None and thr_d2 is not None and 'D2_ef4gb_q95' not in out \
+                and r['pe'] >= 0.5 and pD[i] >= thr_d2:
+            out['D2_ef4gb_q95'] = (r, r['pe'])
+        if pE is not None and r['pe'] >= 0.5:
+            for arm, key in (('E1_nightly_q90', 'q90'), ('E2_nightly_q95', 'q95')):
+                if arm not in out and pE[i] >= thrE[key]:
+                    out[arm] = (r, r['pe'])
+            if e3thr is not None:
+                tp, tsx = e3thr(r['ts'])
+                if 'E3_trail_1h_q90' not in out and tp is not None and pE[i] >= tp:
+                    out['E3_trail_1h_q90'] = (r, r['pe'])
+                if 'E4_trail_1h_q90_strict' not in out and tsx is not None and pE[i] >= tsx:
+                    out['E4_trail_1h_q90_strict'] = (r, r['pe'])
+            if e5thr is not None and 'E5_causal_q90_strict' not in out and pE[i] >= e5thr:
+                out['E5_causal_q90_strict'] = (r, r['pe'])
+    return out
+
+
+def _ref_tape():
+    """Chainlink 1 s ref for London's z. tape1s only; the RTDS oracle capture will replace it once the
+    TWAP60 topic is known and a match check has been run."""
+    c = sqlite3.connect(f'file:{LIVE}?mode=ro', uri=True)
+    return {int(t): float(p) for t, p in
+            c.execute('SELECT ts, ref_px FROM tape1s WHERE ref_px IS NOT NULL')}
+
+
+def _edge_fixed(p, a): return platt(p) - be(a)
+
+
+def _edge_raw(p, a): return p - be(a)
+
+
+def db():
+    d = sqlite3.connect(DB)
+    d.execute('CREATE TABLE IF NOT EXISTS fires(epoch INT, arm TEXT, ts_ms INT, day TEXT, sec INT, '
+              'up INT, p REAL, ask REAL, fill REAL, opp_fill REAL, win INT, pnl REAL, '
+              'sh REAL, vwap REAL, pnl_part REAL, PRIMARY KEY(epoch, arm))')
+    # additive migration for a db created before the partial-fill model; NULL on every pre-existing row,
+    # which is correct - those rows were never scored under it and must not be back-filled as if they were.
+    have = {r[1] for r in d.execute('PRAGMA table_info(fires)')}
+    for col in ('sh', 'vwap', 'pnl_part'):
+        if col not in have: d.execute(f'ALTER TABLE fires ADD COLUMN {col} REAL')
+    d.execute('CREATE TABLE IF NOT EXISTS seen(epoch INT PRIMARY KEY, at INT)')
+    # D2's threshold is the q-quantile of the frozen model's predictions on the PREVIOUS day, so the
+    # day's predictions have to be kept. ~330k floats a day; the prune keeps three days, which is all
+    # the rule needs (day k reads day k-1).
+    d.execute('CREATE TABLE IF NOT EXISTS preds(day TEXT, pr REAL)')
+    d.execute('CREATE INDEX IF NOT EXISTS preds_day ON preds(day)')
+    # E3's trailing window needs the nightly model's predictions WITH timestamps.
+    d.execute('CREATE TABLE IF NOT EXISTS epreds(ts_ms INT, day TEXT, pr REAL)')
+    d.execute('CREATE INDEX IF NOT EXISTS epreds_ts ON epreds(ts_ms)')
+    # arm S: the trailing-24 h edge history of each profile's OWN fires
+    d.execute('CREATE TABLE IF NOT EXISTS sedges(ts_ms INTEGER, prof TEXT, edge REAL)')
+    d.execute('CREATE INDEX IF NOT EXISTS sedges_ts ON sedges(ts_ms)')
+    return d
+
+
+def run_once():
+    global ALL52, STRICT, REF, FAV_BK, FAV_BN1
+    M = freeze_model(); MD = load_D()
+    ALL52 = [str(x) for x in np.load(ROWS, allow_pickle=True)['names']]
+    REF = _ref_tape()
+    FAV_BK = _fav_books()
+    FAV_BN1 = _bn_1s()
+    STRICT = json.load(open(STRICT_F)) if os.path.exists(STRICT_F) else {}
+    d = db()
+    done = {e for (e,) in d.execute('SELECT epoch FROM seen')}
+    hi = d.execute('SELECT max(epoch) FROM seen').fetchone()[0]
+    # A candle is only scorable once it has resolved, so the high-water mark lets us skip the bulk of the
+    # log. But `seen` only records RESOLVED candles, and a straggler can resolve after a later one does -
+    # a transient gap in one gamma mirror is enough. A bare `epoch > hi` would then skip that candle
+    # forever and silently lose it. One hour of lookback costs nothing and makes the skip recoverable.
+    cand, vo, nk = load_candles(min_epoch=(hi - 3600 if hi else None))
+    # EXCLUDE CANDLES THIS BOX TRADED LIVE ON. On 09-28 19:40-20:12 master was armed by someone other
+    # than me and 11 real orders went out (3 filled). Every arm here is a counterfactual priced off the
+    # book in those candles, and in those five candles the book is not exogenous - we were in it. The
+    # shadow had not reached them yet when this was written; it would have on the next incremental run.
+    try:
+        _lv = sqlite3.connect(f'file:{LIVE}?mode=ro', uri=True)
+        LIVE_EPOCHS = {int(e) for (e,) in _lv.execute("SELECT DISTINCT epoch FROM orders WHERE lane='LIVE'")}
+    except Exception:
+        LIVE_EPOCHS = set()
+    todo = [e for e in cand if e not in done and e not in LIVE_EPOCHS]
+    if LIVE_EPOCHS:
+        skipped = sorted(e for e in cand if e in LIVE_EPOCHS and e not in done)
+        if skipped: print(f'  excluded {len(skipped)} candle(s) with LIVE orders: {skipped}')
+    n = 0; qcache = {}; ecache = {}; e3buf = {}
+    for ep in sorted(todo):
+        rows = build_rows(cand[ep], ep, vo[ep], nk)
+        if not rows: 
+            d.execute('INSERT OR REPLACE INTO seen VALUES(?,?)', (ep, int(time.time()))); continue
+        X = np.stack([r['x'] for r in rows])
+        pA = score_A(X, M)
+        pD = score_D(X, MD) if MD is not None else None
+        opp = {(r['ts'], 1 - r['up']): r['q'] for r in rows}
+        day = dt.datetime.fromtimestamp(ep, dt.timezone.utc).strftime('%m-%d')
+        if pD is not None:
+            d.executemany('INSERT INTO preds VALUES(?,?)', [(day, float(v)) for v in pD])
+            prev = (dt.datetime.fromtimestamp(ep, dt.timezone.utc) - dt.timedelta(days=1)).strftime('%m-%d')
+            if prev not in qcache:
+                v = [x for (x,) in d.execute('SELECT pr FROM preds WHERE day=?', (prev,))]
+                qcache[prev] = float(np.quantile(v, Q_D2)) if len(v) >= 1000 else None
+            thr_d2 = qcache[prev]
+        else: thr_d2 = None
+        if day not in ecache: ecache[day] = load_E(day)
+        ME = ecache[day]
+        pE = score_E(X, ME) if ME is not None else None
+        thrE = ME['thr'] if ME is not None else None
+        e3thr = None
+        e5thr = (ME.get('thr_strict', {}) or {}).get('q90') if ME else None
+        if e5thr is None and ME is not None:
+            e5thr = STRICT.get(day)
+        if ME is not None:
+            if day not in e3buf:
+                # cross-boundary seed: the previous day's last hour re-scored under TODAY's model, so the
+                # window matches what EF-6 measured instead of mixing two models at the day boundary.
+                seed = ME.get('seed') or []
+                prior = [(int(a), float(b)) for a, b in seed]
+                prior += [(int(a), float(b)) for a, b in d.execute(
+                    'SELECT ts_ms, pr FROM epreds WHERE day=? ORDER BY ts_ms', (day,))]
+                e3buf[day] = sorted(prior)
+            # add THIS candle's rows before scoring it. A threshold at grid edge E still only uses rows
+            # with ts < E, so same-candle rows earlier than E are legitimately in the window and rows at
+            # or after E are excluded - no lookahead. Appending after the candle (the first version of
+            # this) made late-candle thresholds blind to the candle's own early rows, which matched
+            # neither ef6.py's backtest nor V's streaming lane. Found by the parity harness.
+            newp = [(int(r['ts']), day, float(v)) for r, v in zip(rows, pE)]
+            d.executemany('INSERT INTO epreds VALUES(?,?,?)', newp)
+            e3buf[day].extend((t_, p_) for t_, _, p_ in newp)
+            e3buf[day].sort()
+            buf = e3buf[day]
+
+            def e3thr(t, _b=buf):
+                lo = t - E3_W_MS
+                v = [p for (x, p) in _b if lo <= x < t]
+                return float(np.quantile(v, E3_Q)) if len(v) >= 500 else None
+            # 60 s grid: one threshold per minute, not one per row
+            gcache = {}
+
+            def e3thr(t, _b=buf, _g=gcache):
+                k = t // E3_GRID_MS
+                if k not in _g:
+                    edge = k * E3_GRID_MS
+                    v = [p for (x, p) in _b if edge - E3_W_MS <= x < edge]
+                    if len(v) >= 500:
+                        sv = np.sort(np.asarray(v))
+                        _g[k] = (float(np.quantile(sv, E3_Q)), strict_above(sv, E3_Q))
+                    else: _g[k] = (None, None)
+                return _g[k]
+        sel = pick(rows, pA, pD, thr_d2, pE, thrE, e3thr, e5thr)
+        # ---- arm S: rank this candle's own fire against the profile's trailing 24 h, then append ----
+        for prof, key, arm, efn in (('FIXED', 'C_fixed15', 'S_fixed_top20', _edge_fixed),
+                                    ('RAW', '_RAW0', 'S_raw_top20', _edge_raw)):
+            # NOT `cand` - that is the outer candle dict in this same function, and shadowing it made
+            # the second candle crash on `cand[ep]` with NoneType.
+            c0 = sel.get(key)
+            if c0 is None: continue
+            r0, p0 = c0
+            e0 = efn(r0['pe'], r0['own'])
+            lo_ts = r0['ts'] - S_WINDOW_MS
+            hist = [x for (x,) in d.execute(
+                'SELECT edge FROM sedges WHERE prof=? AND ts_ms >= ? AND ts_ms < ?',
+                (prof, lo_ts, r0['ts']))]
+            if len(hist) >= S_MIN and e0 >= float(np.quantile(np.asarray(hist), S_Q)):
+                sel[arm] = (r0, p0)
+            d.execute('INSERT INTO sedges VALUES(?,?,?)', (r0['ts'], prof, float(e0)))
+        # ---- arm F: fixed15's own fire, kept only when |London z| clears the cut ----
+        cF = sel.get('C_fixed15')
+        if cF is not None:
+            r0, p0 = cF
+            zt = london_z_at(REF, ep, int(r0['ts'] // 1000))
+            if zt is not None:
+                zz = zt if r0['up'] else -zt          # sign to the side being bought
+                for arm, cut in F_CUTS.items():
+                    if abs(zz) >= cut: sel[arm] = (r0, p0)
+        # ---- arms FAV / FAV_mid / FAV_all / FAV_ref: first favourite in 60-180 s, split by frozen cuts ----
+        fv = sorted((r for r in rows
+                     if FAV_SEC[0] <= r['sec'] <= FAV_SEC[1]
+                     and r['own'] > r['opp']
+                     and FAV_BAND[0] <= r['own'] <= FAV_BAND[1]),
+                    key=lambda r: r['ts'])
+        if fv:
+            # COPY the row before replacing q: fv[0] is the same dict the other arms may hold, and
+            # mutating it in place would hand arms A-F FAV's arrival fill instead of their own.
+            r0 = dict(fv[0])
+            _fd = _fav_fill(cand[ep], r0)
+            # q stays the ALL-OR-NOTHING price, so the fill/pnl columns keep the meaning every other
+            # arm's columns have; the partial model is written to its own columns beside them.
+            r0['q'] = _fd['aon']
+            r0['sh'], r0['vwap'] = _fd['got'], _fd['vwap']
+            r0['pnl_part'] = _fav_pnl(_fd, r0['win'])
+            v_bn = _vol_bn(FAV_BN1, ep)                 # the registered series
+            v_ref = _vol_open(REF, ep)                  # settlement series, reference arm only
+            if v_bn is not None:
+                # FAV_all carries the SAME coverage gate as FAV on purpose. It is the null FAV has to
+                # beat, and a null measured on a wider candle set than the rule is not a fair null.
+                sel['FAV_all'] = (r0, v_bn)             # p column carries the vol - no model here
+                if v_bn < FAV_CUT_LOW: sel['FAV'] = (r0, v_bn)
+                elif v_bn < FAV_CUT_MID: sel['FAV_mid'] = (r0, v_bn)
+            if v_ref is not None and v_ref < FAV_REF_CUT:
+                sel['FAV_ref'] = (r0, v_ref)
+        sel.pop('_RAW0', None)
+        for arm, (r, p) in sel.items():
+            q = r['q']
+            pnl = STAKE * per1(r['win'], q) if q == q else 0.0
+            _nn = lambda v: None if v is None or v != v else float(v)
+            # COLUMNS NAMED, NOT POSITIONAL. 09-30: pfav.py does `ALTER TABLE fires ADD COLUMN
+            # pnl_1c` (V asked PFAV for a +1c column) on this SHARED table, and this INSERT was
+            # positional with 15 placeholders - so the moment that 16th column appeared, every
+            # shadow run died with "table fires has 16 columns but 15 values were supplied". The
+            # cron kept firing every 20 min and kept crashing: 12.4 h of forward evidence lost,
+            # silently, until the daily report asked for a day that was not there. A positional
+            # INSERT against a table another process can extend is the bug; naming the columns
+            # fixes it permanently, and pfav.py's own INSERT was already named.
+            d.execute('INSERT OR REPLACE INTO fires(epoch,arm,ts_ms,day,sec,up,p,ask,fill,'
+                      'opp_fill,win,pnl,sh,vwap,pnl_part) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                      (ep, arm, r['ts'], day, r['sec'], r['up'], float(p), r['own'],
+                       (None if q != q else float(q)),
+                       _nn(opp.get((r['ts'], r['up']), float('nan'))),
+                       int(r['win']), pnl,
+                       _nn(r.get('sh')), _nn(r.get('vwap')), _nn(r.get('pnl_part'))))
+            n += 1
+        d.execute('INSERT OR REPLACE INTO seen VALUES(?,?)', (ep, int(time.time())))
+    d.execute('DELETE FROM sedges WHERE ts_ms < ?', (int(time.time() * 1000) - 3 * S_WINDOW_MS,))
+    keepd = sorted({x for (x,) in d.execute('SELECT DISTINCT day FROM preds')})[-3:]
+    if keepd:
+        d.execute(f"DELETE FROM preds WHERE day NOT IN ({','.join('?'*len(keepd))})", keepd)
+        d.execute(f"DELETE FROM epreds WHERE day NOT IN ({','.join('?'*len(keepd))})", keepd)
+    d.commit()
+    print(f'{dt.datetime.now(dt.timezone.utc):%H:%M:%S} evaluated {len(todo)} new candles, {n} fires recorded')
+    return d
+
+
+def report(d=None):
+    d = d or db()
+    import random
+    print(f'\nEF-3 PRE-REGISTERED SHADOW - PAPER, no order path. Decision rule fixed 09-28 14:0x by V.')
+    hdr = (f'  {"arm":24s}{"$tot":>8}{"DD$":>7}{"P/DD":>7}{"fires":>7}{"fills":>7}{"fill%":>7}'
+           f'{"win%":>7}{"days+":>7}{"run":>5}{"permP":>8}')
+    print(hdr)
+    S = {}
+    for arm in ARMS:
+        rs = d.execute('SELECT day,win,pnl,fill,opp_fill FROM fires WHERE arm=? ORDER BY ts_ms',
+                       (arm,)).fetchall()
+        allday = sorted({r[0] for r in d.execute('SELECT day FROM fires')})
+        fl = [r for r in rs if r[3] is not None]
+        tagr = ' [RETIRED - tie-degenerate rule, history only]' if arm in RETIRED else ''
+        if not fl:
+            print(f'  {arm:24s}    (no fills yet){tagr}'); continue
+        cum = peak = mdd = 0.; run = worst = 0; byd = collections.defaultdict(float)
+        for day, win, pnl, q, oq in fl:
+            cum += pnl; peak = max(peak, cum); mdd = max(mdd, peak - cum)
+            run = run + 1 if pnl < 0 else 0; worst = max(worst, run)
+            byd[day] += pnl
+        rng = random.Random(41)
+        Wf = lambda s: sum(per1(a, b) * cost(b) for a, b in s) / sum(cost(b) for a, b in s) if s else float('nan')
+        real = Wf([(w, q) for _, w, _, q, _ in fl])
+        sims = []
+        for _ in range(300):
+            acc = []
+            for _, w, _, q, oq in fl:
+                if rng.random() < 0.5:
+                    if oq is None: continue
+                    acc.append((1 - w, oq))
+                else: acc.append((w, q))
+            if acc: sims.append(Wf(acc))
+        pp = (sum(1 for x in sims if x >= real) / len(sims)) if sims else float('nan')
+        S[arm] = dict(tot=cum, mdd=mdd, n=len(rs), nf=len(fl), fill=len(fl) / len(rs),
+                      pos=sum(1 for v in byd.values() if v > 0), days=len(byd), run=worst, perm=pp,
+                      byd=dict(byd))
+        wr = sum(r[1] for r in fl) / len(fl)
+        S[arm]['win'] = wr
+        tagr = ' [RETIRED]' if arm in RETIRED else ''
+        print(f'  {arm:24s}{cum:>+8.1f}{mdd:>7.1f}{(cum/mdd if mdd>0 else 99.9):>7.2f}{len(rs):>7}'
+              f'{len(fl):>7}{100*len(fl)/len(rs):>6.1f}%{100*wr:>6.1f}%'
+              f'{f"{S[arm][chr(112)+chr(111)+chr(115)]}/{S[arm][chr(100)+chr(97)+chr(121)+chr(115)]}":>7}{worst:>5}{pp:>8.3f}' + tagr)
+        print(f'      per day $:  ' + '  '.join(f'{x} {byd.get(x, 0.0):+7.1f}' for x in allday))
+    C = S.get('C_fixed15')
+    full = sorted({r[0] for r in d.execute('SELECT day FROM fires')})
+    fwd = [x for x in full if x > PREREG_DAY]
+    print(f'\n  days in the db: {full}')
+    print(f'  backfill (<= {PREREG_DAY}, IN-SAMPLE for arm A - context only, NOT the decision): '
+          f'{[x for x in full if x <= PREREG_DAY]}')
+    print(f'  forward days (the decision runs on these): {fwd or "none yet"}')
+    if C and len(fwd) >= 3:
+        for arm in ('A_v0_m02_S150', 'B_raw25_S60'):
+            a = S.get(arm)
+            if not a: continue
+            # recompute on forward days only - S[] above spans the whole db
+            a = {**a, 'tot': sum(v for k, v in a['byd'].items() if k > PREREG_DAY),
+                 'pos': sum(1 for k, v in a['byd'].items() if k > PREREG_DAY and v > 0)}
+            ck = [('$ total > C', a['tot'] > C['tot']), ('DD <= C', a['mdd'] <= C['mdd']),
+                  ('positive >= 2 of 3 days', a['pos'] >= 2), ('fill% >= C', a['fill'] >= C['fill']),
+                  ('opposite-ask flip p < 0.05', a['perm'] < 0.05)]
+            print(f'  {arm}: ' + '  '.join(f'[{"OK" if v else "no"}] {k}' for k, v in ck))
+            print(f'    -> {"QUALIFIES - report to V, then the owner" if all(v for _, v in ck) else "does not qualify"}')
+    else:
+        print(f'  decision rule NOT evaluated: needs >= 3 full FORWARD days, have {len(fwd)}.')
+    return S
+
+
+def selftest():
+    """Prove build_rows reproduces ef2_rows.npz exactly, so arm A is scored on the EF-3 feature table."""
+    z = np.load(ROWS, allow_pickle=True)
+    ep_all = z['ep']; eps = sorted(set(ep_all.tolist()))
+    import random; random.seed(7)
+    pick_eps = set(random.sample(eps, 25))
+    cand, vo, nk = load_candles(pick_eps)
+    bad = 0; checked = 0
+    for ep in sorted(pick_eps):
+        if ep not in cand: continue
+        mine = build_rows(cand[ep], ep, vo[ep], nk)
+        m = ep_all == ep
+        Xr, qr, yr = z['X'][m], z['q'][m], z['y'][m]
+        if len(mine) != len(Xr):
+            print(f'  epoch {ep}: ROW COUNT {len(mine)} vs {len(Xr)}'); bad += 1; continue
+        Xm = np.stack([r['x'] for r in mine])
+        qm = np.array([r['q'] for r in mine], dtype=np.float32)
+        ym = np.array([r['win'] for r in mine], dtype=np.int8)
+        if not np.allclose(Xm, Xr, atol=1e-5, equal_nan=True): print(f'  epoch {ep}: X differs'); bad += 1
+        elif not np.allclose(qm, qr, atol=1e-6, equal_nan=True): print(f'  epoch {ep}: q differs'); bad += 1
+        elif not (ym == yr).all(): print(f'  epoch {ep}: y differs'); bad += 1
+        checked += 1
+    print(f'selftest: {checked} epochs compared against ef2_rows.npz, {bad} mismatched')
+    if bad or checked < 20:
+        raise SystemExit('SELFTEST FAILED - do not trust arm A until build_rows matches ef2_rows.py')
+    print('selftest PASSED - build_rows is row-for-row identical to the EF-3 feature table')
+
+
+if __name__ == '__main__':
+    if '--selftest' in sys.argv: selftest()
+    elif '--report' in sys.argv: report()
+    else: report(run_once())

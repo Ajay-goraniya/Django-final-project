@@ -1,0 +1,21 @@
+POLY  BASE         buys  139 per buy -0.0203 t -0.81 halves -0.0657/+0.0246 green 0/1 | exits 68% (soft 0%) avg exit loss -0.200
+POLY  W0.52 H0.46  buys  139 per buy -0.0291 t -1.20 halves -0.0647/+0.0059 green 0/1 | exits 71% (soft 24%) avg exit loss -0.188
+POLY  W0.52 H0.48  buys  139 per buy -0.0254 t -1.06 halves -0.0602/+0.0089 green 0/1 | exits 71% (soft 20%) avg exit loss -0.183
+POLY  W0.52 H0.50  buys  139 per buy -0.0220 t -0.92 halves -0.0565/+0.0121 green 0/1 | exits 71% (soft 17%) avg exit loss -0.178
+POLY  W0.54 H0.46  buys  139 per buy -0.0367 t -1.63 halves -0.0547/-0.0188 green 0/1 | exits 76% (soft 32%) avg exit loss -0.169
+POLY  W0.54 H0.48  buys  139 per buy -0.0319 t -1.44 halves -0.0496/-0.0146 green 0/1 | exits 76% (soft 30%) avg exit loss -0.162
+POLY  W0.54 H0.50  buys  139 per buy -0.0290 t -1.31 halves -0.0472/-0.0110 green 0/1 | exits 76% (soft 28%) avg exit loss -0.158
+POLY  W0.56 H0.46  buys  139 per buy -0.0515 t -2.64 halves -0.0642/-0.0390 green 0/1 | exits 83% (soft 42%) avg exit loss -0.137
+POLY  W0.56 H0.48  buys  139 per buy -0.0469 t -2.44 halves -0.0605/-0.0336 green 0/1 | exits 83% (soft 42%) avg exit loss -0.132
+POLY  W0.56 H0.50  buys  139 per buy -0.0427 t -2.24 halves -0.0584/-0.0272 green 0/1 | exits 83% (soft 41%) avg exit loss -0.126
+PRED  BASE         buys  849 per buy -0.0222 t -2.73 halves -0.0148/-0.0295 green 0/6 | exits 75% (soft 0%) avg exit loss -0.142
+PRED  W0.52 H0.46  buys  849 per buy -0.0327 t -4.20 halves -0.0266/-0.0387 green 0/6 | exits 78% (soft 40%) avg exit loss -0.136
+PRED  W0.52 H0.48  buys  849 per buy -0.0300 t -3.90 halves -0.0258/-0.0342 green 0/6 | exits 78% (soft 33%) avg exit loss -0.132
+PRED  W0.52 H0.50  buys  849 per buy -0.0260 t -3.42 halves -0.0231/-0.0288 green 0/6 | exits 78% (soft 23%) avg exit loss -0.127
+PRED  W0.54 H0.46  buys  849 per buy -0.0278 t -3.89 halves -0.0198/-0.0357 green 0/6 | exits 81% (soft 50%) avg exit loss -0.112
+PRED  W0.54 H0.48  buys  849 per buy -0.0249 t -3.54 halves -0.0181/-0.0317 green 0/6 | exits 81% (soft 46%) avg exit loss -0.108
+PRED  W0.54 H0.50  buys  849 per buy -0.0232 t -3.32 halves -0.0181/-0.0282 green 0/6 | exits 81% (soft 39%) avg exit loss -0.106
+PRED  W0.56 H0.46  buys  849 per buy -0.0259 t -4.04 halves -0.0232/-0.0285 green 0/6 | exits 85% (soft 57%) avg exit loss -0.089
+PRED  W0.56 H0.48  buys  849 per buy -0.0242 t -3.83 halves -0.0234/-0.0250 green 0/6 | exits 85% (soft 54%) avg exit loss -0.087
+PRED  W0.56 H0.50  buys  849 per buy -0.0221 t -3.55 halves -0.0222/-0.0220 green 0/6 | exits 85% (soft 49%) avg exit loss -0.085
+VERDICT: FAIL - every soft-exit cell is WORSE than BASE on both venues. The resting sell cuts the loss per exit (-0.20 -> -0.13 Poly, -0.14 -> -0.09 Predict) but exits MORE trades (68% -> 71-85%), and the extra exits are ones that would have recovered and won.

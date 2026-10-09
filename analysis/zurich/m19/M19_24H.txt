@@ -1,0 +1,102 @@
+M19 24-HOUR REPORT - the armed deliverable, fired 10-03 01:33 UTC. PAPER ONLY, NO ORDERS.
+
+M19 PAPER SHADOW - data spans 25.3 h, this process up 24.1 h, 2026-10-03 01:38:01 UTC. NO ORDERS, paper only.
+  graded 2244 fills, 18 unsettled; quotes 73189; venue trade prints seen 409389
+           arm     n      W/L  deployed       pnl   pnl/$1  flag
+  m0.15 D  300   276   83/193    452.75  -37.7500  -0.0834  
+  m0.15 D  700   302   89/213    535.65  -90.6500  -0.1692  
+  m0.15 D 1000   316   95/221    573.40  -98.4000  -0.1716  
+  m0.15 D 1500   323   97/226    587.75 -102.7500  -0.1748  
+  m0.20 D  300   223   62/161    333.80  -23.8000  -0.0713  
+  m0.20 D  700   256   67/189    404.00  -69.0000  -0.1708  
+  m0.20 D 1000   270   73/197    432.65  -67.6500  -0.1564  
+  m0.20 D 1500   278   78/200    448.15  -58.1500  -0.1298  
+
+  INDEPENDENT SAMPLE: 329 unique candle-sides, not 2244 arm-fills. The eight arms
+    quote the SAME candles, so they are one sample seen eight ways - a per-arm n of ~280
+    is not eight independent tests, and the 60 bar applies to the 329 candle-sides.
+
+  MONOTONICITY IN D (the speed hypothesis predicts faster = better, in order):
+    m0.15: -0.0834  -0.1692  -0.1716  -0.1748   monotone in D? YES
+    m0.20: -0.0713  -0.1708  -0.1564  -0.1298   monotone in D? NO
+    A non-monotone sweep peaking at an arbitrary cell is the shape this project treats as noise.
+
+  PAIRED, D=300 vs each slower arm, counting ONLY the candle-sides where the two actually
+    set DIFFERENT bids - the ones where they agree carry no information about latency:
+    m0.15 D300 vs D700: 107 discordant of 272 shared -> +14.20 vs -17.50   (only-D300 4, only-D700 30)
+    m0.15 D300 vs D1000: 133 discordant of 272 shared -> +4.40 vs -34.70   (only-D300 4, only-D1000 44)
+    m0.15 D300 vs D1500: 148 discordant of 272 shared -> +8.10 vs -34.70   (only-D300 4, only-D1500 51)
+    m0.20 D300 vs D700: 63 discordant of 216 shared -> -8.90 vs -26.50   (only-D300 7, only-D700 40)
+    m0.20 D300 vs D1000: 89 discordant of 218 shared -> -6.15 vs -26.55   (only-D300 5, only-D1000 52)
+    m0.20 D300 vs D1500: 108 discordant of 219 shared -> -6.40 vs -29.00   (only-D300 4, only-D1500 59)
+
+  POOLED all arms: n 2244, win 28.7%, -548.15 on $3768.15 = -0.1455/$1.
+    The sim expected +0.058 (m0.15) to +0.112 (m0.20) per $1 at a realistic 1 s delay, so live
+    paper is NOT reproducing it yet.
+    WIN RATE vs the sim, recomputed every run (not asserted): live 28.7% on 329 independent candle-sides, SE 2.5pp, sim 33-34% -> -1.72 to -2.13 SE, so the live win rate is BELOW the sim.
+    (If it matches, the fair model is calibrated and the gap is in what we get filled on. If
+     it is below, the prediction is part of the problem too and not only the fills.)
+  REST round-trip to the CLOB read endpoint: n 1508, p50 44 ms, p90 79 ms, max 228 ms
+  BINANCE CLOCK: SETTLED 10-02 01:5x, see analysis/zurich/m19/M19_CLOCK.txt. The +329 ms REST
+    serverTime offset I flagged was MY artefact, not Binance's clock: it tracks the round trip
+    (slow hosts data-api.binance.vision +331 at rtt 883, api-gcp +384 at rtt 1026; fast hosts
+    api.binance.com +3, fapi +4, testnet +4 at rtt ~227). Decisive check: a 1 s kline cannot be
+    published before it closes, and all 76 closed bars arrived AFTER their own close time
+    (p50 +139 ms, p10 +127), so the publishing clock is not ahead. True feed lag is the measured
+    ~111 ms (p90 126) and the REST offset must NOT be added to D.
+  WHICH D IS REALISTIC: a quote needs one read + one write, so the floor is ~2x the one-way p50 = ~89 ms -> D=300 is the closest arm. The sim says the edge survives ~1000 ms and dies by ~2000 ms.
+
+  PROBE POST -> ACK LATENCY: NOT MEASURABLE from what the probe records. Why, and what is:
+    orders has post_ts_ms but NO ack timestamp, and the probe does not log a successful
+    post at all - only rejects, fills and errors. So no post/ack pair exists to difference.
+    The decisions table is not a substitute: its rows arrive every ~10.1 s (p10 10.1 s, p90 10.2 s, n 13044), NOT once per 200 ms pass,
+    so consecutive rows are not adjacent passes. I tried that differential first and it
+    returned a NEGATIVE latency (-132 ms), which is how I know the method is invalid.
+    THE ONE REAL BOUND, from the reject path (the log line is written AFTER the venue
+    answers): n 24 samples, p50 -298 ms, p90 -123 ms, range -911..+576 ms.
+    Those stamps are whole SECONDS and truncated, so values up to -999 ms are expected and
+    the only honest reading is: the venue answered within the same second or the next,
+    i.e. the round trip is UNDER ~1 s. It cannot be resolved finer than that from here.
+    To get a real median/p90 the probe must record the ack time inside place() - a code
+    change plus a restart, which is the owner's call, not mine.
+
+24 H VERDICT - M19 FAILS SO FAR, AND THE ONE REAL SIGNAL IS ABOUT LATENCY, NOT THE MODEL.
+All EIGHT arms are negative at 24 h: best m0.20 D300 -0.0713 per $1 (n 223), m0.15 D300 -0.0834
+(n 276), worst m0.15 D1500 -0.1748 (n 323). Pooled -0.1455 per $1 on $3,768 deployed. The sim
+expected +0.058 to +0.112, so the paper shadow is not reproducing it and the gap is about 0.20 per
+$1 - far too large to be noise on 329 independent candle-sides.
+
+A CORRECTION TO MY OWN REPORTING TOOL, made today rather than discovered later. Until this run the
+report asserted, as a HARDCODED STRING, "the win rate does match the sim (~33-34%), which says the
+fair model is calibrated and the gap is in what we get filled on, not in the prediction." That was
+true when I wrote it at the 6 h mark. It is not true now: the pooled win rate is 28.7% on 329
+independent candle-sides, SE 2.5pp, which is -1.72 to -2.13 SE below the sim's 33-34%. So the
+comfortable reading - "the prediction is fine, only the fills are wrong" - is no longer supported;
+the prediction looks like part of the problem too. The line now RECOMPUTES the comparison every run
+and states the verdict it actually measures, because a daily cron report that carries a frozen
+conclusion will keep printing it long after it stops being true, and this one did for 18 hours.
+
+WHAT DOES SURVIVE: the paired latency test, which is the cleanest thing in the study. Comparing
+D=300 against each slower arm on ONLY the candle-sides where the two actually set different bids -
+the agreeing ones carry no information about latency - D300 is better in all SIX comparisons, and
+positive in three of them:
+  m0.15  D300 vs D700   +14.20 vs -17.50  (107 discordant of 272 shared)
+  m0.15  D300 vs D1000   +4.40 vs -34.70  (133 of 272)
+  m0.15  D300 vs D1500   +8.10 vs -34.70  (148 of 272)
+  m0.20  D300 vs D700    -8.90 vs -26.50  ( 63 of 216)
+  m0.20  D300 vs D1000   -6.15 vs -26.55  ( 89 of 218)
+  m0.20  D300 vs D1500   -6.40 vs -29.00  (108 of 219)
+Six for six in the same direction on a paired, discordant-only comparison is not the shape of noise,
+and it is consistent with the measured round trip: CLOB read p50 44 ms / p90 79 ms, so a quote needs
+~89 ms minimum and D=300 is the only arm near what the box can actually do. BUT the unpaired sweep
+does NOT agree: m0.15 is monotone in D, m0.20 is not (-0.0713, -0.1708, -0.1564, -0.1298), and a
+non-monotone sweep peaking at an arbitrary cell is exactly what this project treats as noise. So the
+honest statement is that speed helps on the trades where speed is the only difference, and that this
+is not yet enough to make the rule positive at any D.
+
+NOT MEASURABLE, restated because it has not changed: the probe's post-to-ack latency cannot be got
+from what the probe records - orders carries post_ts_ms but no ack stamp, and successful posts are
+not logged at all. The only real bound is from the reject path, n 24, whole-second truncated stamps,
+which says the venue answers inside ~1 s and cannot be resolved finer here. A real median needs the
+probe to record the ack inside place(), which is a code change plus a restart and therefore the
+owner's call, not mine.

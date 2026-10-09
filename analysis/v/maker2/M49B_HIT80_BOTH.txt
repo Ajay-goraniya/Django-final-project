@@ -1,0 +1,9 @@
+POLY fee  OWNER EXACT x1.10: candles 277 \$/candle -0.1935 per \$ staked -0.0818 t -1.97 halves -0.1405/-0.2462 green 0/1 buys 2.33 worst -2.44 | 80-side won 83%
+POLY fee  flat stake       : candles 277 \$/candle -0.1896 per \$ staked -0.0813 t -1.94 halves -0.1345/-0.2442 green 0/1 buys 2.33 worst -2.32 | 80-side won 83%
+POLY fee  HOLD both        : candles 277 \$/candle -0.1735 per \$ staked -0.0867 t -1.88 halves -0.0079/-0.3379 green 0/1 buys 2.00 worst -1.02 | 80-side won 83%
+POLY 0fee OWNER EXACT x1.10: candles 277 \$/candle -0.0907 per \$ staked -0.0383 t -0.93 halves -0.0371/-0.1439 green 0/1 buys 2.33 worst -2.29 | 80-side won 83%
+POLY 0fee flat stake       : candles 277 \$/candle -0.0873 per \$ staked -0.0374 t -0.90 halves -0.0317/-0.1425 green 0/1 buys 2.33 worst -2.19 | 80-side won 83%
+POLY 0fee HOLD both        : candles 277 \$/candle -0.1046 per \$ staked -0.0523 t -1.13 halves +0.0608/-0.2688 green 0/1 buys 2.00 worst -0.95 | 80-side won 83%
+PRED      OWNER EXACT x1.10: candles 1128 \$/candle -0.1748 per \$ staked -0.0643 t -3.28 halves -0.3098/-0.0398 green 1/6 buys 2.64 worst -8.92 | 80-side won 78%
+PRED      flat stake       : candles 1128 \$/candle -0.1625 per \$ staked -0.0615 t -3.12 halves -0.2907/-0.0344 green 1/6 buys 2.64 worst -6.90 | 80-side won 78%
+PRED      HOLD both        : candles 1128 \$/candle -0.0058 per \$ staked -0.0029 t -0.12 halves -0.0145/+0.0029 green 3/6 buys 2.00 worst -1.00 | 80-side won 78%

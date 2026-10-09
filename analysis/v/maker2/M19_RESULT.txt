@@ -1,0 +1,39 @@
+M19: 2459 candles with full Binance + tape. train 1440  test 1019
+k fitted on train = 1.4
+TRAIN calibration (fair bucket: n, mean fair, actual up%): 0.0-0.2: 2253 0.07 0.07 | 0.2-0.4: 1939 0.31 0.28 | 0.4-0.6: 3205 0.50 0.49 | 0.6-0.8: 1837 0.69 0.72 | 0.8-1.0: 2286 0.93 0.94
+TEST calibration (fair bucket: n, mean fair, actual up%): 0.0-0.2: 1597 0.07 0.06 | 0.2-0.4: 1424 0.31 0.26 | 0.4-0.6: 2179 0.50 0.52 | 0.6-0.8: 1404 0.69 0.72 | 0.8-1.0: 1548 0.93 0.92
+
+   m  | TRAIN fills win%  pnl   /$   | TEST fills win%   pnl    /$    halves          | null(random side) p
+ 0.02 |  2291  41.4  -476.20 -0.091 |  1564  40.2  -319.85 -0.092  -168.55/-151.30 | 1.000
+ 0.04 |  2187  40.5  -315.00 -0.066 |  1498  39.1  -239.95 -0.076  -128.15/-111.80 | 0.995
+ 0.06 |  2077  39.9  -156.25 -0.036 |  1429  38.2  -140.15 -0.049   -88.60/ -51.55 | 0.944
+ 0.08 |  1975  39.1   -41.05 -0.011 |  1361  37.3   -37.80 -0.015   -33.80/  -4.00 | 0.666
+ 0.10 |  1867  38.8   +67.20 +0.019 |  1283  36.3   +11.80 +0.005    +3.35/  +8.45 | 0.431
+ 0.15 |  1570  36.5  +233.40 +0.089 |  1095  34.2  +163.65 +0.096  +109.20/ +54.45 | 0.018
+
+chosen on TRAIN: m=0.15. SEALED TEST: 1095 fills, win 34.2%, pnl +163.65 (+0.096/$) -> PASS (pending null)
+
+VERDICT (V, 10-02 00:3x): M19 PASSES its pre-registered test. m=0.15 chosen on train; sealed test 09-28..10-01: 1095 fills,
++163.65 at 5 sh (+0.096/$), both halves + (+109/+54), null (outcome drawn at the bid's own odds) p=0.018, sweep monotone,
+calibration of the fair model holds on test. Every day 09-23..10-01 positive (9/9).
+Robustness (M19_ROBUST*.txt, post-hoc, no reselection): survives a size filter (>=5 and >=20 shares traded through our bid:
++0.095 / +0.075 per $); wider margins also positive (m 0.20 +0.18/$, 0.25 +0.23/$, fewer fills).
+THE RISK = SPEED: fair from 1 s ago +0.095/$, 2 s +0.058, 3 s -0.022, 5 s -0.098. The edge is being the fast quote when the
+Polymarket book dislocates vs Binance; it needs a <~1.5 s quote refresh. Must be measured live (paper) before money.
+Untested in sim: queue priority at equal price (trade-through rule already conservative), rate limits, rebates (upside).
+
+CORRECTION (V, 10-02 00:4x, my own): Binance 1 s closes are keyed by kline OPEN time, so BN[t] is only known at t+1. In the sim
+"lat 1" therefore means ZERO reaction delay (quote ready at the exact second boundary) - not achievable live. The realistic
+row is "lat 2" (= 1 s real delay): m 0.15 +0.058/$ (n 1068, halves +79/+17), m 0.20 +0.112/$ (n 899, halves +80/+60).
+"lat 3" (= 2 s real delay) is ~0 / negative. So: the edge needs < ~1 s from Binance tick to resting quote. Still positive at
+1 s, gone at 2 s. The headline +0.096 overstated it; the honest live expectation is ~+0.06..+0.11/$ IF the loop is fast.
+
+INDEPENDENT PERIOD (V, 10-02 01:0x) - M19_OLDPERIOD.txt: 09-11..09-22, 3456 candles, never used to build/choose M19, k=1.4 fixed.
+Realistic 1 s delay ("lat2"), >=5 shares traded through: m 0.15 +0.085/$ (n 3766, 11/12 days +), m 0.20 +0.161/$ (n 3104,
+12/12 days +), m 0.25 +0.243/$ (n 2513, 12/12). Even at 2 s delay m 0.20 stays +0.090/$. Combined with 09-23..10-01: the
+fair-value maker is positive on ~20 of 21 days at m 0.20 with a 1 s loop. Remaining unknowns (live paper will measure):
+real reaction time, queue priority at our price, whether thin-book prints below our bid would really have reached us.
+
+LIVE CONTRADICTION (10-02, PROBE_FILLS_ANATOMY.txt C.3): on 97 real probe fills, M19 fair-minus-price > 0.10 paid -0.31/$ and
+0..0.10 paid -0.02/$, while <= 0 paid +0.15..+0.25/$. The fair model's "bargain" = the market already moved against that side.
+M19's sim edge was adverse selection; the 6 h paper (-0.012/$, win% matched) agrees. M19 is NOT a candidate for live.

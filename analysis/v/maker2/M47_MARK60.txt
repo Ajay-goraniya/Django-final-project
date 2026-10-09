@@ -1,0 +1,12 @@
+POLY fee  FIXED stake x1.10 [OWNER EXACT]: \$/candle -0.0705 per \$ staked -0.0346 t -1.65 halves -0.1926/+0.0517 green 0/1 buys 1.98 worst -3.29 maxDD -29.5
+POLY fee  FIXED stake x1.00 [reference  ]: \$/candle -0.0681 per \$ staked -0.0343 t -1.64 halves -0.1918/+0.0556 green 0/1 buys 1.98 worst -2.95 maxDD -29.2
+POLY fee  TRAIL stake x1.10 [reference  ]: \$/candle -0.1376 per \$ staked -0.0433 t -3.40 halves -0.1954/-0.0798 green 0/1 buys 2.94 worst -4.23 maxDD -40.6
+POLY fee  TRAIL stake x1.00 [reference  ]: \$/candle -0.1304 per \$ staked -0.0443 t -3.56 halves -0.1881/-0.0726 green 0/1 buys 2.94 worst -3.19 maxDD -38.5
+POLY 0fee FIXED stake x1.10 [OWNER EXACT]: \$/candle -0.0001 per \$ staked -0.0001 t -0.00 halves -0.1164/+0.1162 green 0/1 buys 1.98 worst -3.07 maxDD -22.5
+POLY 0fee FIXED stake x1.00 [reference  ]: \$/candle +0.0010 per \$ staked +0.0005 t +0.03 halves -0.1169/+0.1190 green 1/1 buys 1.98 worst -2.74 maxDD -22.2
+POLY 0fee TRAIL stake x1.10 [reference  ]: \$/candle -0.0271 per \$ staked -0.0085 t -0.73 halves -0.0853/+0.0310 green 0/1 buys 2.94 worst -3.86 maxDD -19.5
+POLY 0fee TRAIL stake x1.00 [reference  ]: \$/candle -0.0258 per \$ staked -0.0088 t -0.76 halves -0.0832/+0.0315 green 0/1 buys 2.94 worst -2.87 maxDD -18.5
+PRED      FIXED stake x1.10 [OWNER EXACT]: \$/candle -0.1670 per \$ staked -0.0673 t -7.47 halves -0.1859/-0.1480 green 0/6 buys 2.38 worst -6.09 maxDD -194.9
+PRED      FIXED stake x1.00 [reference  ]: \$/candle -0.1595 per \$ staked -0.0671 t -7.64 halves -0.1738/-0.1453 green 0/6 buys 2.38 worst -4.54 maxDD -186.2
+PRED      TRAIL stake x1.10 [reference  ]: \$/candle -0.2803 per \$ staked -0.0553 t-11.28 halves -0.3319/-0.2289 green 0/6 buys 4.35 worst -7.78 maxDD -325.7
+PRED      TRAIL stake x1.00 [reference  ]: \$/candle -0.2315 per \$ staked -0.0532 t-11.89 halves -0.2705/-0.1926 green 0/6 buys 4.35 worst -4.35 maxDD -269.0

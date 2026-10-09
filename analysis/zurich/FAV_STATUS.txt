@@ -1,0 +1,46 @@
+FAV LEDGER  window 09-29 01:20 .. 09-29 12:40 UTC  (11.3 h)
+(the FAV family restarted 09-29 01:20: the 34 rows before it were deleted as fill-simulator
+ artefacts, which V approved. There is no FAV data from 09-28 23:55 - those rows no longer exist.)
+
+PARTIAL FILL (V's venue mechanic; filled shares are a FLOOR, depth truncated at level 1)
+arm          decisions  fills  fill%  wins   $@10    maxDD
+FAV                45     39    87%    27   -15.65    46.03
+FAV_mid            53     42    79%    34   +77.36    18.02
+FAV_all           131    104    79%    76   +29.35    68.61
+FAV_ref            49     41    84%    29    -2.49    46.03
+C_fixed15          37     n/a    n/a   n/a      n/a      n/a   (not scored under this model)
+
+ALL-OR-NOTHING (reference column, the originally registered gate)
+arm          decisions  fills  fill%  wins   $@10    maxDD
+FAV                45     35    78%    24   -18.77    44.29
+FAV_mid            53     36    68%    32   +88.69    16.20
+FAV_all           131     91    69%    69   +42.53    55.33
+FAV_ref            49     38    78%    27    -4.09    44.29
+C_fixed15          37     19    51%    11   +35.71    32.67
+
+ARRIVAL FILL (+500 ms): 131 FAV-family decisions -> 104 cleared the arrival price cap (79%), 27 PRICE-MISS (ask moved past cap+1c), 13 SIZE-MISS, 13 depth-capped.
+
+READ, and the sample is too small to be evidence: FAV has 39 fills, under the 60 graded-fire bar.
+  INSUFFICIENT. But the direction is the OPPOSITE of the backtest - the LOW-vol bucket (FAV) is
+  NEGATIVE and MID is positive, where the backtest had low > mid > high. 11 hours of one night
+  decides nothing either way; it is reported because it was asked for, not because it means yet.
+  DEPTH IS NOW BINDING: 13 size-misses and 13 depth-capped fills, against 0 of each at 01:30.
+  That is the trip-wire V named for reopening the level-1 truncation - it has been crossed.
+window: 09-29 03:00 .. 09-29 12:40  (9.7 h)   candles seen 117
+  bn_flow vol computable on 117/117 candles (240 s gate) | LOW(<0.304) 49  MID 50  HIGH 18
+
+arm         dec | PARTIAL: scored filled shares wins  win%     $@10    DD  cap | AON: fills size-rej    $@10    DD
+------------------------------------------------------------------------------------------------------------------
+FAV           45 |            45     39  511.5   27   69%   -15.65 46.03    4 |        35        4   -18.77 44.29
+FAV_mid       48 |            48     39  522.4   32   82%   +79.93 18.02    6 |        33        6   +91.26 10.00
+FAV_all      111 |           111     94 1246.5   70   74%   +47.26 68.61   12 |        82       12   +62.99 55.33
+FAV_ref       49 |            49     41  551.2   29   71%    -2.49 46.03    3 |        38        3    -4.09 44.29
+C_fixed15     26 |             0      0    0.0    0    0%    +0.00  0.00    0 |        11        0   -19.25 32.67
+
+  PARTIAL = V's venue mechanic: take every share at price <= cap, cancel the rest, $ scales with
+  shares filled. TRUNCATED AT LEVEL 1 - the recorder persists only the top level, so depth at the
+  next level (which ask+1c reaches) is unknown and `filled` is a FLOOR, not V's exact model.
+  ALL-OR-NOTHING = the previously registered gate, kept as the reference column.
+bn_flow: 09-28 18:13 .. 09-29 12:54, 100.0% of seconds present after the 60 s-capped fill
+  candles refused by the 240 s gate: 0
+  FAV decisions with no book row for the size check: 0

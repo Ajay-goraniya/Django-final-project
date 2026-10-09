@@ -1,0 +1,151 @@
+M35 part (1) - THE OWNER'S RATCHET STOP ON fixed15 EF, ZURICH. READ-ONLY. 2026-10-03 11:16:36 UTC
+Prereg analysis/v/maker2/PREREG_M35_RATCHET_STOP.md (01a35b7). Nothing live touched.
+
+Unlike M32 this rule NEVER RE-ENTERS and so cannot lose more than the stake - it is a pure
+give-back limiter, and the loss floor that M32 broke is intact here by construction.
+
+fixed15 fires on a candle with a 1 Hz bid book: 125 of M29's 363 (09-11..09-16 only,
+which is where a real bid exists); ask-touch resting ENTRY filled on 63 of them.
+
+================ ASK-TOUCH RESTING ENTRY (primary)
+  variant                                   n      W/L  stop      $@10   per $1    maxDD   worst    std  green
+  HOLD to settlement                       63    22/41     0   -156.37  -0.2482  -168.26  -10.00  10.61    2/6  
+  RATCHET as written, 0 fee, at stop       63     10/1    63     +9.00  +0.0143    -0.00   -0.00   0.35    3/6  
+  RATCHET as written, taker fee            63     9/54    63    -12.68  -0.0201   -12.68   -0.48   0.35    1/6  
+  RATCHET as written, sell at the BID      63     5/31    63    -27.92  -0.0443   -27.92   -4.29   0.88    0/6  
+  ARMED ratchet, 0 fee, at stop            63    46/17    43   -106.54  -0.1691  -108.04  -10.00   5.41    3/6  
+  ARMED ratchet, taker fee                 63    46/17    43   -121.18  -0.1923  -122.05  -10.00   5.30    3/6  
+  ARMED ratchet, sell at the BID           63    27/33    43   -145.75  -0.2314  -145.90  -10.00   5.21    2/6  
+    first half: HOLD                       32    10/22     0   -117.23  -0.3663  -168.26  -10.00   9.71    2/4  INSUFFICIENT (<60)
+    first half: ARMED ratchet 0 fee        32     26/6    24    -18.41  -0.0575   -42.00  -10.00   5.19    3/4  INSUFFICIENT (<60)
+    second half: HOLD                      31    12/19     0    -39.15  -0.1263   -98.76  -10.00  11.50    1/3  INSUFFICIENT (<60)
+    second half: ARMED ratchet 0 fee       31    20/11    19    -88.13  -0.2843   -90.63  -10.00   5.47    0/3  INSUFFICIENT (<60)
+
+================ TAKER AT THE ASK (second)
+  variant                                   n      W/L  stop      $@10   per $1    maxDD   worst    std  green
+  HOLD to settlement                      125    61/64     0    -56.41  -0.0451  -131.91  -10.00  10.17    3/6  
+  RATCHET as written, 0 fee, at stop      125   23/102   121    +21.04  +0.0168   -19.92   -0.45   1.96    3/6  
+  RATCHET as written, taker fee           125   21/104   121    -18.78  -0.0150   -54.79   -0.91   2.02    1/6  
+  RATCHET as written, sell at the BID     125   13/112   121    -53.87  -0.0431   -78.49   -4.68   2.18    1/6  
+  ARMED ratchet, 0 fee, at stop           125   106/19    83    +68.02  +0.0544   -47.53  -10.00   5.84    4/6  
+  ARMED ratchet, taker fee                125    88/37    83    +40.94  +0.0328   -49.25  -10.00   5.85    4/6  
+  ARMED ratchet, sell at the BID          125    64/61    83     -7.18  -0.0057   -59.69  -10.00   5.92    3/6  
+    first half: HOLD                       63    33/30     0     +5.18  +0.0082  -131.91  -10.00  10.03    3/4  
+    first half: ARMED ratchet 0 fee        63     56/7    43    +68.08  +0.1081   -21.67  -10.00   5.31    4/4  
+    second half: HOLD                      62    28/34     0    -61.59  -0.0993  -129.11  -10.00  10.38    1/3  
+    second half: ARMED ratchet 0 fee       62    50/12    40     -0.06  -0.0001   -47.53  -10.00   6.34    1/3  
+
+
+================================================================================
+M35 (1) VERDICT - TWO FINDINGS, AND THE FIRST ONE IS A SPEC BUG NOT A RESULT.
+
+1) THE RULE AS LITERALLY WRITTEN IS DEGENERATE. With the stop sitting at P from second one and the
+trigger being the BID, it fires immediately on essentially every trade - 63 of 63 ask-touch entries
+and 121 of 125 taker entries stop out, nearly all at exactly P. The reason is mechanical and not a
+market fact: we enter at the ASK (or at our own resting bid, in which case the best bid IS our
+price), so bid <= P already holds by the width of the spread before anything happens. "RATCHET as
+written" is therefore not a strategy, it is "do not trade" - +9.00 on 63 trades with std 0.35.
+The owner's words ("book moves 10% up, set stop loss at 5% below ... if price drops we sell at
+marked point") only make sense if the mark-stop is ARMED by the first ratchet step, so that is what
+the ARMED rows test, and those are the rows to read.
+
+2) THE ARMED RATCHET IS THE FIRST OF THE OWNER'S IDEAS THAT IMPROVES EVERY RISK NUMBER WITHOUT
+BREAKING ANYTHING. On the taker entries (n 125, the usable sample):
+                                 $@10     per $1    maxDD    std   green
+  HOLD to settlement           -56.41    -0.0451  -131.91  10.17    3/6
+  ARMED ratchet, 0 fee          +68.02   +0.0544   -47.53   5.84    4/6
+  ARMED ratchet, taker fee      +40.94   +0.0328   -49.25   5.85    4/6
+  ARMED ratchet, sell at BID     -7.18   -0.0057   -59.69   5.92    3/6
+Drawdown cut by about two thirds, per-trade std almost halved, more green days, and the loss floor
+intact at -10.00 because the rule never re-enters - which is exactly what M32's rule broke. It beats
+HOLD on per $1 in all three exit treatments. Halves on the zero-fee column: +0.1081 then -0.0001,
+so positive then flat rather than positive then negative.
+
+AND HERE IS THE HONEST LIMIT, WHICH IS LARGE: the entire apparent profit is the difference between
+selling AT the stop and selling at the BID THAT TRIGGERED IT. At the stop it is +0.0544 per $1; at
+the actual triggering bid it is -0.0057, i.e. flat. A resting sell at the stop fills only if someone
+takes it, and the bid that trips us is by definition at or below the stop - so the realistic number
+is the -0.0057 one. Read that way the armed ratchet does not make money; it takes a -0.0451 book to
+roughly zero while cutting the drawdown by two thirds. That is a RISK result, not a profit result,
+and it is the first time one of the owner's ideas has produced one.
+SAMPLE: n 125 taker / 63 ask-touch over SIX days (09-11..09-16 is the only part of the M29 window
+with a real bid), and the ask-touch arm clears the 60 bar by three. On the ask-touch entries both
+HOLD (-0.2482) and the armed ratchet (-0.1691) are deeply negative - the ratchet improves them by
+0.08 per $1 and still cannot rescue an adversely selected entry.
+London's real fixed-EF fills - part (2) - is the test that matters, because there the entry prices,
+the book and the fills are all facts. Nothing live touched here.
+
+================================================================================
+M35 STEP 5 CORRECTED (owner amendment 14b4c9c) BESIDE VERSION 1. READ-ONLY. 2026-10-03 11:19:08 UTC
+CORRECTED: a stop at S becomes the NEW MARK; re-buy at the ask once the price comes back up
+through S to >= 1.10*S; ratchet then runs on S. First stop arms only once the bid reaches P.
+KEY DIFFERENCE FROM M32: the mark ratchets DOWN to each stop, so each re-entry is CHEAPER than
+the last (1.10*S, not 1.10*P). M32 paid 10% over the ORIGINAL mark every cycle, which is what
+guaranteed its loss. That mechanism is absent here - but it still re-enters, so the loss floor
+can break; the worst-trade column is where to check that.
+
+================ ASK-TOUCH RESTING ENTRY (primary)
+  variant                                     n      W/L      $@10   per $1    maxDD   worst    std  green
+  HOLD to settlement                         63    22/41   -156.37  -0.2482  -168.26  -10.00  10.61    2/6 
+  V1 armed ratchet, 0 fee, at stop           63    46/17   -106.54  -0.1691  -108.04  -10.00   5.41    3/6 stops 43 rebuys 0
+  V1 armed ratchet, taker fee                63    46/17   -121.18  -0.1923  -122.05  -10.00   5.30    3/6 stops 43 rebuys 0
+  V1 armed ratchet, sell at BID              63    27/33   -145.75  -0.2314  -145.90  -10.00   5.21    2/6 stops 43 rebuys 0
+  CORRECTED step 5, 0 fee, at stop           63    23/30     +0.82  +0.0013   -40.48  -21.19   6.08    2/6 stops 147 rebuys 111
+  CORRECTED step 5, taker fee                63    19/44    -83.31  -0.1322   -83.31  -23.65   6.16    2/6 stops 147 rebuys 111
+  CORRECTED step 5, sell at BID              63    20/35   -100.98  -0.1603  -100.98  -31.40   7.07    2/6 stops 147 rebuys 111
+    first half: HOLD                         32    10/22   -117.23  -0.3663  -168.26  -10.00   9.71    2/4 
+    first half: CORRECTED 0 fee              32    12/15    -20.50  -0.0641   -38.36  -21.19   5.78    2/4 
+    second half: HOLD                        31    12/19    -39.15  -0.1263   -98.76  -10.00  11.50    1/3 
+    second half: CORRECTED 0 fee             31    11/15    +21.32  +0.0688   -40.48  -10.00   6.41    1/3 
+
+================ TAKER AT THE ASK (second)
+  variant                                     n      W/L      $@10   per $1    maxDD   worst    std  green
+  HOLD to settlement                        125    61/64    -56.41  -0.0451  -131.91  -10.00  10.17    3/6 
+  V1 armed ratchet, 0 fee, at stop          125   106/19    +68.02  +0.0544   -47.53  -10.00   5.84    4/6 stops 83 rebuys 0
+  V1 armed ratchet, taker fee               125    88/37    +40.94  +0.0328   -49.25  -10.00   5.85    4/6 stops 83 rebuys 0
+  V1 armed ratchet, sell at BID             125    64/61     -7.18  -0.0057   -59.69  -10.00   5.92    3/6 stops 83 rebuys 0
+  CORRECTED step 5, 0 fee, at stop          125    68/57   +167.43  +0.1339   -36.55  -16.31   6.34    6/6 stops 224 rebuys 170
+  CORRECTED step 5, taker fee               125    61/64    +44.50  +0.0356   -56.47  -18.02   6.44    4/6 stops 224 rebuys 170
+  CORRECTED step 5, sell at BID             125    59/66    -26.99  -0.0216   -72.38  -26.68   7.20    4/6 stops 224 rebuys 170
+    first half: HOLD                         63    33/30     +5.18  +0.0082  -131.91  -10.00  10.03    3/4 
+    first half: CORRECTED 0 fee              63    37/26    +94.99  +0.1508   -27.59  -16.31   6.09    4/4 
+    second half: HOLD                        62    28/34    -61.59  -0.0993  -129.11  -10.00  10.38    1/3 
+    second half: CORRECTED 0 fee             62    31/31    +72.44  +0.1168   -36.55  -10.00   6.63    3/3 
+
+================================================================================
+CORRECTED STEP 5 VERDICT - THE BEST-LOOKING CELL IN THE WHOLE PROJECT, AND ONE ASSUMPTION CARRIES IT.
+
+THE OWNER'S CORRECTION IS A REAL IMPROVEMENT ON HIS OWN EARLIER RULE, AND THE REASON IS STRUCTURAL:
+because the mark ratchets DOWN to each stop, re-entry costs 1.10*S and not 1.10*P. M32 paid 10% over
+the ORIGINAL mark on every cycle, which guaranteed its loss arithmetically. That is gone. On the
+taker entries the corrected rule beats version 1 and HOLD on every money column:
+                                 $@10     per $1    maxDD   worst   green   halves
+  HOLD                         -56.41    -0.0451  -131.91  -10.00    3/6
+  V1 armed, 0 fee              +68.02    +0.0544   -47.53  -10.00    4/6
+  CORRECTED, 0 fee            +167.43    +0.1339   -36.55  -16.31    6/6   +0.1508 / +0.1168
+  CORRECTED, taker fee         +44.50    +0.0356   -56.47  -18.02    4/6
+  CORRECTED, sell at the BID   -26.99    -0.0216   -72.38  -26.68    4/6
+Six green days out of six, both halves positive, drawdown a quarter of HOLD's. Nothing else tested
+for this owner has done that.
+
+BUT THE PRIMARY EXECUTION HE ASKED FOR IS THE RESTING ENTRY, AND THERE IT IS FLAT: ask-touch entries
+give +0.0013 per $1 at zero fee, -0.1322 with the exit fee and -0.1603 selling at the bid. The
+good numbers above are the TAKER column, which is the secondary one. On his own primary the rule
+roughly breaks even at best.
+
+AND THE ASSUMPTION DOING THE WORK IS NOW DOING FAR MORE OF IT THAN IN VERSION 1. The corrected rule
+takes 224 stops and 170 re-buys across 125 entries - version 1 took 83 stops and never re-entered.
+Every one of those 224 exits is assumed to fill EXACTLY AT THE STOP, when a resting sell only fills
+if someone takes it and the bid that trips it is by definition at or below it. Replace that single
+assumption with the actual triggering bid and +0.1339 becomes -0.0216. The entire difference between
+the best cell in this project and a losing one is one fill assumption applied 224 times.
+THE LOSS FLOOR IS ALSO BROKEN AGAIN, as it must be for anything that re-enters: worst single trade
+-16.31 at zero fee, -26.68 selling at the bid, against HOLD's exact -10.00.
+
+WHAT I WOULD SAY TO THE OWNER: his correction fixed the thing that was mathematically wrong with his
+first rule, and this is the first version of his idea that is not self-defeating. Whether it makes
+money depends entirely on whether a resting sell at the stop actually fills - which this box cannot
+answer, because it has no record of our own resting orders being taken. London's real fixed-EF fills
+with its own book is the only place that question can be settled, and it now has a specific thing to
+measure: of the stops this rule would have placed, what fraction filled at the stop rather than
+worse. Nothing here licenses a live change, and nothing was changed.

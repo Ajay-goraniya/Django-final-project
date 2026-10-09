@@ -1,0 +1,13 @@
+POLY fee  A mark80 stake x2     : n 284 \$/candle -0.0263 per \$ staked -0.0159 t -1.24 halves -0.0711/+0.0186 green 0/1 buys 1.41 worst -1.65 maxDD -11.5
+POLY fee  B both@80 stake x2    : n 277 \$/candle -0.2293 per \$ staked -0.0861 t -2.21 halves -0.1946/-0.2637 green 0/1 buys 2.33 worst -3.69 maxDD -71.1
+POLY fee  A mark80 stake x1     : n 284 \$/candle -0.0365 per \$ staked -0.0259 t -1.77 halves -0.0808/+0.0077 green 0/1 buys 1.41 worst -1.53 maxDD -12.5
+POLY fee  B both@80 stake x1    : n 277 \$/candle -0.1896 per \$ staked -0.0813 t -1.94 halves -0.1345/-0.2442 green 0/1 buys 2.33 worst -2.32 maxDD -60.0
+POLY 0fee A mark80 stake x2     : n 284 \$/candle -0.0007 per \$ staked -0.0004 t -0.03 halves -0.0447/+0.0434 green 0/1 buys 1.41 worst -1.54 maxDD -8.2
+POLY 0fee B both@80 stake x2    : n 277 \$/candle -0.1214 per \$ staked -0.0456 t -1.18 halves -0.0856/-0.1569 green 0/1 buys 2.33 worst -3.44 maxDD -50.3
+POLY 0fee A mark80 stake x1     : n 284 \$/candle -0.0124 per \$ staked -0.0088 t -0.62 halves -0.0558/+0.0310 green 0/1 buys 1.41 worst -1.49 maxDD -9.4
+POLY 0fee B both@80 stake x1    : n 277 \$/candle -0.0873 per \$ staked -0.0374 t -0.90 halves -0.0317/-0.1425 green 0/1 buys 2.33 worst -2.19 maxDD -39.4
+PRED      A mark80 stake x2     : n 1143 \$/candle -0.5687 per \$ staked -0.1722 t -1.67 halves -1.0046/-0.1335 green 0/6 buys 1.70 worst -388.20 maxDD -650.8
+PRED      B both@80 stake x2    : n 1128 \$/candle -0.3635 per \$ staked -0.1015 t -3.73 halves -0.6053/-0.1216 green 1/6 buys 2.64 worst -71.17 maxDD -410.5
+PRED      A mark80 stake x1     : n 1143 \$/candle -0.1324 per \$ staked -0.0780 t-10.38 halves -0.1727/-0.0922 green 0/6 buys 1.70 worst -4.68 maxDD -151.8
+PRED      B both@80 stake x1    : n 1128 \$/candle -0.1625 per \$ staked -0.0615 t -3.12 halves -0.2907/-0.0344 green 1/6 buys 2.64 worst -6.90 maxDD -201.9
+Worst Predict candle (A x2): epoch 1789275300, 10 buys on one side, stake doubled to $512, $1,023 staked, lost -387.54 from a $1 start. VERDICT: FAIL; doubling = martingale blow-up risk.

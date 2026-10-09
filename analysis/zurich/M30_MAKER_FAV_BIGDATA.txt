@@ -1,0 +1,337 @@
+M30 - LONDON MAKER + FAV / FAV_mid / FAV_all ON EVERY DAY WITH A REAL RECORDED SERIES
+READ-ONLY. 2026-10-02 21:46:17 UTC. Prereg analysis/v/maker2/PREREG_M30_MAKER_FAV_BIGDATA.md
+Rules frozen and transcribed from the live code (maker_probe.Quoter.decide, ef3_shadow FAV block);
+nothing tuned. Every trade graded on the VENUE resolution, never a Binance close.
+
+THE DATA THE SPEC ASSUMED DOES NOT ALL EXIST, so the two halves have different sizes:
+  the spec names a 09-11..09-16 book1s/polybook backup. It is NOT on this box - I searched every
+  sqlite3 file; the only Polymarket book WITH BIDS is pm_multi/multi_market.books market=btc5,
+  09-28 18:13 onward, and the nearest older book is pm_probe/ms_probe.pm_top, 2 HOURS on 09-27.
+  So MAKER, which needs bids, runs on 724 candles (09-30 09:25..10-02 21:40) and not on a month.
+  The FAV arms only need an ASK and do get the big window: 3,996 candles over 14 days.
+
+VOL INPUT, validated rather than assumed. FAV's cut was taken from the Binance 1 s KLINE CLOSE
+series (ef3_shadow._bn_1s records V's 09-29 ruling), so for days before Zurich's recorder existed
+I use the official 1 s klines. Measured against bn_flow on 931 shared candles: mean|d| 0.0000 and
+100% agreement on BOTH the 0.304 and 0.466 cuts; the raw series differ on 45 of 280,012 seconds
+(0.02%) and only 2 of 931 candles move at all. Against the live probe's OWN logged vol:
+mean|d| 0.0038, same side of 0.304 on 268 of 270 candles (99.3%). This is the rule's own series.
+
+================ FAV ARMS - ALL DAYS
+   set                              n       W/L       $@10   per $1     maxDD
+   FAV (taker at ask)            1771  1329/442    +382.84  +0.0216   -148.70  
+   FAV  +1c cost                 1771  1329/442    +145.70  +0.0082   -206.51  
+   FAV  ask at next sample       1771  1329/442    +400.38  +0.0226   -157.60  
+   FAV_mid (taker at ask)        1192   835/357    -598.82  -0.0502   -752.02  
+   FAV_mid  +1c cost             1192   835/357    -746.51  -0.0626   -854.19  
+   FAV_mid  ask at next sample   1192   835/357    -625.28  -0.0525   -758.37  
+   FAV_all (taker at ask)        3996 2867/1129    -976.14  -0.0244  -1202.35  
+   FAV_all  +1c cost             3996 2867/1129   -1486.39  -0.0372  -1559.63  
+   FAV_all  ask at next sample   3993 2865/1128    -986.42  -0.0247  -1192.63  
+
+================ FAV ARMS - 09-08..09-16 venues.q, ~5 s grid
+   set                              n       W/L       $@10   per $1     maxDD
+   FAV (taker at ask)             789   593/196    +182.75  +0.0232   -130.41  
+   FAV  +1c cost                  789   593/196     +77.00  +0.0098   -138.23  
+   FAV  ask at next sample        789   593/196    +227.78  +0.0289   -136.38  
+   FAV_mid (taker at ask)         597   427/170    -226.25  -0.0379   -317.87  
+   FAV_mid  +1c cost              597   427/170    -300.52  -0.0503   -368.02  
+   FAV_mid  ask at next sample    597   427/170    -230.94  -0.0387   -325.62  
+   FAV_all (taker at ask)        1899  1389/510    -211.45  -0.0111   -378.06  
+   FAV_all  +1c cost             1899  1389/510    -455.62  -0.0240   -585.62  
+   FAV_all  ask at next sample   1896  1387/509    -159.32  -0.0084   -385.14  
+
+================ FAV ARMS - 09-22..10-01 tape1s, 1 Hz
+   set                              n       W/L       $@10   per $1     maxDD
+   FAV (taker at ask)             982   736/246    +200.08  +0.0204   -148.70  
+   FAV  +1c cost                  982   736/246     +68.70  +0.0070   -205.02  
+   FAV  ask at next sample        982   736/246    +172.60  +0.0176   -157.60  
+   FAV_mid (taker at ask)         595   408/187    -372.56  -0.0626   -505.27  
+   FAV_mid  +1c cost              595   408/187    -445.99  -0.0750   -541.55  
+   FAV_mid  ask at next sample    595   408/187    -394.34  -0.0663   -509.48  
+   FAV_all (taker at ask)        2097  1478/619    -764.69  -0.0365   -971.50  
+   FAV_all  +1c cost             2097  1478/619   -1030.77  -0.0492  -1088.84  
+   FAV_all  ask at next sample   2097  1478/619    -827.09  -0.0394   -988.34  
+
+================ FAV ARMS - PER DAY, HALVES AND VERDICT (all days, ask at the decision sample)
+-- FAV
+   PER DAY (FAV):
+   day        n      W/L      $@10   per $1
+   09-08     39    27/12    -24.29  -0.0623
+   09-09     92    68/24    +18.98  +0.0206
+   09-10     82    58/24    -34.30  -0.0418
+   09-11     93    69/24     -1.17  -0.0013
+   09-12    131   104/27   +119.88  +0.0915
+   09-13    183   134/49     -2.24  -0.0012
+   09-14     70    54/16    +25.14  +0.0359
+   09-15     55    43/12    +32.81  +0.0597
+   09-16     44     36/8    +47.94  +0.1090
+   09-22      6      2/4    -36.58  -0.6097
+   09-23     38    25/13    -34.79  -0.0916
+   09-24     40     31/9    +25.72  +0.0643
+   09-25     66    44/22    -65.94  -0.0999
+   09-26    243   177/66    -18.20  -0.0075
+   09-27    199   159/40   +161.96  +0.0814
+   09-28     71    54/17    +24.53  +0.0346
+   09-29    100    78/22    +63.31  +0.0633
+   09-30    112    87/25    +71.81  +0.0641
+   10-01    107    79/28     +8.25  +0.0077
+   GREEN DAYS: 11 of 19 = 58%   worst day 09-25 -65.94
+   set                              n       W/L       $@10   per $1     maxDD
+   first half                     886   661/225    +144.02  +0.0163   -130.41  
+   second half                    885   668/217    +238.82  +0.0270   -128.68  
+   PASS TEST: positive at +1c YES (+145.70) | same sign both halves YES (+144.02 / +238.82) | >=70% green days NO (11/19) -> FAIL
+
+-- FAV_mid
+   PER DAY (FAV_mid):
+   day        n      W/L      $@10   per $1
+   09-08     39     30/9     +9.36  +0.0240
+   09-09     95    66/29    -71.75  -0.0755
+   09-10    109    77/32    -45.53  -0.0418
+   09-11     75    57/18    +19.46  +0.0260
+   09-12      8      5/3    -11.10  -0.1388
+   09-13     33     24/9    -10.02  -0.0304
+   09-14     83    59/24    -33.36  -0.0402
+   09-15     80    54/26    -68.02  -0.0850
+   09-16     75    55/20    -15.31  -0.0204
+   09-22      8      3/5    -41.29  -0.5162
+   09-23     54    27/27   -163.89  -0.3035
+   09-24     57    35/22    -97.95  -0.1718
+   09-25     43    24/19   -100.33  -0.2333
+   09-26     14     10/4     -1.08  -0.0077
+   09-27     48    33/15    -24.28  -0.0506
+   09-28     90    62/28    -43.65  -0.0485
+   09-29    100    79/21    +78.26  +0.0783
+   09-30     95    72/23    +26.30  +0.0277
+   10-01     86    63/23     -4.65  -0.0054
+   GREEN DAYS: 4 of 19 = 21%   worst day 09-23 -163.89
+   set                              n       W/L       $@10   per $1     maxDD
+   first half                     596   426/170    -229.70  -0.0385   -317.87  
+   second half                    596   409/187    -369.12  -0.0619   -505.27  
+   PASS TEST: positive at +1c NO (-746.51) | same sign both halves YES (-229.70 / -369.12) | >=70% green days NO (4/19) -> FAIL
+
+-- FAV_all
+   PER DAY (FAV_all):
+   day        n      W/L      $@10   per $1
+   09-08     99    74/25     -1.07  -0.0011
+   09-09    269   191/78    -92.56  -0.0344
+   09-10    261   187/74    -81.40  -0.0312
+   09-11    250   188/62    +44.61  +0.0178
+   09-12    143   111/32    +96.73  +0.0676
+   09-13    232   171/61     +1.66  +0.0007
+   09-14    244   176/68    -78.34  -0.0321
+   09-15    215   150/65   -136.71  -0.0636
+   09-16    186   141/45    +35.63  +0.0192
+   09-22     21    10/11    -79.23  -0.3773
+   09-23    148    82/66   -336.62  -0.2274
+   09-24    153    95/58   -228.80  -0.1495
+   09-25    159    96/63   -274.96  -0.1729
+   09-26    263   192/71     -9.42  -0.0036
+   09-27    264   202/62   +105.39  +0.0399
+   09-28    272   195/77    -28.45  -0.0105
+   09-29    273   207/66    +77.64  +0.0284
+   09-30    273   206/67    +96.92  +0.0355
+   10-01    271   193/78    -87.16  -0.0322
+   GREEN DAYS: 7 of 19 = 37%   worst day 09-23 -336.62
+   set                              n       W/L       $@10   per $1     maxDD
+   first half                    1998  1440/558    -505.52  -0.0253   -550.26  
+   second half                   1998  1427/571    -470.62  -0.0236   -665.25  
+   PASS TEST: positive at +1c NO (-1486.39) | same sign both halves YES (-505.52 / -470.62) | >=70% green days NO (7/19) -> FAIL
+
+================ MAKER - FIDELITY GATE FIRST, AND IT FAILS
+The gate: on the candles where the REAL probe posted, does the simulator reproduce its actual
+fill / no-fill? Bar is >=85%. Probe ground truth: 114 candles posted, 88 of them filled.
+   print STRICTLY THROUGH our bid (spec pessimistic) :  45/114 = 39.5%   FAIL
+   print AT OR THROUGH our bid (spec optimistic)     :  51/114 = 44.7%   FAIL
+   book: best ASK <= our bid (not in the spec, added) :  86/114 = 75.4%   FAIL
+   restricted to the 103 probe candles posted inside 60-120: 41/103 and 48/103 - no better.
+
+WHY THE PRINT MODELS FAIL, measured and not guessed: the probe's own 108 real fills appear in
+tape_btc5 only 38 times - 70 ARE SIMPLY NOT IN THE TAPE - even though the tape carries a median
+of 2,324 prints per candle. So the tape is dense but incomplete for small fills (ours were 5
+shares, about $3), and a fill model built on it cannot see two thirds of its own ground truth.
+This is the same artefact the 10-02 anatomy study hit ("77 of 93 fills with no print").
+The book model misses differently: 16 real fills it calls no-fill and 12 no-fills it calls fills.
+
+PER THE SPEC, MAKER RESULTS BELOW ARE MARKED **UNRELIABLE** AND ARE NOT A PASS/FAIL CANDIDATE.
+They are reported because the spec says to report the number either way.
+   set                              n       W/L       $@10   per $1     maxDD
+   MAKER print-optimistic UNRELIABLE   100     81/19    +164.88  +0.1649    -31.11  
+   MAKER print-pessimistic UNRELIABLE    68     53/15     +95.28  +0.1401    -30.00  
+   MAKER book-model UNRELIABLE    303    210/93     +71.28  +0.0235   -113.88  
+     same, +1c cost               303    210/93     +25.78  +0.0085   -115.27  
+   MAKER no-vol-gate null         299    229/70    +335.61  +0.1122    -37.01  
+   MAKER +1c (print-optimistic)    54      45/9    +102.11  +0.1891    -28.82  INSUFFICIENT (<60)
+
+   PER DAY (MAKER book-model, UNRELIABLE):
+   day        n      W/L      $@10   per $1
+   09-28     29     20/9     +9.35  +0.0322
+   09-29     71    52/19    +72.10  +0.1015
+   09-30     82    54/28    -19.58  -0.0239
+   10-01     80    61/19    +82.12  +0.1026
+   10-02     41    23/18    -72.71  -0.1773
+   GREEN DAYS: 3 of 5 = 60%   worst day 10-02 -72.71
+   set                              n       W/L       $@10   per $1     maxDD
+   first half                     152    105/47     +45.82  +0.0301    -73.90  
+   second half                    151    105/46     +25.46  +0.0169   -113.88  
+   (no PASS/FAIL: the fidelity gate failed at 75.4% against the 85% bar)
+
+================ SUMMARY
+   arm            n       $@10    per $1   green days  verdict
+   FAV         1771    +382.84   +0.0216        11/19  FAIL
+   FAV_mid     1192    -598.82   -0.0502         4/19  FAIL
+   FAV_all     3996    -976.14   -0.0244         7/19  FAIL
+   MAKER        303     +71.28   +0.0235          3/5  UNRELIABLE (gate 75.4% < 85%)
+
+   STANDARD ERRORS, because a per-$1 number without one is not a result:
+   arm                        n    per $1       SE       t
+   FAV                     1771   +0.0216   0.0142   +1.52   inside 2 SE - not distinguishable from 0
+   FAV_mid                 1192   -0.0502   0.0182   -2.76   clears 2 SE
+   FAV_all                 3996   -0.0244   0.0098   -2.49   clears 2 SE
+   MAKER book-model         303   +0.0235   0.0397   +0.59   inside 2 SE - not distinguishable from 0  (and UNRELIABLE anyway)
+
+================================================================================
+M30 VERDICT - ALL FOUR ARMS FAIL, BUT THE CALM GATE ITSELF IS DOING REAL WORK.
+
+Against the prereg's bar (positive at +1c AND same sign both halves AND >=70% green days):
+  FAV      +382.84 at $10, +0.0216 per $1, n 1,771, 1329W/442L (75.0%), maxDD -148.70
+           +1c YES (+145.70) | halves YES (+144.02 / +238.82) | green days 11/19 = 58%  -> FAIL
+  FAV_mid  -598.82, -0.0502, n 1,192   green 4/19 = 21%   -> FAIL
+  FAV_all  -976.14, -0.0244, n 3,996   green 7/19 = 37%   -> FAIL
+  MAKER    fidelity gate 75.4% against an 85% bar          -> UNRELIABLE, no pass/fail
+FAV fails on ONE condition only - the owner's every-day test. It clears costs and it clears both
+halves. 58% of days green is not what "every day positive" means, so it is still a FAIL, and I am
+not going to soften that by quoting the two conditions it did pass.
+
+AND THE NUMBER THAT MATTERS MOST IS THE ONE THE PREREG DID NOT ASK FOR - THE STANDARD ERROR:
+  FAV      +0.0216 +/- 0.0142   t +1.52   INSIDE 2 SE, not distinguishable from zero
+  FAV_mid  -0.0502 +/- 0.0182   t -2.76   clears 2 SE, significantly NEGATIVE
+  FAV_all  -0.0244 +/- 0.0098   t -2.49   clears 2 SE, significantly NEGATIVE
+  MAKER    +0.0235 +/- 0.0397   t +0.59   inside 2 SE (and unreliable regardless)
+So on 14 days and 1,771 fires, FAV's +2.2 cents is NOT a demonstrated edge - it is a positive
+number that a sample this size cannot separate from zero. What IS demonstrated, at better than
+2 SE in both cases, is that the two arms the calm gate EXCLUDES lose money. That is the real
+result of M30: the 0.304 cut is not decoration. It is removing a significant loss, and the
+monotone shape ef3_shadow was built to watch forward (FAV > FAV_mid, and FAV_all the null in
+between) survives 14 days of unseen data in the right order. What the cut does not do, on this
+evidence, is turn the remainder into a provable profit.
+
+ROBUSTNESS, since a single window can flatter a rule:
+ - BOTH ask sources agree on the sign and roughly the size: 09-08..09-16 venues.q +0.0232 (n 789),
+   09-22..10-01 tape1s +0.0204 (n 982). Two different instruments, two different grids, same answer -
+   which is the main reason I believe the FAV number is real even though it is not significant.
+ - The +1c cost test cuts FAV from +0.0216 to +0.0082, so roughly 60% of the gross edge is one tick.
+   A rule whose edge is smaller than a tick and a half is not a rule to size up.
+ - Taking the ask at the NEXT sample instead of the decision sample barely moves it (+0.0226), so
+   the result does not depend on the sub-second execution assumption I could not resolve.
+
+ON MAKER, AND WHY I AM NOT REPORTING A NUMBER AS IF IT MEANT SOMETHING:
+Both fill models the prereg specifies are built on tape_btc5 prints, and that input provably cannot
+see its own ground truth - the probe's 108 real fills appear in the tape 38 times. 70 are absent,
+despite a median 2,324 prints per candle. The book-based model I added reaches 75.4%, still short
+of 85%. On the strength of a 75%-accurate fill model the MAKER grid (+0.0235 per $1, t +0.59, 3 of
+5 green days) carries no weight in either direction, and the right conclusion is that THIS BOX
+CANNOT CURRENTLY TEST THE MAKER RULE OFF-LINE. To change that, the fix is not more analysis - it is
+recording our own resting-order state and the top of book at 1 Hz while the rule runs live, which
+is what the probe did for 88 candles and is the only fill evidence here that proved reliable.
+One more thing the grid does say, for what it is worth at this n: the no-vol-gate null returns
++0.1122 per $1 against the gated rule's +0.1649 on the same print model, so the calm gate improves
+the maker leg per dollar too - the same direction the FAV arms show, from independent data.
+
+================================================================================
+M30 ADDENDUM - MAKER ON BOTH BLOCKS. V was right and my data sweep was wrong.
+The 09-11..09-16 bids ARE on the branch: learner/live_backup/polybook.sqlite3.gz, table pb,
+1 Hz. My earlier sweep globbed *.sqlite3 and so never opened a .gz, and I reported the file as
+absent on that basis. It is present, it is 1,184 candles with a live-websocket book, and 1,182
+of them are graded by venues.outcome. The prints for those candles came from
+data-api.polymarket.com/trades, market by market, via the same derive-maker-from-takerOnly
+method tape_rec.py uses - the API DOES reach back to 09-11, so no part of this block is
+reconstructed. Only status='live websocket' rows are used; a reconnecting or absent book is a
+stale read and the live rule refuses to post off one.
+
+THE FIDELITY GATE IS UNCHANGED AND STILL FAILS. It can only be measured where we really traded,
+which is block B: print-at/through 44.7%, print-strictly-through 39.5%, book model 75.4%, all
+against the 85% bar, because the probe's own 108 fills appear in the tape only 38 times. More
+candles do not repair a fill model that cannot see its own ground truth, so EVERYTHING BELOW IS
+STILL MARKED UNRELIABLE. What the extra block buys is a check on whether the narrow block was a
+fluke - and on the best available model it is not, it is the same small positive number.
+
+   block / fill model                     n       W/L      $@10   per $1      SE      t    maxDD   green  fill%
+   -- A 09-11..09-16  (1184 book candles, 1180 with prints)
+   book: ask <= our bid                 332   228/104    +39.75  +0.0120  0.0380  +0.31  -164.55     3/6  76.7%  
+   book model +1c                       128     81/47   -113.49  -0.0887  0.0621  -1.43  -138.29     0/6  82.1%  
+   print at/through bid                 167    156/11   +570.08  +0.3414  0.0295 +11.58   -10.83     6/6  38.6%  
+   print strictly through               146    135/11   +478.65  +0.3278  0.0332  +9.86   -10.83     6/6  33.7%  
+   book model, NO vol gate (null)       823   549/274   -189.59  -0.0230  0.0244  -0.94  -375.02     2/6  78.6%  
+   -- B 09-30..10-02  (1208 book candles, 737 with prints)
+   book: ask <= our bid                 309    212/97    +44.07  +0.0143  0.0396  +0.36  -153.88     3/5  78.6%  
+   book model +1c                       152    107/45    +35.67  +0.0235  0.0547  +0.43   -70.72     3/5  70.4%  
+   print at/through bid                  99     79/20   +150.31  +0.1518  0.0600  +2.53   -31.11     3/3  45.8%  
+   print strictly through                86     67/19   +104.75  +0.1218  0.0663  +1.84   -37.01     3/3  39.8%  
+   book model, NO vol gate (null)       889   600/289    -26.63  -0.0030  0.0235  -0.13  -232.17     2/5  82.4%  
+
+   -- POOLED A+B
+   book: ask <= our bid                 641   440/201    +83.82  +0.0131  0.0274  +0.48  -164.55    6/11  77.6%  
+   book model +1c                       280    188/92    -77.82  -0.0278  0.0412  -0.68  -138.29    3/11  75.3%  
+   print at/through bid                 266    235/31   +720.40  +0.2708  0.0295  +9.18   -31.11     9/9  41.0%  
+   print strictly through               232    202/30   +583.40  +0.2515  0.0328  +7.66   -37.01     9/9  35.7%  
+   book model, NO vol gate (null)      1712  1149/563   -216.22  -0.0126  0.0169  -0.75  -375.02    4/11  80.5%  
+
+   PER DAY, pooled, book model (the one with the least-bad gate):
+   day          $@10
+   09-11      -69.78
+   09-12       -4.63
+   09-13      -12.22
+   09-14      +30.04
+   09-15      +54.96
+   09-16      +41.37
+   09-28       +9.35
+   09-29      +72.10
+   09-30      -19.58
+   10-01      +82.12
+   10-02      -99.91
+   GREEN DAYS: 6 of 11 = 55%
+
+MAKER VERDICT ACROSS BOTH BLOCKS - STILL NO PASS, AND STILL FOR THE SAME TWO REASONS.
+  pooled book model: +83.82 at $10, +0.0131 per $1 +/- 0.0274, t +0.48, n 641, 6 of 11 green days, maxDD -164.55
+  at +1c costs     : -77.82, -0.0278 per $1 - NEGATIVE, so the edge does not survive one tick
+  block A +0.0120 (n 332) vs block B +0.0143 (n 309) - same sign, which is the one genuinely new piece of information: the narrow block was not a fluke.
+  the no-vol-gate null returns -0.0126 per $1 on n 1712, so the calm gate HELPS the maker leg per dollar.
+  1. the fidelity gate fails (75.4% best, 85% bar), so none of these numbers is load-bearing;
+  2. even taken at face value the pooled t is +0.48 - inside 2 SE, not an edge you can
+     prove on 11 days, and the green-day count is under the owner's every-day bar.
+So the conclusion from M30 does not move: the FAV calm gate has a measurable shape, the maker
+rule cannot be validated off-line on this box, and the fix for that is recording our own resting
+order state plus 1 Hz top of book while it runs live - not another backtest.
+
+THE TWO PRINT MODELS IN THIS TABLE ARE INVALID AND MUST NOT BE READ AS A RESULT. I am leaving them
+printed because the prereg names them, but +0.27 per $1 at 235W/31L and t +9.18 is not an edge, it
+is a selection artefact, and here is the measurement that identifies it: splitting the print-model
+fills by how far the matching print sat BELOW our resting bid,
+    print AT our bid (within 0.5c)   n=63   win 100.0%
+    0.5-5c below                     n=36   win  91.7%
+    5-25c below                      n=18   win  72.2%
+    more than 25c below              n= 4   win  50.0%
+63 of 63 is impossible as trading and gives the mechanism away: a print lands at the favourite's bid
+price only while that bid is STILL 0.60-0.80, i.e. in candles where the favourite did not weaken -
+which is very nearly the set of candles the favourite goes on to win. The fill event is conditioned
+on the outcome. As the matching print moves away from our bid the win rate falls monotonically back
+towards a coin flip, which is exactly what a conditioning artefact looks like when you relax the
+condition. Applying the documented 2.2 s data-api lag (passive_fav.py / pfav.py; I had omitted it
+on the first run, which was its own error) moved the number from +0.2803 to +0.2708 and so was NOT
+the cause.
+A real resting bid is hit when the price comes DOWN to it. The book model encodes that and gets
+69% wins and no edge; matching prints at our own bid price encodes the opposite and flatters the
+rule. That is a second, independent reason the print fill models fail on this box, alongside the
+tape missing 70 of the probe's 108 real fills.
+
+SO THE MAKER READ RESTS ON THE BOOK MODEL, AND ACROSS BOTH BLOCKS IT IS THE SAME SMALL NOTHING:
+  block A 09-11..09-16  +39.75 at $10, +0.0120 per $1 +/- 0.0380, t +0.31, n 332, 3 of 6 green
+  block B 09-30..10-02  +44.07 at $10, +0.0143 per $1 +/- 0.0396, t +0.36, n 309, 3 of 5 green
+  POOLED                +83.82 at $10, +0.0131 per $1 +/- 0.0274, t +0.48, n 641, 6 of 11 green
+The one genuinely new thing the extra 1,184 candles buy is that the narrow block was not a fluke -
+two blocks 19 days apart, on two different book recorders, give the same sign and nearly the same
+size. What they do not buy is a pass: t +0.48 is inside 2 SE, 55% green days is under the owner's
+every-day bar, and at +1c costs the pooled number goes NEGATIVE (-77.82, -0.0278), so the whole
+apparent edge is less than one tick. The calm gate still helps - the no-vol-gate null is -0.0126
+per $1 on n 1,712 against the gated +0.0131 - which is the same direction the FAV arms show.

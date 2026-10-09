@@ -1,0 +1,38 @@
+--- /home/ubuntu/pm_paper_zurich/btc_model_v12_polymarket.py.bak-v10gate-20260930T035000Z	2026-09-30 02:20:42.562325017 +0000
++++ /home/ubuntu/pm_paper_zurich/btc_model_v12_polymarket.py	2026-09-30 03:51:03.942839864 +0000
+@@ -592,6 +592,16 @@
+         12.25.1: 'fav_mid' - the same rule with the MID vol band [0.304, 0.466) instead of < 0.304.
+         Owner-ordered 09-30 02:2x. Only the band differs; everything else is the frozen FAV rule."""
+         v=self.db.get('ef_engine','v10'); return v if v in ('v10','build11','fav','fav_mid') else 'v10'
++    LANE_EF_ENGINES=('build11','fav','fav_mid')
++    @classmethod
++    def _v10_order_blocked(cls,engine):
++        """12.25.2: may the v10 classifier's own EF path route an order under this ef_engine?
++
++        No, whenever another brain owns the EF slot. A one-line predicate on purpose: it is the single
++        invariant behind the 09-30 03:00:56 incident, where ef_engine was "fav_mid" and v10 still sent
++        a live order, and it is extracted so a test can assert it directly instead of re-implementing it.
++        Any new lane EF brain must be added to LANE_EF_ENGINES or it will silently let v10 trade again."""
++        return engine in cls.LANE_EF_ENGINES
+     def _routing_live(self):
+         """12.21.1: will the next order go to the venue? (Executor.route: credentials AND master ON)"""
+         try: return self.executor.route()[1]=='LIVE'
+@@ -605,8 +615,16 @@
+             d=self.decide_now(); ep=int(time.time()//300)*300
+             # 12.22.0: ef_engine control. 'v10' = the packaged classifier fires EF here; 'build11' = the
+             # EF reversal lane (poly_ef via lane_loop) fires EF and v10's call is kept as a shadow reason.
+-            if self.ef_engine()=='build11':
+-                d=dict(d,fire=False,reason='EF engine build11 (lane) · v10 shadow: '+('fire '+str(d.get('side')) if d.get('fire') else str(d.get('reason') or '')))
++            # 12.25.2: 'fav' and 'fav_mid' MUST be in this gate too. They were not, and on 09-30 at
++            # 03:00:56 the v10 classifier routed a LIVE order while ef_engine was "fav_mid" - sec 56,
++            # cheap side at 0.39, -$9.9995, which is 79% of that session's live loss and a trade the
++            # fav rule would never make. ef_engine picks which brain owns the LANE slot; it never
++            # silenced this path. Setting fire=False here is the whole fix: line ~614 routes only on
++            # d['fire'], so the v10 row is still WRITTEN to decide_log (as a shadow) and simply
++            # cannot become an order.
++            _efe=self.ef_engine()
++            if self._v10_order_blocked(_efe):
++                d=dict(d,fire=False,reason=f'EF engine {_efe} (lane) · v10 shadow: '+('fire '+str(d.get('side')) if d.get('fire') else str(d.get('reason') or '')))
+             self.last_decision=d
+             self._sync_executor_dials()
+             # 12.21.1: the venue's cash gates only an order that goes to the venue. With master OFF on a

@@ -1,0 +1,78 @@
+loading books and series...
+  2539 candles with a real 1 Hz book, 4383 graded
+M32-MAKER (a) - THE OWNER'S RULE A/B ON THE LONDON MAKER STRATEGY'S OWN ENTRIES. READ-ONLY.
+2026-10-03 11:00:27 UTC. Prereg PREREG_M32_REENTRY.md section M32-MAKER (4e2a421).
+
+*** FILLS ARE APPROXIMATE: M30's book model reproduces the real probe's fill/no-fill on
+*** 86 of 114 posted candles = 75.4%, against an 85% bar - it FAILED M30's fidelity gate.
+*** About one entry in four is a fill that did not happen or a miss that did. Nothing here
+*** should be acted on without posting live.
+
+The entry is a genuine MAKER buy and pays NO fee in either column. The fee / zero-fee split
+applies only to the SELLS and RE-BUYS, which are taker actions (sell into the bid, buy the ask).
+
+maker entries found: 718 fills over 718 candles, out of 2539 candles with a book; days 12
+
+  set                            n       $@10   per $1     maxDD    worst    std       W/L/SCR   green
+  HOLD to settlement           718    +138.41  +0.0193   -164.55   -10.00   6.90     497/221/0    7/12  
+  RULE A (fee on exits)        718    -154.71  -0.0215   -206.36   -17.49   5.63   423/174/121    4/12  
+  RULE A (zero fee)            718     +36.42  +0.0051   -130.90   -16.09   5.56   441/156/121    6/12  
+  HOLD on B kept               293    +342.15  +0.1168    -52.45   -10.00   6.55      220/73/0    9/12  
+  RULE B (fee on exits)        293    +151.14  +0.0516    -49.53   -17.49   5.42     193/64/36    6/12  
+  RULE B (zero fee)            293    +229.99  +0.0785    -41.83   -15.00   5.34     201/56/36    9/12  
+
+cycles: 512 sells, 391 re-buys; fired on 326/718 entries; still held at 270: 597
+
+PER DAY ($@10): 09-11 H-69.8/A-86.0/A0-74.7  09-12 H-4.6/A-18.1/A0-15.3  09-13 H-12.2/A+25.2/A0+48.0  09-14 H+30.0/A-36.1/A0-24.1  09-15 H+55.0/A+35.7/A0+48.3  09-16 H+41.4/A+28.8/A0+38.1  09-28 H+9.3/A-12.1/A0-2.9  09-29 H+72.1/A-21.5/A0+10.3  09-30 H-19.6/A-36.1/A0-15.2  10-01 H+82.1/A-10.0/A0+20.3  10-02 H-71.2/A-40.9/A0-24.6  10-03 H+25.9/A+16.2/A0+28.1
+
+================================================================================
+M32-MAKER (a) VERDICT - TWO SEPARATE ANSWERS, AND THEY POINT DIFFERENT WAYS.
+
+1) THE OWNER'S RE-ENTRY RULE STILL LOSES TO HOLD ON HIS OWN STRATEGY, in both fee modes:
+     HOLD to settlement   +138.41   +0.0193/$1   maxDD -164.55   worst -10.00   7/12 green
+     RULE A, fee on exits -154.71   -0.0215      maxDD -206.36   worst -17.49   4/12 green
+     RULE A, zero fee      +36.42   +0.0051      maxDD -130.90   worst -16.09   6/12 green
+   Zero-fee A is positive and cuts drawdown by a fifth (-164.55 -> -130.90) with lower std (6.90 ->
+   5.56), which is the shape he wants - but it still gives up three quarters of HOLD's per-dollar
+   return, and it still breaks the loss floor: HOLD's worst candle is exactly -10.00, A's is -16.09
+   even fee-free. Re-entering at 1.10*P is what does that, not the fees.
+   On B's kept subset the same ordering holds: HOLD +0.1168 against B +0.0516 (fee) / +0.0785 (zero).
+   So across every cut in this file, the re-entry rule is a cost, not an improvement.
+
+2) THE BINANCE 10 s ENTRY FILTER ON MAKER ENTRIES IS THE REAL RESULT HERE, AND IT IS LARGE:
+     HOLD, all 718 maker entries   +0.0193/$1   maxDD -164.55   7/12 green   497W/221L
+     HOLD, the 293 the filter KEEPS +0.1168/$1  maxDD  -52.45   9/12 green   220W/73L
+   Six times the per-dollar return, a third of the drawdown and 9 green days out of 12, on 41% of
+   the entries. That is M32's original finding reproducing on 718 entries instead of 32 - and it is
+   the exact OPPOSITE of what the same filter did to FAV taker entries in M33 this morning, where
+   the candles it threw away paid five times more than the ones it kept.
+   THE TWO RESULTS ARE CONSISTENT AND THE MECHANISM IS THE ONE THIS PROJECT KEEPS FINDING: a maker
+   entry is ADVERSELY SELECTED - a resting bid only trades when the ask comes down to it, i.e. when
+   the side is going wrong. Requiring Binance to be moving our way at that moment is precisely a
+   test of whether the fill is adverse or benign, so it has something to remove. A taker entry at
+   the ask has no such selection, so the same filter only removes good trades with the bad.
+
+   BUT I WILL NOT CALL IT A PASS, FOR ONE SPECIFIC REASON BEYOND THE 75% FILL FIDELITY: the fill
+   model's trigger IS the adverse event. We "fill" exactly when the ask falls to our bid, and the
+   filter is a momentum test at that same instant - so kept-vs-removed may be partly a split on the
+   fill model's own error rather than on the market. A filter that looks good against a fill rule it
+   is correlated with is the shape of a false positive, and this box cannot separate the two: M30's
+   gate failed at 75.4%, so the fills are approximate by one in four.
+   THE ONLY TEST THAT SETTLES IT IS PART (b) - London's REAL maker fills since 10-02 15:04, where
+   the fills are facts rather than a model. Part (a) says the hypothesis is worth that test; it
+   cannot say more, and I am not proposing a live change on it.
+
+--------------------------------------------------------------------------------
+NOTE ON THE CANDLE COUNT, since the spec says 2,392 and this file says 2,539 - neither is wrong.
+The prereg's 2,392 was M30's count when M30 ran on 10-02 (block A 1,184 + block B 1,208). Block B
+is pm_multi/multi_market, which is a LIVE recorder and has kept appending btc5 book since: it now
+holds 1,355 candles, so the union is 2,539 (2,535 of them with both bids present). The extra ~147
+candles are real new book between M30's run and this one, carrying the entry set up to 10-03.
+So the denominator grew because the data grew, not because the filter changed. Checked rather than
+assumed: block A 1,184 live-websocket candles of which 1,180 carry both bids; block B 1,355, all of
+which do. The entry rule itself requires both bids, so the candles without them can never produce an
+entry and the difference does not affect any number above.
+
+STATUS: part (a) is COMPLETE as specified. V's 11:0x stop arrived about a minute after this file was
+already pushed (472029b) and was cancelled at 11:1x; nothing was reverted in between, so the result
+below is the original run, not a re-run, and the figures are unchanged.

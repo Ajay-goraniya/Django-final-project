@@ -1,0 +1,66 @@
+live default: thr=0.25 regime={'low': 0.15, 'mid': 0.25, 'high': 0.25}
+   thr     n   hit%    per$1     total       H1       H2  worst day
+  0.05  1636   60.9  +0.0649   +106.12  +0.0754  +0.0543    -8.07 (2026-08-30) pos 6/8
+  0.10  1146   61.3  +0.1339   +153.42  +0.1475  +0.1203    +3.12 (2026-09-05) pos 8/8
+  0.15   758   60.8  +0.1951   +147.88  +0.2311  +0.1591    +6.82 (2026-09-05) pos 8/8
+  0.20   476   61.6  +0.2728   +129.84  +0.2911  +0.2544    +1.38 (2026-08-30) pos 8/8
+  0.25   346   63.6  +0.3817   +132.06  +0.4196  +0.3437    +5.16 (2026-08-30) pos 8/8
+  0.30   254   66.5  +0.5010   +127.25  +0.5933  +0.4087    +2.83 (2026-08-30) pos 8/8
+  0.35   186   64.5  +0.4829    +89.81  +0.6118  +0.3540    +1.77 (2026-08-30) pos 8/8
+  0.40   141   67.4  +0.5636    +79.46  +0.6993  +0.4297    +0.70 (2026-08-30) pos 8/8
+  0.50    96   74.0  +0.8115    +77.90  +0.8996  +0.7233    -0.27 (2026-08-30) pos 7/8
+  0.60    68   76.5  +0.9838    +66.90  +1.0607  +0.9069    +0.11 (2026-08-30) pos 8/8
+
+per-day total at each threshold (rain or sun):
+  thr  08-29  08-30  08-31  09-02  09-03  09-04  09-05  09-06
+  0.05   +14.4    -8.1   +24.9   +34.1    -0.4   +11.7    +5.4   +24.1
+  0.10   +15.5    +7.1   +24.9   +30.7   +29.3   +31.1    +3.1   +11.7
+  0.15   +25.1    +6.9   +17.2   +28.0   +32.7   +22.7    +6.8    +8.5
+  0.20   +17.9    +1.4   +10.2   +22.8   +41.5   +16.4    +6.7   +13.0
+  0.25   +21.5    +5.2    +7.8   +21.0   +45.1   +17.9    +6.6    +7.0
+  0.30   +19.7    +2.8   +13.7   +24.4   +38.3   +15.8    +9.1    +3.3
+  0.35   +11.3    +1.8    +6.3   +15.6   +36.1   +10.6    +5.9    +2.2
+  0.40    +7.1    +0.7    +5.5   +15.9   +35.8    +6.8    +3.8    +3.9
+  0.50    +7.3    -0.3    +3.5   +16.3   +32.4   +10.8    +5.8    +2.0
+  0.60    +7.3    +0.1    +2.7   +10.3   +29.4    +9.4    +5.8    +2.0
+total PnL (on $1 a trade), rows = EV threshold, columns = cents paid over the quoted ask
+   thr     n        0c        1c        2c        3c        5c
+  0.05  1636   +106.12    +75.37    +45.78    +17.28    -36.67
+  0.10  1146   +153.42   +128.92   +105.42    +82.85    +40.27
+  0.15   758   +147.88   +129.60   +112.12    +95.37    +63.91
+  0.20   476   +129.84   +116.87   +104.49    +92.68    +70.56
+  0.25   346   +132.06   +121.31   +111.08   +101.32    +83.12
+  0.30   254   +127.25   +118.33   +109.86   +101.80    +86.80
+  0.40   141    +79.46    +74.05    +68.93    +64.08    +55.08
+
+positive days out of 8, same layout:
+   thr        0c        1c        2c        3c        5c
+  0.05         6         6         5         4         3
+  0.10         8         8         7         7         6
+  0.15         8         8         8         8         8
+  0.20         8         8         7         7         7
+  0.25         8         8         8         8         8
+  0.30         8         8         8         8         8
+  0.40         8         8         8         8         8
+
+regime rule as shipped vs flat, total PnL on $1 a trade:
+  slip 0c: n=475 total  +142.93 per$1 +0.3009 pos 8/8
+  slip 1c: n=475 total  +129.61 per$1 +0.2729 pos 8/8
+  slip 2c: n=475 total  +116.90 per$1 +0.2461 pos 8/8
+  slip 3c: n=475 total  +104.77 per$1 +0.2206 pos 7/8
+  slip 5c: n=475 total   +82.05 per$1 +0.1727 pos 7/8
+
+READING IT. The shipped default is the regime rule (low .15 / mid .25 / high .25 by rv60), n=475, and it beats
+every FLAT threshold once you pay 2c or more over the quote: +116.90 vs 0.15's +112.12 and 0.25's +111.08 at 2c,
++104.77 vs +95.37 and +101.32 at 3c. At zero slippage flat 0.10 wins (+153.42 on 1146 fires) and flat 0.15 is
++147.88 - so a lower dial makes more TOTAL money only if real slippage is at or under about 1-2 cents. The optimum
+moves UP as you pay more, which is what it should do: a low EV threshold buys trades priced close to fair, and
+those are the first to stop paying when you cross the spread.
+8/8 positive days: flat 0.15, 0.25, 0.30, 0.40 at every slippage column; flat 0.10 falls to 7/8 at 2c; flat 0.05
+is 6/8 before any slippage and negative by 5c. The 0.10-0.30 band is a broad plateau (+127..+153 at 0c), not a
+spike, so nothing here is a peak fitted to noise.
+WHAT IT DOES NOT SAY. Do not move the live dial on this. Live runs +0.0138/$1 against +0.3009 backtest on the same
+signal - a 22x haircut, and 5c of slippage only takes the backtest to +0.1727, so slippage does NOT explain the
+gap. R-18 does: filled 40.7% vs unfilled 99.1%, i.e. the fills we get are adversely selected. Until that number is
+measured live - which `timing.submit_book` now makes possible - the grid says where to sit for a GIVEN slippage
+and we do not know ours. Measure first, then read this table.

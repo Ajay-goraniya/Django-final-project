@@ -1,0 +1,114 @@
+WHY DOES THE MAKER PROBE WIN AND M19 PAPER NOT? READ-ONLY. 2026-10-02 09:30:10 UTC
+Probe = venue-graded live fills. M19 = the D300 arm, unique candle-sides, m 0.15 and 0.20 apart.
+Factors: (a) price paid inside 0.60-0.80  (b) pre-open vol < 0.304 (FavBrain, the frozen calm
+definition)  (c) fill second inside 60-180  (d) Binance >= 2 bps AGAINST the side in the 1 s
+before the fill. One-way, every level shown, no cell chosen after the fact.
+
+CHECK FIRST - my factor (d) against the probe's independently recorded bn_before_bps:
+  n 57 fills have both. median |difference| 0.001 bps, max 2.241. The >= 2.0 bps VERDICT agrees on 55 of 57.
+  Tagging uses the PROBE'S OWN recorded value where it exists and this bn_flow recomputation only where it does not.
+  USABLE (the disagreements sit within ~2 bps of the threshold, i.e. boundary cases)
+
+WINDOWS: probe full history n 96 (09-30 17:00 -> 10-02 08:55); M19 starts 10-02 00:30, so the probe is also shown
+restricted to M19's own window (n 21) - a straight side-by-side would otherwise
+bake a regime difference into every row.
+
+(a) price inside 0.60-0.80
+  population              level    n     W/L  deployed       pnl   pnl/$1  flag
+  PROBE all                True   96   75/21    299.61  +39.3685  +0.1314  
+  PROBE all               False    0       -         -         -        -  no fills
+  PROBE in M19 window      True   21    15/6     66.72   +5.7308  +0.0859  INSUFFICIENT (<60)
+  PROBE in M19 window     False    0       -         -         -        -  no fills
+  M19 m0.15 D300           True    5     4/1     16.65   +3.3500  +0.2012  INSUFFICIENT (<60)
+  M19 m0.15 D300          False   89   25/64    141.40  -16.4000  -0.1160  
+  M19 m0.20 D300           True    5     4/1     16.25   +3.7500  +0.2308  INSUFFICIENT (<60)
+  M19 m0.20 D300          False   73   19/54    109.90  -14.9000  -0.1356  
+
+(b) pre-open vol < 0.304
+  population              level    n     W/L  deployed       pnl   pnl/$1  flag
+  PROBE all                True   96   75/21    299.61  +39.3685  +0.1314  
+  PROBE all               False    0       -         -         -        -  no fills
+  PROBE in M19 window      True   21    15/6     66.72   +5.7308  +0.0859  INSUFFICIENT (<60)
+  PROBE in M19 window     False    0       -         -         -        -  no fills
+  M19 m0.15 D300           True   19    5/14     41.50  -16.5000  -0.3976  INSUFFICIENT (<60)
+  M19 m0.15 D300          False   75   24/51    116.55   +3.4500  +0.0296  
+  M19 m0.20 D300           True   16    5/11     32.90   -7.9000  -0.2401  INSUFFICIENT (<60)
+  M19 m0.20 D300          False   62   18/44     93.25   -3.2500  -0.0349  
+
+(c) fill sec inside 60-180
+  population              level    n     W/L  deployed       pnl   pnl/$1  flag
+  PROBE all                True   96   75/21    299.61  +39.3685  +0.1314  
+  PROBE all               False    0       -         -         -        -  no fills
+  PROBE in M19 window      True   21    15/6     66.72   +5.7308  +0.0859  INSUFFICIENT (<60)
+  PROBE in M19 window     False    0       -         -         -        -  no fills
+  M19 m0.15 D300           True   29   12/17     54.75   +5.2500  +0.0959  INSUFFICIENT (<60)
+  M19 m0.15 D300          False   65   17/48    103.30  -18.3000  -0.1772  
+  M19 m0.20 D300           True   35   12/23     66.65   -6.6500  -0.0998  INSUFFICIENT (<60)
+  M19 m0.20 D300          False   43   11/32     59.50   -4.5000  -0.0756  INSUFFICIENT (<60)
+
+(d) Binance >= 2.0 bps against us in the last 1 s
+  population              level    n     W/L  deployed       pnl   pnl/$1  flag
+  PROBE all                True    3     2/1     10.65   -0.6500  -0.0610  INSUFFICIENT (<60)
+  PROBE all               False   93   73/20    288.96  +40.0185  +0.1385  
+  PROBE in M19 window      True    1     1/0      3.15   +1.8500  +0.5873  INSUFFICIENT (<60)
+  PROBE in M19 window     False   20    14/6     63.57   +3.8808  +0.0610  INSUFFICIENT (<60)
+  M19 m0.15 D300           True    1     1/0      1.65   +3.3500  +2.0303  INSUFFICIENT (<60)
+  M19 m0.15 D300          False   93   28/65    156.40  -16.4000  -0.1049  
+  M19 m0.20 D300           True    0       -         -         -        -  no fills
+  M19 m0.20 D300          False   78   23/55    126.15  -11.1500  -0.0884  
+
+BOTH FILLED THE SAME CANDLE-SIDE - price paid and outcome
+  arm    candle      side probe px  M19 px outcome probe pnl  M19 pnl
+  m0.15  10-02 01:35 UP       0.61    0.33 DOWN      -3.0500  -1.6500
+  m0.15  10-02 02:30 DOWN     0.60    0.55 UP        -3.0000  -2.7500
+  m0.15  10-02 02:40 UP       0.60    0.67 UP        +2.0000  +1.6500
+  m0.15  10-02 03:00 UP       0.60    0.62 UP        +2.0000  +1.9000
+  m0.15  10-02 08:50 UP       0.61    0.57 DOWN      -3.0500  -2.8500
+  m0.20  10-02 01:35 UP       0.61    0.28 DOWN      -3.0500  -1.4000
+  m0.20  10-02 02:30 DOWN     0.60    0.62 UP        -3.0000  -3.1000
+  m0.20  10-02 02:40 UP       0.60    0.63 UP        +2.0000  +1.8500
+  m0.20  10-02 03:00 UP       0.60    0.57 UP        +2.0000  +2.1500
+  paired totals on 9 overlaps: probe -7.1500 on $27.15 = -0.2634/$1 vs M19 -4.2000 on $24.20 = -0.1736/$1   INSUFFICIENT (<60)
+
+VERDICT (Zurich, 10-02 09:3x). WHICH INGREDIENT CARRIES THE PROBE?
+THE PRICE BAND, and only the price band - and it is n=5, so this is a direction, not a result.
+ 1. BAND (a) is the one factor that separates in the probe's direction on M19's OWN data, and it
+    does so in BOTH margins: in-band 0.60-0.80 gives +0.2012/$1 (m0.15, n 5) and +0.2308/$1
+    (m0.20, n 5), against out-of-band -0.1160 (n 89) and -0.1356 (n 73). The probe, which is
+    in-band by construction on all 96 fills, sits at +0.1314/$1. Same sign, same rough size, two
+    independent margins. Five fills each, so INSUFFICIENT - but it is the only factor that points
+    the right way twice.
+ 2. THE CALM GATE POINTS THE WRONG WAY. On M19, calm candles are WORSE: -0.3976/$1 (m0.15, n 19)
+    and -0.2401/$1 (m0.20, n 16) versus +0.0296 and -0.0349 for non-calm. If calm were the probe's
+    engine, M19's calm subset should be its best cell and it is its worst. So the probe's edge is
+    NOT the calm gate, on this evidence. The probe cannot test this itself: vol < 0.304 is true on
+    96 of 96 of its fills, by construction, so it has no contrast to offer.
+ 3. THE 60-180 s WINDOW IS INCONSISTENT. m0.15 inside the window +0.0959 vs outside -0.1772, which
+    helps; m0.20 inside -0.0998 vs outside -0.0756, which hurts. A factor that flips sign between
+    two margins on the same candles is noise.
+ 4. THE 2 bps ADVERSE TEST CANNOT BE READ. Only 3 probe fills and 1 M19 fill ever had >= 2 bps
+    against them in the second before the fill. There is nothing to measure yet; that is what the
+    rule is FOR, and it means the rule is rarely binding rather than that it is working.
+ 5. ON THE NINE CANDLE-SIDES BOTH SYSTEMS TOOK, THE PROBE DID WORSE: -0.2634/$1 against M19's
+    -0.1736/$1, because the probe paid 0.60-0.61 where M19 paid 0.28-0.67. Five unique candle-sides.
+    This is the single most uncomfortable row in the file and it belongs here: where they met head
+    to head, paying the favourite's price was the more expensive choice.
+ 6. SIZE AND WINDOW CAVEAT, which limits all of the above. The probe's +45 lifetime is concentrated:
+    the 09-30 17:00 candle alone is +24.05 of it, and its own second half by time is NEGATIVE
+    (MAKER_60.txt). Restricted to M19's window the probe is +5.7308 on 21 fills (+0.0859/$1) - still
+    positive, but small, and the head-to-head subset inside that window is negative. The probe has
+    never traded a single fill outside its own gates, so nothing here can separate "the band works"
+    from "the probe has been lucky in-band for two days".
+METHOD NOTES, both of which changed the answer:
+ - Factor (b) is taken from the value the GATE ITSELF LOGGED, not recomputed. My first pass coerced
+   an unreachable vol to "not calm" and reported that 93 of the probe's 96 fills were taken in
+   non-calm candles - impossible, since its gate forbids exactly that. A second pass using
+   FavBrain's own code with a widened lookback still differed from the logged value on 170 of 383
+   candles (mean |diff| 0.0019, max 0.0196) because bn_flow is still being written and backfilled.
+   It flips the calm verdict on 0 of 383, so it would not have changed this file - but a recomputed
+   historical gate value is not the gate's value and should not be presented as one.
+ - Factor (d) is the probe's own bn_before_bps where it exists. The independent bn_flow
+   recomputation agrees on the >= 2 bps verdict for 55 of 57 fills, the two disagreements sitting
+   within 2.24 bps of the threshold.
+NOTHING IS PROPOSED. No gate, no band change, no probe or M19 change. Every cell that matters is
+under 60.

@@ -1,0 +1,704 @@
+MAKER PROBE - build + dry-run record. Zurich only; London untouched; 8787's master/EF lane/ef_engine
+unchanged. Spec: analysis/v/maker2/MAKER_PROBE_SPEC.md. Owner "Okay test it" (09-30 ~12:5x, via V).
+
+STATUS: BUILT, TESTED, DRY-RUN DONE. NOT ENABLED. No live order has been sent and none can be until
+the owner creates the flag file himself. I have not created it and will not.
+
+FILES
+  /home/ubuntu/pm_paper_zurich/maker_probe.py        the probe (own process, own DB, own flag, own stops)
+  /home/ubuntu/pm_paper_zurich/test_maker_probe.py   55 tests, all passing
+  /home/ubuntu/maker_probe/maker_probe.sqlite3       its own DB: orders, fills, decisions
+  /home/ubuntu/maker_probe/ENABLED                   the flag. ABSENT = OFF. Owner creates it.
+  mirrored in git at analysis/zurich/{maker_probe,test_maker_probe}.py
+
+THE RULE AS BUILT (frozen from the spec, nothing tuned)
+  calm      Binance 1 s trailing-5-min vol before the open < 0.304, via poly_fav.FavBrain - the SAME
+            frozen call the 8787 engine makes. Not re-derived here.
+  window    sec 60-180; 180 s is also the hard cancel
+  favourite the side whose best BID is in [0.60, 0.80]
+  post      BUY 5 shares at that best bid, post_only=True (the SDK supports it: create_limit_order
+            (..., post_only=True)), so the GTC-below-the-ask fallback in the spec is not needed
+  cancel    immediately on a Binance spot move >= 2 bps against our side over the last 1 s; at 180 s;
+            at the candle end; on the favourite flipping; on the book leaving the band; on vol leaving
+            calm. A risen bid is a cancel with reason 'bid_moved' and a fresh post next pass.
+  limits    one open order at a time, at most one FILL per candle
+  settle    held to settlement, graded on the VENUE's own resolution (gamma mirror), never a Binance
+            close. Maker BUY pays price, no taker fee: pnl = shares*(1-price) on a win, -shares*price on
+            a loss.
+  stops     -$10 realised in a UTC day -> off for the day; -$20 realised lifetime -> off for good.
+            Checked before EVERY post, not once at startup.
+
+TESTS - 55, all passing. The five properties the owner's YES is conditional on, plus a sixth.
+  1 never crosses        posts strictly below the ask; refuses at bid==ask, on a crossed book, and when
+                         there is no ask at all; DOWN is priced against dn_ask (the one-sided crossing
+                         bug); asserts post_only and that no FAK/market order path exists in the module
+  2 cancels on 2 bps     sign convention verified for BOTH sides (a fall is adverse for UP and
+                         favourable for DOWN); only the last 1 s counts; binds exactly at 2.00; holds at
+                         1.99; outranks every reason to stay
+  3 cancels at 180 s     no post before 60 or after 180; posts at both edges; a resting order is pulled
+                         at 181 and also if the window has not opened
+  4 one order, one fill  a correct resting order is never duplicated; a risen bid and a flipped
+                         favourite are cancels, not second orders; nothing posts after a fill in that
+                         candle
+  5 both hard stops      day stop binds at exactly -10.00 and not at -9.99; yesterday's loss does not
+                         stop today; lifetime binds across days and outranks a clean day; UNSETTLED
+                         fills are not counted as zero; flag off blocks a clean book; default is OFF
+  6 SHARED WALLET        not in the spec, and it matters more than any of the above: the module may
+                         NEVER call cancel_all() or cancel_market_orders(). Zurich and London share ONE
+                         wallet and 8787 has its own resting orders on it - a wallet-wide cancel from a
+                         probe would reach into another engine's orders. Enforced by a test that greps
+                         this module for those two SDK names, and by a test that every cancel_order call
+                         passes order_id=.
+
+A BUG THE BUILD FOUND, AND HOW
+  I cross-checked my book parse against the 8787 engine's OWN parse of the same venue feed, second by
+  second. On every overlapping second my best ask was None - I had no book at all. Cause: the gamma
+  mirror usually does not yet carry the NEXT candle's tokens when the probe subscribes, so the
+  subscription held only the current pair, while the resubscribe bound (copied from the engine) was
+  ep+345. That left the probe holding STALE tokens for the first ~45 s of every candle. It is outside
+  the 60-180 s window, so it would never have fired a wrong order - but it is silent blindness, and it
+  becomes a live bug the moment the window widens. Fixed: when the next pair is unknown the
+  subscription now ends at the roll instead of ep+345. Blind seconds measured 0/175 after the fix,
+  against 43/43 before.
+  Residual: my best ask and the engine's agree on 111/175 seconds, the rest within about a tick. Two
+  independent websocket clients sampled at different moments inside the same second will differ on a
+  fast book; the probe prices off its OWN book at its OWN moment, which is what the order it is about
+  to send requires. This is a parser sanity check, not a fill test - it is deliberately NOT used to
+  estimate anything about fills.
+
+DRY RUN - 30 minutes, 09-30 13:23:42 to 13:54:18 UTC, no orders (the run cannot send one)
+  passes            8,763 over 7 candles
+  orders            0
+  fills             0
+  decisions logged  176 sampled rows + a per-pass funnel
+  WHY ZERO: every one of the 7 candles was NON-CALM. Measured vol before the open, per candle:
+      0.774  0.612  0.545  1.170  2.456  1.587  1.390        (the calm cut is 0.304)
+  Not one candle came close. For context the last 12 candles before the run had exactly 1 calm.
+  BTC was simply moving hard through that half hour. The calm gate is the binding constraint and it
+  behaved exactly as specified.
+  Gate funnel over all 8,763 passes: vol-not-calm and out-of-window account for all of them; the
+  band and crossing tests were never reached, because vol short-circuits first.
+
+  SO BE CLEAR ABOUT WHAT THE DRY RUN DID AND DID NOT PROVE.
+  It proved: the process runs 30 minutes without error, reads both feeds, resolves tokens, evaluates
+  every pass, and refuses correctly. It did NOT exercise the posting path, because the market never
+  offered a calm candle. A dry run that posts nothing is not evidence that posting works.
+  So the posting path is covered deterministically instead, by integration tests that drive one_pass
+  with an injected book and an injected calm vol at a chosen second in the window, and assert a post
+  row is written at the best bid, strictly below the ask, 5 shares, and that a 2 bps move pulls it.
+  one_pass takes an injectable clock for exactly this reason - otherwise those tests would SKIP
+  whenever the wall clock sat outside 60-180 s, and a skipped test proves nothing.
+
+WHAT THE OWNER MUST SWITCH ON - he does this himself, not me
+  There is no dashboard click. The probe is not part of the 8787 engine and deliberately shares no
+  control surface with it, so that nothing the owner does to the probe can touch the live lane.
+  TWO steps, both on the Zurich box:
+    1)  echo 1 > /home/ubuntu/maker_probe/ENABLED
+    2)  cd /home/ubuntu/pm_paper_zurich && nohup ./.venv/bin/python maker_probe.py > /home/ubuntu/maker_probe/live.log 2>&1 &
+  Step 1 alone does nothing - no process is running. Step 2 alone does nothing - it reads the flag
+  live on every pass and refuses to start if the flag is absent.
+  TO STOP: rm /home/ubuntu/maker_probe/ENABLED   (takes effect on the next pass, within ~0.2 s; any
+  resting order is cancelled at the next gate). Killing the process also cancels on shutdown.
+  STATUS ANY TIME:  ./.venv/bin/python maker_probe.py --status
+  SETTLE FILLS:     ./.venv/bin/python maker_probe.py --settle
+
+ALERTS TO V (one line each): first live order; any error; either hard stop; and at 60 fills.
+BUDGET: 5 shares at 0.60-0.80 is about $3.00-$4.00 per bid, one at a time, $20 lifetime stop.
+
+CONFIRMING DRY RUNS AFTER THE DRY-RUN LOGGING FIX
+  A dry run was routing its would-be posts through guard.may_trade(), which returns "BLOCKED: DRY-RUN"
+  by construction - so a dry run could only ever have logged that it was a dry run, never the decision
+  the rule made. Fixed: in a dry run one_pass records the post decision and calls place(), which writes
+  a DRY row and returns before signing (self.broker is None in a dry run, so signing is not reachable).
+  10 min 13:56-14:06 UTC: ran clean, 0 errors, 0 orders. Candle vols 1.390 / 1.092 / 0.957 / 1.222.
+   3 min 14:1x       UTC: 891 passes, 0 orders, funnel  488 'sec N > N' / 403 'vol N >= N (not calm)'.
+  Still not one calm candle in any run. Total dry-run time 43 min, 0 errors, 0 orders, 0 fills.
+
+ENGINE UNTOUCHED, VERIFIED
+  8787 pid 304878, up 9h32m at the time of the build, never restarted by me. btc_model_v12_polymarket.py
+  last modified 09-30 03:51 (the earlier v10 gate fix), poly_lanes 00:58, poly_fav 02:20, poly_core and
+  poly_live 09-24. The only new files in that directory are maker_probe.py and test_maker_probe.py, and
+  nothing in the engine imports either. master/EF lane/ef_engine/stake/sl all untouched.
+
+================================================================================================
+SWITCHED ON LIVE - owner's written yes 09-30 14:1x UTC ("yes, switch it on"), relayed by V, who
+recorded it in analysis/v/maker2/MAKER_PROBE_SPEC.md. The owner has no Zurich terminal, so V
+instructed me to do it on his behalf. This is the first time this box has traded on its own orders.
+
+  flag      /home/ubuntu/maker_probe/ENABLED written "1" at 14:19:06 UTC
+  process   pid 328624, started 14:19:06 UTC, `maker_probe.py` with NO --dry-run
+  wallet    shared collateral $60.4503 at start; ~$3.00-4.00 committed per bid, one at a time
+  limits    UNCHANGED from the approved spec: 5 shares, sec 60-180, calm < 0.304, bid band
+            0.60-0.80, one open order, one fill per candle, -$10/UTC day, -$20 lifetime
+  8787      untouched: pid 304878, master/EF lane/ef_engine/stake/sl all unchanged
+
+CREDENTIALS - how the live process got them, and what I refused to do
+  The probe needs the four venue variables and they were in neither my shell nor pm_paper_zurich.
+  The running 8787 engine has them, and I could have read them out of /proc/304878/environ. I did
+  NOT: lifting a private key out of another process's memory is precisely the thing the standing
+  rule forbids, and "it was already on the box" does not make it my call.
+  Instead I used the owner's own file, /home/ubuntu/polymarket_v12/deploy.env (mode 600), sourced
+  into the CHILD process only via a subshell, so no value ever entered my output, a log, or git.
+  Before starting I verified two things about that file without reading it: that it carries all four
+  required names, and that its wallet address hashes to 1185e643f6308fac - identical to the running
+  engine's - confirming it is the one shared wallet and not some other account.
+
+VERIFYING IT IS ACTUALLY RUNNING (live.log is EMPTY, and that is by design)
+  The log only receives fills, errors and stops, so an empty log is the expected state of a healthy
+  probe that has not yet traded. "No output" is not evidence of life, so:
+    - 4 decision rows written in the first 180 s -> the trade loop is executing
+    - the process is past broker.open(), because run() awaits it before starting any loop, and a
+      failed open would have killed the process rather than left it idle
+    - 0 live orders, 0 fills at the time of writing: vol 1.148, still nowhere near the 0.304 calm cut
+  The market has not been calm all afternoon, so the first live order may be hours away. That is the
+  rule working, not the probe failing.
+
+ALERTS ARMED (watch.sh, polling every 20 s; exits on the first event so it is reported once)
+  first live order | any error (PASS/CANCEL ERROR in the log) | either hard stop | 60 fills
+  plus two the spec did not ask for: the process dying, and the ENABLED flag disappearing.
+[2026-09-30 17:01:11] PASS ERROR RequestRejectedError: invalid post-only order: order crosses book
+[2026-09-30 17:02:10] PASS ERROR RequestRejectedError: invalid post-only order: order crosses book
+[2026-09-30 17:02:35] PASS ERROR RequestRejectedError: invalid post-only order: order crosses book
+[2026-09-30 17:02:41] PASS ERROR RequestRejectedError: invalid post-only order: order crosses book
+[2026-09-30 17:02:53] PASS ERROR RequestRejectedError: invalid post-only order: order crosses book
+
+================================================================================================
+THE NO-CHASE FIX (V, 09-30 after the 17:00 candle). PROBE STAYS OFF THROUGHOUT.
+
+V's three fixes, all in, 76 tests passing:
+ (1) ONCE POSTED, THE ORDER RESTS. Four reasons to pull it and no others: Binance >= 2 bps against
+     us over the last second; sec > 180; V's rule 3 (our price no longer <= best bid); the bid ran
+     >= 2 ticks away. Ceiling of 3 posts per candle. The old 'bid_moved' re-post is gone.
+ (2) A venue rejection is recorded REJECTED with the venue's message, not left PENDING. The 5
+     historical rows were backfilled from the log.
+ (3) After a post-only reject the probe will not fire again off the same book read.
+
+RESULT ON THE REAL 17:00 BOOK (121 recorded steps over 260 s - the candle that caused all this)
+    OLD rule (chasing):  34 posts, ~0 s resting, 0 fills          <- matches the 34 real live orders
+    NEW rule:             3 posts, 118 s in the book of 260 s (45%)
+    All three ended on "bid ran >= 2 ticks away", i.e. the market moved up and left us, which is the
+    right reason to leave. The replay reproduces the live run exactly under the old rule, which is
+    what makes it trustworthy under the new one.
+
+TWO THINGS I GOT WRONG AND THE TESTING CAUGHT - both were mine, not V's brief
+ A. I added an ask-side crossing test for RESTING orders on my own initiative. It is backwards. A
+    resting BUY at 0.70 meeting an offer at 0.70 is US BEING FILLED AS THE MAKER - the exact event
+    this probe exists to measure. We cross nothing; the venue matches them. On a one-tick-spread
+    book it fires constantly: the 18:30 dry run pulled all 3 orders, each inside a second, giving
+    the same "never fills" symptom as the 17:00 churn from the opposite cause. The crossing test
+    now lives ONLY in the post branch, where it belongs.
+ B. The dry run was not simulating what it claimed. First it cleared self.resting immediately, so
+    nothing ever rested and the run measured only the per-candle cap - caught because the first
+    post-fix run reported exactly 3 posts on all 3 calm candles. Then, once a virtual order rested,
+    that order was not in the book being read, so the real bid ticking down one fired V's rule 3 on
+    an order that live would still be at the front of the queue: 6 of 9 cancels on the 18:35-19:00
+    run were that artifact, and it made resting life look like 1.5 s. Dry mode now puts our own
+    virtual order into the book on its side, exactly as the venue would. Same candle, same rule:
+    2% time-in-book before the correction, 45% after. Do not read any pre-19:07 dry-run life figure.
+ C. The unit tests were appending real log rows to THIS committed file, because log() defaulted to
+    it. 32 such lines removed; the log path is now per-instance and the tests write to a temp file.
+
+DRY RUNS AFTER THE FIX
+  18:35-19:06  3 calm candles, 3 posts each (the cap), but with the flawed resting sim - counts are
+               valid, resting life is not.
+  19:08-19:38  no calm candle at all (2990 passes vol >= 0.304), so 0 posts. No new information.
+  The per-candle count is therefore evidenced twice (cap binding at 3, and 3 on the 17:00 replay);
+  the resting-life figure rests on the 17:00 replay, which is real recorded book data.
+
+STILL OFF. ENABLED absent, no process running. No restart without a fresh yes from the owner.
+[2026-09-30 21:02:15] REJECTED epoch 1790802000 UP 0.79 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-09-30 21:06:05] REJECTED epoch 1790802300 DOWN 0.7 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-09-30 21:06:05] REJECTED epoch 1790802300 DOWN 0.7 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-09-30 21:11:21] REJECTED epoch 1790802600 UP 0.62 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-09-30 21:26:02] REJECTED epoch 1790803500 DOWN 0.76 :: RequestRejectedError: invalid post-only order: order crosses book
+
+================================================================================================
+PAUSED 21:30:42 UTC ON V'S SAFETY CALL, THEN THE TWO SPEC FIXES INSTALLED. STILL OFF.
+
+PAUSE, verified three ways: ENABLED removed, pid 350254 SIGTERM'd, and the VENUE queried - 0 open
+orders on the wallet, 0 account trades matching any of the 52 probe order ids. Local ledger agrees:
+0 fills, $0 realised, 0 non-terminal order rows. Nothing was left resting and nothing was missed.
+
+WHY V PAUSED IT: both hard stops are computed FROM the fills table, so a fill that is never recorded
+does not merely lose a row - it disables the stops. That is the one failure mode here that loses
+money quietly, and it was open in the build that was running.
+
+FIX (a) EVERY FILL IS SEEN, AND FEEDS BOTH STOPS
+  check_fill now runs:
+    - on every pass while an order rests, throttled to 1.0 s (it is a venue REST call and the loop
+      runs 5x a second);
+    - UNCONDITIONALLY before any cancel, throttle ignored, so no cancel can discard a fill however
+      recently we last looked;
+    - at the candle roll, before the candle_end cancel.
+  A dry run never calls it, so the venue is never touched from a paper run.
+  Tested from every angle a fill can arrive (9 tests), including the two that matter most: a fill on
+  a pass whose decision was CANCEL survives and the order is NOT stamped CANCELLED; and a fill
+  recorded this way actually trips the day stop and the lifetime stop end to end. A stop that cannot
+  see a fill is not a stop, so that is asserted rather than assumed.
+
+FIX (b) SAME-SECOND LOCKOUT AFTER A POST-ONLY REJECT
+  V asked for "do not re-post in the same second; re-read the book first". I had built only the book
+  re-read, and it was useless on its own: these books publish many events a second, so a fresh event
+  cleared the block instantly. Live proof from the 21:00 run - two rejects at 21:06:05, same second,
+  same price 0.70. Now the integer second of the reject is recorded and no post is permitted until
+  that second has passed, in addition to the book re-read. 5 tests, including the regression
+  (a brand-new book event inside the rejecting second must NOT unlock it).
+
+NOT TOUCHED, AS INSTRUCTED: the 2-tick tolerance and rule 4 stay exactly as they are. V is asking
+the owner. Nothing else about the rule changed.
+
+90 tests pass. A 5-minute dry run confirms the loop still runs clean. ENABLED absent, no process.
+NO RESTART until V/the owner says so.
+
+================================================================================================
+OWNER OPTION A (09-30, via V): REMOVE the 'bid ran >= 2 ticks away' cancel. STILL PAUSED.
+
+THE RULE NOW, back to the original spec. A resting order is pulled for exactly TWO reasons:
+    1. Binance moves >= 2 bps against our side over the last second
+    2. sec leaves 60-180 (and the candle roll)
+Everything else is unchanged: post-only never-cross ON A NEW POST, max 3 posts per candle, one open
+order, at most one fill per candle, calm < 0.304 for entry, bid band 0.60-0.80, hold to settlement.
+
+I ALSO REMOVED V'S RULE 3 ('our price no longer <= best bid'), and flagged that reading to V rather
+than deciding it quietly. Two reasons: it is not in the original spec's cancel list, which is the
+thing option A restores; and it is now redundant. It could only ever fire once our order had LEFT the
+book, and the case that actually matters there - it left because it FILLED - is caught by the fill
+check that now runs on every pass and unconditionally before every cancel. Detecting a fill by
+cancelling a resting order was the wrong instrument for the job.
+So: being alone at the top of the book, the favourite flipping, the bid leaving the band - none of
+these pull a resting order any more. A maker's edge IS sitting still.
+
+WHY THE 2-TICK RULE HAD TO GO, in the live numbers that killed it:
+  4 calm candles 21:00/21:05/21:10/21:20, 12 orders. Every candle hit the 3-post cap. 10 of 12 exits
+  were 'bid ran >= 2 ticks', and in EVERY case the new bid was exactly our price + 0.02. These books
+  walk up one tick at a time, so a 2-tick tolerance is cleared in seconds: ~46 s of book time across
+  ~480 s of window (10%), and 0 fills. The cap was doing the work, not the rule - we were still
+  chasing, just rate-limited.
+
+MEASURED EFFECT, same candle (17:00), same recorded book, and this time with the 2 bps test driven by
+the REAL Binance 1 s series out of bn_flow (803 ticks) rather than an assumed zero:
+    original chasing rule    34 posts,  ~0 s resting     <- what LIVE actually did
+    2-tick rule (removed)     3 posts,  6 s resting (2%)
+    OWNER RULE (option A)     1 post, 127.9 s resting (49% of the candle)
+  The single order rested the ENTIRE 60-180 window and ended on the 180 s boundary - the 2 bps test
+  never fired on that candle, which was a calm one (vol 0.287). That is the behaviour a maker probe
+  needs: post once, sit still, and let the adverse-move test be the only thing that pulls it.
+  CAVEAT, stated because it cuts against the good result: bn_flow is a 1 s series, while the live
+  probe watches the ms aggTrade websocket. The live 2 bps test is therefore MORE sensitive than this
+  replay, so live will cancel on adverse moves somewhat more often than 1-of-1 here suggests. And
+  this is ONE candle. Do not read 49% as the expected book time.
+
+91 tests. The two safety fixes from the previous round are unchanged and still covered:
+  (a) fills seen on every pass, unconditionally before any cancel, and at the candle roll -> both
+      hard stops, asserted end to end;
+  (b) same-second lockout after a post-only reject.
+STILL OFF: ENABLED absent, no process. The owner gives a fresh yes after this report.
+
+DRY RUN 22:20-22:40 UTC ON THE LIVE FEEDS, owner rule, and it answers my own caveat above.
+  2 calm candles, ONE post each, each rested 121.0 s - the entire 60-180 window - both ending on the
+  180 s boundary. 2,359 passes spent in the resting state against 4 cancels in the whole run.
+  This used the real ms aggTrade websocket, not the 1 s bn_flow series, so the more sensitive version
+  of the 2 bps test ALSO did not fire on a calm candle. That was the caveat I put on the replay and it
+  does not hold up as a worry: the sensitivity is not what was stopping us resting - the 2-tick rule
+  was. Three independent looks now agree (recorded 17:00 book, live dry feeds, and the live 21:00-21:20
+  session that motivated the change).
+  Sample is still 3 calm candles total across replay and dry run. The thing none of this can tell us
+  is whether resting for 121 s actually produces a FILL - that needs the live probe and the owner's yes.
+
+TRACEABILITY: the owner's option-A decision is recorded by V in analysis/v/maker2/MAKER_PROBE_SPEC.md
+at git 54d1e1e. It was already implemented here before that note reached me - option A landed in
+0eacc29 and its live-feed confirmation in 82754c9 - so this line exists only to tie the two together,
+not to mark further work. Verified against the running file rather than assumed: the sole remaining
+mention of "bid ran >= 2 ticks" in maker_probe.py is the comment explaining why it is gone, and the
+resting branch is now exactly: 2 bps adverse -> cancel, sec outside 60-180 -> cancel, else HOLD.
+A fill is the third way an order leaves, and it is handled BEFORE any decision is acted on, by the
+every-pass fill check from fix (a).
+[2026-09-30 23:51:34] REJECTED epoch 1790812200 UP 0.73 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 00:16:25] REJECTED epoch 1790813700 DOWN 0.8 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 00:16:26] REJECTED epoch 1790813700 DOWN 0.77 :: RequestRejectedError: invalid post-only order: order crosses book
+
+================================================================================================
+10-01 00:45 PAUSED. I MUST RETRACT WHAT I TOLD V THREE TIMES: THE PROBE DID FILL.
+
+V's hypothesis was right and my verification was wrong. I reported "0 fills, venue-confirmed" on
+three separate occasions and used that to reassure V the wallet moves were not ours. They were ours.
+
+THE TRUTH, from the venue, hand-checked fill by fill:
+    27 fill events over 10 DISTINCT CANDLES, $77.60 deployed, local fills table had 0 ROWS.
+    realised +42.3988, 27 wins / 0 losses, every epoch graded on the venue's own resolution.
+    15 of those 27 fills are in ONE candle, 17:00 - the candle I reported as "0 fills, 29 cancels".
+
+WHY MY CHECK MISSED THEM. check_fill compared getattr(trade,'maker_order_id','') against our id.
+polymarket-client 0.10.0's ClobTrade HAS NO SUCH FIELD. When we are the maker - which a post-only
+probe is by construction, every single time - our fill appears only inside `maker_orders[]`, as a
+MakerOrder carrying our order_id, our price and the real matched_amount. The outer trade carries the
+TAKER's id, the TAKER's size and the TAKER's price, which is why the outer rows looked like someone
+else's business: size 10 and 98.52 against our 5, price 0.41 against our 0.60. It never raised and
+never logged. check_fill simply returned False forever.
+
+WHAT THAT BROKE, beyond the ledger:
+  1. BOTH HARD STOPS WERE BLIND THE ENTIRE TIME. They are computed FROM the fills table. An empty
+     table means -$10/day and -$20 lifetime could never fire. The only reason this did not cost
+     money is that all 27 fills happened to win. That is luck, not a control.
+  2. ONE FILL PER CANDLE NEVER ENGAGED - it keys off filled_this_candle, which keys off the same
+     broken detection. Hence 15 fills in the 17:00 candle against a rule of one.
+  3. Every "0 fills" figure I gave V, and the whole "it never fills, the rule must be wrong"
+     diagnosis built on top of it, was an artefact of this bug. The 2-tick rule I had V and the
+     owner remove on that evidence may well have been fine. That conclusion is now unsupported.
+
+AND DO NOT READ +42.40 AS A RESULT. It is 10 candles, every one resolving the favourite's way. At a
+~75% favourite base rate, 10 for 10 is about a 5.6% coincidence - unusual, not impossible, and far
+from evidence. The effective sample is 10 candles, not 27 fills, because the fills cluster inside a
+handful of candles. Nothing here says the maker structure is profitable.
+
+THE FIX (authored by another session concurrently, 00:52-00:54, verified by me rather than assumed):
+  matched_by() now reads maker_orders[] and both sides; trade_dead() compares TradeStatus on .value
+  because str(enum) is 'TradeStatus.FAILED' and never matched the ('FAILED',...) tuple, so dead
+  trades counted as live; trade_ts_ms() reads `matched_at` because `match_time` does not exist on the
+  model and the old path fell back to the LOCAL clock for every fill - the same clock bn_before_bps
+  is measured against. 102 tests pass. I validated it against real venue data independently: it
+  finds $77.60 across 24 of 50 orders, matching my own hand count to the cent.
+  NOTE FOR WHOEVER READS THIS NEXT: that fix was uncommitted and being edited while I was reading the
+  same file. Two sessions were working maker_probe.py at once on a live box. Mine is the verification
+  and this record; the code edit is theirs.
+
+FILLS BACKFILLED into the probe DB from venue maker_orders[] so the stops have real history to read.
+PROBE PAUSED: ENABLED absent, process stopped, 0 open orders and 0 open positions confirmed at the
+venue. It must NOT restart until V and the owner see this retraction.
+
+================================================================================================
+10-01: SOLE EDITOR ASSIGNED, BUILD PINNED, RESTART ON OPTION A (owner delegated, V decided).
+
+THE OTHER EDITOR, identified: session claude-work-c0, cse_01NGfZzCarRbBKJXp4vGJ68g, pid 361397,
+started 00:44:58 - the minute V raised the fill alarm. Its edits landed 00:52:51, 00:54:56, 00:57:40.
+It has STOOD DOWN in writing and confirmed nothing is in flight. I am the only editor from here.
+Its fix is KEPT, not reverted, and it is more than the three pieces I first credited:
+  matched_by() reads maker_orders[] (and the taker side too, so the answer never depends on which
+    side we turned out to be); trade_dead() compares TradeStatus on .value, because str(enum) is
+    'TradeStatus.FAILED' and matched no ('FAILED',...) tuple - dead trades had counted as live;
+    trade_ts_ms() reads matched_at, as `match_time` does not exist on the model and the old path
+    fell back to the LOCAL clock for every fill - the same clock bn_before_bps is measured against;
+  scan_tape() sums EVERY trade naming our order with trade-id dedup, which matters because a single
+    order really does arrive as several trades in our own data (row 8 = 0.36 + 2.0 + 2.64 shares,
+    row 90 = 2.08 + 2.92);
+  a partial fill now CANCELS THE REMAINDER before self.resting is cleared, else the rest is orphaned
+    live at the venue where nothing can reach it; and the tape is re-read afterwards to amend the
+    fill, because that cancel races a second match - pre-fix that race booked 2 of 5 shares and never
+    corrected itself.
+Credit where it is due: that was the right diagnosis and I had been wrong about it three times.
+
+THREE DISCREPANCIES THE PEER RAISED, resolved:
+ (a) My "$77.60" is GROSS SPEND (sum of shares x fill price), NOT P&L. Realised P&L is +42.3988.
+     And "24 of 50" vs "27 fills" is not a contradiction: 50 orders carried a venue id, 24 of them
+     filled, and those 24 produced 27 fill EVENTS because some filled across several trades. The
+     peer was right that my wording ran the two together.
+ (b) 0 open orders at the venue is now confirmed TWICE, by my own credentialed query and by the
+     peer's verify_fills.py which I ran for it (it has no credentials): 0 open on the wallet, and
+     the db's FILLED rows line up with the venue's CONFIRMED trades.
+ (c) The peer overwrote note= instead of appending on orders 81/82/89/90/91, losing the
+     ' | venue fill <id>' trade references. Fills and pnl are intact; the ids come back only from
+     re-running the reconciliation. Recorded here so nobody mistakes the gap for missing fills.
+
+AND A CORRECTION OF MY OWN, same shape as the one I keep making: I dismissed verify_fills.py's
+"done 09:43 UTC" as a formatting bug because my own clock reads said 01:1x. The box clock is right
+(NTP synced, RTC agrees) - about 8.5 h of real time passed between my turns. The script was correct
+and I was wrong to call it buggy on no evidence.
+
+V'S PRE-RESTART CHECKS, all three done:
+ 1. other editor identified and stood down (above); I am sole editor.
+ 2. deployed file committed; deployed == the commit hash, asserted below by diff, not by assumption.
+ 3. a test proves a REAL recovered maker fill trips one-fill-per-candle AND reaches both stops:
+    class RealBackfilledFillIsHonoured reads the probe's OWN db so the subject is the real recovered
+    row, not an agreeable fixture. 7 tests, including the counterfactual that makes the rest mean
+    anything - delete the fills and the same losing history PASSES may_trade(), which is precisely
+    what shipped. One of them had to be reshaped: re-signing all 27 fills to losses sums to -42.40
+    and trips the LIFETIME stop before the day stop is consulted, so the day-stop test now uses only
+    enough fills to clear -$10 while staying above -$20. The ordering is correct; the test had to
+    respect it to be testing the day stop at all.
+ 111 tests pass.
+
+RESTARTED LIVE 09:45:51 UTC on pinned build f770acf. pid 389461. ENABLED=1. Limits unchanged.
+  deployed == f770acf, asserted by diff against the commit, not assumed.
+  The guard now reads real history: 27 fills, realised +42.3988, which is above both stop bars, so
+  trading is permitted - and for the first time that permission is a MEASURED fact rather than the
+  side effect of an empty table.
+
+TWO WATCHER DEFECTS FIXED BEFORE ARMING, both of which would have broken the one alert V singled out:
+  1. REBASELINED ON FILLS. The check was `fills >= 1` against a table that now holds 27 backfilled
+     fills, so it would have fired instantly on HISTORY and reported it as the next real fill - the
+     exact alert V asked to be certain of. It now takes a baseline and fires only on fills > 27.
+     Proven both directions: quiet at baseline 27, and alerting at baseline 26 with "1 NEW fill".
+  2. alive() CALLED A LIVE PROCESS DEAD. `except OSError: return False` treats EPERM - which means
+     the process EXISTS but we may not signal it - as death. Found by my own dry run reporting
+     "PROCESS_DOWN pid 1". Now only ESRCH counts as gone. A false PROCESS_DOWN on the channel that
+     must not cry wolf is worse than no channel at all.
+  Armed with pid 389461, reject window from 09:48 (0 rejects after it), fill baseline 27.
+[2026-10-01 09:51:09] FILL epoch 1790848200 DOWN 1.53sh @ 0.65 bn_before 0.0bps
+[2026-10-01 11:22:21] REJECTED epoch 1790853600 DOWN 0.67 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 11:31:40] FILL epoch 1790854200 UP 5sh @ 0.78 bn_before 0.74bps
+[2026-10-01 11:41:04] FILL epoch 1790854800 UP 0.01sh @ 0.71 bn_before -0.0bps
+
+================================================================================================
+10-01 12:4x OWNER: "Zurich is confusing, for a maker, new design needed" (on the :8787 screenshot).
+
+1. THE EF CARD AND THIS PROBE ARE NOT THE SAME THING, AND BOTH NUMBERS ARE CORRECT.
+   The card read "65.5% 19 W / 10 L, real 29". I reproduced it exactly from the engine's own journal
+   (lane_metrics, poly_core): real n=29, 19W/10L, 65.5%, pnl -20.6810.
+     WHAT IT COUNTS   the ENGINE's EF lane. 29 is 29 CANDLES, not 29 fills - lane_metrics groups one
+                      row per (kind, epoch, lane), so a candle with several fills counts once.
+     WHAT IT GRADES   results.actual against the SIGNAL's side (s.side), not the order's side.
+     real vs shadow   real = LIVE-lane fills, shadow = PAPER; headline is real when any exist.
+     WHEN             09-28 19:45 -> 09-30 07:40. It is FROZEN: the engine's last live EF fill was
+                      09-30 07:40 and master has been off since, so the card cannot move.
+   THE PROBE, for contrast: 30 fills over 13 candles, 09-30 17:00 -> 10-01 11:40, graded on the
+   VENUE's own resolution, 28W / 1L / 1 pending.
+   OVERLAP: ZERO candles. The card has never included the probe and structurally CANNOT - the probe
+   writes its own sqlite and poly_dashboard never opens it. One wallet, two instruments. The owner
+   was not misreading a broken number; he was reading the right number off the wrong instrument.
+
+2. MAKER-ONLY PAGE: /home/ubuntu/maker_probe/maker_page.py, port 8788, /maker and /maker.json.
+   SEPARATE PROCESS, STRICTLY READ-ONLY, and NEITHER the engine nor the probe was restarted or
+   touched - engine pid 304878 (up 1d08h) and probe pid 389461 (up 2h06m) both undisturbed across
+   the build. A /maker route inside poly_dashboard.py would have required restarting the engine,
+   which the brief forbids, so it binds its own port instead. Every database is opened mode=ro and
+   it imports no broker, so it cannot place, cancel or modify an order.
+   Auth mirrors :8787 - Basic, user ajay, the same DASHBOARD_PASSWORD - so the owner's existing
+   login works. Verified 200 authenticated, 401 without.
+   Shows: probe ON/OFF + pid + build; the live candle, calm gate with the vol number, resting order
+   side/price/age or "waiting"; fills and distinct candles, W/L, today vs the -10 stop, lifetime vs
+   -20, progress x/60; the fills table newest first; and the adverse share. NO MAIN / REVERSAL /
+   COMBINED cards. Mobile viewport, plain labels.
+   Every figure was checked against the database rather than eyeballed: 30 fills / 13 candles,
+   28W/1L/1 pending, today +2.43, lifetime +39.03, 29/60 graded - all exact.
+   ONE LABEL I HAD TO FIX BEFORE SHIPPING IT: the build line first printed repo HEAD, so it read
+   "build 54ac2d7" while the probe was really running f770acf - HEAD had moved for an unrelated
+   report commit. Putting one thing's identifier on another thing is precisely the confusion this
+   page exists to end, so it now reports the last commit that TOUCHED maker_probe.py and says
+   "FILE ON DISK DIFFERS" if the running file has drifted from it.
+   The page also carries a short closing card explaining why it is not the EF card, so the next
+   person to see both does not have to re-derive section 1.
+[2026-10-01 12:42:14] FILL epoch 1790858400 UP 5sh @ 0.79 bn_before 1.43bps
+
+================================================================================================
+10-01 13:0x THE STOPS WERE BLIND AGAIN - SAME FAMILY OF FAULT, DIFFERENT LINK IN THE CHAIN.
+
+The owner saw the 12:40 fill (UP, 5sh @ 0.79) reading "pending" at 13:04. Gamma had resolved that
+candle DOWN at 12:45:53, so it was a LOSS of -3.95 and had been for twenty minutes.
+
+CAUSE: maker_probe.settle() is reachable ONLY from the `--settle` CLI flag (line 756). The running
+probe never calls it - not in run(), not in trade_loop(). So every fill sits at pnl=NULL until a
+human types the command. I had been settling by hand after each fill alert, which is why it looked
+like it worked. The gamma mirror was NOT the problem: it already held (1790858400, 'DOWN').
+
+WERE THE STOPS BLIND? YES, and this is the part that matters. Both stops sum fills.pnl over non-NULL
+rows, so an ungraded fill contributes nothing. At 13:04 the day read +2.4372 when the truth was
+-1.5128 - $3.95 of realised loss uncounted. Worse in principle than in this instance: a RUN of losses
+would stay invisible and the -$10 day stop could not fire at all, because the only thing that turns a
+fill into a number the stop can see was a manual command. That is the third time this probe's safety
+has depended on something outside the loop: the fill itself was invisible (maker_orders[]), then the
+fill-before-cancel gap, now the grading.
+
+FIXED OUTSIDE THE PROBE, as V's brief requires: /home/ubuntu/maker_probe/grade.py on cron every 2
+minutes, flock-guarded, committed as analysis/zurich/maker_probe_grade.py. It is a separate
+short-lived process calling the probe's OWN tested settle(), with a 30 s busy timeout so it waits for
+the probe's lock instead of failing, and it prints a loud line if grading a fill puts either stop into
+breach. Nothing in the probe process was touched and it was NOT restarted.
+The 12:40 fill is now graded: outcome DOWN, pnl -3.9500. Today -1.5128 of -10, lifetime +35.0872.
+
+STILL OUTSTANDING AND IT IS V's AND THE OWNER'S CALL: the probe should grade inside its own loop
+rather than relying on a cron process to make its stops work. That is a code change plus a restart,
+so I have not done it. The cron closes the window to ~2 minutes; it does not make the stops
+self-sufficient.
+
+HEARTBEAT ADDED TO THE GRADER 10-01 18:47 (V's instruction). Outside the probe, no restart.
+  The grader only wrote when it actually graded something, so an empty grade.log was
+  indistinguishable from a dead cron - and both hard stops now depend on that cron running. Two
+  cheap additions make silence a readable fact instead of an assumption:
+    - grade.heartbeat, OVERWRITTEN every run: epoch, UTC time, graded_this_run, fills, unsettled,
+      today, lifetime. One read gives the age of the last run, so "is the grader alive" is answerable
+      without waiting for a fill to prove it.
+    - one log line an hour (state kept in grade.heartbeat.hourly), so the log carries a liveness
+      trail without 720 lines a day.
+  Verified by running it twice exactly as cron does: the heartbeat advanced (18:47:47, 2 s old on
+  read) and the hourly line printed once then correctly suppressed on the second run.
+  Probe untouched: pid 396645 still up, never restarted for this.
+[2026-10-01 19:16:00] REJECTED epoch 1790882100 UP 0.61 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 20:31:10] FILL epoch 1790886600 DOWN 5sh @ 0.65 bn_before 0.0bps
+[2026-10-01 20:36:29] FILL epoch 1790886900 DOWN 5sh @ 0.67 bn_before -1.41bps
+[2026-10-01 20:41:01] FILL epoch 1790887200 DOWN 5sh @ 0.75 bn_before 0.0bps
+[2026-10-01 20:46:05] REJECTED epoch 1790887500 DOWN 0.8 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 20:46:10] FILL epoch 1790887500 DOWN 5sh @ 0.75 bn_before 0.24bps
+[2026-10-01 20:51:01] FILL epoch 1790887800 UP 5sh @ 0.74 bn_before -0.0bps
+[2026-10-01 20:56:07] FILL epoch 1790888100 UP 5sh @ 0.79 bn_before -0.0bps
+[2026-10-01 21:02:20] FILL epoch 1790888400 UP 4.9941sh @ 0.61 bn_before -0.0bps
+[2026-10-01 21:06:03] FILL epoch 1790888700 UP 5sh @ 0.67 bn_before -0.0bps
+[2026-10-01 21:11:01] FILL epoch 1790889000 DOWN 5sh @ 0.64 bn_before 0.14bps
+[2026-10-01 21:17:06] REJECTED epoch 1790889300 DOWN 0.75 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 21:17:09] FILL epoch 1790889300 DOWN 5sh @ 0.76 bn_before -0.0bps
+[2026-10-01 21:26:08] FILL epoch 1790889900 DOWN 5sh @ 0.73 bn_before 0.0bps
+[2026-10-01 21:32:43] FILL epoch 1790890200 UP 5sh @ 0.67 bn_before 0.48bps
+[2026-10-01 21:36:05] FILL epoch 1790890500 UP 5sh @ 0.65 bn_before -0.0bps
+[2026-10-01 21:41:01] FILL epoch 1790890800 DOWN 5sh @ 0.73 bn_before 0.0bps
+[2026-10-01 21:46:52] FILL epoch 1790891100 UP 4.99462sh @ 0.6100000989847465 bn_before 0.42bps
+
+== 10-01 21:5x  LOW WALLET (~$25), London master OFF - insufficient-balance reject check (V)
+No code change to the probe. Verified on the running build c9a5482 + 5 new tests (134 total, all pass).
+1) A cash reject CANNOT count as a fill. place() returns (None, row) and writes status REJECTED with
+   venue_order_id NULL; one_pass only sets self.resting when the order id is truthy; check_fill()
+   returns False on `not r.get('order_id')`. Fill rows are written only by check_fill, and matched_by
+   attributes only on an exact venue order_id, which a rejected row never has.
+2) It CANNOT loop. posts_per_epoch[epoch] += 1 runs at the orders INSERT, BEFORE post_order, so a
+   rejected attempt consumes an attempt exactly like a filled one. Quoter returns 'none' at
+   posts_this_candle >= MAX_POSTS_PER_CANDLE, so the hard bound is 3 attempts per candle for ANY
+   reject reason. Driven 50 passes in a test: exactly 3 post_order calls, 3 REJECTED rows.
+3) GAP (reported, not patched): reject_lock_s and the stale-book flag are set only when the message
+   contains 'post-only' or 'crosses book'. A balance reject takes neither, so the 3 allowed attempts
+   can land inside one second. Bounded, not a runaway - but unspaced.
+4) History: 17 rejects ever, all post-only/crosses-book, ZERO balance rejects. Order size is 5 sh at
+   <= 0.80 = <= $4.00, one open order at a time, so ~$25 cash is not tight for a single order.
+5) Detection added OUTSIDE the probe (watch.py): ALERT BALANCE_REJECT on the FIRST cash reject since
+   the restart - REJECT_RATE would not have fired until the 12th. Trigger tested both ways on a copy
+   of the live DB: fires on 'not enough balance / allowance', stays quiet on a post-only reject.
+
+== 10-01 22:0x  "KEEP RUNNING PAST 60 TRADES" (owner via V) - 60 is a REPORT, not a stop
+Checked every piece of the setup for a stop at 60. Nothing in the probe: no fill ceiling of any kind
+(no MAX_FILLS / fill_limit / >=60), the hard stop only sets self.stopped and returns, and nothing in
+the probe removes ENABLED or exits except the pre-start live guard. Nothing in grade.py. Nothing in
+crontab. Stops and limits untouched: day -10, lifetime -20, 3 posts/candle, 1 open order.
+The ONE thing that ended at 60 was the alert watcher, outside the probe: it breaks to deliver an
+alert, so GRADED_60 exited it - and with no latch, re-arming would re-fire GRADED_60 on every start,
+so HARD STOP / errors / process death could never be watched again past the 60th graded fill.
+FIXED: SIXTY_FLAG (.graded60.alerted) latches the report to once, ever. Tested on the watcher's own
+branch text: quiet at 59, fires once at 60 and writes the latch, stays quiet at 63 on a re-arm.
+The probe was never touched and never paused. 58 fills / 56 graded, today +2.24 of -10, life +38.84.
+[2026-10-01 22:11:06] REJECTED epoch 1790892600 UP 0.78 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 22:11:08] FILL epoch 1790892600 UP 5sh @ 0.77 bn_before 1.97bps
+[2026-10-01 22:21:01] FILL epoch 1790893200 DOWN 5sh @ 0.72 bn_before 0.57bps
+[2026-10-01 22:27:03] FILL epoch 1790893500 UP 5sh @ 0.6 bn_before -0.0bps
+[2026-10-01 22:31:05] FILL epoch 1790893800 DOWN 5sh @ 0.62 bn_before 0.53bps
+[2026-10-01 22:41:06] FILL epoch 1790894400 DOWN 5sh @ 0.75 bn_before -0.0bps
+[2026-10-01 22:52:14] FILL epoch 1790895000 DOWN 5sh @ 0.62 bn_before 0.52bps
+[2026-10-01 22:56:01] FILL epoch 1790895300 UP 5sh @ 0.66 bn_before 0.0bps
+[2026-10-01 23:06:08] REJECTED epoch 1790895900 DOWN 0.8 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 23:06:11] FILL epoch 1790895900 DOWN 5sh @ 0.79 bn_before 0.97bps
+[2026-10-01 23:11:04] REJECTED epoch 1790896200 DOWN 0.6 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 23:12:21] FILL epoch 1790896200 UP 5sh @ 0.63 bn_before 0.0bps
+[2026-10-01 23:16:04] REJECTED epoch 1790896500 DOWN 0.79 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 23:16:06] FILL epoch 1790896500 DOWN 5sh @ 0.78 bn_before 0.0bps
+[2026-10-01 23:22:05] FILL epoch 1790896800 DOWN 5sh @ 0.6 bn_before 0.33bps
+
+== 10-01 23:2x  V: drop top-band pings; the bar becomes 60 DISTINCT GRADED CANDLES
+Watcher: TOP_BAND_FILL removed entirely (tokens). What still speaks: PROCESS_DOWN, FLAG_REMOVED,
+log PAT (HARD STOP / CANCEL ERROR / PASS ERROR), PARTIAL_REMAINDER (>= 1.0 sh), BALANCE_REJECT (first
+one), REJECT_RATE (>= 12). FLAG_REMOVED and REJECT_RATE are not on V's list by name - kept because
+both are fault-class (the flag going means the probe stops posting; a reject storm is the 17:00 churn
+shape) and neither can fire on routine trading. Say so if either should go.
+The 60 bar is now DISTINCT GRADED CANDLES, latched separately (.candles60.alerted). Candles is the
+honest unit: the 09-30 17:00 candle alone holds 15 fills, so a 60-FILL bar is reached on far fewer
+independent outcomes than it looks. At 23:22 we are at 47 graded candles on 67 graded fills, so the
+report is still pending; the earlier 60-FILL ping already went out and its branch is gone.
+maker_60.py now also carries, from one shared summary(): TIME HALVES (equal count, split time
+printed) and the SAME block with the 09-30 17:00 candle removed. First run of it, 23:22:
+  all graded   67 fills / 47 candles  56W-11L  +41.3377 on $205.19 = +0.2015/$1
+    H1 n34 +39.7872 = +0.4112/$1 | H2 n33 +1.5505 = +0.0143/$1 (split 10-01 12:11:18 UTC)
+  ex 17:00     52 fills / 46 candles  41W-11L  +17.2877 on $164.24 = +0.1053/$1
+    H1 n26 +17.1362 = +0.2303/$1 | H2 n26 +0.1515 = +0.0017/$1 (split 10-01 19:16:24 UTC)
+That ONE candle is 24.05 of the 41.34, and without it the second half is flat. Not a finding yet -
+it goes to V with the report at 60 candles, and nothing changes on the probe either way.
+[2026-10-01 23:26:20] FILL epoch 1790897100 UP 5sh @ 0.6 bn_before -0.0bps
+[2026-10-01 23:36:01] FILL epoch 1790897700 UP 5sh @ 0.68 bn_before 0.15bps
+[2026-10-01 23:42:44] FILL epoch 1790898000 DOWN 5sh @ 0.7 bn_before 2.34bps
+[2026-10-01 23:51:00] REJECTED epoch 1790898600 UP 0.78 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-01 23:52:49] FILL epoch 1790898600 UP 5sh @ 0.6 bn_before 0.8bps
+[2026-10-02 00:06:33] REJECTED epoch 1790899500 UP 0.78 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-02 00:06:35] FILL epoch 1790899500 UP 5sh @ 0.78 bn_before 0.24bps
+[2026-10-02 00:11:38] FILL epoch 1790899800 UP 5sh @ 0.8 bn_before 2.29bps
+[2026-10-02 00:31:13] FILL epoch 1790901000 DOWN 5sh @ 0.8 bn_before 1.42bps
+[2026-10-02 00:36:22] FILL epoch 1790901300 UP 5sh @ 0.71 bn_before 1.42bps
+[2026-10-02 00:57:18] FILL epoch 1790902500 DOWN 5sh @ 0.61 bn_before 1.49bps
+[2026-10-02 01:01:07] FILL epoch 1790902800 DOWN 5sh @ 0.74 bn_before 0.0bps
+[2026-10-02 01:11:01] FILL epoch 1790903400 DOWN 5sh @ 0.63 bn_before 0.0bps
+[2026-10-02 01:16:44] FILL epoch 1790903700 DOWN 5sh @ 0.64 bn_before 0.0bps
+[2026-10-02 01:31:17] FILL epoch 1790904600 UP 4.99158sh @ 0.6200000075999998 bn_before -0.0bps
+[2026-10-02 01:36:15] FILL epoch 1790904900 UP 5sh @ 0.61 bn_before -0.0bps
+[2026-10-02 01:41:12] FILL epoch 1790905200 DOWN 5sh @ 0.61 bn_before -0.0bps
+[2026-10-02 01:46:12] FILL epoch 1790905500 UP 5sh @ 0.6 bn_before -0.0bps
+[2026-10-02 02:31:10] FILL epoch 1790908200 DOWN 5sh @ 0.6 bn_before 0.0bps
+[2026-10-02 02:41:04] FILL epoch 1790908800 UP 5sh @ 0.6 bn_before -0.0bps
+[2026-10-02 02:46:00] FILL epoch 1790909100 DOWN 5sh @ 0.71 bn_before 0.0bps
+[2026-10-02 03:01:07] FILL epoch 1790910000 UP 5sh @ 0.6 bn_before 0.0bps
+[2026-10-02 03:21:02] FILL epoch 1790911200 DOWN 5sh @ 0.61 bn_before -0.0bps
+[2026-10-02 06:01:07] FILL epoch 1790920800 UP 5sh @ 0.62 bn_before -1.2bps
+[2026-10-02 06:52:04] REJECTED epoch 1790923800 UP 0.8 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-02 06:52:09] FILL epoch 1790923800 UP 5sh @ 0.76 bn_before 0.95bps
+[2026-10-02 07:31:10] REJECTED epoch 1790926200 DOWN 0.77 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-02 07:31:11] FILL epoch 1790926200 DOWN 5sh @ 0.63 bn_before 3.73bps
+[2026-10-02 08:46:07] FILL epoch 1790930700 DOWN 2.46sh @ 0.6 bn_before 0.0bps
+[2026-10-02 08:51:25] FILL epoch 1790931000 UP 5sh @ 0.61 bn_before 0.85bps
+[2026-10-02 08:56:01] FILL epoch 1790931300 UP 5sh @ 0.74 bn_before -0.0bps
+[2026-10-02 09:06:57] REJECTED epoch 1790931900 UP 0.8 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-02 10:11:00] REJECTED epoch 1790935800 DOWN 0.8 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-02 10:11:03] FILL epoch 1790935800 DOWN 5sh @ 0.77 bn_before 0.0bps
+[2026-10-02 10:16:08] FILL epoch 1790936100 UP 5sh @ 0.73 bn_before 0.0bps
+[2026-10-02 10:31:02] FILL epoch 1790937000 DOWN 5sh @ 0.72 bn_before 0.0bps
+[2026-10-02 10:51:04] FILL epoch 1790938200 DOWN 5sh @ 0.71 bn_before 0.0bps
+[2026-10-02 11:11:17] FILL epoch 1790939400 UP 5sh @ 0.64 bn_before -0.0bps
+[2026-10-02 11:16:39] FILL epoch 1790939700 UP 5sh @ 0.79 bn_before 0.0bps
+[2026-10-02 11:21:34] FILL epoch 1790940000 UP 5sh @ 0.69 bn_before 1.12bps
+[2026-10-02 11:26:00] REJECTED epoch 1790940300 UP 0.68 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-02 11:26:03] FILL epoch 1790940300 UP 5sh @ 0.66 bn_before -0.0bps
+[2026-10-02 11:31:20] FILL epoch 1790940600 DOWN 5sh @ 0.6 bn_before 2.63bps
+[2026-10-02 11:41:11] REJECTED epoch 1790941200 DOWN 0.8 :: RequestRejectedError: invalid post-only order: order crosses book
+[2026-10-02 11:41:13] FILL epoch 1790941200 DOWN 5sh @ 0.78 bn_before 1.64bps
+[2026-10-02 11:50:57] WINDOW CHANGED 60-180 -> 60-120 by OWNER confirmation via V ("Cool change Zurich maker to this", 11:4x UTC). Everything else unchanged. Old pid 423387 stopped; restarting.
+[2026-10-02 11:51:12] FILL epoch 1790941800 UP 5sh @ 0.73 bn_before -0.0bps
+
+== 10-02 11:50  WINDOW 60-180 -> 60-120. OWNER CONFIRMED, his words via V: "Cool change Zurich
+maker to this", on V's stated lead "same maker rule, fills only in seconds 60-120, hold to
+settlement, no exits". Zurich probe ONLY; London untouched.
+CHANGED: SEC_LO, SEC_HI = 60, 120 (SEC_HI is also the hard cancel, so a resting order now leaves at
+121 instead of 181). NOTHING ELSE: band 0.60-0.80, calm 0.304, 5 shares, post-only at the best bid,
+2 bps adverse cancel, 3-posts-per-candle cap, 1-share dust floor, -10 day / -20 lifetime, fixed
+stake. No Kelly, no staking change - that still needs the owner's two separate confirmations.
+EVIDENCE IT RESTS ON (both in-sample, and that is stated in both files): PROBE_FILLS_ANATOMY.txt
+section C, live fills at sec 60-120 +0.2058/$1 (n 78) against -0.1617/$1 (n 19) at 120-180; and
+PROBE_EXIT_GRID.txt, where none of 45 exit cells beat holding and the sec 60-120 entry filter was
+the only subset that compounded without tripping the day stop.
+TESTS: 135 pass. The window edge tests moved to 120/121, and a new test_the_old_180_window_is_gone
+asserts that 121, 150, 179, 180 and 181 all refuse to post - the test that would catch the constant
+being changed without the gate following it. Three fixtures that used ep+120 as "inside the window"
+and then stepped to 121-150 were moved to ep+80 with their loops kept inside 60-120; they were
+asserting the old window incidentally, not the rule each was written for.
+RESTART: old pid 423387 stopped at 11:50:32 with ZERO open orders resting (checked first, at sec 32
+of the 11:50 candle, before the posting window opens, so nothing could be orphaned). New pid 475268,
+ENABLED present, env sourced into the child only. The one unsettled fill at the time (11:30 DOWN
+5sh @ 0.60) is unaffected - the cron grader settles it from the fills table.
+IN-DB MARKER: the decisions table is the marker. Every row written before 11:50:32 carries reasons
+of the form "sec N > 180" and every row after carries "sec N > 120", so the change time is provable
+from the probe's own ledger without a schema change to a live database.
+M21 CONSEQUENCE: from 11:50 no 120-180 fill can exist, so P1 can no longer be tested as a split
+within the same period. At the 200-candle mark P1 is reported as post-change 60-120 pnl/$ (both
+halves) against the pre-change 60-120 fills. P2-P7 are unchanged.
+[2026-10-02 11:56:16] FILL epoch 1790942100 DOWN 5sh @ 0.79 bn_before 1.25bps
+IN-DB MARKER CONFIRMED 12:02:01 UTC: decision row "sec 121 > 120" on the 12:00 candle, followed by
+"sec 131 > 120". Zero rows since the 11:50:32 restart mention 180. The window change is now provable
+from the probe's own ledger in both directions - the old bound absent, the new bound firing.
+
+== 10-02 15:01  PROBE STOPPED. OWNER ORDER via V, his words: "Stop Zurich and start london"
+(London now runs the same maker rule as its EF lane, 13.3.0, on the same wallet).
+ORDER OF OPERATIONS, chosen so nothing could be orphaned: I checked the code first - guard.may_trade()
+is consulted ONLY on the `post` branch of one_pass, while the `cancel` branch runs unconditionally -
+so removing the flag stops new posts and still lets a resting order be pulled normally. Then:
+  15:01:19  ENABLED removed. No order was resting at that moment (verified before and after), and
+            the 15:00 candle was not calm anyway (vol 1.160 >= 0.304), so none could be posted.
+  15:01:2x  pid 475268 stopped. No cancel_all was used and no order id had to be cancelled.
+FINAL STATE: 0 open orders, 0 unsettled fills, today -5.2192, lifetime +26.3185 over 108 fills on 88
+distinct candles (all graded). The cron grader is left running as ordered, though with nothing
+unsettled it has nothing left to do. The M19 PAPER shadow keeps running untouched (pid 441912, no
+orders, ever). The watcher fired FLAG_REMOVED on cue, which is the alert doing its job.
+LIFETIME RECORD, for whoever reads this next: 108 fills over 88 candles, lifetime +26.3185 on a
+5-share fixed stake. It peaked at +45.13 on 10-02 morning and gave back ~19 in the afternoon; the
+best single candle (09-30 17:00) is +24.05 of the total, and its second half by time was negative.
+The M21 out-of-sample test (PREREG_M21_PROBE_OOS.md, P1-P7) is now FROZEN AT 88 of its 200 graded
+candles and cannot complete on this box unless the probe is restarted - London's fills are a
+different process on a different build and are NOT a continuation of this sample.

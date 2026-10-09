@@ -1,0 +1,148 @@
+MAKER PROBE - owner questions, READ-ONLY. 2026-10-01 23:47:16 UTC
+fills in db 72, graded 70
+
+(1) INTEGRITY OF THE 8 FILLS 22:33-23:34 UTC
+  fills in the window: 8
+  OK   fill side == intended side
+  OK   price inside 0.6-0.8
+  OK   fill price == posted price
+  OK   sec inside 60-180 at post
+  OK   calm vol < 0.304 at post
+  OK   graded on venue truth (gamma outcome == fills.outcome)
+  OK   pnl arithmetic = shares*(1-price) win / -shares*price loss
+  2bps cancel: 9 adverse-cancels lifetime, 0 in the window; 19 window-exit cancels lifetime
+  fills whose own bn_before >= 2bps (filled before the cancel could land): 0
+  bn_before present on 8/8, bn_after on 8/8
+
+(2) PER-FILL MARKET CONTEXT, same 8 fills
+    id time UTC            side    px  sec  vol@post  bn_before  bn_after out       pnl
+    63 2026-10-01 22:41:05 DOWN  0.75   60     0.220      -0.00      0.00 DOWN  +1.2500
+    64 2026-10-01 22:52:13 DOWN  0.62   60     0.129       0.52      0.00 UP    -3.1000
+    65 2026-10-01 22:56:00 UP    0.66   60     0.214       0.00      0.00 UP    +1.7000
+    66 2026-10-01 23:06:10 DOWN  0.79   69     0.246       0.97      0.00 DOWN  +1.0500
+    67 2026-10-01 23:12:20 UP    0.63  102     0.165       0.00      0.00 DOWN  -3.1500
+    68 2026-10-01 23:16:05 DOWN  0.78   65     0.073       0.00      0.63 UP    -3.9000
+    69 2026-10-01 23:22:04 DOWN  0.60   60     0.226       0.33     -0.00 UP    -3.0000
+    70 2026-10-01 23:26:19 UP    0.60   64     0.137       0.00      0.00 DOWN  -3.0000
+
+  winners n 3: mean vol 0.226  mean sec 63  mean px 0.733  mean bn_before +0.32  mean bn_after +0.00
+  losers  n 5: mean vol 0.146  mean sec 70  mean px 0.646  mean bn_before +0.17  mean bn_after +0.13
+  ranges: winners vol 0.214-0.246 px 0.66-0.79 | losers vol 0.073-0.226 px 0.60-0.78
+  n is 8. Nothing here is a finding; it is a description of eight candles.
+
+(3) STRICTER CALM GATE - vol as LOGGED AT POST, every graded fill
+  graded fills 70; vol@post recoverable on 70; 0 have no matching post row and are EXCLUDED from this grid rather than assumed calm
+
+  ALL graded  (n 70)
+       cut  fills  candles      W/L  deployed       pnl   pnl/$1  kept%
+     0.304     70       50    56/14    215.09  +31.4377  +0.1462   100%
+     0.280     48       42    36/12    153.58   +7.9348  +0.0517    69%
+     0.250     35       33    25/10    113.79   +2.7358  +0.0240    50%
+     0.220     30       28     21/9     98.29   +1.7003  +0.0173    43%
+     0.200     21       20     13/8     70.99   -5.9985  -0.0845    30%
+     0.150     10       10      5/5     33.65   -8.6464  -0.2570    14%
+
+  H1 (first half by time)  (n 35)
+       cut  fills  candles      W/L  deployed       pnl   pnl/$1  kept%
+     0.304     35       18     33/2    100.05  +41.4872  +0.4147   100%
+     0.280     15       12     14/1     45.39  +16.1343  +0.3554    43%
+     0.250     12       10     11/1     35.09  +11.4343  +0.3258    34%
+     0.220     11        9     10/1     34.10  +10.8988  +0.3196    31%
+     0.200      7        6      6/1     24.60   +5.4000  +0.2195    20%
+     0.150      1        1      1/0      3.65   +1.3500  +0.3699     3%
+
+  H2 (second half by time)  (n 35)
+       cut  fills  candles      W/L  deployed       pnl   pnl/$1  kept%
+     0.304     35       32    23/12    115.04  -10.0495  -0.0874   100%
+     0.280     33       30    22/11    108.19   -8.1995  -0.0758    94%
+     0.250     23       23     14/9     78.69   -8.6985  -0.1105    66%
+     0.220     19       19     11/8     64.19   -9.1985  -0.1433    54%
+     0.200     14       14      7/7     46.39  -11.3985  -0.2457    40%
+     0.150      9        9      4/5     30.00   -9.9964  -0.3333    26%
+
+  ALL excluding 09-30 17:00  (n 55)
+       cut  fills  candles      W/L  deployed       pnl   pnl/$1  kept%
+     0.304     55       49    41/14    174.14   +7.3877  +0.0424   100%
+     0.280     48       42    36/12    153.58   +7.9348  +0.0517    87%
+     0.250     35       33    25/10    113.79   +2.7358  +0.0240    64%
+     0.220     30       28     21/9     98.29   +1.7003  +0.0173    55%
+     0.200     21       20     13/8     70.99   -5.9985  -0.0845    38%
+     0.150     10       10      5/5     33.65   -8.6464  -0.2570    18%
+
+  WHAT EACH CUT REMOVES FROM THE 8-FILL WINDOW (5 losers, 3 winners)
+       cut  losers removed  winners removed   left  left pnl
+     0.304          0 of 5           0 of 3      8  -12.1500
+     0.280          0 of 5           0 of 3      8  -12.1500
+     0.250          0 of 5           0 of 3      8  -12.1500
+     0.220          1 of 5           1 of 3      6  -10.2000
+     0.200          1 of 5           3 of 3      4  -13.1500
+     0.150          2 of 5           3 of 3      3  -10.0000
+
+  Read it as a sweep, not a pick: a cut that helps one of these four sets and not the
+  others, or that is non-monotone across the six values, is noise. Every cell below 60 fills
+  is INSUFFICIENT by the standing rule, and nothing here changes the probe.
+
+VERDICT (Zurich, 10-01 23:4x)
+(1) NOTHING IS BROKEN. All seven integrity checks pass on all 8 fills: side == intended, price in
+    0.60-0.80 and equal to the posted price, sec 60-180 at post, vol@post < 0.304, pnl arithmetic
+    exact, and fills.outcome == the gamma (Polymarket) resolution on every row. The 2 bps rule did
+    not need to fire in this window (0 adverse-cancels; 9 lifetime, 19 window-exit cancels), and no
+    fill carried bn_before >= 2 bps, so nothing was filled through an adverse move. bn_before and
+    bn_after are present on 8/8. This was eight ordinary candles that lost.
+(2) The losers were NOT the volatile ones - the opposite. Winners' mean vol@post 0.226 vs losers'
+    0.146; winners' mean price 0.733 vs losers' 0.646; sec 63 vs 70. The three winners sat in
+    0.214-0.246 vol, the five losers spread 0.073-0.226. On n=8 that is a description, not a signal.
+(3) A STRICTER CALM GATE DOES NOT HELP; it hurts, and nearly monotonically. On all 70 graded fills
+    pnl/$1 falls 0.304 -> 0.150 as +0.1462, +0.0517, +0.0240, +0.0173, -0.0845, -0.2570. The only
+    cell that beats the current gate anywhere is 0.280 on the ex-17:00 set (+0.0517 vs +0.0424), a
+    hair, non-monotone, n=48 - noise by the standing rule. In the 8-fill window the cuts strip
+    WINNERS FIRST: at 0.220 one loser and one winner go; at 0.200 all three winners and one loser go
+    and the window gets WORSE (-13.15 vs -12.15). Every cell is under 60 fills = INSUFFICIENT.
+    The real split is time, not vol: H1 +0.4147/$1 vs H2 -0.0874/$1 at the current gate, and the
+    tightest cuts cannot rescue H2 (-0.3333/$1 at 0.150). No change to the probe, no gate proposed.
+
+APPENDIX (V, 10-01 23:5x): the owner's 23:43:29 screenshot "not calm (0.308 >= 0.304)" vs the
+23:40 DOWN 5sh @ 0.70 fill. Candle epoch 1790898000. READ-ONLY; probe untouched.
+
+WHAT THE PROBE SAW, from its own decisions table, every pass of that candle:
+  23:41:00.020 sec  60 post  vol 0.285  "calm 0.285 fav DOWN bid 0.70 sec 60"
+  23:41:06 .. 23:42:34       vol 0.285  hold, adverse +0.00 on every pass
+  23:42:44.939 sec 164 fill  vol 0.285  "filled before cancel (adverse 2.34bps)"
+  then sec 165-297           "already filled this candle" (no further posts)
+So vol at POST = 0.285 and vol at FILL = 0.285. It is the SAME number because the gate's value is
+FavBrain.vol_before_open(epoch): the 1 s log-return std over [epoch-300, epoch) x 1e4 - the five
+minutes BEFORE the candle opened. It is fixed before the candle starts and cannot move inside it.
+INDEPENDENT CHECK, Binance BTCUSDT 1 s closes, the probe's own formula:
+  [23:35:00,23:40:00) = 0.285  n 300   <- reproduces the probe's logged value exactly
+  trailing 300 s to 23:41:00 (post)   = 0.245
+  trailing 300 s to 23:42:44 (fill)   = 0.221
+  trailing 300 s to 23:43:29 (shot)   = 0.257
+  [23:40:00,23:45:00) = vol_before_open(23:45) = 0.207 ; [23:30,23:35) = 0.258
+  inside-candle [23:40:00,23:43:29) = 0.188
+NONE of these is 0.308, so the 8787 card's 0.308 is computed off the ENGINE's own series/window, not
+the probe's gate value - and 23:43:29 is 45 s AFTER the fill, so the screenshot cannot describe the
+state at fill time anyway.
+IS THE GATE RE-CHECKED WHILE RESTING? No. decide() tests vol only in the "nothing resting: may we
+post?" branch. A resting order leaves on exactly two things: Binance >= 2 bps adverse, or sec outside
+60-180. Nothing re-reads vol, so a LIVE vol could rise after a post and the order would stay - but on
+this order the gate value itself never moved, so that is not what happened here.
+WHAT DID HAPPEN: Binance moved 2.34 bps AGAINST us and the fill landed on the same pass as the cancel
+decision - fills.bn_before_bps = 2.3372, log "filled before cancel (adverse 2.34bps)". That is the
+known fill-before-cancel race, which the probe handles correctly (it books the fill instead of
+cancelling). It is not a calm-gate breach.
+
+CORRECTION (10-01 23:5x). The 0.308 was MY /maker PAGE, not the 8787 engine. I said earlier it had
+to come from the engine's own series; that was wrong and this is the fix.
+maker_page.vol_now() recomputed the calm number itself and omitted the one thing FavBrain._series()
+does: FORWARD-FILL a second with no print (up to FF_MAX_S), so a quiet second contributes a ZERO
+return. The page skipped those seconds instead and took log-returns ACROSS the holes, which inflates
+the std. Same window, same db, different number: page 0.30809 vs gate 0.28513 on candle 1790898000 -
+enough to flip the displayed verdict to "not calm" on a candle the gate had called calm. That is
+exactly the reimplementation-of-a-live-rule error CLAUDE.md warns about, in my own code.
+FIX (page only, probe untouched, no probe restart): the page no longer computes it. It reads
+decisions.vol - the value the running probe LOGGED for that candle - and falls back to
+FavBrain.vol_before_open() from poly_fav, the gate's own module. Verified identical to 15 decimals
+on three candles via both paths (0.285125185626913 for 23:40). Labels now read "calm (5 min before
+open)" with its source, plus a separate "live vol (trailing 5 min, NOT the gate)" row and a line
+saying the gate cannot change inside the candle and that 8787's live vol is that other kind of
+reading. Page restarted (pid 435384); auth re-verified 401 without creds, 200 with.

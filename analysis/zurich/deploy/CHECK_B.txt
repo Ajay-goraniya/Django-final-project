@@ -1,0 +1,45 @@
+check (b): replaying the ENGINE decide_log through the staged brain on the last 40 FAV candles
+candle          shadow(side sec ask)      brain(side sec ask)      match
+09-29 20:10  DOWN  150 0.84      DOWN  150 0.84      OK
+09-29 20:15  UP    101 0.66      UP    101 0.66      OK
+09-29 20:20  UP     60 0.68      UP     60 0.68      OK
+09-29 20:25  UP     61 0.65      UP     61 0.65      OK
+09-29 20:30  DOWN   60 0.71      DOWN   60 0.71      OK
+09-29 20:35  UP     65 0.65      UP     65 0.65      OK
+09-29 20:40  UP     60 0.74      UP     60 0.74      OK
+09-29 20:45  DOWN   60 0.77      DOWN   60 0.77      OK
+09-29 20:50  UP     60 0.66      UP     60 0.66      OK
+09-29 20:55  DOWN   76 0.67      DOWN   76 0.67      OK
+09-29 21:00  DOWN   60 0.78      DOWN   60 0.78      OK
+09-29 21:10  UP     60 0.67      UP     60 0.67      OK
+09-29 21:15  DOWN   60 0.83      DOWN   60 0.83      OK
+09-29 21:20  DOWN   60 0.73      DOWN   60 0.73      OK
+09-29 21:25  UP     60 0.68      UP     60 0.68      OK
+09-29 21:35  UP    108 0.65      UP    108 0.65      OK
+09-29 21:40  UP     60 0.82      UP     60 0.82      OK
+09-29 21:50  UP     60 0.65      UP     60 0.65      OK
+09-29 21:55  DOWN  147 0.76      DOWN  147 0.76      OK
+09-29 22:00  UP     60 0.81      UP     60 0.81      OK
+09-29 22:05  DOWN   60 0.75      DOWN   60 0.75      OK
+09-29 22:25  UP     60 0.65      UP     60 0.65      OK
+09-29 22:30  DOWN   60 0.69      DOWN   60 0.69      OK
+09-29 22:40  UP     77 0.65      UP     77 0.65      OK
+09-29 22:45  DOWN   60 0.67      DOWN   60 0.67      OK
+09-29 22:50  UP     60 0.78      UP     60 0.78      OK
+09-29 22:55  DOWN   64 0.66      DOWN   64 0.66      OK
+09-29 23:00  UP     60 0.72      UP     60 0.72      OK
+09-29 23:05  UP     66 0.85      UP     66 0.85      OK
+09-29 23:15  DOWN   61 0.65      DOWN   61 0.65      OK
+09-29 23:30  DOWN   61 0.66      DOWN   61 0.66      OK
+09-29 23:35  DOWN   60 0.70      DOWN   60 0.70      OK
+09-29 23:40  DOWN   60 0.75      DOWN   60 0.75      OK
+09-29 23:45  UP     60 0.84      UP     60 0.84      OK
+09-29 23:50  DOWN   60 0.69      DOWN   60 0.69      OK
+09-29 23:55  UP     61 0.84      UP     61 0.84      OK
+09-30 00:00  UP     60 0.77      UP     60 0.77      OK
+09-30 00:10  DOWN   60 0.85      DOWN   60 0.85      OK
+09-30 00:15  DOWN  129 0.66      DOWN  129 0.66      OK
+09-30 00:20  DOWN   61 0.65      DOWN   61 0.65      OK
+
+  matched 40  differed 0  no-fire 0  of 40
+  (b) PASS - byte-for-byte on candle, side, sec and ask

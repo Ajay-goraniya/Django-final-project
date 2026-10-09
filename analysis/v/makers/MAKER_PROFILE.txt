@@ -1,0 +1,20 @@
+576 candles (48 h). PnL excludes maker rebates. per-candle curve.
+wallet      cands  pnl$    pnl/vol  cand+%  maxDD$  P/DD  worst$  paired%sh  med pair cost  paired$   residual$  maker%
+0x86b14772    572   +6335  +0.0127     59     2876   2.2    -986      80     1.048        -21815    +28149     96
+0x7743aea5    479   +3395  +0.0345     49     1692   2.0    -382      56     0.954         +3818      -423    100
+0xc1b4bfdc    573   +2265  +0.0150     55     1166   1.9    -267      75     1.030         -2175     +4440    100
+0xcd30457c    573   +2107  +0.0146     54     1243   1.7    -305      80     1.017         -4082     +6189     99
+0xc387c2a4    427   +2833  +0.0367     41     2291   1.2    -574      44     0.839         +9653     -6820    100
+0x32ed2e54    471   +2038  +0.0182     50     2698   0.8    -701      62     0.920          +549     +1489     90
+0x3048d653    572   +7567  +0.0230     53     1032   7.3    -442      88     0.960        +14505     -6939     41
+0x41e2e1cc    568   +3462  +0.0176     54      828   4.2    -207      87     0.986         +2973      +489     23
+0xc53375ff    565   +2221  +0.0112     52     2038   1.1    -333      83     0.969         +5281     -3059     35
+0x0cb03848    558   -8577  -0.0516     46     9173  -0.9    -403      56     0.781        +33248    -41825     87
+0xcc0d715a     25  -30799  -0.6251     28    31799  -1.0   -4100       0     nan            +0    -30799     99
+0x4b01c8e0     49  -16674  -1.0807     51    23554  -0.7   -4032       0     -204255.880          +612    -17286     88
+
+READ (V, 09-30): the consistent winners over 48 h still have P/DD only 1-2 as makers (DD 25-80% of 48 h profit); the best P/DD (0x3048 7.3,
+0x41e2 4.2) are 23-41% maker, 87-88% of shares PAIRED at median pair cost 0.96-0.99 - they leg both sides over time.
+Legging on a martingale price path has zero EV before costs (optional stopping: P(hit p+d) = p/(p+d), the miss loses p), so the pair margin
+comes from speed / stale quotes, not a rule. Our own tests agree: resting two-sided bids CLOSED 09-27 (one-side fills lose 96%), pair arb
+CLOSED (median 43 ms window). No new copyable rule here. Paired/residual split uses per-candle average prices (approximate).

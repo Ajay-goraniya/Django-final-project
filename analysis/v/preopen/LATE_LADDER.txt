@@ -1,0 +1,8 @@
+576 candles, last 48.0 h. TWAP projection at 275 s agrees with the venue 559/576 = 0.970
+rung 0.20: fills   19 (3.3% of candles)  win 10.5%  per$1 -0.474  $ at $10/fill -90.0  INSUF
+rung 0.35: fills   20 (3.5% of candles)  win 15.0%  per$1 -0.571  $ at $10/fill -114.3  INSUF
+rung 0.50: fills   20 (3.5% of candles)  win 15.0%  per$1 -0.700  $ at $10/fill -140.0  INSUF
+rung 0.65: fills   21 (3.6% of candles)  win 19.0%  per$1 -0.707  $ at $10/fill -148.5  INSUF
+rung 0.80: fills   23 (4.0% of candles)  win 26.1%  per$1 -0.674  $ at $10/fill -155.0  INSUF
+H1: candles with a fill 11, sum per$1 -46.35
+H2: candles with a fill 12, sum per$1 -18.42

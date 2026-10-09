@@ -1,0 +1,881 @@
+# NC - New Changes (owner's list)
+
+Findings the owner asked to record. Nothing here is deployed on London (eu-west-2) without the owner's
+confirmation of that specific change (CLAUDE.md rule, 09-23).
+
+## NC-1 - REVERSAL on Polymarket: trade only up to 240 s into the candle (09-23)
+
+- **Why:** Polymarket settles on TWAP60 (average of the last 60 s vs the 60 s before the open), not on the plain
+  candle close. A reversal that happens in the last minute only moves part of that average, so late REVERSAL
+  bets stop paying. Predict.fun settles on the plain candle, so it is not affected the same way.
+- **Result (8-day Polymarket replay, exact fee, graded on Polymarket's own outcome):**
+
+  | window | trades | per $1 | w/o top 3 | all checks | losing days |
+  |---|---|---|---|---|---|
+  | 0-240 s | 394 | +0.215 | +0.144 | PASS (shuffle p=0.001, beats cheap-side null) | 1 of 9 |
+  | 0-200 s | 323 | +0.144 | +0.063 | FAIL (shuffle, null) | 3 of 9 |
+  | 200-240 s | 71 | +0.538 | +0.304 | PASS | 1 of 9 |
+  | after 240 s | 65 | about -0.03 without one lucky 1c ticket | | | |
+
+- **Meaning:** keep REVERSAL's trades up to 240 s; do not cut at 200 s (200-240 s is its best window);
+  never trade it after 240 s. London's order engine already refuses orders after 240 s, so no code change is needed.
+- **Limits:** the replay assumes every order fills (live, 40-60% of first tries are refused). Zurich's live
+  shadow REVERSAL is weaker so far (32 trades, +0.034/$1) - confirm at 60 trades before any live use.
+- **Status:** tested on replay, not deployed. REVERSAL stays OFF on London.
+- **Full grid (every bucket, Polymarket replay, 459 graded REVERSAL):**
+
+  | bucket | n | right | per $1 | w/o top 3 |
+  |---|---|---|---|---|
+  | 0-60 s | 36 (<60) | 66.7% | +0.098 | -0.016 |
+  | 60-120 s | 123 | 62.6% | +0.077 | +0.001 |
+  | 120-180 s | 119 | 65.5% | +0.202 | +0.014 |
+  | 180-200 s | 45 (<60) | 64.4% | +0.213 | -0.056 |
+  | 200-240 s | 71 | 83.1% | +0.538 | +0.304 |
+  | 240-300 s | 65 | 49.2% | +1.769 (one 0.010 ticket) | -0.034 |
+
+  0-240 s by day: 09-08 -0.153 | 09-09 +0.032 | 09-10 +0.176 | 09-11 +0.255 | 09-12 +0.846 | 09-13 +0.643 |
+  09-14 +0.283 | 09-15 +0.067 | 09-16 +0.043. Costs: +1c +0.185, +2c +0.157, +5c +0.086.
+  Predict.fun (Mumbai 8796): 43 trades, too few to compare.
+- **Reproduce** (save as a .py next to `analysis/h1/verify.py`'s repo root; args `--rows lanes_twap60.csv --venues venues.sqlite3 --lo 0 --hi 240`):
+
+```python
+"""REVERSAL <240 s on the 8-day Polymarket replay, through analysis/h1/verify.py's gates (V, 09-23).
+Input: lanes_twap60.csv (replay_lanes_1s.py --open twap60) + venues.sqlite3 (q = both asks at 1 Hz, outcome = Polymarket
+resolution). Exact fee 0.07p(1-p) inside the stake; $1 per fire."""
+import sys, csv, sqlite3, bisect, argparse, numpy as np, datetime as dt
+sys.path.insert(0, 'analysis/h1'); import verify as V
+ap = argparse.ArgumentParser(); ap.add_argument('--rows', required=True); ap.add_argument('--venues', required=True)
+ap.add_argument('--lo', type=float, default=0); ap.add_argument('--hi', type=float, default=240); a = ap.parse_args()
+vc = sqlite3.connect(a.venues); Q = [(int(t), u, d) for t, u, d in vc.execute('select ts,poly_up,poly_dn from q order by ts')]; QT = [q[0] for q in Q]
+OUT = {int(e): x.upper() for e, x in vc.execute('select epoch,actual from outcome') if x}
+def asks(ts):
+    i = bisect.bisect_left(QT, ts - 5); best = None
+    for j in range(i, min(len(Q), i + 11)):
+        if abs(Q[j][0] - ts) <= 5 and Q[j][1] is not None and Q[j][2] is not None and (best is None or abs(Q[j][0] - ts) < abs(best[0] - ts)): best = Q[j]
+    return (float(best[1]), float(best[2])) if best else None
+R = []
+for r in csv.DictReader(open(a.rows)):
+    if r['kind'] != 'REVERSAL' or r['win'] in ('', 'None') or not (a.lo <= float(r['sec']) < a.hi): continue
+    q = asks(int(r['ts']))
+    if not q: continue
+    R.append(dict(ep=int(r['epoch']), ts=int(r['ts']), side=r['side'], ask=float(r['ask']), up=q[0], dn=q[1], act=r['actual'].upper(), win=int(r['win'])))
+R.sort(key=lambda r: r['ts'])
+pay = lambda ask, win: (1 / (ask * (1 + 0.07 * (1 - ask))) - 1) if win else -1.0
+per = np.array([pay(r['ask'], r['win']) for r in R]); n = len(R); h = n // 2
+F = V.Finding(f'REVERSAL {a.lo:.0f}-{a.hi:.0f}s, Polymarket 8-day replay', per.mean(), n)
+F.grading(replay_actual={r['ep']: r['act'] for r in R}, venues_outcome={r['ep']: OUT[r['ep']] for r in R if r['ep'] in OUT})
+days = {}
+for r, x in zip(R, per): days.setdefault(dt.datetime.utcfromtimestamp(r['ep']).strftime('%m-%d'), []).append(x)
+F.sample({'all': n}); F.halves(per[:h].mean(), per[h:].mean())
+y = np.array([1 if r['act'] == 'UP' else 0 for r in R]); pred = np.array([1.0 if r['side'] == 'UP' else 0.0 for r in R])
+AU = np.array([r['up'] for r in R]); AD = np.array([r['dn'] for r in R])
+def pnl(y_, p_, _):
+    ask = np.where(p_ == 1, AU, AD); win = (p_ == y_)
+    return float(np.mean(np.where(win, 1 / (ask * (1 + 0.07 * (1 - ask))) - 1, -1.0)))
+F.permutation(y, pred, np.zeros(n), pnl, draws=1000)
+F.costs({k: np.mean([pay(min(.999, r['ask'] + k), r['win']) for r in R]) for k in (0, .01, .02, .05)})
+cheap = np.mean([pay(min(r['up'], r['dn']), (r['act'] == 'UP') == (r['up'] <= r['dn'])) for r in R])
+F.null(per.mean(), cheap, 'buy the cheaper side at the same second')
+opp = np.mean([pay(r['dn'] if r['side'] == 'UP' else r['up'], r['act'] != r['side']) for r in R])
+F.null(per.mean(), opp, 'buy the OTHER side at the same second')
+top = np.sort(per)[::-1]
+print('concentration: all %+.3f | w/o top1 %+.3f | w/o top3 %+.3f | w/o top10 %+.3f' % (per.mean(), top[1:].mean(), top[3:].mean(), top[10:].mean()))
+print('by day (n, per$1):', ' '.join(f'{d} {len(v)} {np.mean(v):+.3f}' for d, v in sorted(days.items())), '| losing days', sum(np.mean(v) < 0 for v in days.values()), '/', len(days))
+F.verdict()
+```
+
+## NC-2 - TWAP settlement study (09-24) - PROVEN NOT PROFITABLE: the TWAP maths is right, but it adds no money to EF
+
+Data: 2,274 candles 09-08..09-16. Polymarket's own `priceToBeat`/`finalPrice` per candle (gamma API, public after
+the candle settles), Binance 1 s klines, Polymarket 1 Hz asks, `venues.outcome`.
+
+- **A. Ground truth.** `finalPrice >= priceToBeat` matches Polymarket's resolution **2179/2179**. The price to beat of
+  a candle = the previous candle's final TWAP (TWAP60 of Chainlink ending at the open). Polymarket does NOT publish it
+  live - only after settlement - but it can be computed live from the Chainlink stream (London already does: `line_open`).
+- **A. Which Binance proxy predicts the settlement.** Binance TWAP60 close vs TWAP60 open agrees with Polymarket
+  **96.7%**; the plain Binance candle (close vs open) only **87.0%**. Every disagreement of the TWAP proxy is in a
+  near-tie candle (|TWAP move| < 1 bp: 21% wrong, n=349); above 1 bp it is **0% wrong** (n=1,925).
+  Chainlink sits about **$25 below Binance** (p10/p90 $-51/$-12) and that gap drifts only $2 (p50) / $6 (p90) within a candle.
+- **B. Fair-probability maths (no fitted parameters, sigma = trailing Binance volatility, 4 windows 300-3600 s).**
+  The TWAP-aware formula beats the plain close-vs-open formula at **every second of the candle, every window**
+  (log loss e.g. 120 s 0.528 vs 0.557; 240 s 0.314 vs 0.446; 270 s 0.218 vs 0.953 - the plain formula collapses after
+  240 s because it ignores the locked-in part of the average). **But Polymarket's own price beats both at every
+  second** (120 s 0.495; 240 s 0.240; 270 s 0.124). The market already prices TWAP, and more.
+- **C. Money: fire when the TWAP fair price beats Polymarket's ask** (15-239 s, first second EV >= bar, exact fee,
+  1 s decision lag, graded on Polymarket). Full grid, 24 cells: TWAP model -0.066..+0.004 per $1 (best cell n=1390,
+  +0.004, dies at +2c: -0.066); plain model -0.129..-0.036, worse in every cell. **No cell makes money.**
+- **Verdict:** a pure TWAP fair-price model has no edge against Polymarket's price - do not build it as a signal.
+  What TWAP is good for:
+  1. **Labels:** anything trained or graded on the Binance candle (close >= open) is wrong on 13% of candles; the
+     Binance TWAP60 proxy is wrong on 3.3%, all of them near-ties. Models should be trained on the TWAP label.
+  2. **Timing:** after 240 s the average is part-locked - the reason late REVERSAL fails (NC-1).
+  3. **Near-ties (< 1 bp)** are unreadable even with the right formula (21% proxy error) - that is where EF's
+     losses concentrate (H1: near-tie candles -0.144/$1).
+- **Follow-up 1 - EF's label is already right.** v10 was trained on Polymarket's resolved outcome (Chainlink TWAP),
+  not the Binance candle (`learner/build_features.py`). Its move/fair-value *features* use the plain close-vs-open maths,
+  but see follow-up 2 - swapping them for TWAP versions is not expected to help.
+- **Follow-up 2 - does the TWAP fair price add anything to Polymarket's own price?** Walk-forward by day, logistic on
+  logit(market) vs logit(market)+logit(TWAP fair), log loss at 8 points in the candle: adding TWAP makes it **worse at
+  every point** (+0.0002 .. +0.0228; e.g. 120 s 0.5068 -> 0.5076, 255 s 0.1584 -> 0.1812). The plain formula also adds
+  nothing. **Polymarket's price already contains everything the TWAP maths knows.**
+- **Follow-up 3 (09-24) - the near-tie idea also fails.** Retrained EF brain that sees the distance to the line (Binance
+  TWAP60 now vs at the open, signed; |dist|; < 1 bp flag), walk-forward by day, 8 days / 1,077 EF candles, same EV bar
+  0.15, Polymarket-graded, $10: fixed15 +$818 paper / +$256 held (refused if the ask runs) vs distance-aware +$505 / +$152.
+  Worse; days split 3-3 (one tie). Premise wrong at fire time: fixed15's near-tie (< 1 bp) trades made +$239 on 57. The
+  fitted weights on distance are ~0.
+- **FINAL STATUS: PROVEN NOT PROFITABLE - CLOSED.** Neither a TWAP fair-price model, TWAP features, nor distance-to-line
+  improves EF or makes money. Keep only: TWAP labels for any training (v10 already uses them) and the 240 s REVERSAL rule
+  (NC-1). Not deployed anywhere; London unchanged.
+
+## NC-3 - Handle HTTP 425 (matching-engine restart) (09-24) - recorded, NOT built
+
+- **What Polymarket does** (docs, "Matching Engine Restarts"): during a restart every order endpoint returns **HTTP 425
+  (Too Early)**. After each restart the engine is **post-only for 2 minutes** - non-post-only orders (our FAK) are
+  rejected. Restarts are announced ~2 days ahead on Telegram t.me/polytradingapis and Discord #trading-apis.
+- **What our engine does now** (`poly_live.py` `post()`): 425 is a 4xx, so it is booked as a plain venue rejection. It
+  is safe (no money at risk, no ambiguous order), but a restart looks like a run of EF refusals and wastes the retries.
+- **Change to build later:** on 425 -> mark "venue restarting", skip that candle's retries, back off, and do not send
+  FAK for 2 min after the first non-425 answer (post-only window); log it as its own reason, not as an EF refusal.
+- **Status:** not built, not deployed. Low priority. Needs the owner's confirmation before building and before London.
+
+## NC-4 - Master survives restarts; only the owner (or a session on his order) turns it off (09-24)
+
+- **Owner's rule:** a server restart, crash, overload or deploy must NOT change the master switch. If master was ON
+  before, it is ON after; if OFF, it stays OFF. Only the owner (or a session acting on his written order) flips it.
+  The EF / MAIN / REVERSAL switches follow the same rule. Goal: London can run for weeks unattended.
+- **What the code does today (checked 09-24, build 13.0.3 on London):** already this. Since 12.24.3 master is no
+  longer forced OFF at boot (`btc_model_v12_polymarket.py` ~line 77, owner: "if master off it's paper and if master on
+  it's live"); it lives in the meta table like the lane switches and survives any restart. It is seeded OFF only on a
+  brand-new database (`poly_dashboard.Dashboard.__init__`). London runs under systemd `Restart=always`.
+- **Who changed it is recorded:** master and the lane switches are AUDITED controls - every write stores old value,
+  new value and the calling code, so "the owner / a session / a restart" can always be told apart. A restart writes
+  nothing to master.
+- **Where master can still go OFF without the owner:** (1) a deploy that points the engine at a NEW database file;
+  (2) a session briefed to park it (a safe-start deploy did this on 09-16 03:40). Both need a written owner order under
+  the current rules. No automatic stop exists (cash floor removed 09-23).
+- **Verified on London 09-24 19:24 (read-only):** `pm-london.service` is enabled, `Restart=always`,
+  `WantedBy=multi-user.target` -> it starts on a full server reboot and after any crash; `--db polymarket_v12_london_1.sqlite3`
+  is a fixed file; master is ON in meta. Master audit since 09-22: only dashboard (owner) writes; **none at the 7 restarts**
+  since 09-23 - master stayed ON through all of them. The dashboard is served by the same process, so it comes back too.
+- **Two small open items (recorded, not done - owner 09-24: "no need to annoy London now"):**
+  1. The boot banner still prints "(master OFF = shadow paper)" - a static label, not a write. Reword it to show the
+     real stored state (e.g. "master ON (from meta)") next time a London build is approved.
+  2. The Claude bridge on London (tmux) does not survive a server reboot. Trading continues without it, but V cannot
+     get London reports until it is restarted. Add a systemd unit or @reboot entry for it on the owner's go.
+- **Still to add (owner's go):** a DEPLOY_LONDON.md line: "never park master on a restart/deploy unless the owner says so
+  in writing".
+
+## NC-5 - Event-driven decide loop (13.1.x decide_mode=event) on London (09-25) - TRIED LIVE, REVERTED TO POLL
+- Zurich A/B (shadow): event made spot price 2.3x fresher at fire (spot_rx p50 ~50 vs ~115 ms) for 1.53x CPU.
+  Shadow cannot show refusals, so it was tried live on the owner's go: London 13.1.2 event/50 ms from 14:05 UTC.
+- London live, 30 EF candles on event vs poll (grade: venues.outcome): never filled 18/30 (60%) vs 9/30 equal-N (30%)
+  and 60/172 over the prior 48 h (35%); Fisher p 0.037 / 0.014. Retry fills 3 vs 12. First-try fills equal (9 vs 9).
+  Event's per-candle PnL looked better but rests on 12 fills - insufficient, not a finding.
+- Owner: "Switch to old please". London decide_mode=poll 21:17:15 UTC (live meta, no restart; build stays 13.1.2).
+  Zurich mirrored to poll.
+- Likely cause (UNVERIFIED): event fires at the instant of the move, when makers pull quotes in the 50 ms hold, and
+  the retries then chase a book that has already moved. Do not re-try event mode without a fill-rate answer to this.
+- LESSON (Zurich 21:30): the shadow lane fills in-process - 348/348 EF orders filled all-time, 36/36 in its event
+  window while London missed 60%. Any change whose cost lands on FILL behaviour is invisible on Zurich by construction;
+  judge those only on London (or say up front that shadow cannot answer).
+
+## NC-6 - Ubuntu needrestart auto-restarted pm-london (09-26 06:13) - owner: "No need" to block it
+- unattended-upgrades (libexpat1/curl/libpcap) -> needrestart restarted the service; clean stop/start, meta intact,
+  no order in flight. Post-restart zero-fill run checked: order shape identical, every reject a matching-engine
+  "no orders found" (not auth/sign), book moved away within 1 s - no fault.
+- Proposed fix (exclude pm-london from needrestart auto-restart) NOT applied: owner 09-26 11:3x "No need".
+  Do not re-raise unless an auto-restart lands mid-order.
+
+## NC-7 - Retry levers on London EF (09-26, read-only backtests on the London DB) - KEEP AS IS
+- **No-EV retries** (buy the never-filled candles at the best ask +1s/+2s): 100 graded, 45% win, **-0.124/-0.163 per $1**; every bucket INSUFFICIENT. They lose. The EV re-check on retries stays.
+  **RETRACTED 09-28 (London):** that test used tape-INFERRED sides, which match the logged side only 69% (195/283). With logged sides the
+  never-filled candles would have won 65% (94/144, gamma), as PAD_GRID said. Superseded by NC-13. The fillwin/d_ask5 cells that fell back
+  to inferred sides are retracted too.
+- **Retry fills as they are** (attempt >=2, n54 INSUFFICIENT): 50% win vs 48% break-even, +0.03/$1. Dropping retries costs ~11 in total, and the halves disagree. No evidence either way; no change.
+- The fill-side levers are now all closed: pad/cap (PAD_GRID_LONDON), speed (NC-5), size (R-14), no-EV retry and no-retry (this entry). Re-open only with a new mechanism, not a new threshold.
+
+## NC-8 - MAIN / REVERSAL new EV logic, two windows (09-27) - NOTHING SHIPS
+- Rules: R0 first call, R1 the lane's own p at breakeven, R2 walk-forward calibrated EV, R3 venue-only null. Priced with
+  PAST-ONLY quotes (the old +-5 s nearest-row quote was lookahead: 52% of MAIN R1's picks used a future row).
+- **MAIN dead** in both windows, all rules, all ages: W1 0-240 s R0 -0.017 paper / -0.10 London-exec; W2 R0 -0.140 / -0.228.
+  "MAIN after 240 s" was the future quote (W1); W2 has too little tape after 240 s to say. No reason to lift the 240 s rule.
+- **REVERSAL R1 0-240 s, London-exec**: W1 +0.065 (p05 below zero), W2 -0.023. Zurich live shadow +0.064 on 77. Not a finding.
+- Calibration (R2) never beat its null (R3). Files: analysis/v/model/MAIN_REV_*.md, analysis/zurich/LANE_EV_ZURICH_W2.md.
+
+## NC-9 - REVERSAL "brain" on Binance perp/flow/depth features (09-27) - NOT A FINDING
+- Rebuilt perp, flow, depth and settlement-line features from data.binance.vision for 09-08..09-16 (parity with the live
+  parquet: corr 1.000 on 4 features), plus 08-29..09-06 as training. Walk-forward AUC: brain 0.746 vs the venue-only null 0.750-0.754.
+- As a REV filter: the best n>=60 cell is +0.150/$1 London-exec (n64), below its own null cell (+0.178); paired test 28 vs 27, p=1.0.
+- The market price already carries what these features know. Open, and only window 2 can say: REV filtered by the calibrated venue
+  price alone (+0.12..+0.18 on n59-65). File: analysis/v/model/REV_BRAIN_HIST.md.
+- **09-27 01:3x, the last lead closed:** the price-calibrated REV filter, FROZEN on window 1 and tested on window 2 with no refit:
+  n53 (<60), paper +0.062 (H1 +0.209 / H2 -0.080), London-exec -0.060/$1. The calibration transferred exactly (pred 0.660 = actual
+  0.660), so the price is a true probability, and that is exactly why it does not pay after costs. REVERSAL stays off. File: analysis/zurich/REV_FROZEN_OOS.md.
+
+## NC-10 - Paper vs live on London EF: cause found, no fix yet (09-27)
+- **Cause (London's own data):** 104 of 263 EF candles never filled; they would have won 63% vs 52% for the fills, and hold
+  ~80% of the paper profit. Winners' asks are gone before our FAK lands (the venue's 50 ms taker hold lets makers cancel).
+- **Order-side fixes, all tested on London data and dead:** pad/cap (PAD_GRID_LONDON), speed (NC-5), resting/maker (R-18),
+  no-EV retries and no retries (NC-7), size (R-14).
+- **Fill-aware brain (10 decision-time features, leave-one-day-out):** AUC 0.419 [0.325, 0.509], anti-predictive.
+  The one univariate hint ("fire only if the ask is flat or falling over the last 5 s") covers n=11 of 162 fills. That is
+  insufficient, the sweep is non-monotone, and it would be a fire gate. Not a finding.
+- Open paths: the ETH/SOL head-start shadow on Zurich (analysis/zurich/ETH_SOL_SHADOW.md); re-check the d_ask5 hint when London has more than 600 fills.
+- **09-27 03:0x, market-making (two-sided resting bids) CLOSED on data** (owner called it): on 2,052 candles of the 1 Hz tape
+  (09-08..09-16), bids at mid-1..5c posted at 0 s or 30 s. Both sides fill in 55-74% of candles (+2k each), one side fills in 26-44%,
+  and those one-side fills LOSE 96% (591 of 613 at mid-2c). Net -9..-11c per candle in every cell, conservative or optimistic.
+  The complement-book "back door" is also dead: the books mirror (up+dn ask = 1.01 in 96% of seconds), and the venue already mint-matches inside the FAK.
+
+## NC-11 - "Fire before the crowd" and other markets (09-27) - nothing tradeable yet
+- **Predicting Binance's next move** (8 days of spot+perp aggTrades, walk-forward): WHEN a ≥5 bps move comes is predictable (AUC 0.75-0.80),
+  but its DIRECTION 100/250/500 ms ahead is chance (AUC 0.54/0.55/0.51). Small (≥2 bps) moves are directional, but worth +0.1-0.2 bps,
+  i.e. +1-3 pp of resolution probability, the size of the Binance-to-Chainlink error. The perp leads spot by 2-5 ms, which is useless against ~230 ms.
+  analysis/v/lead/BINANCE_LEAD.md.
+- **BTC 15m** (1,343 candles, gamma labels, TWAP60 agreement 98.5%): EF loses in all 12 London-exec cells; the lead is smaller than on 5m
+  and gone in 2-3 s. analysis/v/multi/btc15/BTC15_EF.md.
+- **BTC 5m race, quantified:** after a signal, the fired side reprices +7c within 1 s. Paper +0.64/$1 at 0 s, +0.15 at 1 s late, about 0 at 2 s.
+- **ETH/SOL 5m** (NC-10 file, ETH_SOL_EF.md): all cells lose London-exec. The live-book shadows on Zurich (since 03:33 09-27) are the open test.
+
+## NC-12 - "Stable EF": selectivity + hybrid staking (09-27, Zurich, 490 fires / 9 days, gamma-graded) - NOT YET
+- Top 20% of fires per day by calibrated edge (RAW): 6/day, 59% win, paper +0.225, London-exec +0.060, the only London-positive family.
+  FIXED is London-negative at every tier. verify.py REJECTS it: random 6/day reaches p95 +0.262 (p=0.084), the sweep is non-monotone (peaks at 20%), and n=54.
+- Staking is second order: once selective, all arms (fixed / tiered / half-Kelly capped / de-risk F) are within one point per $1.
+- Hints (n<60): ask 0.25-0.35 loses in both profiles (16.7% win); sec 180-240 is the best bucket in both. Re-run at ~30 days. analysis/zurich/STABLE_EF.md.
+
+## NC-13 - Predict.fun-style execution on London (owner: "fix the order failure", 09-28) - raises fills, not money
+- **Why Predict.fun fills ~93%** (learner/btc_model_build11.py:603-650): EF is a MARKET BUY with a VWAP-band price tolerance
+  (<0.10 +100%, 0.10-0.20 +70%, 0.20-0.30 +50%, 0.30-0.40 +20%, >=0.40 +10%) and up to 3 re-quoted replacements with no EV re-check.
+  London caps at ask+1 tick and re-checks EV. 69% of London's 580 EF orders end "no orders found to match with FAK order".
+- **Test (London's own DB, 326 EF candles, logged sides, gamma-graded; fill = our side's best ask <= cap in (submit, +3 s], 1 Hz tape):**
+
+  | cap | fills | win | per $1 optimistic / pessimistic |
+  |---|---|---|---|
+  | +1c | 43% | 44% | +0.00 / -0.09 |
+  | +3c | 49% | 46% | +0.06 / -0.06 |
+  | +5c | 58% | 47% | +0.06 / -0.08 |
+  | +10c | 70% | 50% | +0.06 / -0.13 |
+  | +15c | 79% | 51% | +0.07 / -0.17 |
+  | Predict bands | 59% | 47% | +0.04 / -0.12 |
+
+  The halves flip at every cap (H1 +0.22..+0.33 optimistic, H2 -0.06..-0.15). Fills over the attempt-1 top-of-book size: 37 at +1c, 54 at +5c,
+  79 at +15c (no depth archive, so the real price is worse than optimistic).
+- **Why:** the extra fills are the candles whose ask stayed reachable; they win about what they cost (the added fills win ~56-60% at ~+5-15c).
+  The 65% winners are the ones the book runs away from, and many stay out of reach even at +15c within 3 s. The venue takes ~230 ms to
+  process our order, so the fill problem is the latency race (NC-5, NC-10), not the cap.
+- **Verdict:** a wider cap copies Predict.fun's fill rate but not its money. Nothing changes on London. File (London box, local):
+  analysis/london/PREDICT_STYLE_EXEC.md + pexec.py.
+
+
+## NC-14 - TWAP physics vs the market, and where the fees bite (V, 09-28 night) - no edge, one structural fact
+- **TWAP physics** (Brownian projection of the closing TWAP60 vs the opening TWAP60, Binance 1 s as the reference; 2,052 venue-graded
+  candles 09-08..16; analysis/v/twap/twap_lock_binance.py): the market's price has a lower Brier than ours in EVERY window
+  (0-15 s 0.233 vs 0.238 ... 240-270 s 0.071 vs 0.098). The trading grids are negative or flip halves in every window, at the quote and 5 s later.
+  In the last 30 s the Binance stand-in is wrong on 21% of the still-contested candles, so the last-minute question is re-run on the
+  real Chainlink feed by London (analysis/v/twap/twap_lock_ref.py). The early and mid-candle answer is final: the book already prices the TWAP rule.
+- **Favourite/long-shot grid** (same data, first quote per candle per cell, both sides, venue-graded, full grid in the session log):
+  favourites (ask >= 0.60) are priced fair (per $1 about -0.04..+0.03 in every time bucket); cheap shares lose in every cell and both halves
+  (0.40-0.50: -0.04..-0.10; 0.20-0.30: -0.05..-0.21; 0.02-0.10: -0.05..-0.44 per $1). Cause: the taker fee is 0.07(1-p) per $1 and the
+  1-tick spread is a bigger share of a cheap price. **EF buys cheap shares (ask <= 0.60), so it starts about 5-10% per $1 in the hole on
+  every fire before any model edge.** No single cell is a finding (the best, 0-60 s at 0.90-0.98, is +0.03 on n95, one standard error).
+
+## NC-15 - Overnight 09-28 (owner: "don't stop till you find a profitable version") - running log
+- **Why speed cannot win (fact, not theory):** the BTC 5m market has Polymarket's taker-order delay ON (`itode: true`,
+  learner/AWS_TASKS.md:419). A taker order is held (250 ms per the docs, reportedly 50 ms on crypto) and re-validated, and makers
+  cancel inside the hold. The venue's own design protects makers from our strategy. That is the 69% "no orders found".
+- **TWAP lock-in on the REAL Chainlink feed (London, 922 candles, alignment 99.57%): DEAD.** The market beats exact TWAP math in
+  every window (270-296 s Brier 0.040 vs 0.063); every grid cell is negative at t-1, +1 s and +2 s. (analysis/london/TWAP_LOCK_REF_LONDON.txt, London box)
+- **EV-bounded chase (fills + retries, London's own orders): not a finding.** It adds 25-55 fills (all n<60), pessimistic totals are about 0,
+  and H2 is weak. The runaway winners run past even an EV=0 cap. (analysis/london/EV_CAP_CHASE.md, London box)
+- **Regime grid (Zurich, fixed15 under London exec, 129 fires / 7 days): no bucket is robust.** All fires -0.021/$1. Weekdays n113 +0.065
+  fail the cost test (+2c +0.018, +5c -0.036); weekends n16 -0.555 over 2 days, directionally the owner's point, but too thin. (analysis/zurich/EF_REGIME_GRID.md)
+- **Delay brain (Zurich decide_log, 35,855 passes, 622 candles, gamma):** EF's edge is +0.059 at +250 ms and -0.055 at +1 s. A ridge
+  trained on the delayed price works as a VETO on EF's own fires. Kept: n130, 58.5%, +0.201/+0.142/+0.106 at +250/500/1000 ms,
+  halves +0.167/+0.236, perm p 0.001. Vetoed: n133, 45.1%, -0.081/-0.180/-0.212. The sweep is non-monotone but positive at every threshold.
+  OPEN: fixed15 selection, the London-exec pass, and a test on London's real fills. (analysis/zurich/EF_DELAY_BRAIN.md)
+- **Veto on London's REAL fills (fixed15, 75 scored, 09-25..28): not shippable.** KEEP n41 -0.020/$1 vs VETO n34 -0.197; the total favours the veto by ~$57,
+  but the halves flip (on 09-25 the veto set won +55.9) and all cells are under 60. On Zurich, fixed15+veto fails (perm p 0.287); raw25+veto London-exec +0.035 on 4 days.
+  v2 (7 days, 1 s label) keeps KEEP > VETO (perm p 0.000), but v1 and v2 agree on only 58.7% of candles, so "the veto" is not one stable object yet.
+- **Mechanism found (Zurich v2, point 3):** EF fires at a transient DIP of the ask in its own read (+6c one row later vs +0.43c market drift) -
+  a winner's curse on the ask. This is the order-failure mechanism behind NC-10/NC-13.
+- **Book age at send, London REAL orders (analysis/london/BOOK_AGE_GRID.md): the one real-money split that separates.** Candle fill by book age
+  <10/10-25/25-50/50-100/100-250/250-750 ms = 91/71/64/46/37/19%, monotone. Fills on books >=50 ms old lost -74.8 (H1 -33.4 / H2 -41.4, 5/6 days <=0;
+  n53, under 60). The per$1 grid is non-monotone (profit sits in 25-50 ms); it is not an activity or sec-in-candle artefact. Age is traced to poly_core.BookCache.quote.
+- **Drafts on the branch, OFF by default, NOT deployed:** dd774e9 poly_veto (meta ef_veto) and e6ccd97 fresh-book send (ev_settings.fire_book_age_ms:
+  price an attempt only on our token's book no older than the limit; wait inside the budget; can never loosen quote_age). All suites pass.
+- **EF persistence (wait K passes): DEAD** (analysis/zurich/EF_PERSIST.md). Waiting doubles fills and destroys the edge (raw25 K1 +0.071, K2 -0.137).
+  The fills are ADVERSELY SELECTED by 10-29 pp (filled win 43.8% vs unfilled 54.8% at K1): makers leave the quote when content to sell us the loser.
+  On this book, raising the fill rate raises it on the losers. That closes the EF execution side.
+- **NEW STRUCTURAL LEAD - the 5m/15m dominance pair (TWAP rule, model-free):** the 15m market and the LAST 5m candle inside it settle on the SAME closing TWAP60.
+  If L15 < L5, 15m UP + 5m DOWN pays 1 or 2, never 0; mirror if L15 > L5. Zurich books (analysis/zurich/ARB_5M_15M.md, 22.8 h): cost incl. fees < 1 on
+  25/81 windows, median best cost 0.956 (4.4c/pair), p10 0.732; 0 zero-payoffs in 725 cells; both books tight (+1c). PUBLIC-TRADE cross-check (V,
+  analysis/v/twap/ARB_TRADES_CHECK.txt, independent source): takers actually bought both legs within 3 s at cost < 1 in 19/91 windows (13 with lines
+  >= $5 apart); dominance-pair payoff on gamma across all 91 windows {1: 68, 2: 23}, never 0. OPEN: simultaneous-fill (legging) risk - a ms probe of
+  both books runs on Zurich until 06:45 UTC (ARB_LEGGING_MS.md) - plus the 5m leg's size, and more days.
+- **Pair frequency, 7 BTC days on public trades (Zurich, analysis/v/twap/btc_day0..6.out):** traded cost<1 in 17/15/24/13/26/22/36 of 96 windows
+  (09-20..26, 153/672 = 22.8%), EVERY day. Payoff over 672: 1->469, 2->202, 0->1. The one 0 (09-22 15:15) had lines $2.33 apart on the Binance
+  proxy, inside its error, so the leg ORDER was wrong, not the rule. pair_bot now defaults to --min-gap 5 and uses the real Chainlink stream.
+  SOL 6/91, all with gaps <= $0.12 (proxy noise; do not lean on it). ETH 15/91, never 0.
+- **EF trigger source (Zurich, 785,924 passes, 1,015 candles): the fill-rate side is closed for good.** Book-triggered fires fill 82% but pay -0.007;
+  model-triggered fill 36% and hold all the edge (+0.234). "Fire only on book moves" LOSES (raw25 +0.071 -> -0.021, fixed15 +0.061 -> -0.158); on candles
+  both arms fill, both are negative. All 13,295 qualifying passes fill 85% and pay -0.059. EF's apparent edge sits in the fires the book will not fill.
+  So the fresh-book-send draft (e6ccd97) is NOT recommended either: more fills on this book are more losing fills. (analysis/zurich/EF_TRIGGER_SOURCE.md)
+
+- **RETRACT the pair frequency (V + Zurich, 05:3x-05:5x).** Zurich: its 25/81 was a stale 15m book (recorder resync bug, fixed); corrected
+  5 of 105 windows with a fresh book and |gap| >= $5, 1-9 riskless seconds each, best cost 0.95-0.99. Mine: the public-trades check took the MIN
+  of each leg independently over 3 s, and the legs move against each other, so it understated cost. 09-27 BTC, 87 windows with |gap| >= $5:
+  W3min 13 windows / 132 s; same-second min 13 / 32 s; same-second MAX (what a taker actually risked) **1 window / 1 s, cost 0.9998**.
+  The 7-day 153/672 (22.8%) used W3min and is inflated the same way. Structure (payoff never 0) stands; the edge is ~1-4c in a few
+  seconds of a few windows a day. Not a profit engine at our size. (analysis/v/twap/ARB_TRADES_STRICT.txt, arb_trades_strict.py)
+- **Pair CLOSED (Zurich ARB_LEGGING_MS, ms probe 02:15-06:45, 27.5 M book events).** Both legs <= cost for median **43 ms**; 9 of 11 intervals
+  shorter than our 250 ms arrival; min touch p50 10 shares; 2 of 18 windows, and those were the two SMALLEST line gaps ($7-9 vs median $61),
+  i.e. where the leg choice is least reliable. Fire-both simulation: both fill 54.5%, one leg only 9.1%, neither 36.4%. pair_bot paper: 1 pair,
+  cost 0.9811, paid 1, +0.38 - the structure holds, the trade is not there at our speed. (analysis/zurich/ARB_LEGGING_MS.md)
+
+## NC-16 - 09-28 09:5x, owner's direction: EF acts like everyone else; make the signal early
+Owner (09:4x-09:5x): the venue's order hold is not the problem, it is the same for everyone. "Find the actual cause and fix... improve your
+signal, make it early and see something that not everyone sees... the model acts the same as everyone... check the EF method we used in
+the Predict.fun bots, it wasn't based on how everyone reacts."
+- Facts checked in code: London's EF lane runs the SAME v10 model (`from btc_model_v10 import Model`, model_v10.json) the Predict.fun bots
+  used. decide_v11 (Predict.fun) fired at ~20 s on the v11 path (NOTES_v12 11:23); London fires at the first pass EV clears the bar.
+- model_v10.json coefficients: move_bps +1.663, **lv (the VENUE's own logit) +1.551**, mv_x_sec -0.982, everything else < 0.14. The
+  model's second-largest input is Polymarket's own price - it agrees with the crowd by construction.
+- Zurich EF_TRIGGER_SOURCE already showed the split: fires where p moved and the book stood still earn +0.234/$1; fires that chase a book
+  dip pay -0.007; p chasing a rising ask -0.556. The edge is where the model disagrees with the market, not where it follows it.
+- Briefs out 09:55: Zurich EF_FIRE_TIME (fire-second grid S x P, full grid; then part 4: spot-only walk-forward model vs venue mid at
+  sec 20/30/45/60, disagreement cells). London: real fills by fire second and ask (read-only).
+- train_summary.json: logit btc_only logloss 0.5364 / acc 72.0% vs btc+venue 0.5146 / 73.3%. The venue price adds ~1.3 pp of accuracy;
+  the spot-only signal carries nearly all the skill and is the part the crowd does not already price.
+- **London real fills by fire second (10:00, 205 settled, venue payout):** fire sec p10/50/90 = 48/126/203. Per $1: 15-30 n9* -0.03 | 30-60
+  n18* +0.09 | 60-120 n65 -0.11 | 120-180 n64 +0.05 | 180-240 n49* +0.09. By fill price: <0.45 n87 +0.08 | 0.45-0.55 n86 -0.09 | >0.55 n32* +0.08.
+  In the candles EF later bought, at sec 20-30 the CURRENT model gave our side p 0.40 (ask 0.36) - it did not favour that side yet; at the fire
+  p 0.57, ask 0.45. So firing the same model earlier is a different, weaker bet, not the same bet cheaper. The early question now rests on
+  the spot-only model (Zurich part 4), not on retiming v10.
+- **Zurich EF_FIRE_TIME (10:16, 1,015 candles, sim fills):** baseline fires p50 at sec 126; only 5% by sec 30. Grid S x P: all 16 cells with
+  S>=45 negative; 7 of 12 with S<=30 positive; P is ANTI-predictive down every column (S=15: P=0 +0.045, 0.55 +0.042, 0.70 -0.083).
+  PLACEBO (fire at S on the model's SIDE, no p bar): S=15 +0.045/$1 on 732 sim fills of 853 fires, halves +0.021/+0.068, win 58%, mean ask
+  0.54, fill 82-87%, ask reversion +0.6c (not selected dips). Baseline: 0.43 ask, 44% win, +7c reversion, 42% fill. The gain is WHEN, not the
+  p bar. Caveats: sim fill rate unvalidated above ~42%; verify.py NOT A FINDING on the P=0.55 cells (they lose to their own placebo);
+  the placebo is the candidate. Only London can measure real fills at sec 15. (analysis/zurich/EF_FIRE_TIME.md)
+  verify.py on the S=15 placebo: NOT A FINDING - cost sensitivity +0c +0.045 / +1c +0.026 / +2c +0.007; sweep over S non-monotone
+  (15 +0.045, 45 -0.044, 60 +0.008); does not beat fixed15 unfiltered (+0.061 sim); paired vs fixed15 McNemar p=0.21 (23 discordant).
+  Reading: early timing is a real direction with the SAME order of edge as the current rule, not more, and 2c of slippage removes it.
+- **Zurich part 4, spot-only walk-forward model vs the venue price (10:29): CLEAN NO on this feature set.** AUC spot-only vs venue mid alone:
+  20s 0.687/0.714, 30s 0.691/0.732, 45s 0.709/0.744, 60s 0.703/0.768 - eight of eight lost, gap widens through the candle. Disagreement
+  cells: one positive both-halves cell (S=60 p>=0.60 ask<=0.50, +0.091, 99 sim fills) is a specification artefact (flips sign with one
+  feature; fills decay 50/34/15/0 by day). verify NOT A FINDING. Structural: move_bps alone correlates +0.717 with the venue mid - the crowd
+  IS a move-follower, so a spot-move model carries no private information. What the crowd does not see must be an input the venue is not
+  watching. Next tests: (a) Chainlink-reference vs Binance divergence early in the candle (settlement is Chainlink, the crowd prices Binance);
+  (b) Binance flow-only model (perp aggressor flow, imbalance) vs venue mid. (analysis/zurich/EF_FIRE_TIME.md s.4)
+- **London EF_CHAINLINK_DIV (10:38, 922 candles, 1 s ref_px + spot_px, venue labels).** Chainlink sits BELOW Binance in 98% of seconds
+  (mean -2.25 bps, |div| p50 2.2 / p90 3.4, autocorr 30 s +0.49..0.61). Raw div carries no direction information (AUC 0.47; adding it to
+  move_bps HURTS: 0.633 -> 0.592 at S20). The live cell is basis WIDENING -> buy DOWN at the 1 s tape ask: S45 X2.5 n323 +0.08 (H1 +0.05 /
+  H2 +0.11), X3 n167 +0.26 (+0.09/+0.42), X3.5 n83 +0.41, X4 n54* +0.47, monotone in X; S60 X3 n166 +0.23 but H1 negative at X3.5-4.
+  Perm p=0.00/0.01. Null always-DOWN -0.03. Win% FLAT ~50%: the money is cheap DOWN asks, no fill model, threshold on a de-meaned basis.
+  CANDIDATE ONLY. Mechanism if real: the venue prices Binance, settles on Chainlink; when Binance runs above Chainlink the crowd overrates UP.
+  Next (briefed 10:4x): rolling no-lookahead basis, cheapness-matched null, symmetric UP side, per day, div persistence to the close.
+- **London Chainlink div part 2 (10:46, 975 candles):** rolling no-lookahead basis KILLS the sample (n<=52*, negative) - the raw cell is a
+  slow basis REGIME (wide for >5 min), not a fresh divergence. It beats the cheapness-matched null (S45 X3 +0.242 vs -0.115; S60 +0.205 vs
+  -0.092) and is positive 5/6 days (n 16/57/33/2/37/34). Basis persists to the close (corr +0.56) but does NOT act through settlement flips
+  (corr -0.03) - so no mechanism: a persistent basis cancels out of Binance-move-vs-Binance-line. REAL London DOWN fills at <=0.45 with
+  div<=-3: n10, -0.30/$1 vs +0.13 for the rest (INSUF, but the only real-money read and it points the other way). Verdict: candidate, no
+  mechanism, needs a shadow with real fill accounting before it is anything.
+- **Zurich part 5, flow-only (10:47): NO.** ofi60 correlates 0.64-0.69 with the venue mid (move_bps 0.717) - the venue already watches
+  flow. AUC flow-only 0.641-0.698 vs mid 0.714-0.768; mid+flow is WORSE than mid alone at every second (-0.006..-0.019). No cell meets
+  the precondition. Chainlink div on Zurich's 135 h / 437k s: de-meaned |corr| with mid 0.10-0.13 (the only independent input) and it
+  predicts nothing (AUC 0.47-0.51, corr with next-60 s return sign-flipping). Reference drifts -0.25 -> -2.21 bps below Binance over the
+  span (~$22 on BTC - the measured reason a Binance line proxy fails at small gaps). One sentence: every engine input that predicts the
+  outcome is already in the price; the one input not in the price does not predict. Zurich offered venue print flow - DECLINED: that is
+  "how everyone reacts", the owner's exclusion. Next: data the engine does not collect - cross-exchange lead (Coinbase/Kraken are Chainlink
+  sources; the crowd watches Binance). Zurich: Chainlink vs Binance lead-lag on the 437k s. V: Coinbase ticks -> 1 s, public.
+- **Chainlink-basis DOWN candidate CLOSED (Zurich second read, 11:00, 1,352 candles / 135 h, gamma-graded).** div<=-3 -> DOWN: +0.016/$1
+  on 224 candles (London had +0.24 on 167); cheapness null -0.012; the fired set wins LESS than its null (48.2% vs 48.6%). Win rate falls
+  monotonically as the threshold tightens (49.9 -> 35.7%); sweep peaks at the chosen value; positive 2 of 6 days; fire rate tracks the
+  day's mean basis (42% one day, 1% another). Mechanism: a LEVEL condition on a drifting offset selects DAYS, not moments. De-meaned
+  it fires 6 times in 135 h. Mirror fires twice. Consistent with London's 10 real fills at -0.30. Nothing for verify.py. Shadow stopped.
+- **V independent read, 7 days public data (2,304 candles, 09-20..27, walk-forward, venue labels, priced at what takers PAID within 3 s):
+  spot-only AUC 0.650/0.676/0.702/0.723 at S=20/30/45/60 vs the venue's traded price 0.670/0.698/0.724/0.742 - loses at every second, same
+  as Zurich's 5 days. 64 disagreement cells: every n>=60 cell is ~0 or negative except S30 P.60 ask<=.55 +0.092 (n102, perm 0.03, halves
+  +0.12/+0.03) and S60 P.60 ask<=.55 +0.069 (n158, perm 0.03, halves +0.15/-0.00): one-in-64 chance cells, 0.6-0.7 fires/candle... no.
+  Null (buy the venue favourite) -0.03..-0.05. Spot-only early model CLOSED on two independent datasets. (analysis/v/early/EARLY_SPOT_SIGNAL.txt)
+- **Zurich lead-lag (11:05, 438k s): BINANCE LEADS CHAINLINK by 2-3 s** (corr CL forward vs BIN past, k=3: 0.812; reverse 0.095).
+  Chainlink's own recent move carries nothing about its future that Binance does not (partial corr 0.424 vs raw 0.415; reverse 0.007).
+  The settlement reference is a lagged, smoothed copy of the exchange the model already watches. Candle moves correlate 0.98; sign
+  disagreement at S=20-60 is 6.5-7.0% but only where the move is ~0.1 bps (15x smaller than typical) - on-the-line candles. No
+  reference-based edge exists; mechanism now known. Operational: a Binance-derived line is untrustworthy exactly at small gaps (arb).
+
+## NC-17 - 09-28 11:1x, OWNER: "Number 2 recreate ef" - EF PAUSED on London; EF is to be rebuilt
+- Owner order relayed to London 11:11: EF lane OFF, master/main/rev untouched, open position settles normally. Awaiting confirmation.
+- Coinbase lead test still running (the last open public-input line). Everything else in NC-16 is closed with a mechanism.
+- EF-2 design (what "recreate" means here, given NC-13..16): NOT a direction model plus a gate. One trained model of
+  P(win | buy THIS side at THIS ask at THIS second), trained per 250 ms pass on Zurich's decide_log (5+ days, venue labels, ef_persist fill
+  sim so it learns that filled dips lose), inputs = the 44 engine features + own ask + ask dynamics (1/5/30 s change, the selected-dip
+  detector) + sec. Decision = EV at the price we would pay > 0, nothing else. Walk-forward by day on Zurich; FINAL test on London's real
+  attempts (fills AND rejects, venue outcomes). It ships nowhere without the owner's confirmation of that specific model.
+- **CORRECTION 11:1x (V's misread, owner's words: "Who told you to touch london?").** "Number 2" was NOT a pause order. The rule: recreate EF
+  and test it ON ZURICH; London keeps running fixed15 UNTOUCHED until a version BEATS FIXED IN PROFIT AND EXECUTION on Zurich - only then
+  does London stop. Pause order cancelled to London 11:13 (EF back ON if it was switched). EF-2 acceptance bar = beats fixed15 on the same
+  days on per$1 AND on execution (fill rate, slippage, rejects) in Zurich shadow, verify.py passed, then the owner's confirmation.
+- **Owner 11:2x: "First make something work then stop old ones, at the moment train train train, and improve that new ef."** Standing
+  order: London untouched; all effort on EF-2 training and iteration on Zurich. Iteration ladder: v0 logistic walk-forward -> v1 gradient
+  boosting -> v2 ask dynamics at ms resolution from the probe archive (27.5 M btc5 book events = the richest record of being picked off)
+  -> v3 add any external input that survives (Coinbase lead test pending). Each version: same acceptance table vs fixed15.
+- **EF-2 milestone 1 (Zurich 11:24):** 1,606,978 candidate rows (822k passes x both sides, 1,015 candles, 5 days), 52 features (44 engine
+  + own/opp ask, d_ask 1/5/30 s, dip30, sec, p_side). Base rate 0.490. **Sim fill over ALL candidate rows 96.3%** vs 42% on fixed15's fires:
+  the selection destroys the fill, not the market. **Filled rows win 48.8%, unfilled 54.9%** - adverse selection measured on the whole
+  population. dip30 mean +7.6c (p90 +20c). Tooling: numpy only on Zurich (no sklearn) -> ridge logistic + a numpy boosted-stump ensemble
+  as capacity check. Decision on the QUOTED ask, economics at the sim fill price (V confirmed - no lookahead). Walk-forward running.
+- **London EF-2 final-test table (11:20):** ef2_london_attempts.csv - 654 real attempts, 361 candles, 209 fills all settled, 35 feature keys;
+  features decision-time for 415, diag-within-3 s for 66, none for 173 (refused candles store no decision). Ready to score.
+- Chainlink cell footnote (Zurich 11:15): reading the same div one second earlier flips per$1 by 0.16 and win% by 8.7 pp - a coin whose
+  sign depends on the clock. Close confirmed. Shadow stopped 11:24.
+- **EF-2 rung v0 (Zurich 11:43, logistic walk-forward, 883 candles / 4 scored days): NO MARGIN PASSES THE BAR.** fixed15 on the same days:
+  132 fires (33/day), 42% fill, 43% win, +0.050/$1, +$26.5, halves +0.277/-0.177, perm 0.45 (56 fills - not a measurement). EF-2 m=0.02:
+  883 fires (221/day), **89.6% fill**, 65.9% win, +0.016/$1, +$128, halves +0.018/+0.013, opposite-ask flip p=0.007; m=0 +0.013, 0.05 -0.014,
+  0.10 -0.236. Execution: EF-2 wins outright. Profit per $1: fixed15; total $: EF-2 5x. verify.py on EF-2 0.02: NOT A FINDING - permutation
+  0.585, non-monotone margin sweep, **dies by +2c of cost**, fails the null and paired (McNemar 0.35).
+  **The structural result: the ASK ALONE scores AUC 0.8611 vs the 52-feature model 0.8608 and p_side alone 0.8580, and matches the
+  model within 0.005 at EVERY horizon (0.72 at sec 15-29 -> 0.93 at 180-240).** 1.6 M rows and 52 features add +0.003 over the price.
+  Capacity is not the limit (stump ensemble 0.8599; HistGB worse). So P(win | features) collapses to the market price: no private
+  information in the engine's inputs at any second. Ask dynamics do outweigh move_bps (0.113 vs 0.084 coefficient mass) but the price
+  carries 1.443. The S=15 placebo (model's side, no p bar, fire at 15 s) is again the only arm that beats the null and passes costs
+  (+0.067/$1, 615 fills, both halves positive) - the edge that exists is TIMING, not modelling. (analysis/zurich/EF2.md)
+- **Owner 11:5x: "Early fires are just guess and gambling and we don't wanna guess and gamble."** The S=15 timing arm is DROPPED (a 58%
+  call at 0.54 is a weighted coin). With rung v0's result (the ask alone = any model at every horizon), EF-2 as a PREDICTION model on btc5 is
+  closed: v0b/v1/v2 not run. Remaining, both on data already held: (1) does the model beat the price on the SLOWER 15m market (Zurich
+  btc15 books since 09-22) - briefed 11:47; (2) Coinbase lead (V, running). If both are empty, the honest answer is that this venue has no
+  non-gambling edge on obtainable data. London untouched throughout.
+- **Coinbase lead test (V, 7 days public data, 2,304 candles, 692k shared seconds): CLOSED.** Coinbase does lead Binance by a hair at 1-2 s
+  (corr 0.147 vs 0.139 at k=1; 0.072 vs 0.018 at k=2) - and that hair is worth nothing at candle horizons: adding Coinbase features to the
+  Binance-only model changes AUC by +0.005 / 0.000 / -0.006 / -0.005 at S=20/30/45/60; Coinbase-lead alone AUC 0.49-0.51; the venue price
+  still beats both. No information the price lacks. (analysis/v/early/COINBASE_LEAD.txt)
+- **EF-2 rung v1 (HistGB, Zurich 11:50): worse than v0 on everything** - AUC 0.839 vs 0.861, worse than p_side alone; best margin +0.002/$1,
+  loses to fixed15 on both profit measures; execution 94% fill but slippage -0.16c. Trees are worse than linear here; capacity is not the limit.
+  **Correction (Zurich withdraws its v0 point 7):** permutation importance says ask dynamics contribute NOTHING (block -0.0008; move -0.0003);
+  the price +0.097 and the engine's p +0.053 carry the model. EF-2 does not lean on the record of being picked off.
+  **London final-test blocker found before it bit:** imputing the 8 features London lacks keeps AUC (0.861 -> 0.857) but inverts the DECISION
+  (win 65.9% -> 32.5%, per$1 +0.016 -> -0.076): 34% of coefficient mass in ref_open/ref_now/_price/bn_line_*/opp_ask - ranking transfers,
+  level does not (the ETH_SOL_DIAG failure via imputation). Fix: refit on London's 44 keys ('london44'); London told to HOLD until then.
+  v2 (ms ask dynamics) cancelled - nothing for it to find. 15m test next.
+- **Owner 11:5x: "Our goal is BTC 5 minute candles, not 15."** 15m test cancelled. EF-2 v0 (logistic, margin 0.02) is THE btc5 candidate: on
+  the same 4 days it beat fixed15 on execution (89.6% vs 42.4% fill) and total $ (+128 vs +26.5 at $1), lost on per$1 (+0.016 vs +0.050,
+  the latter unmeasured at 56 fills). Bar to clear: positive per day at +1c cost (London's cap is ask+1 tick), fires NOT early, calibration
+  holds, then a 24 h paper shadow beside fixed15, then London's real-attempt scoring with the london44 refit. Briefed 11:53.
+- **v0b timing grid (Zurich 11:59, ran before my cancel; CLOSED by the owner's ruling and by the data).** S=15 cap 0.60: 168 fires/day,
+  85% sim fill, 57.4% win, +0.057/$1, +$410 vs fixed15 +0.104/$1, +$74 - but **positive on 2 of 5 days** (-0.006/+0.097/-0.011/+0.126/-0.116).
+  Mechanism absent: the model's side's ask is 0.619 at sec 15, 0.619 at 45, 0.629 at 120 - the crowd does not move toward the model's
+  side before the outcome; the model does not lead. Only the S sweep is monotone (+0.057/+0.046/+0.023/+0.009). verify NOT A FINDING.
+  **fixed15 itself is positive on 2 of 5 days** (+0.282/+0.324/-0.020/-0.229/-0.477): the baseline the owner's bar names is two good days.
+  Zurich: five days cannot settle "beats fixed on profit"; the archive gains ~1 day/day. (analysis/zurich/EF2.md)
+- **london44 exported (Zurich 12:03):** learner/v12_2/ef2/ef2_model_london.json, walk-forward AUC 0.8609 on 44 features (0.8608 on 52), with a
+  do-not-use-the-52-feature-model clause. London told 12:04 to score its 654 real attempts (fills by p_win decile; EF-2 rule kept vs skipped).
+- 15m (ran before the cancel; owner ruled 5m only; for the record): the 15m ask is as good as the 5m ask past a third of the candle and
+  sits at 0.505 for the first minutes (no view, not softness); a 15m-fitted model does not beat it (7 deltas, none > 1.1 SE, one training
+  day). Not a softer venue. Closed. (analysis/zurich/EF2_15M.md)
+- **EF-2 v0 acceptance detail (Zurich 12:32): v0 IS AN EARLY-FIRE ARM - OUT under the owner's 11:5x ruling.** m=0.02 fires at sec 15 on
+  89.6% of candles (sec p10/50/90 15/15/31). Its money is all in 15-30 s (+0.031, 713 fills); every later bucket is negative (-0.066 /
+  -0.247 / -0.466). It buys the favourite (ask p50 0.62); fixed15 buys the underdog (0.43) - opposite trades, 8 of 49 shared candles agree.
+  Per day m=0.02 is positive 4/4 (+0.008/+0.019/+0.007/+0.233 partial) - the most stable arm seen - but **at +1c (London's ask+1 tick
+  bound) it is exactly break-even (+0.000, 2/4 days)**. fixed15 at +1c: +0.021 from one day (1/4). Calibration in aggregate 0.672 vs
+  0.659; per-decile returns not monotone. Restricting v0 to later fires makes it negative. **EF-2 v0 does not beat fixed15.** Shadow
+  stopped (the owner's early-fire ruling). London's real-attempt scoring left to finish as a diagnostic only.
+- **EF-2 london44 on London's REAL fills (12:32, 211 fills scored, 0% imputed): NO INFORMATION.** AUC p_win 0.530 vs quoted ask alone 0.529
+  (OOS 0.537 vs 0.533). Per$1 by p_win decile has no order; top deciles negative. The EF-2 rule would KEEP n32 at -0.161/$1 and SKIP n179
+  at +0.013 - it keeps the losers; KEEP beats SKIP on 1 of 6 days. p_win does not predict fills either. The 0.86 candidate-row AUC is a
+  mechanical artefact (late-candle rows where the ask is nearly the answer) and does not transfer to real fired-and-filled trades.
+  **EF-2 CLOSED on both counts: early-fire by construction (Zurich) and no information on real fills (London).** (analysis/london/EF2_LONDON_SCORE.md)
+- **stable_ef weekly re-run (Zurich 12:45, 10 days, 543 fires): FAIL** - random same-count-per-day control p=0.075, tier sweep non-monotone;
+  six other gates pass. Context bucket sec 180-240 (late candle): FIXED n67 win 65.7% paper +0.313 London-exec +0.154, 70% of days positive.
+  NOT a finding: it is one cell of a 5-bucket sec grid, and it CONTRADICTS EF_FIRE_TIME's baseline (fixed15 180-240 -0.139, 13 sim fills)
+  while agreeing in sign with London's real fills (180-240 n49* +0.09). Two of three reads positive, one negative, none verified. Watch only.
+
+## NC-18 - 09-28 12:5x-13:0x, the late-candle read and the owner's two-trigger EF
+- **London real fills (213 settled):** before 200 s n189 w47% -$71.14 (DD $179.64); from 200 s n24* w62% +$45.23 (DD $44.60, 4/6 days);
+  from 180 s n49* +$32.02; from 220 s n10* +$42.22. By band: 60-120 s n65 w42% -$55.80 is the loss centre.
+- **Why 60-120 s loses (London WHY_60_120.md, n68 vs 116):** not price (fill p50 0.45 vs 0.48), not move size (|ref-line| p50 2.0 vs 1.6 bps),
+  not execution (slippage p50 +1c both). REVERSALS: the Chainlink ref re-crosses the line after our fire in 65% (win 25%) vs 53% later;
+  not re-crossed wins 67% vs 69%. V's first explanation (small move, near-0.50 price) was wrong on both counts.
+- **Zurich 10 days, after 200 s (stable_ef):** FIXED n42* w69% paper +0.422 (+$183.6, DD $46.9, 9/9 days) London-exec +0.260 (+$65.1);
+  RAW n41* w63% paper +0.350. Below 200 s both arms negative under London exec. BUT the counter-read (decide_log, explicit per-second
+  fill sim) has the fill collapsing with the second: 44% below 200 s, 21% at 200+ - read A applies a flat fill model. London's REAL fill
+  rate by second is the deciding number (asked 13:00).
+- **Owner 13:0x: keep the current EF, add a SECOND trigger in the same candle that may fire only after the first, any time after it** (his
+  "brain that knows the move is wrong and reverses"). Briefed to Zurich 13:03: variants A either side / B opposite only / C same side only,
+  both arms, candle-total $, drawdown, per day, split by first-fire second. London untouched until the owner has seen it.
+- **London REAL fill rate by first-attempt second (13:25):** candle fill | per-attempt: <120 s 59% (179) | 32%; 120-180 60% (113) | 31%;
+  180-200 49% (39*) | 29%; >=200 54% (37*) | 39%; >=220 53% (17*) | 45%. **Late fires fill about as often as early ones** - Zurich read B's
+  21% sim collapse does not happen in real money; read A (flat fill) is the closer model. Unfilled >=200: n17*, 47% win, +0.066 (INSUF).
+  So the after-200 s profit on London's real fills is not a fill artefact. Still n24 real fills - under the bar.
+- **Owner's second trigger - both implementations CLOSED (Zurich 13:07 + 13:27, 5 decide_log days, per-pass fill sim).**
+  (a) Same EF rule on a later pass: the opposite side only qualifies when it is cheap = when it is LOSING; on first-fire losers a
+  qualifying opposite pass appears 1 in 20 and fills 0%; every raw25 variant turns +$107 into a loss (DD up to 4x); fixed15 +$7-14 of
+  second leg for ~2x drawdown, halves flip.
+  (b) Own condition, ref re-crosses the TWAP60 line: fires on 84-92% of candles (weather, not an event); opposite ask at the trigger is
+  already p50 0.56 and barely differs between first-leg losers (0.58) and winners (0.55) - the book absorbed the re-cross 2-3 s earlier
+  (Binance leads Chainlink). Buy-opposite negative at every K (raw25 -0.020..-0.039); sell-first-leg worse (-0.098..-0.137, second fee on
+  nearly every candle, losing run 5 -> 28). One corner (fixed15, first fire >=200 s, K=2, buy opposite) n15* +0.530 - reported, not a candidate.
+  The re-cross is real as an observation and empty as a trigger: the price carries it before the settlement ref confirms it.
+
+## NC-19 - 09-28 13:4x, OWNER GOAL (standing, /goal): EF with good profit, SMALL max drawdown, good frequency and fill rate. Do not stop.
+- Method change: every arm is judged FIRST on $ total at $10, worst drawdown $, profit/drawdown ratio, fires/day, fill%, % days positive,
+  longest losing run - then per$1/win%/halves/perm. Accuracy is not the target.
+- Zurich EF-3 grid (briefed 13:44): fixed15 start-second curve S0 {0..230}; EF-2 v0 with the same S0 curve; fixed15 skipping 60-120 s;
+  fixed15 x ask band x S0; top-3 by profit/DD through verify.py.
+- V (public data, 7 days, 2,304 candles): late_rules.py - venue-favourite null, walk-forward spot model, and model-agrees-with-favourite
+  arms at S0 120..260 on the same objective columns. Collection running (4 slices).
+- **"fixed only after 220 s" as a RULE (Zurich 13:44, 5 per-pass days): LOSES.** sec>=200 rule: 60 fires (12/day), 45% fill, win 44%,
+  -$34.6 (DD $74.1), 1/5 days; >=220: 33 fires, 52% fill, win 41%, -$41.2, 1/5 days; >=230 -$31.2. The SLICE (fixed15's own fires that happened
+  to land >=220: n19, win 58%, +$41.5 paper, 7/8 days) is SURVIVORSHIP - candles where the rule found nothing until 220, selected by its own
+  silence and not tradeable. Forcing the wait brings in the candles the rule would have taken early, and those are worse; the FAK half that
+  fills is the wrong half (paper +0.074 -> FAK -0.124). London's after-200 s real profit is the same survivor slice. Closed.
+- **EF-3 items 1/3/4 (Zurich 13:59, 5 days, per-pass FAK; $tot / DD / P/DD / fires-day / fill / days+):** fixed15 S0 curve 0 +73.8/75.8/0.97/
+  35.6/41%/2of5 | 60 +105.6/92.9 | 120 +130.0/81.6/1.59/26.2/3of5 | 150 -54.3 | 180 +13.3 | 200 -43.7 | 220 -34.5. **raw25 S0=60 +187.1 / DD
+  58.1 / 3.22 / 56 per day / 4 of 5 days** (S0 0 +107.3/98.4, 120 +54.1, 150 -45.8). Skip-60-120 no help/harmful. Ask band x S: 12/12
+  negative. Fine S0 curve 30..120 + verify for raw25 S0=60 briefed 14:00.
+- **EF-3 item 2, EF-2 v0 x start-second (4 wf days):** m=0.02 S0=150 +233.3 / DD 60.7 / 3.85 / 135 per day / 88% fill / 2 of 4 days; S0 0
+  +182.3/110.8/1.65/218/4of4; S0 230 +85.6/54.0/1.58/48/81%/3of4. Only family positive after 150 s, 75-77% win at mean ask 0.713 (+0.049/$1).
+  Caveats: 09-28 part day - effectively 3 days, 2 carry the profit; Zurich says the top cells do not clear the null (detail pending).
+  Zurich caught its own bug: without pinning to the model's side, late EV bars buy 5c long shots (-$2,024) - any late EF must be pinned.
+- **EF-3 item 5 (Zurich 14:02): no arm passes verify.py** - fails per-day sample (09-28 part day), jagged S sweep, and per$1 null (fixed15
+  +0.050 vs v0 +0.037..0.049). Permutation gate INAPPLICABLE (selection on pw>=0.5 fixes the set); V's opposite-ask flip p=0.000-0.003.
+  On the OWNER'S columns, same 4 days: **EF-2 v0 m=0.02 S0>=150 +$233 / DD $60.7 / ratio 3.85 / 88% fill / run 3 vs fixed15 +$26 / DD $75.8 /
+  0.35 / 42% / run 6.** Same edge per dollar, spread over 6x the fills, smaller drawdown. Failure is about EVIDENCE (3 real days), not edge.
+- **PRE-REGISTERED 14:0x (fixed before any more tables):** Zurich PAPER shadow, from now, same candles, per-pass FAK sim:
+  A = EF-2 v0 m=0.02 S0=150 (model's side pinned); B = raw25 S0=60; C = fixed15 as London runs it (control). Decision rule, fixed now:
+  after >= 3 FULL days, an arm qualifies only if $ total > C, worst DD <= C's, positive on >= 2 of 3 days, fill% >= C, and V's opposite-ask
+  flip p < 0.05. Then it goes to the owner; nothing reaches London without his confirmation of that exact arm.
+- **V public-data late rules v1 (2,304 candles, 8 days) - SUSPECT, not a finding.** Favourite-buying null is negative at every S0/band
+  (-0.003..-0.113/$1). The walk-forward spot model looks strong late (S0 180 m 0.05: 677 fires, 97/day, +$674, DD $193, 7/7 days; S0 220
+  m 0.02 +$596, DD $114) and footprint+price similar (S0 220 m 0.05 +$471, DD $108, 7/7) - BUT the price used is the max taker price in the
+  3 s BEFORE the decision second, while the model sees Binance at the END of it: a stale quote (verify.py quote_age). Tell: footprint+spot+mid
+  ranks WORSE than the mid alone (AUC 0.830 vs 0.839 at S120 ... 0.938 vs 0.944 at S240) yet "trades" profitably - the edge is the model
+  knowing a Binance move the stale price has not absorbed. Recollecting with the FORWARD taker price (first second in [S+1, S+4] after the
+  decision); v1 tables kept as LATE_RULES.txt / FP_EVAL_v1.txt for the record.
+- Footprint (8 days, perp aggTrades: absorption, stacked imbalance, POC, acceptance vs line, big prints, CVD divergence): corr with the
+  venue mid 0.90-0.93; AUC alone 0.820-0.926 vs mid 0.839-0.944. **Already in the price, like every other flow input (NC-16).**
+- **Zurich CORRECTION 14:23 (analysis-side float32 tick bug, live engine unaffected):** fixed15's null was inflated by a free extra tick on
+  44.8% of rows (float32 0.34 -> ceiling 0.35 -> fire at 0.36). Corrected fixed15: +$54.5 / DD $85.3 / 0.64 (was +73.8/75.8). All three v0
+  arms now PASS beats-the-null; remaining fails are the jagged sweep and the 09-28 part day. raw25/v0 numbers unchanged; the 220 s answer stands.
+  Caught by the pre-registered shadow (sqlite float64 vs npz float32, 196 vs 178 candles).
+- **Pre-registered shadow running (ef3_shadow.py, paper, arm A frozen by sha256).** Backfill (in-sample for A, excluded from the decision):
+  A v0 S0>=150 +$132.2 / DD $84.8 / 1.56 / fill 89.5% | **B raw25 S0>=60 +$187.1 / DD $58.1 / 3.22 / fill 43.2%** | C fixed15 +$54.5 / DD
+  $85.3 / 0.64 / fill 42.3%. On backfill B beats C on every column of the decision rule. Forward days: 0 of 3.
+- **raw25 S0 fine curve + verify (Zurich 14:30):** S0 30 +170.9/65.5 | 45 +122.3/78.3 | 60 +187.1/58.1 | 75 +192.3/59.1 | 90 +119.4 | 105
+  +82.4 | 120 +54.1/102.1 - a regime (30-75 all positive, decays after 75), not a spike; fixed15's curve has no structure. S0=60 is a VETO,
+  not a better entry: 102 candles fire+fill under both, 88 the same pass, 0 differ; it only DROPS 36 fills at mean sec 36 that won 33.3% and
+  lost $77.2 - the whole +107 -> +187. The owner's "no early gambling", measured. B at S0=60: 121 fills (43%), win 47.9%, +0.155/$1, mean ask
+  0.41, flip p=0.040, +2c still +0.099. verify FAILS sample, HALVES (H1 +0.314 / H2 -0.000) and sweep. **+$179 of +$187 is 09-24/25; the
+  last three days are +$7.8 combined.** B stays pre-registered unchanged; the forward shadow decides.
+- **V's late spot-model rule DOES NOT REPLICATE on Zurich's book (14:34, 822k passes, real ask, +250 ms FAK):** 16 of 20 cells lose (S0=150
+  -$479..-$544, 180 -$213..-$232, 200 -$148..-$220, 240 -$168..-$218); S0=220 +$216..+$223 is an ISLAND between losers. Decomposition: deciding
+  on a 3 s stale ask but paying the forward price changes ~nothing (+231 vs +216); BOOKING at the stale ask turns S0=220 into +$1,553 (ratio
+  10.04, 100% fill, p=0.000) and S0=180 from -$232 into +$1,447. The public-data v1 result was a price you cannot trade at plus deleted
+  no-fills. CLOSED as a candidate; the forward-price public rerun is kept only as a cross-check of this decomposition.
+- **B on 10 days (Zurich 14:37, stable_ef, slice = lower bound on the rule): COLLAPSES.** RAW sec>=60 +$125 paper over 10 days, 5/10 days;
+  best two days = 159% of the total, the other eight -$73. Start-second bar flat on 10 days (RAW 0/30/45/60/75: +142/+125/+156/+125/+76).
+  Zurich RETRACTS its veto mechanism: on 10 days the dropped sec<60 set is n36 w47% +$17 (5-day: 33%, -$77). "Early fires lose" was a 5-day
+  fact. **London-exec is negative in EVERY cell, both arms** (RAW -$207 / -$179 at sec>=60; FIXED -$95 / -$83): paper positive, real fills
+  negative - the adverse fill is the whole story. B stays pre-registered (forward days are the test) but the prior is now against it.
+  Arm A (EF-2 v0 S0>=150) is the one arm whose edge does not depend on getting a cheap fill - 89.5% sim fill, buys the favourite.
+- **Public trade timestamps are LATE (V live probe 14:5x, 146 prints matched WS vs data-api): data-api ts - WS ts p10 +1.5 s, p50 +2.2 s,
+  p90 +3.0 s; 99% >= 1 s.** So "first taker price in [S+1, S+4]" by data-api time was matched at about [S-1, S+2] - at or before the
+  decision. Lag test agrees: the same rule paying 20-30 s later loses as much as it "made" (S0 220 m .02: +$617 -> -$613). The late spot
+  rule's public-data profit is a stale price; Zurich's book result (-$232) stands. CLOSED. Rule for all public-tape work: shift data-api
+  timestamps by -2.2 s (or use WS/book data) before any second-resolution fill question. (analysis/v/early/ts_lag_probe.py)
+- **Arm A replayed on London's own history (14:54, 1,633 candles 09-22..28, 15 s diag cadence, price = diag ask, no fill model): FAILS.**
+  n943, 135/day, win 74%, -$136.7, DD $310.6, 3/7 days. OUT OF SAMPLE only (09-22..24, before london44's training days): n390, win 71%,
+  -$214.6, 0/3 days - its only positive days are the model's own training days. Control (real fixed15 fills, same universe): -$26.6, DD $156.
+  A buys favourites at 74% and still loses; worse than fixed15 on every column. The forward shadow continues as pre-registered, but the
+  prior on A is now strongly against it. ef2_late.py stays OFF and unwired.
+- Zurich independent lag read (15:10, 09-27 2 h, 1,591 unambiguous pairs + a 305k-pair cross-correlation vs a null): data-api - WS p50 +2.20 s
+  (p10 +1.42, p90 +3.00), 98.8% >= 1 s - matches V's live +2.2 s. Public-tape prices are not usable at second resolution. Rule recorded.
+- **EF-4 (after-fill target, Zurich 3c1871a):** the target moves the model the right way (coefficient mass from price 0.230 -> 0.159,
+  onto ask dynamics 6x and the clock 70x). Linear best cell (+$417) was fitting the DATE via two collinear BTC price levels (corr
+  0.999886); without them +$116, 8/12 cells negative. Stumps: EF-4gb t=0 S0=0 +$164 / DD $75.5 / P/DD 2.17 / 90.8% fill / 4 of 4 days /
+  flip p=0.003 vs C +$16.3 / DD $85.3, and the non-top-two days summed POSITIVE - first arm today to do that. BUT frozen as arm D it
+  does not reproduce (-$138, DD $227, 1/5 days): the absolute cut 'pred >= 0' sits 0.76 sd into a tail whose position depends on each
+  fit's calibration offset. Lesson (3rd time): an absolute threshold on an uncalibrated score is not a rule. Next: the same stumps with
+  a CAUSAL QUANTILE cut (fire when pred is in the top q of the previous day's predictions), q in {0.70, 0.80, 0.90}. Briefed 15:4x.
+- **EF-5 quantile cut (Zurich 39bec9f), $ / DD:** q .70 S0 0: in-day +276/105, CAUSAL +251/116, FROZEN -64/223 | q .80: +157/87, +169/106,
+  -48/117 | q .90: +29/66, **+140/69**, -99/134 | q .95: +25/50, **+92/69**, +26/69. C same days +16.3/85.3. The quantile cut is causal-safe
+  (yesterday's threshold costs nothing) and worth ~$164 and 2/3 of the DD vs the absolute cut on an identical model. What fails to transfer
+  is the FROZEN MODEL: "refitting nightly on a growing window was doing the work". D2 (frozen, q .95) registered per the rule, flagged as
+  noise (isolated cell, flip p 0.137, +$9 over C).
+  **V's read: the CAUSAL column IS an implementable production rule - retrain every night on all days so far, cut at the q-quantile of
+  yesterday's scores.** q .90 and q .95 (adjacent) both beat C on $ AND DD. Pre-registering it as arm E (nightly refit), q .90 primary,
+  q .95 secondary, in the forward shadow; asked Zurich for halves, per day, fill%, flip p on those two cells.
+- **EF-5 CAUSAL detail (Zurich 16:22):** q .90: 262 fills (90.3%), win 73.3%, +0.054/$1, halves +0.026/+0.082, run 4, flip p 0.020; per day
+  +24.1 / -6.3 / +103.8 / +18.7 with fills 56 / 4 / 188 / 14. q .95: 203 fills, flip p 0.020; per day -7.3 / +0.4 / +99.8 / -1.3.
+  FREQUENCY IS UNSTABLE: 4 fills one day, 188 the next; 74% of the money is 09-27. Yesterday's quantile is a VALUE and the day's score
+  distribution shifts, so the same q lands at a different rank. Arm E1/E2 registered as briefed (21-day training cap for box safety - OK).
+  Next: a causal AND rate-stable cut - trailing-window quantile (last 1 / 3 / 6 h of candidate scores), briefed as E3 candidates.
+- **EF-6 trailing-window quantile (Zurich b0018e1): the rate-stability problem is SOLVED.** Cells ($ / DD / fires-day / fill / days+ / flip p):
+  W1h q.90 +222.1 / 72.6 / 126 / 93.1% / 3of4 / 0.037 | W3h q.80 +267.4 / 99.7 / 147 / 93.0% / 4of4 / 0.007 | W3h q.90 +213.4 / 92.8 / 116 /
+  91.1% / 0.000 | W6h q.80 +161.2 / 85.8 / 129 / 92.1% / 4of4 / 0.027 | C +16.3 / 85.3 / 37 / 43.6% / 1of4 / 0.527. Daily-fills CV on the
+  3 full days 0.13-0.31 (C 0.48, arm E 0.94). W1h q.90 passes $, DD and CV and misses V's best-day-share bar at 52% vs <50%.
+  **V decision 16:3x, stated before any forward day and recorded as a CHANGE:** the <50% best-day share was an ENTRY bar for a paper
+  shadow and it is ill-posed on 3 days (floor 33%, unbounded when totals are small). V relaxes the ENTRY bar - not the forward decision
+  rule - and registers W1h q.90 as E3, marked "entered on a relaxed entry bar". The forward decision rule (NC-19: $ > C, DD <= C, >= 2/3
+  days, fill >= C, flip p < 0.05 after >= 3 full forward days) is unchanged and applies to E3 exactly as to every arm.
+- **E3 registered and live on Zurich (19ea92a): start 09-28 16:39 UTC, first ledger 17:30, first full forward day 09-29; three full forward
+  days complete 23:59 UTC 10-01 -> the decision rule is first evaluable on 10-02 for all arms.** Marked "entered on a relaxed entry bar".
+  Zurich added a day-boundary SEED (previous day's final hour re-scored under the new model) so E3's first hour does not mix two models;
+  09-28 ran seedless and is backfill. ef6_lane.py draft now loads the seed too (11 tests).
+- **E3 lane parity (Zurich 4375885): NOT at parity on the first replay** (09-27: shadow 136 fired candles, lane 80, 14 identical). Causes:
+  ask bounds (lane 0-1 vs shadow 0.01-0.99, 3.4% extra rows in the window), cold start (8 of 136), and nightly models that split on
+  _ask_up/_ask_dn/opp_ask. V fixed the lane (997da51: bounds 0.01-0.99; rows carry _ask_up, _ask_dn, opp_ask). Engine check: the live
+  FeatureState already writes _ask_up/_ask_dn (btc_model_v10.py:190) and decide_now copies every finite numeric feature into
+  d['features'], so the engine side has them. Zurich also fixed its shadow's in-candle buffer order. Parity re-run pending.
+- **OWNER ORDER 17:0x: "Tell london to record that, Zurich wont stay active always."** Relayed 17:00: London sets meta decide_log=true
+  (the 13.0.4 per-pass logger already in its build: logging only, after the fire path, no restart, no trading setting) and archives each
+  UTC day outside the engine DB (engine keeps 4 days, EF-6 trains on 21). This is the owner's confirmation of THAT change only.
+  Nightly training is an automatic scheduled job (ef5_nightly.py at 00:05 UTC on Zurich) - no human and no session runs it.
+- **E3 lane PARITY reached (Zurich 4ca8ecb):** the engine-format trees had been emitted with STANDARDISED split points while the lane feeds
+  raw values; de-standardised at emit (exact: max abs diff 0.0 on 400 rows). 09-27, 230k passes: 134 candles in both, **130 identical on
+  side and second**, 0 side differences, 4 second differences, 2 shadow-only, 0 lane-only (was 14/136). Residual 6 cluster in 11:25-12:45 -
+  marginal thresholds, not a rule difference. Seed files are in SECONDS. The shadow's in-candle fix landed 16:53, DB rebuilt 16:50: no
+  forward-day hour ran old code. learner/v12_2/ef6_lane.py + the nightly ef6_<day>.json now reproduce registered arm E3.
+- **E3 independent replay on London (17:04, ef6_lane + ef6_2026-09-27.json, 18,326 diag rows 09-22..26 at ~15 s, price = diag ask, no fill
+  model, 0% unscorable): FAILS.** n418, 84/day, win 69%, -$286.6, DD $352.9, 1/5 days (09-22 -16 | 09-23 -69 | 09-24 -173 | 09-25 -31 |
+  09-26 +2). OUT OF SAMPLE 09-22/23: n107, win 70%, -$84.8, 0/2 days. Even the IN-SAMPLE days lose. Control (real fixed15 fills, same days):
+  +$61.1, DD $99.6, 3/4 days. Same shape as arm A: a high win rate on expensive favourites that loses money.
+  CONFLICT with Zurich's +$222 on overlapping days. Candidate causes: decision cadence (15 s vs 250 ms), London's own feature values vs
+  Zurich's, price source (diag ask vs FAK sim). Asked Zurich to replay E3 on its own decide_log SUBSAMPLED to 15 s - if that also loses,
+  E3 depends on 250 ms timing or on the fill sim; if it still wins, the difference is London's features. E3 stays in the forward shadow
+  (pre-registered), but its prior is now against it.
+- **E3 decomposition (Zurich 912ba4c): EF-6's +$222 does not reproduce on Zurich's own data either.** Same json + lane on Zurich's
+  decide_log: 250 ms quoted ask +$21.0 (n938, win 64.5%, ask 0.63) | 15 s subsample +$37.9 | 15 s + FAK sim +$34.8 | 250 ms per-day
+  walk-forward (the refit axis) -$32.9 (09-25 +121 vs EF-6 +101; 09-26 -148 vs EF-6 +120 - a $270 sign flip). Not timing, not the fill sim.
+  The 130/136 parity was checked on 09-27, which carries only +$10 of the +$222 - the days that carry it were never parity-checked.
+  London (-$287) and Zurich's four regimes agree with each other; **ef6.py's backtest is the outlier. E3 = UNVALIDATED.** Next: Zurich
+  reconciles 09-26 fire by fire between ef6.py and the lane path to find the defect; if ef6.py is wrong, EF-5/EF-6 tables are re-run.
+- **09-26 reconciled (Zurich 548f04d): no coding defect - the RULE is tie-degenerate.** The stump ensemble emits few distinct values (09-26:
+  545 distinct over 472k rows; the top value covers 13.3%), so the q.90 threshold IS one of them and 'pred >= thr' is decided by ties; which
+  second fires then depends on where the 60 s grid is anchored (ef6.py at the day's first row, the lane at wall-clock). Same candle set
+  (221 of ~225 shared) but only 23 agree on the second -> +$119.8 vs -$147.9 from the same model on the same day. The EF-6 grid's fire
+  times were an artifact. V ACCEPTS Zurich's proposed fix (stated before any re-run): threshold = smallest distinct prediction strictly
+  above the sample quantile (causal, deterministic, no boundary ties). Re-run EF-5 CAUSAL and EF-6 under it, AND at grid anchors 0/15/30/45 s:
+  a result that moves materially with the anchor is noise, whatever its mean.
+- **EF-7 strict threshold + anchor jitter (Zurich 5c9162e): the old EF-6 headline was ~82% tie artifact.** EF-5 CAUSAL strict (no grid, one
+  threshold per day): q.70 +153.4/DD 115.7 | q.80 +164.7/95.6 | **q.90 +111.0/76.0** | q.95 +104.6/52.1. EF-6 strict, mean over anchors
+  0/15/30/45 [min, max]: **W1h q.90 +40.3 [+22.9, +74.2] DD 51.3** | W1h q.80 +76.4 [+61.7, +83.7] DD 83.6 | W1h q.95 +51.2 [+39.6, +73.3]
+  DD 47.3 | W6h q.90 +32.4 [+29.2, +37.3] DD 60.3 - these four clear the bar (all anchors > C, mean DD <= C); W3h and W6h q.95 fail.
+  C same days +16.3 / DD 85.3. Margins now $30-60 over C on 4 days; anchor spread still up to 3.2x.
+  **V's registration, chosen by the rule already registered, NOT by the new table:** E4 = E3's own cell (W1h q.90) with the strict rule;
+  E5 = E1's own cell (EF-5 causal q.90) with the strict rule. E3/E1 retired from the decision (kept as logged history). Same forward rule.
+- **E3/E4 cell STRICT on London (17:34, ef6_lane 754e6a5, ef6_2026-09-27.json, diag ask, no fill model, anchors 0/15/30/45): FAILS at every
+  anchor.** OOS 09-22/23: -$72.5 mean [-84.8, -60.2], n98-99, win 72-73%, DD 96-116 vs real fixed15 n55 58% +$50.0 DD 18.4. In-sample
+  09-24..26: -$167.2 [-176.2, -159.7], n257-260, DD 222-243 vs fixed15 +$11.1 DD 99.6. The tie fix trims fires, changes nothing. E4 stays in
+  the forward shadow as registered; its prior is now strongly against it. V is testing the METHOD on an independent period (EF-8, 09-11..16
+  polybook 1 Hz book + venue outcomes + Binance 1 s, nightly walk-forward, rules fixed before the run; analysis/v/ef8/).
+- **London decide_log ON (owner's yes in London's terminal, 17:4x).** Meta flag only, no restart (pid 91301, NRestarts 0), nothing else
+  touched. ~4 rows/s, 44 feature keys, ~520 B/row (~180 MB/day). Daily read-only archive to /home/ubuntu/pm_london_archive/
+  decide_log_YYYY-MM-DD.sqlite3 at 00:20 UTC (archive_decide_log.py); engine DB stays capped by its 4-day prune; ~290 days of disk headroom.
+- **E4/E5 LIVE in the forward shadow, E1/E3 retired (Zurich bc453be).** E4 strict parity lane vs shadow (identical side+second): 09-27 106/110,
+  09-26 80/112, 09-25 41/94 - degrades as the training set shrinks (09-25's model saw one day; threshold +0.589 vs -0.041 on 09-27);
+  hypothesis, not isolated. Rows exactly ON the plain q.90: 8,415 (09-27) / 3,193 (09-28) / 92 (09-25). Backfill (in-sample, not the
+  decision): E4 +20.2 / DD 54.1 / 323 fires / 92.3% fill / 3 of 4 / flip p 0.147; E5 +125.3 / DD 76.0 / 288 / 89.9% / 3 of 4 / flip p 0.020.
+  Retired tie versions of the same cells: E3 +162.6, E1 +140.3. ef5_nightly now emits thr_strict. London asked (17:46) to replay E5
+  walk-forward per day (ef6_D.json, strict q.90 of D-1 under D's model) on 09-25..28 vs real fixed15.
+- **E5 on London (17:48, day-D model, one strict q.90 cut from D-1 rows, diag ask, no fill model, $10, 09-25..28): FAILS.** n430, win 68%,
+  -$140.3, DD $229.6, 1/4 days (25 +23.4 n97 | 26 -4.7 n5 | 27 -36.9 n196 | 28 -122.0 n132). Control real fixed15: n122, 43%, -$97.5, DD $156.0,
+  1/4. Cuts 0.407 / 0.135 / -0.041 / 0.011: the scale drifts between the D-1 and D models, fires swing 5 -> 196 a day. Both EF-5/EF-6 cut rules
+  now fail on London's own data. The Zurich-trained stump family does not transfer; it stays in the forward shadow only as registered.
+- **EF-8 (V, independent period 09-11..16, analysis/v/ef8/, EF8_EVAL.txt): the METHOD does not generalise.** 1,182 venue-graded candles,
+  polybook 1 Hz book (both sides ask/bid/size/age) + Binance 1 s, TWAP60 proxy agrees with the venue 99.8% on |proj| >= 1 bp at 240 s.
+  After-fill target (fill = same-side ask 1 s later <= ask+1c, fee-exact), stump booster refit nightly on all earlier days, strict
+  thresholds, rules fixed before the run; test days 09-13..16. Unpinned cells buy 9-12c long shots and lose (-$267..-$1,013, DD up to
+  $1,425). Pinned (TWAP-projection z >= 0) cells are positive in total (+$96..+$186) but positive on only 1-2 of 4 days, 09-14 alone
+  carries +$332..+$341 in every pinned cell, H2 negative in every cell, flip p 0.058-0.153 (none < 0.05). Random matched null p 0.00-0.02
+  and FAV120 -$167, but "one good day" is the same failure as arm B and EF-6. Verdict: NOT A FINDING. With E4 and E5 failing on London,
+  the stump/after-fill/quantile family is closed as a route to the owner's goal unless London-trained data (decide_log, from 17:4x
+  09-28) shows otherwise.
+- **Polymarket book SIZE / quote age (V, 09-11..16, analysis/v/ef8/BOOK_SIZE_INFO.txt): NO information beyond the price.** Walk-forward
+  logistic, venue-graded, 9 seconds 15..240: adding log size own/opp, their ratio (and x price) and quote age makes log loss WORSE at every
+  second (e.g. 120 s 0.4884 -> 0.4913; 240 s 0.3059 -> 0.3143). Closed.
+- **Plan for the London-native EF (task W25):** London's decide_log has the SAME schema as Zurich's (poly_core.py:407, 44 features,
+  both asks, ~4 rows/s), so Zurich's trainer (ef4/ef5_nightly) runs on London's archive unchanged - no Zurich-to-London transfer. Train
+  walk-forward from London's own rows once >= 3 full days exist (10-01 night), grade on venue outcomes, check against London's REAL
+  attempts (fills and rejects), judge on the owner's columns vs real fixed15. London asked (18:02) for fixed15's profit phase vs
+  give-back phase and a pre-defined regime grid on its real fills (FIXED_PHASES.md).
+- **EF-8 regime read (V, EF8_REGIME.txt, terciles cut on the training days only): no rule.** Vol at the open: the money sits in the MIDDLE
+  tercile only (E4 q.80 pinned: low -$10 n179 | mid +$238 n202 | high -$42 n86) - non-monotone, i.e. not a regime you can name in advance;
+  q.90 cells all n<60. |mom60| at the fire: flat-to-falling across terciles. 09-14 is not explained by vol or trend. Not a finding.
+- **PRE-REGISTERED 18:0x, before any London decide_log day exists: the London-native EF test (W25).** Code = Zurich's ef3_shadow.py
+  builder + ef4.gb_reg (stumps, LEVEL columns excluded) + ef5_nightly.py, UNCHANGED except paths (London archive). Rows = every London
+  decide_log pass 15-240 s, both sides, ask 0.01-0.99; target = after-fill $ per $1 with the +250 ms FAK sim; labels = gamma/venue.
+  Walk-forward: day D's model trains on London days < D only (>= 2 days), 21-day cap. Arms (all pinned to p_side >= 0.5, once per candle):
+  L5 = one strict q.90 cut per day from D-1 rows under D's model; L4 = trailing 1 h strict q.90, 60 s grid, anchors 0/15/30/45 (all four
+  must beat the control). Control = London's REAL fixed15 fills on the same candles. Scoring days = every full London day from the THIRD
+  one on (first = 10-01 if the archive is complete). Decision after >= 3 scoring days, same rule as NC-19: $ > C, DD <= C, positive on
+  >= 2 of 3 days, sim fill% >= C's real fill%, opposite-ask flip p < 0.05. Then the arm's REAL-fill check: London's real attempts on the
+  candles where arm and fixed15 overlap (fills and rejects). Nothing else, no retuning; a failure is recorded as a failure.
+- **Nonlinear "price + everything" vs the price (V, 09-11..16, NONLIN_VS_MID.txt, walk-forward, venue labels): the price wins by a wide
+  margin.** Log loss 30-240 s: mid 0.4846 | trees on mid only 0.4923 | trees on mid + 15 inputs (line distance, TWAP projection, z, vol,
+  momentum 5/15/60, ask deltas, dip30, book sizes, age, spread) 0.5485 - worse in every window. The earlier linear "adds nothing" results
+  were not an artefact of linearity. Closed.
+- **Why fixed gave it back (London FIXED_PHASES, 17:57, real settled EF trades, venue truth).** Settled high 09-25 22:03. Profit phase n148:
+  fill 30%/attempt, 59%/candle, win 54%, paid 0.470, +0.106/$1, +$113.4, sec p50 117, book age 41 ms. Give-back n84: fill 36%/58%, win 39%,
+  paid 0.459, -0.174/$1, -$140.7, sec p50 123, book age 39 ms. EXECUTION IDENTICAL; only the win rate moved, at the same price.
+  V's read: the split is AT the curve's maximum, which maximises the difference by construction (z ~2.2 before that selection). Whole
+  period n232 ~ -0.012/$1: fixed15 is about break-even on real fills, and a break-even strategy's curve rises and gives back by
+  itself - the drawdown is variance, not a regime change. Regime grid (4 families x 3 cells, cuts from H1): non-monotone (vol low+ mid-
+  high+), only high-vol n68 positive in both halves - not a finding. So the owner's "small drawdown" needs a REAL edge; no gate or
+  regime switch on fixed15 supplies one.
+- **Both-sides buy (V, polybook 278k live seconds 09-11..16): up+dn ask = 1.01 at p1..p95; fee-inclusive cost < $1 in ONE second
+  (min 0.9904).** The venue mint-matches; no in-book arbitrage. Closed.
+- **London-native EF (London LONDON_NATIVE_EF.md, 18:01-18:04, diag rows 09-22..28, walk-forward, rules fixed before the run): NO EDGE.**
+  Paper at diag ask, no fill model: L4 +$65.4 [58.8, 71.2] DD 112.9, L5 +$20.3 DD 98.4, both positive 2 of 4 days, win ~80% on expensive
+  favourites. Follow-up (costs / favourite null / flip): it UNDERPERFORMS the buy-the-favourite baseline at the same seconds. Closed. The
+  pre-registered decide_log run (10-01) stays on record, but the London-trained version of this family has already failed its first read.
+  Detail (London 18:04): L5 paid 0.814, +0.004/$1, +1c -$35.5, +2c -$82.5, favourite null +$33.2 (picked the favourite in 95% of fires);
+  L4 paid 0.782, +0.011/$1, +1c -$8.1, +2c -$70.4, favourite null +$131.7 (92% favourite). It is a favourite-buyer that dies at +1c.
+- **EF-9 briefed to Zurich 18:07 (owner: new architecture).** Sequence model (1D-CNN/GRU) on the raw 250 ms stream (both books, Binance
+  spot+perp price and flow, sec, line distance; no hand features), after-fill target with the +250 ms FAK sim, walk-forward by day,
+  strict q.90 trailing-1h, pinned, anchors 0/15/30/45; reported with +1c/+2c, the favourite null and fixed15. Rules fixed before the run.
+- **EF-9 V-side: GRU sequence model on the raw 1 s stream (V, 09-11..16, EF9_SEQ_V.txt, walk-forward, rules fixed before the run): LOSES.**
+  30 s of both asks/bids/sizes/age + Binance line distance and its change, after-fill target. E5 none -$412.5 (0/4 days) | E5 phys -$279.5
+  (1/4) | E4 none -$536.0 (0/4) | E4 phys -$248.2 (1/4); all worse at +1c/+2c; favourite null -$88..-$311. Worse than the stump version.
+- **EF-9 INSUF (Zurich 0086b15, 4.24 d, 250 ms asks + sec + line distance, strict q.90 trailing 1 h, anchors 0/15/30/45):** mean +$27.3
+  [+24.1, +29.4], DD $198.2, 197/day, fill 94.7%, win 75.4%, ask 0.739; +1c -$69.3, +2c -$164.4; 3/4 days; favourite null -$36.7; fixed15
+  +$13.4 / DD $96.3. Beats the null by ~$64 but twice C's DD and dead at one tick - the same favourite-buyer shape. Recorders LIVE (btc5
+  bid/ask/sizes; Binance spot aggTrades 250 ms signed; perp unreachable from Zurich). Arm S (Stable EF, top-20% trailing 24 h, FIXED
+  primary + RAW) LIVE in the forward shadow (d98f8e6), 12 arms. EF-9 v1 with Binance aggTrades history briefed 18:48.
+- **Pre-open buying (owner idea 18:5x; V, public taker prints, lag-corrected, gamma outcomes; analysis/v/preopen/): NOT A FINDING.**
+  Rules confirmed from Polymarket's own text: resolves on the Chainlink BTC/USD TWAP-60s stream, line = TWAP at the start. 10 h (120
+  candles) showed the last-60 s cheap side (<0.45) at +0.169/$1, both halves positive. On 48 h (576 candles) the same cell is -0.083
+  (H1 -0.232 / H2 +0.092; 76/215 and 93/216 candles positive) - the 10 h slice was the recent half. Buying both sides costs >= $1.01
+  before fees (books mirror). Other pre-open cells ~0 at ~0.50 (coin-flip noise). Closed.
+- **EF-9 v1 (Zurich 41bc12a): 250 ms asks + Binance spot AND perp price/signed flow from data.binance.vision aggTrades (09-24..27),
+  10 channels, strict q.90 trailing 1 h, anchors 0/15/30/45, 3 test days.** Mean +$161.8 [+154.0, +167.9], DD $140.5, 277/day, fill
+  91.1%, win 74.2%, ask 0.717, 3/3 days; +1c +$62.1, +2c -$40.0; favourite null +$27.6; fixed15 +$43.4 / DD $93.1. First version to
+  survive one tick. BUT ~all of the gain vs the INSUF version is 09-26 (-100.2 -> +111.1), overall correlations unchanged (the gain is in
+  the top-decile ranking), 3 test days only, DD 1.5x C. Candidate, NOT a finding. Zurich fixed a p_side str-vs-int bug first (assert
+  added). Live perp flow is unreachable from Zurich (fstream), so a forward arm needs spot-only or another perp route.
+- **EF-9 v1 on MORE history (V, 09-11..16 polybook 1 s + Binance spot/perp aggTrades signed flow 1 s, GRU, walk-forward, 4 test days,
+  rules as before; EF9V1_SEQ_V.txt): LOSES.** E4 phys -$57.7 (2/4 days), E5 phys -$66.6 (2/4), unpinned -$179/-$464; all -$199..-$907
+  at +1c. Flow helps vs the no-flow GRU (-$248 -> -$58) but does not turn it positive. Caveats: 1 s fill model (harsher than +250 ms),
+  pin = TWAP z (no engine p_side). Zurich running the same on its 6 days of tape1s.
+- **EF-10 raw PARAMETER grid (Zurich 0c54181, owner's "parameter adjustment", 1,944 cells, EF10_grid.csv, 5 days per-pass FAK):** raw
+  today +$107.3 / DD 98.4 / 65/day / fill 42% / 2 of 5 days. Cells: median +$60.6, 27% beat raw on $, only 70 of 727 at raw's frequency.
+  WALK-FORWARD selection (best on days < D, frequency floor): +$37.8 / DD 27.1 / 2 of 4 vs raw +$58.0 / DD 71.1 / 1 of 4 on the same
+  days; +1c: tuned -$22.5 vs raw +$27.9. The chosen cell changes every day. Verdict: raw's current settings are not improvable on this
+  evidence and are the most cost-robust. Closed.
+- London 20:33 (for the record): healthy; 4 RECONCILE_STUCK this hour, all 'OpenOrder response did not match expected shape' on rejected
+  attempt-1s, all resolved (possible venue API shape change - watch). ~+$19.4 of cash inflow beyond the engine's pnl on 3 wins
+  (venue_pnl > payout - spent - fee), OWNER 20:5x: "it's mine, I know where it came from" - treated as a deposit (excluded from trading-only), not traced. London changed nothing.
+- **EF-11 (Zurich c118a2c): EF-9 v1 at 1 s on tape1s 09-22..28 (spot+perp signed flow were in tape1s all along), 5 test days, anchors
+  0/15/30/45: LOSES.** Mean -$121.9 [-188.8, +1.1], DD 383-456, 61/day, win 44-45% at ask 0.449, +1c -$92..-$259, 2-3/5 days, favourite
+  null -$155.6; per day +208 / -312 / -61 / +117 / +50. Differences vs v1: pin = model's own side (no engine p before 09-24), 1 s fill,
+  thin coverage (548 candles). With V's 09-11..16 loss, EF-9 v1's 3-day +$161.8 is NOT reproduced on 9 more days. It stays a
+  forward-shadow arm only as registered; no further isolation work (V decision, token cost vs value).
+- **PolyBot-style late maker ladder (V, 48 h, 576 candles, LATE_LADDER.txt): LOSES, and shows the adverse-selection mechanism exactly.**
+  The Binance-proxy TWAP projection at 275 s agrees with the venue 97.0% (559/576), but the rungs FILL on only 19-23 candles (3-4%) and
+  those fills win 10-26% (per$1 -0.47..-0.71): panic sells below a rung happen precisely on the candles where the projection is WRONG.
+  The seller knows (Chainlink) what the Binance proxy does not. Caveat: PolyBot projects on the real Chainlink stream - on London's
+  real ref the fills would move to other candles; that re-test needs London's tape (not briefed; INSUF n anyway). Closed on public data.
+- **Retrain cadence (owner: every 2 days / every week; V, EF-8 09-11..16, EF8_EVAL_REFIT2.txt):** 2-day refit vs nightly, pinned cells:
+  E4 q.80 +$125.2 vs +$185.6 | E4 q.90 +$72.9 vs +$151.8 | E4 q.95 +$76.4 vs +$179.2 | E5 q.90 +$106.7 vs +$129.7; days+ 1-2/4 either
+  way, H2 negative in every cell, 09-14 carries all of it. Slower retraining is WORSE, not better, and fixes none of the one-day problem.
+  WEEKLY cannot be tested: it needs >= 2 weeks of history at the same resolution (a train week + a test week); first possible ~10-08 on
+  the Zurich/London decide_log archives. Recorded, not a finding.
+- London 20:51: RECONCILE_STUCK 'expected shape' is the known get_order parser miss on FAK no-match orders (261 rows since 09-22, handled
+  since 12.8.11, poly_live.py:220), all REJECTED, nothing stuck - no update needed, 'API change' watch retracted. The 19.42 is logged as a
+  deposit (health.py; deposits total 70.42); trading-only settled then sits below the start, so the 20:33 mood 'well' is corrected to
+  'in the red'.
+- **EF vs TWAP60 on London's REAL fills (owner's observation 20:5x; London EF_VS_TWAP60.md, 240 settled fills, Chainlink ref, line rule
+  = venue 99.6%).** Owner is right on FREQUENCY: 111/240 (46%) of fills were against the projection (z < -0.5). But those MADE money:
+  z -1.5..-0.5 n102 win 49% paid 0.405 +0.125/$1 +$184 (H1 +149 / H2 +35); z < -1.5 n9 INSUF +$53; all 'against' +$142.1 vs -$10.4 for
+  all fills. The loss is the NEUTRAL bucket (z -0.5..+0.5): n123 win 49% paid 0.510 -0.110/$1 -$111 (H1 -21 / H2 -91), worst < 120 s
+  (n62 -$142). By sec: < 120 s -$117 (both halves negative), 120-200 +$120, > 200 n25 INSUF +$76. EF is a cheap contrarian; blocking
+  'against' fills would remove the profitable part. Not acted on (grid only, cells INSUF); the neutral/early loss is the lead to watch.
+- **EF-12 (Zurich d6444cb): giving EF the TWAP60 line makes it WORSE on the sim (1,001 candles 09-24..28).** fixed15 A +$41.1 / DD 85.3 /
+  39/day / 2 of 5 / +1c +18.7; B |z| >= 0.25/0.50/0.75/1.00: -29.5 / -51.5 / -26.2 / -61.0 (fill rises 42% -> 51-61%); raw25 +$82.5 vs
+  |z| cuts -4.7 / -16.3 / +30.2 / +28.4; C (z + twap distance as inputs) -11.5. Skipping neutral hurts at every cut - the easy-to-fill
+  fires are the ones not worth having. CONFLICTS with London's real-fill read (neutral n123 -0.110/$1): different instrument (real fills
+  vs FAK sim over all passes) and z formula. London asked to push twapz.py so Zurich re-runs on the identical z. Arm E (P_twap +
+  move strength replacing EF's p) pending.
+- **EF-13 (Zurich 188ec5b), owner's exact TWAP spec (variance of the AVERAGE: locked part, remaining sum-of-squares; move strength):**
+  A fixed15 +$41.1 / DD 85.3 / 39/day / +1c +18.7 | B |z| cuts 0.25/0.50/0.75/1.00: -24.5 / -64.1 / -33.0 / -14.9 | C fixed15 + P_twap +
+  move strength +$27.4 / DD 115.5 / 99/day / 3 of 4 / +1c -15.5 | E p replaced by P_twap -$1,584.7 (buys long shots: mean ask 0.332,
+  21% of fires < 0.15, win 30%). Better physics, same answer on the sim; move strength carries something bare z did not, but C still
+  trails fixed15 and dies at +1c. A direction-only probability dropped into an EV test against the ask becomes a long-shot buyer.
+  London-formula parity (fire passes only) still pending.
+- **EF-14 (Zurich 3ddf051): EF-12/EF-13 RETRACTED by Zurich - with London's exact z (relayed; five construction errors fixed) the
+  owner's TWAP filter WORKS on the sim, scored on fixed15's own fires (the order London's live fills measure).** A fixed15 +$54.5 / DD
+  85.3 / 39/day / +1c +31.6 / H2 -0.040 | B |z|>=0.25 +48.6 / DD 75.4 | **B |z|>=0.50 +$64.7 / DD 51.1 / 21/day / +1c +48.1 / H1 +0.254 H2
+  +0.010** | 0.75 +2.4 | 1.00 +16.6. Contrarian z <= -0.5: n97, 44 fills, +$73.7 (same sign as London's real fills). Two independent
+  sources now agree (London real fills + Zurich sim). LIMITS: ~50 fills in 5 days (< 60), 2 of 5 days positive, NON-MONOTONE sweep
+  (verify.py sweep flag) - not verified. Registered forward arm F (|z|>=0.50) with F25/F75 as reference arms (21:21).
+- **Arm F LIVE in the forward shadow (Zurich be3dc2f), rule frozen:** F_z50 (fixed15's own fires, skip |z| < 0.50, London z) plus
+  reference arms F25/F75; 15 arms. Backfill (in-sample, not the decision): F_z50 +$65.6 / DD 66.9 / 57 fills / 2 of 5; F25 +38.6; F75
+  +21.0. London's z now has ONE implementation (london_z.py) shared by shadow and backtest. Zurich records the Chainlink oracle feed via
+  RTDS (IPv4 forced); the exact TWAP60 is on PolyBolt and needs CLOB credentials - London recorder awaits the owner's yes.
+- **Zurich traded LIVE 19:40-20:12 UTC (reported by Zurich 21:41, found on a health check):** 11 EF orders lane LIVE, 3 filled ($5
+  each, all won), net +$19.41; master OFF before and after; no audit row names who armed it; Zurich touched nothing. The +$19.41 matches
+  London's +$19.42 inflow on the SAME wallet, which the owner claimed as his (20:5x) - so most likely the owner armed Zurich himself.
+  Asked the owner to confirm. Zurich told to change nothing, leave master false, exclude the 11 LIVE rows from all paper/shadow tables.
+  NOTE: Zurich and London trade from ONE wallet - any Zurich live fill moves London's cash/equity.
+- **Who makes money on BTC 5m (V, public data-api both legs + taker legs, 48 h, 576 candles, 10,170 wallets; TOP_WALLETS.txt).**
+  Check: sum of all wallets' PnL = -$216.0k = -fees (closes). Top by PnL: many of the CONSISTENT winners (trade ~all 570 candles) are
+  MAKERS - 0x86b1 +$6.3k on $499k (96% maker), 0x7743 +$3.4k (100%), 0xc1b4 +$2.3k (100%), 0xcd30 +$2.1k (99%), 0xc387 +$2.8k (100%
+  maker, buys at 0.265, late: sec p50 177), 0x32ed +$2.0k (90%). Consistent TAKER-heavy winners exist too: 0x3048 +$7.6k on $329k (41%
+  maker, 572 candles), 0x41e2 +$3.5k (23% maker, 568), 0xc533 +$2.2k (35%, 565), 0x9e3e +$3.0k (7%, 443); 0xc4e2 +$4.1k on $38k,
+  0% maker, buys favourites at 0.738, sec p50 63 (138 candles). Big losers are makers too (0xcc0d -$30.8k, 0x4b01 -$16.7k). Margins are
+  ~1-3% of volume for the frequent winners. Next: per-trade context (sec, price, TWAP z, Binance move) for the top consistent takers.
+- OWNER 22:4x: "yes" - the Zurich live window 19:40-20:12 was the owner. Closed.
+- **What triggers the top TAKER winners (V, WALLET_TRIGGERS.txt, 48 h, taker BUY legs, fee-exact per $1, Binance-proxy z):** the
+  high-frequency ones earn a FLAT +0.4..+1.7% per $1 across every second, price and z bucket (0x3048 n16.8k +0.014; 0x41e2 n7.7k +0.017;
+  0xc533 n9.2k +0.004) - no visible trigger, i.e. scale + speed, not a signal we can copy. 0x9e3e (443 candles) +0.095, positive early
+  (< 180 s) and on NEUTRAL |z| (+0.146), negative late and on decided |z|>=1.5 (-0.119). 0xc4e2 (138 candles) buys favourites at ~0.74 in
+  the first 3 minutes, win 83-87%, +0.123 - selective favourite buying that works for them. 0x9783 (+0.44, 29 candles) and 0xb7e3 (1
+  candle) are too few candles to read. No single public pattern stands out; the reliable winners win by volume and latency.
+- **Favourite-buyer wallet 0xc4e2 profiled (FAV_BUYER.txt):** first entries n138, win 76%, paid 0.695, +0.067/$1, median sec 40, trailing
+  vol 0.19 vs 0.29 for all market favourite prints (+0.027/$1) - it enters EARLY, in LOW-VOL candles, ~3c cheaper.
+- **Its style as a rule on INDEPENDENT days (V, 09-13..16 polybook 1 s, fill model, fee-exact; FAV_RULE_TEST.txt, 36-cell grid fixed
+  before the run, vol terciles cut on 09-11/12):** LOW-vol tercile is positive in 8 of 9 window x band cells; MID-vol is negative in 9 of 9
+  (-9..-187); high mixed. Best-looking cells (quoted with the grid, not alone): 60-180 s, fav ask 0.65-0.85, low vol: +$149.2 / DD 68.6 /
+  75 per day / fill 85% / 4 of 4 days / +1c +$113.1; 0.65-0.75: +$120.2 / DD 80.9 / 4 of 4 / +1c +$88.9. CAUTION: the vol pattern is
+  non-monotone (low +, mid --, high ~) and EF-8's regime read had a different shape; 4 test days. CANDIDATE only - replication briefed to
+  Zurich on 09-22..28 with the identical grid.
+- **FAV rule REPLICATED on Zurich (48cd84a, FAV_RULE_ZURICH.txt, 09-24..28, identical 36-cell grid, cuts from 09-22/23, no retune):**
+  LOW-vol positive 9/9 (V 8/9); low beats buy-every-favourite 9/9 (+0.030..+0.053/$1); vol permutation p 0.005/0.015/0.029; halves 8/9.
+  verify.py on 60-180 s, 0.65-0.85, low: n638, +0.100/fire, ALL SIX GATES PASS (grading 0/838 across two label sources, sweep monotone,
+  +2c +0.071, null +0.100 vs +0.051), 5 of 5 days positive. SHAPE differs: Zurich low > mid > high (monotone; mid + in 6/9, high - 9/9)
+  vs V non-monotone (mid - 9/9). Regime: on Zurich's days every favourite was profitable outright (+0.051/$1). Fill 80-95% (1 s ask
+  unchanged 1 s later 51.7%). First candidate today to pass verify.py on independent data from a second box. Forward arm FAV briefed.
+- **OPERATIONAL: Zurich's gamma outcome mirror /tmp/poly froze 09-28 01:42 - the forward shadow has scored NOTHING since the 01:30 candle
+  (all arms incl. F).** V authorised Zurich to fix it (read gamma directly) and backfill the missed rows.
+- **FAV improvements (V, pre-registered, 09-13..16; FAV_IMPROVE.txt):** base low-vol +$149.2 / DD 68.6 / 4 of 4 | + z>=0 +145.0 / 62.6 /
+  4 of 4 (the favourite already agrees with the TWAP) | + z>=0.5 +121.6 / 2 of 4 | + m60 0..5 bp +89.6 | both +69.1 | all-vol + z>=0.5
+  +118.6 / DD 136.5 | all-vol + z & m60 -2.6. Nothing beats the plain rule; FAV stays as registered. The remaining lever is execution
+  (entry price / fills), measurable only in the paper test and live.
+- **FAV parity (Zurich ed70141, FAV_RULE_PARITY.txt): V's code on V's data reproduced byte for byte (md5 fdd0c761...); Zurich's data
+  through the SAME path: LOW-vol positive 8/9 (the negative cell is 0.70-0.80 on both boxes), MID negative 7/9, ALL negative 7/9, best
+  cell +0.043/$1 (NOT +0.100).** Zurich RETRACTS its first-pass numbers and the 'mid positive' shape: it compared a decide_log ask
+  against a tape1s ask (two independent reads, zero mean bias but a 2.3x selection bias in the fill test). Both boxes now agree on the
+  shape (low +, mid -). The verify.py pass quoted earlier was on the flawed path - to be re-run on the corrected one. Checks 1-7 all
+  passed (12/12 on both boxes). Trap noted: data.binance.vision daily archives are in MICROSECONDS for these dates.
+- **Zurich eac9a1c: outcome mirror FIXED** (gamma_outcomes.py, labels copied from fetch_poly.py, 0/19 disagreements), 282 candles
+  BACKFILLED past the 01:30 stall - no forward day lost. **FAV registered**; V decision 23:42: the vol series is BINANCE 1 s (the series
+  the rule was validated on), cut 0.304, live from bn_flow (no fire if < 240 of 300 s), recorded as a definition fix before any forward
+  row; ref_px version kept as reference arm FAV_ref (0.281); FAV_mid/FAV_all re-cut on Binance (0.304/0.466). Zurich also caught a
+  KeyError (opp not stored) that would have taken the whole shadow down on the first new candle.
+- **FAV at ARRIVAL (Zurich 18228c6, FAV_ARRIVAL.txt; owner's "fills at the time the order reaches Polymarket"):** pricing the fill at
+  decision + 500 ms (245 ms round trip + 150 ms taker hold) HALVES the edge: +0.043 -> +0.019/$1, fill 84.8%, win of fills 74.9%,
+  +$119.7 on 644 decisions (~$24/day at $10). Shape survives: FAV +0.019 > FAV_mid +0.008 > FAV_hi -0.029; null FAV_all +0.005.
+  Sensitivity +250/+500/+1000 ms: fill 88.4/84.8/78.9%, win flat, $ non-monotone (noise). SIZE gate (ask size >= our shares) only
+  measurable since 09-28 18:13: 30 fires, 6 rejected (20%, INSUF) - if it holds, effective fill ~68% and +0.019 is optimistic. Forward
+  arm uses +500 ms + size gate; shared DELAY_MS for arms A-F left at 250 ms (not silently re-graded).
+- **FAV LIVE in the forward shadow (Zurich bc1184d), first row 09-28 23:55:** FAV (Binance 1 s, cut 0.304, bn_flow forward-filled to the
+  kline series, 60 s cap; 99.80% identical to official klines, low/high split agrees 100%), FAV_mid, FAV_all, FAV_ref (ref_px 0.281);
+  +500 ms arrival fill + size gate. V confirmed the forward fill (holes would have blocked 34% of low-vol candles vs 7% of the rest).
+- **FAV first forward hour + fill-sim correction (Zurich 70cd89e, 1df478e):** the '40% size rejection' was the books recorder's best ask
+  vs decide_log's ask (two feeds disagreeing), NOT thin depth - 0 genuine size shortfalls in 15 decisions; 11/15 (73%) clear the price
+  cap. Partial fills now modelled like a real FAK (min(want, depth <= cap), level-weighted; all-or-nothing kept as reference); depth is
+  truncated at level 1, labelled a FLOOR (V: leave it). 34 FAV rows scored by the buggy simulator deleted; arms re-accrue from 01:30.
+  First daily FAV ledger ~00:00 UTC 09-30.
+
+- **PASSIVE FAV (V, 09-30, analysis/v/maker2/): FOUND, THEN FAILED THE STRICT TEST - RETRACTED.** M2 on the public tape (09-26..28, fresh
+  09-28..30) looked like P/DD 2-5, but it took its price from real maker fills. M5 strict (decide first, trade-through fills, +1c, causal calm
+  cut, $100/$10, 5,584 candles 09-11..30): every tape variant goes broke; strict -335 / -778 over 20 days. Regime switching (M4) and pre-open
+  both-sides bids (M3) also lose. Zurich's PFAV paper arm (live since 09-30 09:25) uses the lenient fill and should be read with this in mind.

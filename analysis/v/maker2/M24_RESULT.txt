@@ -1,0 +1,22 @@
+M22-M24 (V, 10-02 ~13:00 UTC) - WHERE IS THE MARKET'S PRICE WRONG? -> calm FAVOURITES are underpriced; longshots overpriced.
+
+M22 (prints only, 20 days): the result flips sign between an optimistic entry (next print + 1c) and a pessimistic one (worst
+print in the next 5 s + 1c). Prints cannot price a taker to the 1-6c the edge lives in. Inconclusive by construction.
+
+M23 (REAL 1 Hz asks, book1s 09-11..16, entry = ask one second after the decision, taker fee): full grid in M23_GRID.txt.
+ Calm candles: buying the favourite at ask 0.55-0.90 pays in sec 0-120 and 180-240, both halves positive in most cells;
+ buying anything under 0.50 loses everywhere (-0.08..-0.35/$). Not-calm candles: favourites ~0 or negative.
+ = favourite-longshot bias, present only in calm candles.
+
+M24 - Zurich's FROZEN calm-FAV rule (poly_fav.py: vol<0.304, sec 60-180, fav ask 0.65-0.85, one buy per candle), never
+ tuned here, replayed on 09-11..16 which it never saw:
+   591 trades, win 75.0%, avg ask 0.711, +0.034/$ after fee (+0.025 per share)
+   halves +2.99 / +11.59; days 09-11 -0.33, 09-12 +6.70, 09-13 +2.25, 09-14 +3.12, 09-15 +1.45, 09-16 +1.40
+   null: coin-flip side at THAT side's real ask -> P(null >= ours) = 0.008
+ verify.py gate (m24_verify.py): grading tape vs venues.outcome 0/591 disagree PASS; n PASS; halves PASS;
+   costs +0c +0.025 / +1c +0.015 / +2c +0.005 PASS; null PASS -> "passes all checks".
+ Combined with Zurich's own record of the same frozen rule: history 09-24..29 +116 @$10 (4/2 days, IN-SAMPLE to its build),
+ forward shadow 09-29..10-01 +124 @$10 on 256 fills (3/3 days, out of sample). Two independent windows positive.
+
+LIMITS: thin - +2.5c a share; 2c of extra slippage leaves +0.5c. Calm-only (~40% of candles). One live sample exists:
+ 09-30 01:20-01:30, 3 candles, -1.39 (n=3, nothing). The 09-30 fav_mid live loss was a v10 classifier firing beside it (defect).

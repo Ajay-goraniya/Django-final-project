@@ -1,0 +1,66 @@
+MAKER PROBE - "we lost in wicks". READ-ONLY. 2026-10-02 00:00:37 UTC
+universe: 33 graded fills with BOTH bn_before and bn_after present, over 33 distinct candles, 20W/13L.
+the other 39 graded fills predate the matched_at fix and have no venue-timed window; they are EXCLUDED, not counted as zero.
+bps are on the engine bn_flow spot 1s series, forward-filled as FavBrain does.
+
+(A) BY bn_before - the Binance move against us in the seconds BEFORE the fill
+          bucket    n     W/L  deployed       pnl   pnl/$1  flag
+            <0.5   25    16/9     79.59   -8.0601  -0.1013  INSUFFICIENT (<60)
+         0.5-1.0    5     3/2     17.65   -2.6500  -0.1501  INSUFFICIENT (<60)
+         1.0-1.5    1     0/1      3.95   -3.9500  -1.0000  INSUFFICIENT (<60)
+         1.5-2.0    1     1/0      3.85   +1.1500  +0.2987  INSUFFICIENT (<60)
+       ABOVE TOP    1     0/1      3.50   -3.5000  -1.0000  outside the fixed buckets, shown not dropped
+
+(B) BY MAX ADVERSE BINANCE MOVE from the fill to the candle end (bps vs price at fill)
+          bucket    n     W/L  deployed       pnl   pnl/$1  flag
+            <5.0   25    20/5     80.34  +11.1899  +0.1393  INSUFFICIENT (<60)
+        5.0-10.0    6     0/6     21.20  -21.2000  -1.0000  INSUFFICIENT (<60)
+       10.0-20.0    2     0/2      7.00   -7.0000  -1.0000  INSUFFICIENT (<60)
+          >=20.0    0     0/0      0.00   +0.0000  +0.0000  INSUFFICIENT (<60)
+
+(C) EVERY LOSER: when our side first traded under 0.50, and what the last 60 s did
+    px<0.50 = first trade print of OUR token below 0.50 after the fill, on the public tape.
+    ahead@240 = at sec 240 the spot sat on OUR side of the opening TWAP60 (proxy, see below).
+      id candle side    px  fill@s  <0.50 @s   low  maxadv  ahead@240  flipped      pnl
+      29 11:30 UP    0.78     100       188  0.01     9.8         no      n/a  -3.9000
+      31 12:40 UP    0.79     132       216  0.00     9.5         no      n/a  -3.9500
+      47 20:45 DOWN  0.75      69       185  0.01     7.8         no      n/a  -3.7500
+      50 21:00 UP    0.61     139       171  0.01     1.6         no      n/a  -3.0464
+      55 21:30 UP    0.67     162       162  0.00     7.5         no      n/a  -3.3500
+      56 21:35 UP    0.65      63       132  0.00     5.7         no      n/a  -3.2500
+      61 22:25 UP    0.60     122       164  0.01     5.3         no      n/a  -3.0000
+      64 22:50 DOWN  0.62     133       149  0.00    14.9         no      n/a  -3.1000
+      67 23:10 UP    0.63     140       221  0.01     1.7         no      n/a  -3.1500
+      68 23:15 DOWN  0.78      65        86  0.01    14.0         no      n/a  -3.9000
+      69 23:20 DOWN  0.60     124       146  0.01     2.3         no      n/a  -3.0000
+      70 23:25 UP    0.60      79       258  0.01     3.0        yes      YES  -3.0000
+      72 23:40 DOWN  0.70     164       182  0.01     4.1         no      n/a  -3.5000
+
+  losers whose token has NO tape rows at all (cannot be answered): 0 of 13
+  TWAP60 PROXY CHECK: open=[ep-60,ep) close=[ep+240,ep+300) on bn_flow spot agrees with the venue resolution on 33 of 33 candles (100.0%). The venue settles on its Chainlink reference TWAP60, not on Binance spot, so read the 240 s columns as a proxy.
+  losers that were AHEAD at sec 240 and still lost: 1 of 13; of those, the last 60 s flipped the TWAP sign on 1.
+
+VERDICT (Zurich, 10-02 00:0x). The "wick" hypothesis is NOT supported by these 33 fills.
+1. A WICK WOULD SHOW UP BEFORE THE FILL. It does not. Bucketed on bn_before, the pre-fill move
+   against us, the big bucket (<0.5 bps, n=25) is 16W/9L at -0.1013/$1 and the one fill in the
+   1.5-2.0 bucket WON. There is no gradient: the fills that lost were not the ones taken into a
+   move. Whatever is wrong is not visible in the second before the fill, which is the only part of
+   this that a rule could ever act on.
+2. WHAT SEPARATES WINNERS FROM LOSERS IS A SUSTAINED POST-FILL MOVE, NOT A SPIKE. Max adverse move
+   from fill to candle end: <5 bps 20W/5L +0.1393/$1; 5-10 bps 0W/6L -1.0000/$1; 10-20 bps 0W/2L
+   -1.0000/$1; >=20 bps empty. Every single fill that saw >=5 bps against it lost, all 8 of them.
+   READ THIS WITH CARE: max adverse move after the fill is close to a restatement of the outcome -
+   if the price finishes against you, you lost - and it is unknowable at post time. It is a
+   description, not a gate, and nobody should build one on it.
+3. A WICK IMPLIES REVERSION. These did not revert. Our token's own prints after the fill bottom at
+   0.00-0.01 on 13 of 13 losers, first crossing under 0.50 at a median ~sec 170, and they stayed
+   there to settlement. That is a market repricing, not a spike.
+4. THE LAST MINUTE DID NOT TAKE THE LOSSES. 12 of 13 losers were ALREADY behind at sec 240; exactly
+   ONE (id 70, 23:25 UP @0.60) was ahead at 240 and lost in the final 60 s. The TWAP60 proxy used
+   for that column agrees with the venue's own resolution on 33 of 33 candles (100%).
+5. AGAINST THE HYPOTHESIS, the clearest counter-examples are the two losers whose Binance move
+   barely happened at all: id 50 (21:00 UP @0.61, max adverse 1.6 bps) and id 67 (23:10 UP @0.63,
+   1.7 bps). Both finished on the wrong side of the TWAP line having never been wicked.
+SAMPLE: n=33, 13 losers. EVERY bucket above is under 60 fills and marked INSUFFICIENT. The 39 other
+graded fills predate the matched_at fix and have no venue-timed window, so they are excluded rather
+than counted as zero. Nothing changed on the probe.

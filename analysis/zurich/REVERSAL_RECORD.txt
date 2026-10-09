@@ -1,0 +1,91 @@
+REVERSAL LANE - THE FULL ZURICH RECORD. READ-ONLY. 2026-10-02 14:17:10 UTC
+Source: the engine journal's own `calls` table (kind=REVERSAL), joined to orders/fills for
+the real-vs-paper split. Graded on POLYMARKET's resolution from the gamma mirror.
+GRADING CROSS-CHECK: 97 of 167 decisions have a gamma outcome, and on those the
+journal's own `actual` column agrees with Polymarket on 97 of 97. Where gamma has no
+row the journal value is used and the row is marked - it is never assumed.
+
+== ALL TIME
+   set                        n      W/L       $@5    per $1  flag
+   all decisions            167   116/51   +169.38   +0.2029  
+   REAL venue fills           0      0/0     +0.00   +0.0000  INSUFFICIENT (<60)
+   paper only               167   116/51   +169.38   +0.2029  
+   order FILLED              92    59/33    +10.79   +0.0234  
+   no order/unfilled         75    57/18   +158.59   +0.4229  
+
+   window: 09-23 02:05 .. 10-02 11:40 UTC
+   $ at $5 is the fee-exact per-$1 scaled to a $5 stake, so it is comparable across rows;
+   the lane's own plans staked 4.69-4.96 per order, which is why the normalisation matters.
+
+== BOTH HALVES (by time)
+   half                       n      W/L       $@5    per $1  flag
+   H1                        84    64/20   +200.16   +0.4766  
+   H2                        83    52/31    -30.78   -0.0742  
+
+== LAST 7 DAYS vs EVERYTHING BEFORE
+   set                        n      W/L       $@5    per $1  flag
+   last 7 days              106    72/34     +4.57   +0.0086  
+   before that               61    44/17   +164.81   +0.5404  
+
+== PER DAY
+   day         n      W/L       $@5    per $1  real  flag
+   09-23      25     17/8     +9.14   +0.0731     0  INSUFFICIENT (<60)
+   09-24      19     16/3   +169.74   +1.7868     0  INSUFFICIENT (<60)
+   09-25      27     20/7     -0.48   -0.0035     0  INSUFFICIENT (<60)
+   09-26      20     16/4    +17.48   +0.1748     0  INSUFFICIENT (<60)
+   09-27      16     14/2    +15.97   +0.1997     0  INSUFFICIENT (<60)
+   09-28      12      4/8    -38.15   -0.6358     0  INSUFFICIENT (<60)
+   09-29      11      5/6     -8.11   -0.1474     0  INSUFFICIENT (<60)
+   09-30      13      9/4    +11.14   +0.1713     0  INSUFFICIENT (<60)
+   10-01      18     11/7    -22.33   -0.2481     0  INSUFFICIENT (<60)
+   10-02       6      4/2    +14.97   +0.4991     0  INSUFFICIENT (<60)
+
+== THE PRICE BAND IT BUYS AT (quote at the call)
+   band            n      W/L       $@5    per $1  flag
+   0.00-0.40      37    11/26   +146.71   +0.7930  INSUFFICIENT (<60)
+   0.40-0.50      16      7/9     -3.15   -0.0394  INSUFFICIENT (<60)
+   0.50-0.60      12      8/4    +13.08   +0.2179  INSUFFICIENT (<60)
+   0.60-0.70      10      8/2    +10.44   +0.2089  INSUFFICIENT (<60)
+   0.70-0.80      19     13/6     -9.53   -0.1003  INSUFFICIENT (<60)
+   0.80-1.01      73     69/4    +11.83   +0.0324  
+   quote distribution: min 0.03 p25 0.42 MED 0.75 p75 0.91 max 0.99; mean entry sec 172
+
+== IS REVERSAL A SHADOW ARM TODAY?
+   NO. The ef3/FAV shadow carries 23 arms (A_v0_m02_S150, B_raw25_S60, C_fixed15, D/D2, E1-E5,
+   F/F25/F75, FAV, FAV_all, FAV_mid, FAV_ref, PFAV, PFAV50, PFAV_THRU, PFAV_taker, S_fixed_top20,
+   S_raw_top20) and REVERSAL is not among them. So Zurich has the SAME GAP London has: when the
+   lane is off there is no shadow recording what it would have done. Everything above comes from
+   the engine journal while the lane was actually deciding, not from a shadow.
+   09-29..now from the journal: n 48, 29/19, -4.33 at $5, -0.0180 per $1  INSUFFICIENT (<60)
+
+VERDICT (Zurich, 10-02 14:1x). THE HEADLINE +169 IS NOT A RESULT. Four facts dismantle it, and all
+four are in the table above.
+ 1. ZERO REAL FILLS, EVER. All 167 REVERSAL decisions in this journal are PAPER (lane=PAPER on every
+    order with kind=REVERSAL). Nothing here is money that moved. The paper fill model is the
+    engine's own shadow executor: the lane plans a cap one cent through the quote and the shadow
+    fills at it, with the plan's own amount (4.69-4.96 per order, which is why every figure here is
+    normalised to a fee-exact $5 stake instead of being read off the plans).
+ 2. THE PROFIT SITS IN DECISIONS THAT NEVER BECAME ORDERS. Of 167 decisions, 92 produced a FILLED
+    paper order and 75 did not. The 92 that filled made +10.79 at $5 (+0.0234/$1). The 75 that never
+    filled "made" +158.59 (+0.4229/$1). So the lane's executable paper record is about one percent
+    per dollar - essentially nothing - and the headline comes almost entirely from trades it did not
+    place even in simulation.
+ 3. ONE DAY IS THE WHOLE TOTAL. 09-24 alone is +169.74 at $5 (+1.7868/$1 on 19 decisions) against an
+    all-time +169.38. Every other day nets to approximately zero. Four of the ten days are negative.
+ 4. IT HAS DECAYED. Halves +200.16 then -30.78; last 7 days +4.57 (+0.0086/$1) against +164.81
+    (+0.5404/$1) before that; and 09-29..now is -4.33 (-0.0180/$1) on 48 decisions.
+WHAT THE LANE ACTUALLY IS, from its own prices: it buys late (mean entry second 172) and at two very
+different kinds of price. The money is in 0.00-0.40, where it is 11W/26L - it loses most of them and
+is paid 10-30x when right (+0.7930/$1, and this is where 09-24 lives). The bulk of its decisions,
+73 of 167, are at 0.80-1.01 where it is 69W/4L but earns +0.0324/$1 - a near-coin-flip edge on an
+expensive side. A lane whose entire record is a long-shot tail on one day is exactly the shape that
+needs a much longer sample before anyone reads it, and every per-day and per-band cell here is under
+60 decisions and flagged.
+GRADING: 97 of 167 decisions have a Polymarket resolution in the gamma mirror and the journal's own
+`actual` agrees with it on 97 of 97, so for this lane the journal's label is Polymarket's. The other
+70 predate the mirror's coverage and use the journal value, marked as such rather than assumed.
+ON V's QUESTION ABOUT THE LONDON GAP: Zurich has the SAME gap. REVERSAL is NOT one of the 23 arms in
+the ef3/FAV shadow, so when the lane is off nothing records what it would have done - everything
+above exists only because the lane was deciding live in the journal at the time. If the owner wants
+REVERSAL measurable while off, it needs a shadow arm, and that is a build, not a read.
+Nothing changed; read-only throughout.

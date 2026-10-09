@@ -1,0 +1,98 @@
+FAV, LAST 2 H  |  15:30 .. 18:00 UTC  (now 18:08)   Binance cuts LOW<0.304 MID<0.466
+
+1) VOL BUCKET PER CANDLE
+candle  vol     bucket    candle  vol     bucket    candle  vol     bucket
+  15:30  0.846  HIGH      15:35  0.653  HIGH      15:40  0.457  MID     
+  15:45  0.391  MID       15:50  0.810  HIGH      15:55  0.604  HIGH    
+  16:00  0.612  HIGH      16:05  0.586  HIGH      16:10  0.549  HIGH    
+  16:15  0.484  HIGH      16:20  0.551  HIGH      16:25  0.428  MID     
+  16:30  0.297  LOW       16:35  0.412  MID       16:40  0.399  MID     
+  16:45  0.478  HIGH      16:50  0.607  HIGH      16:55  0.431  MID     
+  17:00  0.353  MID       17:05  0.351  MID       17:10  0.366  MID     
+  17:15  0.401  MID       17:20  0.428  MID       17:25  0.357  MID     
+  17:30  0.269  LOW       17:35  0.355  MID       17:40  0.317  MID     
+  17:45  0.282  LOW       17:50  0.401  MID       17:55  0.389  MID     
+  18:00  0.289  LOW     
+
+  31 candles: LOW 4  MID 16  HIGH 11   median vol 0.412
+  LAST 4 CANDLES vol [0.282, 0.401, 0.389, 0.289]  (2 of 4 LOW)
+
+  IS THE MARKET IN LOW VOL RIGHT NOW? Directionally yes, by the bucket no.
+  It HAS quietened hard: 0.846 at 15:30 down to 0.289 now, roughly a third.
+  But the BUCKET is MID: only 4 of 31 candles since 15:30 are LOW, median 0.412,
+  and the last four straddle the 0.304 cut (2 LOW / 2 MID) rather than sitting
+  under it. So the owner's read of a quiet market is right about the direction and early
+  about the threshold - vol is oscillating across the line, not below it.
+  That is also WHY FAV is nearly idle: it only fires on LOW candles, so it took 3 decisions
+  since 15:30 while FAV_mid took 16. The arm is not broken, the regime is not its regime.
+
+2) EVERY DECISION SINCE 15:30
+arm         candle  side   ask   filled  won     $@10
+FAV         16:30  DWN  0.85   y     y     +1.64
+FAV         17:30  UP   0.82   y     y     +2.04
+FAV         17:45  UP   0.66   y     n     -6.46
+FAV_mid     15:40  UP   0.68   n     n     +0.00
+FAV_mid     15:45  UP   0.71   y     y     +3.80
+FAV_mid     16:25  UP   0.65   y     y     +5.02
+FAV_mid     16:35  UP   0.70   n     n     +0.00
+FAV_mid     16:40  DWN  0.85   y     y     +1.77
+FAV_mid     16:55  DWN  0.65   y     n    -10.00
+FAV_mid     17:00  DWN  0.75   y     n    -10.00
+FAV_mid     17:05  UP   0.78   y     y     +2.63
+FAV_mid     17:10  DWN  0.71   y     y     +4.59
+FAV_mid     17:15  DWN  0.65   n     n     +0.00
+FAV_mid     17:20  DWN  0.66   n     n     +0.00
+FAV_mid     17:25  UP   0.66   y     y     +4.80
+FAV_mid     17:35  DWN  0.84   y     y     +1.64
+FAV_mid     17:40  UP   0.74   y     y     +3.62
+FAV_mid     17:50  DWN  0.84   y     y     +1.77
+FAV_mid     17:55  DWN  0.66   y     y     +4.80
+FAV_all     15:30  UP   0.65   y     y     +5.02
+FAV_all     15:35  UP   0.65   y     y     +3.34
+FAV_all     15:40  UP   0.68   n     n     +0.00
+FAV_all     15:45  UP   0.71   y     y     +3.80
+FAV_all     15:55  UP   0.72   y     y     +3.44
+FAV_all     16:00  UP   0.85   y     y     +1.77
+FAV_all     16:05  DWN  0.66   y     y     +4.80
+FAV_all     16:10  UP   0.79   y     n    -10.00
+FAV_all     16:15  UP   0.66   y     y     +5.02
+FAV_all     16:20  UP   0.68   y     y     +4.38
+FAV_all     16:25  UP   0.65   y     y     +5.02
+FAV_all     16:30  DWN  0.85   y     y     +1.64
+FAV_all     16:35  UP   0.70   n     n     +0.00
+FAV_all     16:40  DWN  0.85   y     y     +1.77
+FAV_all     16:45  DWN  0.85   y     y     +1.64
+FAV_all     16:50  UP   0.71   y     n    -10.00
+FAV_all     16:55  DWN  0.65   y     n    -10.00
+FAV_all     17:00  DWN  0.75   y     n    -10.00
+FAV_all     17:05  UP   0.78   y     y     +2.63
+FAV_all     17:10  DWN  0.71   y     y     +4.59
+FAV_all     17:15  DWN  0.65   n     n     +0.00
+FAV_all     17:20  DWN  0.66   n     n     +0.00
+FAV_all     17:25  UP   0.66   y     y     +4.80
+FAV_all     17:30  UP   0.82   y     y     +2.04
+FAV_all     17:35  DWN  0.84   y     y     +1.64
+FAV_all     17:40  UP   0.74   y     y     +3.62
+FAV_all     17:45  UP   0.66   y     n     -6.46
+FAV_all     17:50  DWN  0.84   y     y     +1.77
+FAV_all     17:55  DWN  0.66   y     y     +4.80
+FAV_ref     17:30  UP   0.82   y     y     +2.04
+C_fixed15   15:40  DWN  0.69   n     n     +0.00
+C_fixed15   15:45  DWN  0.39   n     n     +0.00
+C_fixed15   15:55  DWN  0.37   n     n     +0.00
+C_fixed15   16:05  UP   0.48   n     n     +0.00
+C_fixed15   16:45  UP   0.49   y     n    -10.00
+C_fixed15   16:50  DWN  0.42   n     n     +0.00
+C_fixed15   17:10  UP   0.50   y     n    -10.00
+
+3) PER-ARM TOTALS          last 60 min                    since 15:30
+arm          dec fills wins    $@10   |   dec fills wins    $@10
+FAV            2     2    1    -4.42   |     3     3    2    -2.78
+FAV_mid       10     8    7   +13.85   |    16    12   10   +14.44
+FAV_all       12    10    8    +9.43   |    29    25   20   +21.08
+FAV_ref        1     1    1    +2.04   |     1     1    1    +2.04
+C_fixed15      1     1    0   -10.00   |     7     2    0   -20.00
+
+FAV-family $ is the PARTIAL model (filled shares a FLOOR, depth truncated at level 1);
+C_fixed15 $ is its own all-or-nothing fill. Every count here is far under the 60-fill bar:
+a 1.5 h window is a snapshot, not evidence about any arm.

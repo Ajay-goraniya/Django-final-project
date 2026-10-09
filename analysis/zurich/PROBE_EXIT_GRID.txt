@@ -1,0 +1,399 @@
+PROBE EXIT / STOP / TAKE-PROFIT GRID - IN-SAMPLE EXPLORATORY, NOT EVIDENCE.
+2026-10-02 10:58:32 UTC. READ-ONLY; the probe and the M19 shadow were untouched.
+
+EVERY cell below is fitted and measured on the SAME ~100 fills, so none of it is a result.
+Per V: anything promising becomes a new frozen prediction (P5..) appended to PREREG_M21 and
+is judged out of sample at the 200-candle mark. Nothing here is acted on.
+
+THE EXIT PRICE IS NOT A BOOK BID. The probe keeps no book history and none is archived, so
+"exit at the book bid" cannot be done from recorded data. What the public tape proves is a
+MAKER-BUY print: a resting bid at that price was hit, so a bid existed there. Every exit here
+is filled at such a print. That IGNORES QUEUE POSITION AND OUR OWN SIZE, so all of these
+exits are an UPPER BOUND on what was achievable. Prices at sec >= 270 are excluded as
+settlement rather than exits. Taker fee 0.07*p*(1-p) per share is charged on every exit.
+
+
+== 1. ALL graded fills (n 99 fills over 79 candles)
+     stop   take  trail exits     W/L       pnl   pnl/$1   vs HOLD   maxDD  flag
+     none   none      -     0   77/22  +38.2685  +0.1232    (hold)   15.95  
+     none   0.80      -    78   77/22  -18.1162  -0.0583  -56.3847   39.10  
+     none   0.85      -    76   78/21   -7.4030  -0.0238  -45.6715   33.30  
+     none   0.90      -    75   78/21  +10.5140  +0.0338  -27.7545   21.84  
+     none   0.95      -    74   78/21  +27.2675  +0.0878  -11.0010   16.28  
+     0.50   none      -    63   36/63  -24.5482  -0.0790  -62.8167   24.55  
+     0.50   0.80      -    99   60/39  -15.8719  -0.0511  -54.1404   29.13  
+     0.50   0.85      -    99   58/41  -13.1460  -0.0423  -51.4145   30.07  
+     0.50   0.90      -    99   54/45   -4.6049  -0.0148  -42.8734   26.04  
+     0.50   0.95      -    98   37/62  -29.0102  -0.0934  -67.2787   29.01  
+     0.40   none      -    51   48/51  -15.5960  -0.0502  -53.8645   19.18  
+     0.40   0.80      -    99   68/31  -12.4470  -0.0401  -50.7155   28.96  
+     0.40   0.85      -    99   68/31   -4.1403  -0.0133  -42.4088   25.04  
+     0.40   0.90      -    98   66/33   +9.0470  +0.0291  -29.2215   16.81  
+     0.40   0.95      -    97   49/50  -22.3263  -0.0719  -60.5948   23.24  
+     0.30   none      -    45   54/45  -24.3136  -0.0783  -62.5821   34.86  
+     0.30   0.80      -    99   70/29  -14.3759  -0.0463  -52.6444   30.89  
+     0.30   0.85      -    99   71/28   -4.7825  -0.0154  -43.0510   25.69  
+     0.30   0.90      -    98   71/28  +11.7640  +0.0379  -26.5045   14.88  
+     0.30   0.95      -    97   70/29  +23.9470  +0.0771  -14.3215   12.28  
+     0.20   none      -    41   58/41  -20.3818  -0.0656  -58.6503   34.86  
+     0.20   0.80      -    99   73/26  -16.8381  -0.0542  -55.1066   33.35  
+     0.20   0.85      -    98   74/25   -5.8090  -0.0187  -44.0775   27.90  
+     0.20   0.90      -    97   74/25  +11.2649  +0.0363  -27.0036   20.45  
+     0.20   0.95      -    96   74/25  +27.2761  +0.0878  -10.9924   15.69  
+     0.10   none      -    37   62/37  -12.8270  -0.0413  -51.0955   34.86  
+     0.10   0.80      -    98   77/22  -10.9573  -0.0353  -49.2258   31.94  
+     0.10   0.85      -    97   78/21   +0.2244  +0.0007  -38.0441   25.67  
+     0.10   0.90      -    96   78/21  +18.1413  +0.0584  -20.1271   16.37  
+     0.10   0.95      -    95   78/21  +34.8949  +0.1123   -3.3736   11.13  
+     none   none   0.10    92   37/62  -35.2956  -0.1136  -73.5641   45.35  
+     none   0.80   0.10    99   47/52  -23.9089  -0.0769  -62.1774   35.00  
+     none   0.85   0.10    99   45/54  -20.1921  -0.0650  -58.4606   34.37  
+     none   0.90   0.10    99   42/57  -16.7822  -0.0540  -55.0507   34.59  
+     none   0.95   0.10    99   38/61  -30.3531  -0.0977  -68.6216   41.09  
+     none   none   0.20    77   38/61  -38.1925  -0.1229  -76.4610   38.77  
+     none   0.80   0.20    99   57/42  -21.1145  -0.0680  -59.3830   32.20  
+     none   0.85   0.20    99   53/46  -19.9529  -0.0642  -58.2214   34.13  
+     none   0.90   0.20    99   47/52  -17.0786  -0.0550  -55.3471   34.89  
+     none   0.95   0.20    99   40/59  -35.6342  -0.1147  -73.9027   36.99  
+     none   none   0.30    56   43/56  -15.6574  -0.0504  -53.9259   19.33  
+     none   0.80   0.30    99   68/31  -13.2559  -0.0427  -51.5244   29.77  
+     none   0.85   0.30    99   66/33   -8.6487  -0.0278  -46.9172   29.55  
+     none   0.90   0.30    98   62/37   +2.5403  +0.0082  -35.7282   23.32  
+     none   0.95   0.30    98   44/55  -21.6944  -0.0698  -59.9629   22.61  
+
+== 1b. EXCLUDING the 09-30 17:00 candle (n 84 fills over 78 candles)
+     stop   take  trail exits     W/L       pnl   pnl/$1   vs HOLD   maxDD  flag
+     none   none      -     0   62/22  +14.2185  +0.0527    (hold)   15.95  
+     none   0.80      -    63   62/22  -29.1159  -0.1079  -43.3344   39.10  
+     none   0.85      -    61   63/21  -21.1229  -0.0783  -35.3413   33.30  
+     none   0.90      -    60   63/21   -6.6265  -0.0246  -20.8450   21.84  
+     none   0.95      -    59   63/21   +5.9922  +0.0222   -8.2263   16.28  
+     0.50   none      -    48   36/48  -14.9607  -0.0555  -29.1792   22.24  
+     0.50   0.80      -    84   45/39  -26.8717  -0.0996  -41.0902   29.13  
+     0.50   0.85      -    84   43/41  -26.8658  -0.0996  -41.0843   30.07  
+     0.50   0.90      -    84   39/45  -21.7454  -0.0806  -35.9639   26.04  
+     0.50   0.95      -    83   37/47  -19.4227  -0.0720  -33.6412   25.15  
+     0.40   none      -    36   48/36   +3.0023  +0.0111  -11.2162   15.37  
+     0.40   0.80      -    84   53/31  -23.4467  -0.0869  -37.6652   28.96  
+     0.40   0.85      -    84   53/31  -17.8602  -0.0662  -32.0787   25.04  
+     0.40   0.90      -    83   51/33   -8.0935  -0.0300  -22.3120   16.81  
+     0.40   0.95      -    82   49/35   -3.7280  -0.0138  -17.9465   15.12  
+     0.30   none      -    30   54/30  +10.5459  +0.0391   -3.6726   11.74  
+     0.30   0.80      -    84   55/29  -25.3757  -0.0941  -39.5942   30.89  
+     0.30   0.85      -    84   56/28  -18.5023  -0.0686  -32.7208   25.69  
+     0.30   0.90      -    83   56/28   -5.3765  -0.0199  -19.5950   14.88  
+     0.30   0.95      -    82   55/29   +2.6717  +0.0099  -11.5468   12.28  
+     0.20   none      -    26   58/26  +14.4777  +0.0537   +0.2592   17.18  
+     0.20   0.80      -    84   58/26  -27.8378  -0.1032  -42.0563   33.35  
+     0.20   0.85      -    83   59/25  -19.5288  -0.0724  -33.7473   27.90  
+     0.20   0.90      -    82   59/25   -5.8756  -0.0218  -20.0941   20.45  
+     0.20   0.95      -    81   59/25   +6.0008  +0.0222   -8.2177   15.69  
+     0.10   none      -    22   62/22  +22.0325  +0.0817   +7.8140   13.59  
+     0.10   0.80      -    83   62/22  -21.9570  -0.0814  -36.1755   31.94  
+     0.10   0.85      -    82   63/21  -13.4955  -0.0500  -27.7140   25.67  
+     0.10   0.90      -    81   63/21   +1.0008  +0.0037  -13.2176   16.37  
+     0.10   0.95      -    80   63/21  +13.6196  +0.0505   -0.5989   11.13  
+     none   none   0.10    77   22/62  -44.9407  -0.1666  -59.1592   45.35  
+     none   0.80   0.10    84   32/52  -34.9086  -0.1294  -49.1271   35.00  
+     none   0.85   0.10    84   30/54  -33.9120  -0.1257  -48.1305   34.37  
+     none   0.90   0.10    84   27/57  -33.9227  -0.1258  -48.1412   34.59  
+     none   0.95   0.10    84   23/61  -39.9983  -0.1483  -54.2168   41.09  
+     none   none   0.20    62   27/57  -38.4573  -0.1426  -52.6758   38.77  
+     none   0.80   0.20    84   42/42  -32.1143  -0.1190  -46.3328   32.20  
+     none   0.85   0.20    84   38/46  -33.6727  -0.1248  -47.8912   34.13  
+     none   0.90   0.20    84   32/52  -34.2191  -0.1268  -48.4376   34.89  
+     none   0.95   0.20    84   29/55  -35.8990  -0.1331  -50.1175   36.99  
+     none   none   0.30    41   43/41   -6.0699  -0.0225  -20.2884   19.33  
+     none   0.80   0.30    84   53/31  -24.2556  -0.0899  -38.4741   29.77  
+     none   0.85   0.30    84   51/33  -22.3685  -0.0829  -36.5870   29.55  
+     none   0.90   0.30    83   47/37  -14.6002  -0.0541  -28.8187   23.32  
+     none   0.95   0.30    83   44/40  -12.1069  -0.0449  -26.3254   22.61  
+
+== 2. RESTING-ORDER CANCEL: pull the order once a bid is proven N ticks below our price
+   Applied to FILLED orders, because those are the ones whose outcome the rule would change:
+   if such a print happened BEFORE our fill, the rule removes that fill. The unfilled column
+   is shown too but it changes nothing - those orders produced no outcome either way.
+    ticks fills LOST  their W/L  their pnl  pnl/$1 lost  unfilled also cut  flag
+        1         10        9/1    +7.6323      +0.2642                 38  INSUFFICIENT (<60)
+        2          9        8/1    +6.5323      +0.2614                 35  INSUFFICIENT (<60)
+        3          8        7/1    +4.8323      +0.2228                 34  INSUFFICIENT (<60)
+   A positive "their pnl" means the cancel rule would have thrown away money.
+
+== 3. WINNERS vs LOSERS, the real fills, full distributions side by side
+   winners 77, losers 22    / INSUFFICIENT (<60)
+   seconds to reach 0.80
+     W  n  76 min    1.00 p25   23.00 MED   81.00 p75  119.00 max  195.00
+     L  n   2 min    2.00 p25    2.00 MED    2.00 p75    2.00 max  167.00
+        never reached / unknown: 1 winners, 20 losers (EXCLUDED)
+   seconds to reach 0.90
+     W  n  74 min   14.00 p25   61.00 MED  107.00 p75  136.00 max  186.00
+     L  n   1 min  170.00 p25  170.00 MED  170.00 p75  170.00 max  170.00
+        never reached / unknown: 3 winners, 21 losers (EXCLUDED)
+   max adverse excursion (pts below entry)
+     W  n  77 min   -0.11 p25    0.08 MED    0.21 p75    0.46 max    0.62
+     L  n  22 min    0.57 p25    0.60 MED    0.64 p75    0.70 max    0.79
+   min proven bid in the first 30 s
+     W  n  41 min    0.33 p25    0.57 MED    0.63 p75    0.72 max    0.76
+     L  n   8 min    0.19 p25    0.20 MED    0.34 p75    0.40 max    0.65
+        never reached / unknown: 36 winners, 14 losers (EXCLUDED)
+   fill second
+     W  n  77 min   60.00 p25   63.00 MED   71.00 p75   98.00 max  178.00
+     L  n  22 min   60.00 p25   65.00 MED   81.00 p75  124.00 max  164.00
+   price paid
+     W  n  77 min    0.60 p25    0.62 MED    0.66 p75    0.74 max    0.80
+     L  n  22 min    0.60 p25    0.61 MED    0.65 p75    0.71 max    0.79
+   side UP: n 37 24W/13L  INSUFFICIENT (<60)
+   side DOWN: n 62 53W/9L  
+
+== 4. COMPOUNDING a fixed fraction of bankroll from $30, per candle, in order
+   Only HOLD and the exit cells whose pnl/$1 > 0 are compounded, as asked. The -10/day and
+   -20 lifetime columns are the probe's real stops applied to the SIMULATED dollars, so they
+   say whether this staking plan would have tripped them, not whether the probe did.
+
+   -- all fills (n 99, 79 candles)  
+                       cell  frac     end $  maxDD% lose run  -10/day  -20 life
+                       HOLD    5%     36.03    24.6        4       no        no
+                       HOLD   10%     39.42    46.0        4      YES        no
+                       HOLD   20%     34.87    76.8        4      YES        no
+                L- U0.90 T-    5%     27.00    29.4        3       no        no
+                L- U0.90 T-   10%     22.51    52.5        3      YES        no
+                L- U0.90 T-   20%     12.11    83.0        3      YES        no
+                L- U0.95 T-    5%     32.39    23.9        3       no        no
+                L- U0.95 T-   10%     32.17    44.8        3      YES        no
+                L- U0.95 T-   20%     24.14    75.2        3      YES        no
+             L0.40 U0.90 T-    5%     25.90    22.8        3       no        no
+             L0.40 U0.90 T-   10%     21.48    42.7        3      YES        no
+             L0.40 U0.90 T-   20%     13.03    72.0        3      YES        no
+             L0.30 U0.90 T-    5%     27.88    19.1        3       no        no
+             L0.30 U0.90 T-   10%     24.73    36.4        3      YES        no
+             L0.30 U0.90 T-   20%     16.82    64.8        3      YES        no
+             L0.30 U0.95 T-    5%     31.37    16.8        3       no        no
+             L0.30 U0.95 T-   10%     31.10    32.5        3      YES        no
+             L0.30 U0.95 T-   20%     25.92    59.2        3      YES        no
+             L0.20 U0.90 T-    5%     27.59    26.5        3       no        no
+             L0.20 U0.90 T-   10%     23.96    47.6        3      YES        no
+             L0.20 U0.90 T-   20%     15.02    76.1        3      YES        no
+             L0.20 U0.95 T-    5%     32.73    22.0        3       no        no
+             L0.20 U0.95 T-   10%     33.50    40.4        3      YES        no
+             L0.20 U0.95 T-   20%     28.72    69.2        3      YES        no
+             L0.10 U0.85 T-    5%     24.68    31.5        3       no        no
+             L0.10 U0.85 T-   10%     19.16    55.6        3      YES        no
+             L0.10 U0.85 T-   20%      9.52    84.5        3      YES       YES
+             L0.10 U0.90 T-    5%     30.42    23.1        3       no        no
+             L0.10 U0.90 T-   10%     28.91    43.2        3      YES        no
+             L0.10 U0.90 T-   20%     21.18    72.9        3      YES        no
+             L0.10 U0.95 T-    5%     36.48    17.6        3       no        no
+             L0.10 U0.95 T-   10%     41.32    34.7        3       no        no
+             L0.10 U0.95 T-   20%     42.22    63.9        3      YES        no
+             L- U0.90 T0.30    5%     23.96    28.6        3       no        no
+             L- U0.90 T0.30   10%     18.38    51.0        3      YES        no
+             L- U0.90 T0.30   20%      9.54    79.5        3      YES       YES
+     cells compounded: 12 (HOLD plus 11 positive exit cells)
+
+   -- entry sec 60-120 (n 80, 67 candles)  
+                       cell  frac     end $  maxDD% lose run  -10/day  -20 life
+                       HOLD    5%     49.41    11.4        2       no        no
+                       HOLD   10%     75.98    22.1        2       no        no
+                       HOLD   20%    144.44    41.7        2       no        no
+                L- U0.85 T-    5%     30.95    14.2        2       no        no
+                L- U0.85 T-   10%     30.45    29.5        2       no        no
+                L- U0.85 T-   20%     25.21    59.1        2      YES        no
+                L- U0.90 T-    5%     37.73    12.5        2       no        no
+                L- U0.90 T-   10%     45.00    24.2        2       no        no
+                L- U0.90 T-   20%     53.83    44.6        2      YES        no
+                L- U0.95 T-    5%     44.85    12.0        2       no        no
+                L- U0.95 T-   10%     63.20    23.2        2       no        no
+                L- U0.95 T-   20%    103.71    43.3        2      YES        no
+             L0.50 U0.90 T-    5%     27.32    16.0        5       no        no
+             L0.50 U0.90 T-   10%     24.25    31.0        5       no        no
+             L0.50 U0.90 T-   20%     17.66    56.8        5      YES        no
+                L0.40 U- T-    5%     35.60    11.7        3       no        no
+                L0.40 U- T-   10%     40.42    22.5        3       no        no
+                L0.40 U- T-   20%     45.52    41.9        3      YES        no
+             L0.40 U0.85 T-    5%     28.70    13.1        3       no        no
+             L0.40 U0.85 T-   10%     26.72    26.2        3       no        no
+             L0.40 U0.85 T-   20%     21.26    50.7        3      YES        no
+             L0.40 U0.90 T-    5%     32.66     8.4        3       no        no
+             L0.40 U0.90 T-   10%     34.44    16.7        3       no        no
+             L0.40 U0.90 T-   20%     34.65    32.5        3      YES        no
+                L0.30 U- T-    5%     42.04     8.0        2       no        no
+                L0.30 U- T-   10%     56.03    15.7        2       no        no
+                L0.30 U- T-   20%     85.35    30.0        2       no        no
+             L0.30 U0.85 T-    5%     30.56     8.4        2       no        no
+             L0.30 U0.85 T-   10%     30.21    17.2        2       no        no
+             L0.30 U0.85 T-   20%     26.80    37.9        2      YES        no
+             L0.30 U0.90 T-    5%     36.72     7.0        2       no        no
+             L0.30 U0.90 T-   10%     43.36    13.8        2       no        no
+             L0.30 U0.90 T-   20%     54.09    26.7        2      YES        no
+             L0.30 U0.95 T-    5%     41.00     6.8        2       no        no
+             L0.30 U0.95 T-   10%     53.72    13.3        2       no        no
+             L0.30 U0.95 T-   20%     81.00    25.6        2       no        no
+                L0.20 U- T-    5%     42.13     9.3        2       no        no
+                L0.20 U- T-   10%     55.85    18.2        2       no        no
+                L0.20 U- T-   20%     82.09    34.3        2       no        no
+             L0.20 U0.85 T-    5%     28.89    13.0        2       no        no
+             L0.20 U0.85 T-   10%     26.78    25.9        2       no        no
+             L0.20 U0.85 T-   20%     20.38    52.6        2      YES        no
+             L0.20 U0.90 T-    5%     34.79     9.4        2       no        no
+             L0.20 U0.90 T-   10%     38.64    18.4        2       no        no
+             L0.20 U0.90 T-   20%     41.53    34.9        2      YES        no
+             L0.20 U0.95 T-    5%     40.90     8.9        2       no        no
+             L0.20 U0.95 T-   10%     53.10    17.4        2       no        no
+             L0.20 U0.95 T-   20%     76.74    33.3        2      YES        no
+                L0.10 U- T-    5%     49.82     9.8        2       no        no
+                L0.10 U- T-   10%     77.83    19.2        2       no        no
+                L0.10 U- T-   20%    156.92    36.6        2       no        no
+             L0.10 U0.80 T-    5%     28.80    17.5        2       no        no
+             L0.10 U0.80 T-   10%     26.69    34.2        2       no        no
+             L0.10 U0.80 T-   20%     20.40    62.5        2      YES        no
+             L0.10 U0.85 T-    5%     33.49    11.5        2       no        no
+             L0.10 U0.85 T-   10%     35.95    22.2        2       no        no
+             L0.10 U0.85 T-   20%     36.50    41.2        2      YES        no
+             L0.10 U0.90 T-    5%     40.82    11.0        2       no        no
+             L0.10 U0.90 T-   10%     53.12    21.3        2       no        no
+             L0.10 U0.90 T-   20%     77.95    39.8        2      YES        no
+             L0.10 U0.95 T-    5%     48.53    10.4        2       no        no
+             L0.10 U0.95 T-   10%     74.60    20.3        2       no        no
+             L0.10 U0.95 T-   20%    150.17    38.3        2      YES        no
+                L- U- T0.30    5%     32.02    11.4        3       no        no
+                L- U- T0.30   10%     32.74    22.7        3       no        no
+                L- U- T0.30   20%     30.05    43.8        3      YES        no
+             L- U0.85 T0.30    5%     27.09    17.9        3       no        no
+             L- U0.85 T0.30   10%     23.80    34.3        3       no        no
+             L- U0.85 T0.30   20%     16.82    61.0        3      YES        no
+             L- U0.90 T0.30    5%     30.04    10.6        3       no        no
+             L- U0.90 T0.30   10%     29.13    22.5        3       no        no
+             L- U0.90 T0.30   20%     24.79    47.0        3      YES        no
+     cells compounded: 24 (HOLD plus 23 positive exit cells)
+
+   -- entry price 0.60-0.70 (n 60, 44 candles)  
+                       cell  frac     end $  maxDD% lose run  -10/day  -20 life
+                       HOLD    5%     38.00    25.7        3       no        no
+                       HOLD   10%     45.25    46.7        3      YES        no
+                       HOLD   20%     52.67    75.4        3      YES        no
+                L- U0.80 T-    5%     27.76    24.3        2       no        no
+                L- U0.80 T-   10%     24.74    44.1        2      YES        no
+                L- U0.80 T-   20%     17.29    71.9        2      YES        no
+                L- U0.85 T-    5%     29.39    27.8        2       no        no
+                L- U0.85 T-   10%     27.54    49.3        2      YES        no
+                L- U0.85 T-   20%     20.85    77.2        2      YES        no
+                L- U0.90 T-    5%     33.30    24.8        2       no        no
+                L- U0.90 T-   10%     35.18    45.1        2      YES        no
+                L- U0.90 T-   20%     33.41    73.5        2      YES        no
+                L- U0.95 T-    5%     37.03    23.6        2       no        no
+                L- U0.95 T-   10%     43.29    43.3        2      YES        no
+                L- U0.95 T-   20%     49.66    71.7        2      YES        no
+             L0.50 U0.80 T-    5%     26.74    19.0        6       no        no
+             L0.50 U0.80 T-   10%     23.51    35.0        6       no        no
+             L0.50 U0.80 T-   20%     17.44    59.5        6      YES        no
+             L0.50 U0.85 T-    5%     25.59    22.0        6       no        no
+             L0.50 U0.85 T-   10%     21.48    39.8        6      YES        no
+             L0.50 U0.85 T-   20%     14.44    65.4        6      YES        no
+             L0.50 U0.90 T-    5%     26.54    21.0        6       no        no
+             L0.50 U0.90 T-   10%     23.07    38.4        6      YES        no
+             L0.50 U0.90 T-   20%     16.49    64.1        6      YES        no
+             L0.40 U0.80 T-    5%     28.40    16.8        6       no        no
+             L0.40 U0.80 T-   10%     26.41    31.5        6      YES        no
+             L0.40 U0.80 T-   20%     21.57    55.4        6      YES        no
+             L0.40 U0.85 T-    5%     28.43    18.4        6       no        no
+             L0.40 U0.85 T-   10%     26.37    34.1        6      YES        no
+             L0.40 U0.85 T-   20%     21.23    58.3        6      YES        no
+             L0.40 U0.90 T-    5%     30.31    16.6        6       no        no
+             L0.40 U0.90 T-   10%     29.85    31.5        6      YES        no
+             L0.40 U0.90 T-   20%     26.77    55.6        6      YES        no
+             L0.30 U0.80 T-    5%     28.83    15.7        4       no        no
+             L0.30 U0.80 T-   10%     27.13    29.7        4       no        no
+             L0.30 U0.80 T-   20%     22.50    52.8        4      YES        no
+             L0.30 U0.85 T-    5%     30.21    18.2        4       no        no
+             L0.30 U0.85 T-   10%     29.68    33.9        4      YES        no
+             L0.30 U0.85 T-   20%     26.51    58.5        4      YES        no
+             L0.30 U0.90 T-    5%     34.00    14.9        4       no        no
+             L0.30 U0.90 T-   10%     37.41    28.5        4       no        no
+             L0.30 U0.90 T-   20%     41.39    51.7        4      YES        no
+             L0.30 U0.95 T-    5%     37.38    14.0        4       no        no
+             L0.30 U0.95 T-   10%     45.04    26.6        4       no        no
+             L0.30 U0.95 T-   20%     59.04    48.6        4      YES        no
+             L0.20 U0.80 T-    5%     28.37    21.9        4       no        no
+             L0.20 U0.80 T-   10%     26.11    40.0        4      YES        no
+             L0.20 U0.80 T-   20%     20.28    66.4        4      YES        no
+             L0.20 U0.85 T-    5%     30.35    24.4        4       no        no
+             L0.20 U0.85 T-   10%     29.73    43.8        4      YES        no
+             L0.20 U0.85 T-   20%     25.77    70.8        4      YES        no
+             L0.20 U0.90 T-    5%     34.24    21.3        4       no        no
+             L0.20 U0.90 T-   10%     37.66    39.2        4      YES        no
+             L0.20 U0.90 T-   20%     40.62    66.0        4      YES        no
+             L0.20 U0.95 T-    5%     37.84    20.0        4       no        no
+             L0.20 U0.95 T-   10%     45.80    37.2        4      YES        no
+             L0.20 U0.95 T-   20%     59.05    63.8        4      YES        no
+             L0.10 U0.80 T-    5%     29.61    20.7        2       no        no
+             L0.10 U0.80 T-   10%     28.32    38.3        2      YES        no
+             L0.10 U0.80 T-   20%     23.37    65.0        2      YES        no
+             L0.10 U0.85 T-    5%     31.58    23.8        2       no        no
+             L0.10 U0.85 T-   10%     32.02    43.1        2      YES        no
+             L0.10 U0.85 T-   20%     29.18    70.6        2      YES        no
+             L0.10 U0.90 T-    5%     35.77    20.6        2       no        no
+             L0.10 U0.90 T-   10%     40.90    38.4        2       no        no
+             L0.10 U0.90 T-   20%     46.76    65.7        2      YES        no
+             L0.10 U0.95 T-    5%     39.78    19.3        2       no        no
+             L0.10 U0.95 T-   10%     50.32    36.4        2       no        no
+             L0.10 U0.95 T-   20%     69.50    63.5        2      YES        no
+             L- U0.85 T0.10    5%     26.04    21.6       10       no        no
+             L- U0.85 T0.10   10%     22.33    39.1       10      YES        no
+             L- U0.85 T0.10   20%     15.82    64.3       10      YES        no
+             L- U0.90 T0.10    5%     26.28    21.4       10       no        no
+             L- U0.90 T0.10   10%     22.73    38.8       10      YES        no
+             L- U0.90 T0.10   20%     16.34    64.0       10      YES        no
+             L- U0.80 T0.20    5%     25.95    20.2        6       no        no
+             L- U0.80 T0.20   10%     22.12    37.0        6      YES        no
+             L- U0.80 T0.20   20%     15.32    62.0        6      YES        no
+             L- U0.85 T0.20    5%     25.59    22.0        6       no        no
+             L- U0.85 T0.20   10%     21.47    39.9        6      YES        no
+             L- U0.85 T0.20   20%     14.36    65.5        6      YES        no
+             L- U0.90 T0.20    5%     25.70    22.0        6       no        no
+             L- U0.90 T0.20   10%     21.63    39.9        6      YES        no
+             L- U0.90 T0.20   20%     14.51    65.7        6      YES        no
+             L- U0.80 T0.30    5%     27.77    17.2        6       no        no
+             L- U0.80 T0.30   10%     25.20    32.3        6       no        no
+             L- U0.80 T0.30   20%     19.52    56.5        6      YES        no
+             L- U0.85 T0.30    5%     27.17    20.2        6       no        no
+             L- U0.85 T0.30   10%     24.06    37.1        6      YES        no
+             L- U0.85 T0.30   20%     17.59    62.6        6      YES        no
+             L- U0.90 T0.30    5%     29.14    16.1        6       no        no
+             L- U0.90 T0.30   10%     27.58    30.4        6      YES        no
+             L- U0.90 T0.30   20%     22.82    55.0        6      YES        no
+     cells compounded: 31 (HOLD plus 30 positive exit cells)
+
+VERDICTS (Zurich, 10-02 11:0x). IN-SAMPLE, so these are hypotheses, not findings.
+1. NO EXIT RULE BEATS HOLDING. Of the 45 stop x take-profit x trailing cells on all 99 fills, ZERO
+   beat hold (+0.1232/$1). The closest is L0.10/U0.95 at +0.1123, still -3.37 in dollars. Every
+   take-profit destroys value and the cheap ones are the worst: U0.80 costs -56.38 against hold,
+   because the probe's winners are bought at 0.60-0.80 and settle at 1.00, so selling at 0.80 caps
+   the entire edge while keeping every loss. Trailing stops are worse again (-0.1136/$1 at 10 pts).
+   Excluding the 09-30 17:00 candle only TWO cells beat hold, both deep stops with NO take-profit:
+   L0.20 by +0.26 and L0.10 by +7.81. That is the same marginal result as the earlier stop study and
+   it rests on the same removal of the probe's best candle.
+   Remember these exits are priced at a proven bid print with no queue and no size, i.e. the most
+   generous possible assumption, and they STILL lose to doing nothing.
+2. CANCELLING A RESTING ORDER WHEN THE BID DIPS THROWS AWAY THE BEST FILLS. At 1 tick it removes 10
+   fills that went 9W/1L for +7.63 (+0.2642/$1); at 2 ticks 9 fills, 8W/1L, +6.53; at 3 ticks 8
+   fills, 7W/1L, +4.83. The sign is the same at every depth: the fills taken while the bid is
+   slipping are the GOOD ones. This is the second independent result pointing the same way as the
+   2 bps cancel being inert - reacting to short-term adverse movement costs the probe money.
+3. THE CLEANEST SEPARATOR IS MAX ADVERSE EXCURSION, AND IT IS ALMOST DISJOINT: winners' max drop
+   below entry has median 0.21 pts and maximum 0.62; losers' has median 0.64 and MINIMUM 0.57.
+   Only the 0.57-0.62 band overlaps. But it is measured over the whole candle, after the fact, so it
+   cannot gate an entry - and acting on it IS the deep stop, which section 1 shows recovers almost
+   nothing because by then the price is near zero. Winners reach 0.80 at a median of 81 s; of 22
+   losers only 2 ever touched 0.80 and only 1 touched 0.90. Fill second and price paid barely
+   separate at all (medians 71 vs 81 s, 0.66 vs 0.65), which is worth noting against section 4.
+4. WHAT COMPOUNDS IS THE ENTRY FILTER, NOT ANY EXIT. Staking a fixed fraction from $30, HOLD:
+     all fills            5% -> $36.03 (DD 24.6%)   10% -> $39.42 (46.0%)   20% -> $34.87 (76.8%)
+     entry sec 60-120     5% -> $49.41 (DD 11.4%)   10% -> $75.98 (22.1%)   20% -> $144.44 (41.7%)
+     entry price 0.60-0.70 5% -> $38.00 (DD 25.7%)  10% -> $45.25 (46.7%)   20% -> $52.67 (75.4%)
+   The sec 60-120 subset is the only one that never trips the -10 day stop at ANY fraction, and the
+   only one whose drawdown falls as the edge rises. No exit cell beats HOLD inside any subset.
+   DOUBLE IN-SAMPLE WARNING: sec 60-120 was itself selected from these same fills (it is already P1
+   in PREREG_M21), so compounding it here measures the same choice twice. The $144 figure is what
+   this sample would have produced in hindsight, not an expectation.
+WHAT IS FROZEN FROM THIS READ: P5-P7 appended to PREREG_M21, judged out of sample at 200 candles.
+Nothing is proposed to the owner and nothing was changed.

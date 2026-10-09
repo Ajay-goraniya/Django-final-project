@@ -1,0 +1,63 @@
+M50 READING B - BUY BOTH AT 80, STAKE DOUBLES ON EVERY RE-BUY. POLYMARKET. READ-ONLY.
+2026-10-03 12:49:07 UTC. legB byte-identical to m49_hit70_both.py leg(); trigger
+is m50's own with 0.80. Max stake reached is derived as grow^(n-1) from the buy count, so the
+rule itself is untouched. Only the candle dict, session split and reporting are mine.
+Polymarket only; venues.outcome + gamma labels; no Predict.fun data.
+
+  POLY fee  OWNER EXACT x2 : n 2539 $/candle -0.2310 per $ staked -0.0648 t -5.61 halves -0.1793/-0.2827 green 1/12 buys 2.67 worst -15.74 maxDD -590.1 | max stake reached 16 (mean 1.59) | 80-side won 82%
+  POLY fee  flat stake x1  : n 2539 $/candle -0.1935 per $ staked -0.0724 t -6.06 halves -0.1444/-0.2426 green 1/12 buys 2.67 worst -4.12 maxDD -499.2 | max stake reached 1 (mean 1.00) | 80-side won 82%
+  POLY fee  HOLD both      : n 2539 $/candle -0.1359 per $ staked -0.0679 t -4.48 halves -0.1060/-0.1658 green 2/12 buys 2.00 worst -1.05 maxDD -348.7 | max stake reached 1 (mean 1.00) | 80-side won 82%
+
+  POLY 0fee OWNER EXACT x2 : n 2539 $/candle -0.0926 per $ staked -0.0260 t -2.29 halves -0.0440/-0.1411 green 4/12 buys 2.67 worst -14.40 maxDD -250.4 | max stake reached 16 (mean 1.59) | 80-side won 82%
+  POLY 0fee flat stake x1  : n 2539 $/candle -0.0752 per $ staked -0.0281 t -2.38 halves -0.0279/-0.1225 green 4/12 buys 2.67 worst -3.76 maxDD -231.1 | max stake reached 1 (mean 1.00) | 80-side won 82%
+  POLY 0fee HOLD both      : n 2539 $/candle -0.0668 per $ staked -0.0334 t -2.20 halves -0.0368/-0.0967 green 3/12 buys 2.00 worst -0.98 maxDD -188.1 | max stake reached 1 (mean 1.00) | 80-side won 82%
+
+  BY SESSION ($/candle)
+  row                                     ASIA |               EU |               US |             LATE
+  POLY fee  OWNER EXACT x2      -0.1844 n740 |     -0.3062 n686 |     -0.1628 n696 |     -0.3042 n417
+  POLY fee  flat stake x1       -0.1654 n740 |     -0.2298 n686 |     -0.1541 n696 |     -0.2495 n417
+  POLY fee  HOLD both           -0.0839 n740 |     -0.1341 n686 |     -0.1400 n696 |     -0.2242 n417
+  POLY 0fee OWNER EXACT x2      -0.0488 n740 |     -0.1624 n686 |     -0.0229 n696 |     -0.1715 n417
+  POLY 0fee flat stake x1       -0.0486 n740 |     -0.1094 n686 |     -0.0347 n696 |     -0.1337 n417
+  POLY 0fee HOLD both           -0.0148 n740 |     -0.0650 n686 |     -0.0708 n696 |     -0.1551 n417
+
+  THE ENTRY, before any rule: mean COMBINED ask at the 0.80 trigger 1.0126 for a payout of exactly 1.00
+  -> buy-both starts -0.0126 per candle on $2, i.e. -0.0125 per $ staked, guaranteed, before fees and before stops.
+ONE-SIDED CONTROL at the 0.80 trigger, same check as M49 so the 82% is not misread:
+  n 2539; mean ask actually PAID on the 80-side 0.8162; it won 81.6%
+  break-even win rate at that ask 81.6% -> gap +0.03%
+  BUY ONLY the 80-side and hold, fee:   per $1 -0.0124  t -1.31
+  BUY ONLY the 80-side and hold, 0 fee: per $1 +0.0005  t +0.05
+
+================================================================================
+M50-B VERDICT: -0.2310 PER CANDLE WITH FEES, AND THE DOUBLING IS THE WORST THING IN IT. THE TAIL
+GOES FROM -1.05 TO -15.74 AND A SINGLE LEG REACHED A 16x STAKE.
+
+  OWNER EXACT x2, fees    $/candle -0.2310  per $ staked -0.0648  t -5.61  1/12 green  worst -15.74
+  flat stake x1,  fees             -0.1935               -0.0724  t -6.06  1/12 green  worst  -4.12
+  HOLD both,      fees             -0.1359               -0.0679  t -4.48  2/12 green  worst  -1.05
+  OWNER EXACT x2, 0 fee            -0.0926               -0.0260  t -2.29  4/12 green  worst -14.40
+  HOLD both,      0 fee            -0.0668               -0.0334  t -2.20  3/12 green  worst  -0.98
+Max stake reached 16 (mean 1.59), so on a $1 base one leg of one 5-minute candle carried $16.
+
+THE DOUBLING CREATES AN ILLUSION THAT NEEDS NAMING, because the per-dollar column flatters it: x2 is
+-0.0648 per DOLLAR STAKED against flat stake's -0.0724, so doubling looks BETTER per dollar. It is
+not better - it is staking far more dollars. Per CANDLE it is -0.2310 against -0.1935, and the worst
+candle is nearly four times deeper. That is the martingale signature exactly: the average improves
+because the big stakes land on the re-buys that happen to run, while the ruin cases concentrate in a
+handful of candles. One candle at -15.74 on a $1 base is sixteen times the nominal unit.
+AND HOLD BOTH BEATS BOTH STAKED VERSIONS AGAIN (-0.1359 against -0.1935 and -0.2310), with a worst
+candle of -1.05. Buying both sides caps the loss at the spread; every piece of machinery added on
+top removes that cap and pays for the privilege.
+
+THE ENTRY IS STILL A GUARANTEED LOSS: mean combined ask at the 0.80 trigger is 1.0126 for a payout
+of exactly 1.00, so buy-both starts -0.0125 per dollar staked with certainty - before fees, before
+stops, before any doubling. That is the floor everything else is built below.
+AND I RAN THE SAME ONE-SIDED CHECK AS M49 SO THE 82% IS NOT MISREAD: the mean ask actually PAID on
+the 80-side is 0.8162, not 0.80, and it won 81.6% - break-even at that ask is 81.6%, a gap of three
+HUNDREDTHS of a percentage point. Buying only the 80-side and holding is +0.0005 per $1 at zero fee
+(t +0.05) and -0.0124 with the fee. Together with M44 (+0.0022 at 0.60), M47 and M49 (+0.0021 at
+0.70), that is four independent price levels where the 5-minute favourite is priced correctly to
+within a rounding error. The market is not leaving anything at 0.60, 0.70 or 0.80.
+Sessions: every cell negative in both fee columns - EU and LATE worst (-0.306, -0.304 with fees).
+Polymarket only, legB byte-identical to the prereg script, nothing live touched.

@@ -1,0 +1,6 @@
+test days [np.str_('09-13'), np.str_('09-14'), np.str_('09-15'), np.str_('09-16')], rows 18327 (UP side, sec 30..240 step 10). log loss / AUC
+sec  30- 90 n 6487  mid 0.5714/0.772  trees_mid_only 0.5774/0.769  trees_all 0.6497/0.736
+sec 100-150 n 5535  mid 0.4843/0.849  trees_mid_only 0.4916/0.842  trees_all 0.5434/0.826
+sec 160-200 n 4031  mid 0.4238/0.887  trees_mid_only 0.4361/0.881  trees_all 0.4829/0.868
+sec 210-240 n 2274  mid 0.3454/0.927  trees_mid_only 0.3506/0.927  trees_all 0.3882/0.909
+sec  30-240 n18327  mid 0.4846/0.847  trees_mid_only 0.4923/0.842  trees_all 0.5485/0.821

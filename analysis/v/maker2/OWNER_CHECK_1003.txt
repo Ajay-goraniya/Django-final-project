@@ -1,0 +1,6 @@
+OWNER 10-03 13:0x "this can't be true, buggy code?" - V checks without strategy code (Polymarket 08-01, raw book):
+1) First time a side's ask reaches X: avg ask paid / side won / edge before fees
+   0.50: 0.556 / 56.2% / +0.006 | 0.60: 0.651 / 65.2% / +0.000 | 0.70: 0.735 / 72.8% / -0.007 | 0.80: 0.828 / 81.8% / -0.010
+2) UP ask + DOWN ask same second: mean 1.0137 over 16,411 seconds, never below 1.00.
+3) Hand trace of M50B (00:20 candle) reproduces the arithmetic line by line; an independent re-implementation gives -0.2293/candle,
+   identical to m50_80_double.py. Zurich re-implemented every M4x rule on its own loader and got the same signs on 12 days.

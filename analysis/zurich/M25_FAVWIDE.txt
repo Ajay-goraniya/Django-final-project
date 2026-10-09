@@ -1,0 +1,98 @@
+M25 - FAV-WIDE (0.55, 0.9) vs BASE FAV (0.65, 0.85). READ-ONLY, nothing deployed. 2026-10-02 13:12:28 UTC
+Only the band differs. Window 60-180, calm < 0.304, one buy per candle, and the fill model is
+the shadow's own _fav_fill / _fav_pnl (arrival +500 ms, real recorded ask, exact fee, $10),
+called rather than reimplemented. "Fill" means got > 0 shares.
+calm candles replayed: 423
+
+
+== (a) FORWARD 09-29 00:00 .. now  (385 calm candles)
+   arm        fills  pnl $@10   per $1   H1 pnl   H2 pnl  flag
+   base FAV     298    +45.01  +0.0151   +19.05   +25.95  
+   FAV-wide     328    -43.02  -0.0131   +27.57   -70.59  
+   diff wide-base: -88.03 $  -0.0282 per $1
+
+== (b) HISTORY 09-24 .. 28  (38 calm candles)
+   arm        fills  pnl $@10   per $1   H1 pnl   H2 pnl  flag
+   base FAV      31    -24.11  -0.0778   -21.60    -2.51  INSUFFICIENT (<60)
+   FAV-wide      32    +40.33  +0.1260    +0.67   +39.67  INSUFFICIENT (<60)
+   diff wide-base: +64.45 $  +0.2038 per $1
+
+== (bonus) TODAY 10-02 only  (45 calm candles)
+   arm        fills  pnl $@10   per $1   H1 pnl   H2 pnl  flag
+   base FAV      35    -64.97  -0.1856   -10.32   -54.65  INSUFFICIENT (<60)
+   FAV-wide      37    -72.68  -0.1964   -24.93   -47.75  INSUFFICIENT (<60)
+   diff wide-base: -7.71 $  -0.0108 per $1
+
+== PAIRED, FORWARD: only candles where the two DISAGREE carry information
+   identical trade (same entry): 170
+   EXTRA - wide trades, base does not: 47, their pnl +19.97  INSUFFICIENT (<60)
+   DIFFERENT entry, both trade: 111, wide -11.12 vs base +92.31 (wide-base -103.42)
+   total discordant 158; FAV-wide net on them -83.46
+   on the DIFFERENT ones wide buys at avg ask 0.653 sec 62 against base 0.700 sec 81 - the prereg mechanism, measured forward
+
+== PAIRED, HISTORY 09-24..28: only candles where the two DISAGREE carry information
+   identical trade (same entry): 18
+   EXTRA - wide trades, base does not: 5, their pnl +10.62  INSUFFICIENT (<60)
+   DIFFERENT entry, both trade: 9, wide +33.05 vs base -21.79 (wide-base +54.84)  INSUFFICIENT (<60)
+   total discordant 14; FAV-wide net on them +65.46  INSUFFICIENT (<60)
+   on the DIFFERENT ones wide buys at avg ask 0.643 sec 60 against base 0.688 sec 84 - the prereg mechanism, measured forward
+
+== PAIRED, TODAY 10-02: only candles where the two DISAGREE carry information
+   identical trade (same entry): 22
+   EXTRA - wide trades, base does not: 4, their pnl -17.70  INSUFFICIENT (<60)
+   DIFFERENT entry, both trade: 11, wide +2.11 vs base -14.67 (wide-base +16.77)  INSUFFICIENT (<60)
+   total discordant 15; FAV-wide net on them -0.92  INSUFFICIENT (<60)
+   on the DIFFERENT ones wide buys at avg ask 0.663 sec 60 against base 0.702 sec 73 - the prereg mechanism, measured forward
+
+== PER DAY, every day shown
+   day      candles base n   base $ wide n   wide $ wide-base
+   09-28         38     31   -24.11     32   +40.33    +64.45
+   09-29        110     84   +48.74     97   +34.27    -14.47
+   09-30        117     88   +16.24     99    +5.82    -10.42
+   10-01        113     91   +44.99     95   -10.43    -55.43
+   10-02         45     35   -64.97     37   -72.68     -7.71
+
+== THE PREREG'S FOUR CHECKS, on the FORWARD period
+   1 FAV-wide pnl > 0, both halves > 0, fills >= 60: pnl -43.02, halves +27.57/-70.59, fills 328 -> FAIL
+   2 beats base in $ AND per $1: -43.02 vs +45.01 and -0.0131 vs +0.0151 -> FAIL
+   3 paired discordant trades pnl > 0 on n >= 60: net -83.46 on n 158 -> FAIL
+   4 per day reported, no day hidden: PASS (5 days above)
+
+   OVERALL: FAIL - per the prereg, a failure leaves base FAV as the reference and nothing is proposed.
+
+LIMITATION ON PERIOD (b), stated rather than worked around. The prereg asks for history 09-24..28.
+The BOOKS reach back that far (2302 candles with book rows from 09-24 12:30), but the FROZEN CALM
+GATE cannot be computed there: its input is the shadow's Binance 1 s series, which begins 09-28
+18:13, so the first epoch with a computable vol is 09-28 18:20. Everything before that is skipped
+because the gate is undefined, not because it was calm or not calm. Period (b) above is therefore
+09-28 18:20 .. 09-28 24:00 only - 38 calm candles, 31/32 fills, INSUFFICIENT on both arms.
+I did NOT substitute the settlement-series vol (_vol_open / FAV_REF_CUT) to reach further back: it
+is a different definition with a different cut, and swapping it in would be testing a different rule
+while calling it the registered one.
+
+VERDICT (Zurich, 10-02 13:1x): M25 FAILS, on the check the prereg itself called the one that matters.
+ 1 FAIL  FAV-wide forward pnl -43.02 on 328 fills, halves +27.57 then -70.59. Fills clear 60; the
+         pnl and the second half do not.
+ 2 FAIL  base FAV +45.01 and +0.0151/$1; FAV-wide -43.02 and -0.0131/$1. Wide is 88.03 WORSE in
+         dollars and 0.0282 worse per $1 on the same calm candles.
+ 3 FAIL  and this is the informative one. 158 discordant candles, enough to read (>= 60), and
+         FAV-wide is -83.46 net on them. Split: the 47 EXTRA trades wide takes and base does not are
+         roughly neutral (+19.97, which matches the prereg's own in-sample +0.15 reading that extra
+         trades are "nothing"); the damage is the 111 candles where BOTH trade and wide buys earlier
+         and cheaper - wide -11.12 against base +92.31, i.e. -103.42.
+ 4 PASS  every day is in the table, including the two that favour wide.
+THE IN-SAMPLE MECHANISM REVERSED. The prereg's logged mechanism was that base "waits for the
+favourite to climb to 0.65 and pays for the move", so buying the same favourite at ~0.60 keeps it:
+in-sample that was wide +17.10 vs base -3.07 on 310 such candles. Forward, the entry difference is
+the same shape - wide buys at avg ask 0.653 at sec 62, base at 0.700 at sec 81 - but the sign of the
+result is opposite: the cheaper, earlier entry LOST 103 relative to waiting. Both facts can be true
+at once: the favourite that is still at 0.60-0.65 at second 62 is on average not yet the favourite
+the market settles on, and the 4 cents base pays by second 81 are buying information, not just
+chasing. That is the reading I would put next to the in-sample result, not a dismissal of it.
+PER DAY, wide beats base on exactly one day of five (09-28, +64.45, and that is the 38-candle
+INSUFFICIENT fragment) and loses on 09-29 (-14.47), 09-30 (-10.42), 10-01 (-55.43) and 10-02 (-7.71).
+BONUS, today 10-02 alone: the wider band loses MORE, not less - wide -72.68 against base -64.97
+(-0.1964 vs -0.1856 per $1). On the 11 candles where both traded and entries differed wide was
+actually better today (+2.11 vs -14.67), but its 4 extra trades cost -17.70, so the band itself did
+not cushion today's losses.
+Base FAV stays the reference. Nothing is proposed to the owner and nothing was deployed.

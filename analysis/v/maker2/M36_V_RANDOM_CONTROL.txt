@@ -1,0 +1,18 @@
+M36 V-side random-entry control (1 day 08-01 local polybook, 5 s grid, 1,597 random entries, taker stop at triggering bid + fee). Read-only.
+Script: same family as PREREG_M36 grid (a,g,R,T). Result: 0 of 192 cells positive; re-buy (R=1) worst; best cells = stop rarely fires (a30). Exit rules alone add at most +0.02/$1 vs HOLD - no money from exits alone; any edge must come from the entry.
+n entries 1597 HOLD per1 -0.0778
+           a      g    R     T    per1        t  vsHOLD
+mean  0.1333  0.125  0.5  0.25 -0.1307  -8.8898 -0.0529
+min   0.0000  0.050  0.0  0.00 -0.2189 -19.9896 -0.1411
+max   0.3000  0.200  1.0  0.50 -0.0564  -2.7250  0.0214
+cells per1>0: 0 of 192
+        a     g  R    T    per1       t  vsHOLD
+144  0.20  0.15  0  0.0 -0.0616 -3.0847  0.0162
+160  0.30  0.05  0  0.0 -0.0603 -3.1022  0.0176
+112  0.15  0.15  0  0.0 -0.0588 -3.0555  0.0190
+176  0.30  0.15  0  0.0 -0.0575 -2.7250  0.0203
+168  0.30  0.10  0  0.0 -0.0564 -2.7631  0.0214
+      a     g  R    T    per1        t  vsHOLD
+5   0.0  0.05  1  0.2 -0.2189 -19.9896 -0.1411
+13  0.0  0.10  1  0.2 -0.2177 -19.3227 -0.1399
+29  0.0  0.20  1  0.2 -0.2151 -18.9226 -0.1373

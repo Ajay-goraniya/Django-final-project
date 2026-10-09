@@ -1,0 +1,33 @@
+--- /home/ubuntu/pm_multi/eth_sol_shadow.py	2026-09-27 10:05:47.348788444 +0000
++++ /tmp/pp/eth_sol_shadow.py	2026-09-28 06:03:40.911565604 +0000
+@@ -63,6 +63,16 @@
+        book_age_s REAL, decide_ms REAL, depth_at_cap REAL, engine_ok INTEGER, reason TEXT, spot_age_s REAL)""",
+     """CREATE TABLE IF NOT EXISTS skips(epoch INTEGER, sec INTEGER, reason TEXT, detail TEXT,
+        PRIMARY KEY(epoch, sec, reason))""",
++    # Every pass that reached a p and a book, qualified or not. ETH_SOL_DIAG could only measure calibration
++    # on the FIRED set, which is selected by the very quantity being corrected (EV, and therefore p), so the
++    # 17.3 pp over-confidence there is the error where the money is and NOT an unconditional number. This
++    # table is the ETH/SOL equivalent of BTC's decide_log and it is what makes an unconditional calibration,
++    # and a bar chosen on the full distribution, possible. One row per second per arm, 15-240 s, and the
++    # candle short-circuits once it has fired, so the real rate is well under 226 rows/candle.
++    """CREATE TABLE IF NOT EXISTS decide(epoch INTEGER, sec INTEGER, ts REAL, side TEXT,
++       p_up REAL, p_side REAL, ask REAL, ask_up REAL, ask_dn REAL, ask_sz REAL, ev REAL, theta REAL,
++       qualified INTEGER, book_age_s REAL, spot_age_s REAL, zt REAL, sig REAL, line REAL, spot REAL,
++       PRIMARY KEY(epoch, sec))""",
+     # post-fire drift on LIVE books: what the side's ask was 1 s and 2 s after we fired. On the frozen
+     # arm's first 6 h the slippage at the fill was +0.00c, so the question is not what we paid but what
+     # the book did next - that is the number that says whether the fire moment was any good.
+@@ -267,7 +277,12 @@
+         if best is None:
+             db.execute('INSERT OR IGNORE INTO skips VALUES(?,?,?,?)', (ep, s, 'no_book', '')); db.commit(); continue
+         ev, tk, side, p_side, q = best
+-        if ev < A.theta: continue
++        qu, qd = qs.get(up), qs.get(dn)
++        db.execute('INSERT OR REPLACE INTO decide VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
++                   (ep, s, time.time(), side, p_up, p_side, q['ask'],
++                    qu['ask'] if qu else None, qd['ask'] if qd else None, q['ask_sz'],
++                    ev, A.theta, 1 if ev >= A.theta else 0, q['age'], spot_age, zt, sig, line, spot))
++        if ev < A.theta: db.commit(); continue
+         tm = terms.get(tk)
+         if not tm:
+             db.execute('INSERT OR IGNORE INTO skips VALUES(?,?,?,?)', (ep, s, 'no_terms', '')); db.commit(); continue

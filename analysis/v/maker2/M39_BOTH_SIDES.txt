@@ -1,0 +1,17 @@
+M39 (V, 10-03 12:1x) owner: 'same on both side, up and down, at minute 3'. EXACT rule: buy UP+DOWN at ask at sec 180, owner's ratchet on each leg (v1 and v2 re-buy). sec 120/240 shown for reference. History only.
+PRED sec120 v1 no re-buy: n1159 per\$1 -0.0452 t-6.15 halves -0.0480/-0.0424 green 0/6 worst -0.960 best +0.812
+PRED sec120 v2 re-buy: n1159 per\$1 -0.0936 t-9.93 halves -0.0965/-0.0907 green 0/6 worst -1.257 best +0.794
+PRED sec180 v1 no re-buy: n1148 per\$1 -0.0447 t-6.41 halves -0.0397/-0.0498 green 0/6 worst -0.950 best +0.881
+PRED sec180 v2 re-buy: n1148 per\$1 -0.0749 t-8.78 halves -0.0859/-0.0638 green 0/6 worst -1.416 best +0.881
+PRED sec240 v1 no re-buy: n1025 per\$1 -0.0491 t-6.48 halves -0.0495/-0.0487 green 0/6 worst -0.970 best +0.911
+PRED sec240 v2 re-buy: n1025 per\$1 -0.0566 t-7.98 halves -0.0526/-0.0606 green 0/6 worst -1.079 best +0.911
+PRED sec180 HOLD both: n1148 per\$1 -0.0314
+POLY fee sec120 v1 no re-buy: n288 per\$1 -0.0716 t-4.97 halves -0.0773/-0.0659 green 0/1 worst -0.897 best +0.754
+POLY fee sec120 v2 re-buy: n288 per\$1 -0.0938 t-5.08 halves -0.1059/-0.0818 green 0/1 worst -1.295 best +0.754
+POLY fee sec180 v1 no re-buy: n285 per\$1 -0.0689 t-4.72 halves -0.0591/-0.0787 green 0/1 worst -0.880 best +0.797
+POLY fee sec180 v2 re-buy: n285 per\$1 -0.0783 t-4.73 halves -0.0804/-0.0761 green 0/1 worst -1.047 best +0.797
+POLY fee sec240 v1 no re-buy: n276 per\$1 -0.0498 t-3.97 halves -0.0555/-0.0441 green 0/1 worst -0.952 best +0.956
+POLY fee sec240 v2 re-buy: n276 per\$1 -0.0563 t-4.59 halves -0.0679/-0.0446 green 0/1 worst -0.952 best +0.956
+POLY 0fee sec180 v1 no re-buy: n285 per\$1 -0.0310 t-2.13 halves -0.0179/-0.0440 green 0/1 worst -0.856 best +0.822
+POLY 0fee sec180 v2 re-buy: n285 per\$1 -0.0288 t-1.77 halves -0.0267/-0.0309 green 0/1 worst -0.941 best +0.822
+VERDICT: FAIL everywhere (t -4 to -10, 0 green days, halves both negative). Worse than just holding both (-0.031). Why: both legs cost >= $1 (spread), and the stop sells the leg that later wins.

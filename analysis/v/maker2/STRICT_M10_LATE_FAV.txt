@@ -1,0 +1,35 @@
+M5 strict passive FAV calm. candles 5584 2026-09-11..2026-09-30; $100 start, $10/fill, rebates excluded. IN = 09-26..28 build set.
+post  calm cut    fill   slip posts fills  fill%  win%    end $  maxDD$ maxDD% loss run  days+ OUT-of-sample $    IN $
+tape  fixed0.304  thru   0.00  2074  1130    54%  89.3      1.2   116.7    99%        3   4/10           -98.8    +0.0  STOPPED (<$10)
+tape  fixed0.304  thru   0.01  2074  1130    54%  89.3      6.9   105.1    94%        2   1/5            -93.1    +0.0  STOPPED (<$10)
+tape  fixed0.304  touch  0.00  2074  1410    68%  91.4      7.5   131.6    95%        2   5/13           -92.5    +0.0  STOPPED (<$10)
+tape  fixed0.304  touch  0.01  2074  1410    68%  91.4      3.8   113.9    97%        2   4/10           -96.2    +0.0  STOPPED (<$10)
+tape  causal      thru   0.00  1585   881    56%  88.6      9.4   118.6    93%        2   3/7            -90.6    +0.0  STOPPED (<$10)
+tape  causal      thru   0.01  1585   881    56%  88.6      2.4   118.3    98%        2   2/7            -97.6    +0.0  STOPPED (<$10)
+tape  causal      touch  0.00  1585  1092    69%  90.8      8.4   130.3    94%        2   3/7            -91.6    +0.0  STOPPED (<$10)
+tape  causal      touch  0.01  1585  1092    69%  90.8      4.4   124.4    97%        2   3/7            -95.6    +0.0  STOPPED (<$10)
+
+PER DAY - headline = strictest: tape post, causal calm cut, trade-through fills, +1c slippage
+  2026-09-11  no fills
+  2026-09-12  no fills
+  2026-09-13  no fills
+  2026-09-14  fills   2  won   2  day $   +1.86  equity  101.86
+  2026-09-15  fills   7  won   5  day $  -16.45  equity   85.41
+  2026-09-16  fills  36  won  36  day $  +24.23  equity  109.64
+  2026-09-17  fills  91  won  81  day $  -41.58  equity   68.06
+  2026-09-18  fills  43  won  36  day $  -44.00  equity   24.06
+  2026-09-19  fills 107  won 100  day $   -2.68  equity   21.39
+  2026-09-20  fills   3  won   1  day $  -19.01  equity    2.38
+  2026-09-21  no fills
+  2026-09-22  no fills cut-fit day
+  2026-09-23  no fills cut-fit day
+  2026-09-24  no fills
+  2026-09-25  no fills
+  2026-09-26  no fills IN(build)
+  2026-09-27  no fills IN(build)
+  2026-09-28  no fills IN(build)
+  2026-09-29  no fills
+  2026-09-30  no fills
+
+VERDICT (V, 09-30): M10 FAILS. Passive late buys of 0.90-0.97 favourites win 89-91% but need ~93% at that price; every cell goes broke
+from $100 (all 8 tape cells STOPPED). Same adverse selection as M5: the bids that fill are the ones the favourite collapses through.

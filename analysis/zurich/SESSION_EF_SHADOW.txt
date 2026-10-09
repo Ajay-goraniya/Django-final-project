@@ -1,0 +1,140 @@
+Does London's 00-13 vs 13-24 fixed15 split hold OUTSIDE 09-23..10-01? READ-ONLY. Owner via V.
+
+London's real fixed15 fills 09-23..10-01 (n=366) split 00-13 UTC -235 / 13-24 UTC +151. The owner asks
+whether that happens all the time. This is the independent check on Zurich's own EF history, and V's
+instruction was to prefer DAYS NOT IN 09-23..10-01.
+
+Nothing is re-derived: fires, the FIXED (= fixed15) predicate, gamma grading and the lane_exec_sim
+London execution all come from stable_ef.py, which carries the frozen definitions.
+Buckets fixed before looking: Asia 00-07, Europe 07-13, US 13-20, Late 20-24 UTC.
+
+FIXED (= fixed15) fires rebuilt from the engine diagnostics: 231 over 12 days.
+  days OUTSIDE 09-23..10-01 (the independent sample): ['09-15', '09-16', '09-21', '09-22'] -> 97 fires
+  days INSIDE  09-23..10-01 (overlaps London, context only): ['09-24', '09-25', '09-26', '09-27', '09-28', '09-29', '09-30', '10-01'] -> 134 fires
+  grading: gamma venue resolution where present, engine results.actual otherwise (77 gamma / 154 engine)
+
+A. THE INDEPENDENT SAMPLE - days NOT in 09-23..10-01
+  bucket             n    win%    $ paper  $/$1 paper   $ London  $/$1 London   flag
+  Asia 00-07        19   57.9%     +47.64      +0.251      +9.55       +0.081   UNDER 60 FILLS
+  Europe 07-13      18   66.7%     +49.57      +0.275     +13.23       +0.121   UNDER 60 FILLS
+  US 13-20          46   39.1%    -135.49      -0.295    -116.81       -0.405   UNDER 60 FILLS
+  Late 20-24        14   50.0%      +7.46      +0.053      -9.88       -0.114   UNDER 60 FILLS
+  00-13             37   62.2%     +97.21      +0.263     +23.44       +0.105   UNDER 60 FILLS
+  13-24             60   41.7%    -128.03      -0.213    -130.64       -0.350   
+
+  per day (London execution), 00-13 vs 13-24:
+    day       n   00-13 $   13-24 $   00-13 result
+    09-15    33    +13.91    -82.88   won
+    09-16    11     -8.84    -40.65   LOST
+    09-21    28     +0.00     -4.04   
+    09-22    25    +14.45     +0.00   won
+    days with any 00-13 fires: 3; days 00-13 LOST: 1
+
+B. CONTEXT - days inside 09-23..10-01 (same window London measured)
+  bucket             n    win%    $ paper  $/$1 paper   $ London  $/$1 London   flag
+  Asia 00-07        38   39.5%    -115.60      -0.304     -99.87       -0.419   UNDER 60 FILLS
+  Europe 07-13      26   46.2%     -12.62      -0.049     -32.09       -0.197   UNDER 60 FILLS
+  US 13-20          56   55.4%     +32.06      +0.057     -31.22       -0.092   UNDER 60 FILLS
+  Late 20-24        14   57.1%     +11.63      +0.083      -5.73       -0.066   UNDER 60 FILLS
+  00-13             64   42.2%    -128.21      -0.200    -135.16       -0.339   
+  13-24             70   55.7%     +43.69      +0.062     -34.72       -0.082   
+
+  per day (London execution), 00-13 vs 13-24:
+    day       n   00-13 $   13-24 $   00-13 result
+    09-24    17     +0.00     -8.51   
+    09-25    24    -20.79     +5.21   LOST
+    09-26     7    -21.61    -13.75   LOST
+    09-27    10    -16.40    -12.01   LOST
+    09-28    37     -3.88    -14.47   LOST
+    09-29    23    -31.75     +5.18   LOST
+    09-30    11    -11.69     +8.96   LOST
+    10-01     5    -27.08     -6.96   LOST
+    days with any 00-13 fires: 7; days 00-13 LOST: 7
+
+C. ALL DAYS TOGETHER
+  bucket             n    win%    $ paper  $/$1 paper   $ London  $/$1 London   flag
+  Asia 00-07        57   45.6%     -67.96      -0.119     -90.30       -0.257   UNDER 60 FILLS
+  Europe 07-13      44   54.5%     +36.95      +0.084     -20.62       -0.077   UNDER 60 FILLS
+  US 13-20         102   48.0%    -103.43      -0.101    -149.19       -0.237   
+  Late 20-24        28   53.6%     +19.09      +0.068     -15.96       -0.092   UNDER 60 FILLS
+  00-13            101   49.5%     -31.01      -0.031    -107.67       -0.173   
+  13-24            130   49.2%     -84.35      -0.065    -163.20       -0.204   
+
+  per day (London execution), 00-13 vs 13-24:
+    day       n   00-13 $   13-24 $   00-13 result
+    09-15    33    +13.91    -82.88   won
+    09-16    11     -8.84    -40.65   LOST
+    09-21    28     +0.00     -4.04   
+    09-22    25    +14.45     +0.00   won
+    09-24    17     +0.00     -8.51   
+    09-25    24    -20.79     +5.21   LOST
+    09-26     7    -21.61    -13.75   LOST
+    09-27    10    -16.40    -12.01   LOST
+    09-28    37     -3.88    -14.47   LOST
+    09-29    23    -31.75     +5.18   LOST
+    09-30    11    -11.69     +8.96   LOST
+    10-01     5    -27.08     -6.96   LOST
+    days with any 00-13 fires: 10; days 00-13 LOST: 8
+
+================================================================================================
+ANSWER TO THE OWNER'S QUESTION - "does this happen all the time?"  NO. IT REVERSES.
+
+London's real fixed15, 09-23..10-01, n=366:          00-13  -235      13-24  +151
+Zurich fixed15 on the days NOT in that window
+(09-15, 09-16, 09-21, 09-22), London execution:      00-13  +23.44    13-24  -130.64
+                                                     (+0.105/$1)      (-0.350/$1)
+Both halves come out with the OPPOSITE SIGN to London's. The morning, which lost 235 on London's
+days, made money on the out-of-window days and won 2 of the 3 days that had any morning fires. The
+afternoon, which made 151 on London's days, is the worst bucket here at -0.405/$1 in US 13-20.
+
+ON THE OVERLAPPING DAYS I REPRODUCE LONDON. Inside 09-23..10-01 the morning lost on 7 of 7 days with
+morning fires (-107.67 all told). So Zurich's data and London's agree about 09-23..10-01 and disagree
+about everything before it. That is the shape of a WINDOW effect, not a clock effect: the thing being
+measured is those nine days, not the hours of the day.
+
+SO THE HONEST READING IS NOT "the morning is good after all". It is that the morning/afternoon split
+is NOT STABLE, and neither sign should be traded. Two independent reasons to refuse it:
+  1. SAMPLE. Every bucket in the independent sample is UNDER 60 FILLS - 19, 18, 46 and 14 - and only
+     3 days carry any morning fires at all. A reversal on 37 morning fills is not evidence of a
+     reversal; it is evidence that 37 fills cannot settle the question.
+  2. EXECUTION. Pooled over all 12 days at London execution BOTH halves lose: 00-13 -107.67
+     (-0.173/$1) and 13-24 -163.20 (-0.204/$1), with 8 of 10 morning days losing. Whatever the clock
+     is doing, fixed15 at London's execution is negative in both halves once the days are pooled -
+     which is the same conclusion the stable-EF re-run reached this morning by a different route.
+
+WHAT WOULD ACTUALLY ANSWER IT: the same split on London's OWN longer history, before 09-23, with the
+buckets fixed in advance. Zurich's EF history only reaches back to 09-15 and is thin before 09-21, so
+4 usable out-of-window days is all this box can offer. I am not proposing a session rule either way.
+
+================================================================================================
+CORRECTION 10-01, after the owner challenged the result. I MADE TWO MISTAKES AND THE SECOND ONE
+NARROWS THE CONCLUSION. The numbers in the grid above are right; what I said about them was not.
+
+MISTAKE 1, a misquote. I told V the inside-window morning was "-107.67". It is NOT: -107.67 is the
+ALL-DAYS 00-13 London figure (block C). The inside-window morning is -135.16 (block B). I read the
+wrong block.
+
+MISTAKE 2, and this is the one that matters. I claimed "INSIDE 09-23..10-01 I REPRODUCE LONDON". I do
+not. At London execution - the only basis comparable to London's REAL executed fills - inside the
+window I get:
+        00-13  -135.16   London says -235   -> same sign, agrees
+        13-24   -34.72   London says +151   -> OPPOSITE SIGN, disagrees
+So I reproduce the MORNING half and NOT the afternoon. I checked the morning, saw it matched, and
+asserted the whole split had reproduced. The afternoon disagreement exists INSIDE the window too,
+which is exactly what my "window effect, not clock effect" story cannot explain.
+
+WHERE THE AFTERNOON DISAGREEMENT ACTUALLY COMES FROM: the execution model, not the clock. On PAPER,
+inside the window, both halves match London's signs - 00-13 -128.21 and 13-24 +43.69. Applying
+lane_exec_sim turns that +43.69 into -34.72, a swing of about 78 on 70 fires. So the thing standing
+between Zurich's afternoon and London's +151 is MY exec model, and if lane_exec_sim is too harsh it
+would push the afternoon negative everywhere. That is a flag on my model, not on London's data, and
+it should be checked against London's real afternoon fills before anyone leans on my afternoon number.
+
+WHAT STILL STANDS, and it is narrower than what I sent:
+  The MORNING's sign is window-dependent: +23.44 (+0.105/$1) out of window against -135.16
+  (-0.339/$1) inside it. So the answer to the owner's "does this happen all the time?" is still NO -
+  but the evidence is about the MORNING only, on 37 out-of-window morning fills over 3 days, and it
+  says London's "the morning loses" is not a standing property of the clock.
+WHAT I SHOULD NOT HAVE SAID: that the whole split reverses, and that Zurich reproduces London.
+WHAT IS UNRESOLVED: the afternoon. I cannot corroborate +151 on any basis once execution is applied,
+and I now think that is my exec model rather than a real contradiction.

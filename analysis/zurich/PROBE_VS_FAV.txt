@@ -1,0 +1,78 @@
+PROBE (passive, real money) vs FAV ARM (taker, simulated) - is the gain EXECUTION?
+READ-ONLY. 2026-10-02 13:21:56 UTC. Window 09-30 17:00 .. now.
+Probe: post-only BUY at the best bid, maker fee 0, graded on the venue resolution, real fills.
+FAV arm: same rule as a TAKER - arrival ask + exact fee, partial arrival fill, $10 nominal.
+Per $1 uses the money ACTUALLY deployed on both sides: the probe its spend, FAV sh*be(vwap).
+candles: probe filled 88, FAV filled 159, BOTH 70, FAV-only 89, probe-only 18
+
+== 1. BOTH FILLED: 70 candles
+   side agreement: 67 of 70 (95.7%)
+   mean price paid: probe bid 0.6934 vs FAV fee-exact cost per share 0.7351  (FAV raw ask 0.7273)
+   mean entry second: probe 78 vs FAV 69
+   PROBE total +23.7161 on $280.27 = +0.0846 per $1
+   FAV   total -63.1123 on $679.33 = -0.0929 per $1
+   difference (probe - FAV): +86.8284 $, +0.1775 per $1
+   PAIRED per candle: n 49 non-tied, probe better on 47, mean difference +0.1208 per $1, sign-flip p 0.0000   INSUFFICIENT (<60)
+   outcome agreement is automatic (same candle, same venue resolution), so the only
+   thing moving here is WHAT WAS PAID and WHEN.
+
+== 2. FAV TRADED, THE PROBE DID NOT FILL - the "missed" set: 89 candles
+   FAV on them: 72W/17L, +95.5570 on $858.64 = +0.1113 per $1
+   FAV on the BOTH set, for comparison: -0.0929 per $1
+   ADVERSE SELECTION READ: if the probe is being filled only on the bad candles, the missed
+   set should be where FAV made its money. Compare the two per-$1 figures directly.
+
+== 3. THE PROBE FILLED, FAV DID NOT TRADE: 18 candles   INSUFFICIENT (<60)
+   probe on them: 12W/6L, +2.6024 on $62.39 = +0.0417 per $1
+   These are candles the taker rule skipped (ask outside 0.65-0.85, or vol/sec gates) but
+   where a resting bid still got filled - so they are the probe trading something FAV cannot.
+
+== 4. TODAY 10-02 ONLY
+== 1. BOTH FILLED (10-02 only): 28 candles   INSUFFICIENT (<60)
+   side agreement: 26 of 28 (92.9%)
+   mean price paid: probe bid 0.6939 vs FAV fee-exact cost per share 0.7417  (FAV raw ask 0.7289)
+   mean entry second: probe 75 vs FAV 67
+   PROBE total -8.1692 on $95.62 = -0.0854 per $1
+   FAV   total -70.3851 on $280.00 = -0.2514 per $1
+   difference (probe - FAV): +62.2159 $, +0.1659 per $1
+   PAIRED per candle: n 18 non-tied, probe better on 18, mean difference +0.1779 per $1, sign-flip p 0.0000   INSUFFICIENT (<60)
+   outcome agreement is automatic (same candle, same venue resolution), so the only
+   thing moving here is WHAT WAS PAID and WHEN.
+
+   missed set today: 7 candles, FAV +5.4190 on $70.00 = +0.0774 per $1   INSUFFICIENT (<60)
+   probe-only today: 7 candles, probe +2.9500 on $22.05 = +0.1338 per $1   INSUFFICIENT (<60)
+
+VERDICT (Zurich, 10-02 13:2x). YES ON EXECUTION - AND THE PROBE PAYS FOR IT IN SELECTION.
+Both effects are real, they pull opposite ways, and reporting only the first would be the flattering
+half of the answer.
+1. EXECUTION IS WORTH ABOUT +0.18 PER $1 ON IDENTICAL CANDLES. On the 70 candles where both filled,
+   the outcome is the same by construction (same candle, same venue resolution), the side agrees on
+   67 of 70, and the probe still returns +0.0846/$1 against FAV's -0.0929/$1. Paired per candle the
+   probe is better on 47 of 49 non-tied candles, mean +0.1208/$1, exact sign-flip p 0.0000. The
+   mechanism is exactly what a maker is: the probe pays a mean bid of 0.6934 where the taker's
+   fee-exact cost is 0.7351 - 4.2 cents a share, of which the raw ask accounts for 3.4 and the fee
+   the rest - and it enters 9 s later (sec 78 vs 69) rather than earlier. Nothing about the rule
+   differs on these candles. This is the clean answer to the question asked.
+2. BUT THE PROBE'S FILLS ARE ADVERSELY SELECTED, and the size of it is comparable. On the 89 candles
+   FAV traded and the probe did NOT get filled, FAV went 72W/17L for +0.1113/$1 - that is where the
+   taker made its money. On the 70 shared candles the taker LOST (-0.0929/$1). So the candles the
+   probe cannot reach are the good ones, and the candles where somebody is willing to sell into a
+   resting bid are disproportionately the ones that go wrong. A passive quote only trades when
+   someone wants the other side, and that want is information.
+3. NET, the probe is still positive: +0.0846/$1 on the shared candles and +0.0417/$1 on the 18
+   candles FAV skipped entirely (12W/6L, ask outside 0.65-0.85 or a gate FAV applies), so the
+   execution advantage more than covers the selection penalty ON WHAT IT ACTUALLY TRADES. What it
+   does NOT do is capture the +95.56 the taker made on the missed set. Both statements belong in any
+   proposal: passive execution is better per candle, and passive reach is worse.
+4. TODAY 10-02, the bad day, says the same thing more sharply: on the 28 shared candles the probe is
+   -0.0854/$1 against FAV's -0.2514/$1, better on 18 of 18 non-tied candles (mean +0.1779/$1), so
+   execution cushioned a losing day rather than created a winning one. The missed set today is only
+   7 candles (+0.0774/$1 for FAV) and probe-only 7 (+0.1338/$1), both far too small to read.
+SAMPLE: the shared set (70) and the missed set (89) clear 60; the paired non-tied count (49), the
+probe-only set (18) and every today-only cell do not, and are flagged in place.
+ONE ASYMMETRY TO KEEP IN MIND: the probe's numbers are REAL money with real fills, FAV's are a
+simulation with an arrival-fill model whose shares are a floor. That cuts in the probe's favour on
+reliability and against it on size - FAV's deployed capital is larger per candle ($679 over 70
+candles against the probe's $280) because the probe's 5 shares are a smaller stake than FAV's $10.
+Per $1 is the only fair comparison and it is what the verdict uses.
+Nothing proposed, nothing changed; the probe and the M19 shadow ran untouched throughout.

@@ -1,0 +1,12 @@
+M8: 5612 candles; train 2880, test 2732; wallets with >= 200 train BUYs: 3890; SMART: 526
+(a) SMART wallets own test $/1: +0.0266 over 462 wallets still trading; 236/462 individually positive
+TRAIN (in-sample): copies 2858, win 52.3%, $ -798.7, per $1 -0.0279, worst drop 1161.1, days + 4/10, $100 acct: broke 2026-09-11
+   09-11 -157  09-12 -246  09-13 +5  09-14 -358  09-15 -133  09-16 +155  09-17 -118  09-18 -165  09-19 +53  09-20 +164
+TEST (sealed): copies 2732, win 48.5%, $ -2679.5, per $1 -0.0981, worst drop 2868.7, days + 0/10, $100 acct: broke 2026-09-21
+   09-21 -441  09-22 -181  09-23 -434  09-24 -627  09-25 -123  09-26 -81  09-27 -252  09-28 -295  09-29 -227  09-30 -17
+NULL (200 random sets of 526 active wallets, copied the same way on TEST): median -1923.7, p95 -1141.5; draws >= ours: 184/200
+
+VERDICT (V, 09-30): copy-trading FAILS. Skill partly persists (the 526 SMART wallets' own test $/1 +0.027, 236/462 positive), but copying
+their first buy ~3 s later at the ask + fee + 1c loses -0.098/$1 on the sealed test (-$2,680 at $10, 0/10 days). Their edge is the price
+they get (speed / passive fills), not a direction we can follow late. Random wallet sets lose less (184/200 did better) because SMART
+wallets' first buys are the most time-sensitive.

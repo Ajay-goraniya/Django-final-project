@@ -1,0 +1,18 @@
+SIZE CHECK: shares traded strictly below our bid in that second >= N (5 = our size)
+ m=0.15 size>=  0 TRAIN n  1570 win  36.5% pnl  +233.40 /$ +0.089 halves +156.80/ +76.60 | TEST n  1095 win  34.2% pnl  +163.65 /$ +0.096 halves +109.20/ +54.45
+ m=0.15 size>=  5 TRAIN n  1567 win  36.4% pnl  +224.60 /$ +0.086 halves +150.50/ +74.10 | TEST n  1092 win  34.1% pnl  +160.80 /$ +0.095 halves +114.25/ +46.55
+ m=0.15 size>= 20 TRAIN n  1536 win  35.9% pnl  +177.10 /$ +0.069 halves +126.95/ +50.15 | TEST n  1073 win  33.5% pnl  +125.10 /$ +0.075 halves  +95.15/ +29.95
+ m=0.20 size>=  0 TRAIN n  1310 win  35.1% pnl  +324.75 /$ +0.164 halves +206.40/+118.35 | TEST n   929 win  33.0% pnl  +248.95 /$ +0.194 halves +157.25/ +91.70
+ m=0.20 size>=  5 TRAIN n  1304 win  35.0% pnl  +318.05 /$ +0.162 halves +203.60/+114.45 | TEST n   926 win  32.8% pnl  +234.00 /$ +0.182 halves +143.65/ +90.35
+ m=0.20 size>= 20 TRAIN n  1290 win  34.6% pnl  +289.70 /$ +0.149 halves +184.90/+104.80 | TEST n   899 win  32.4% pnl  +202.60 /$ +0.162 halves +120.75/ +81.85
+ m=0.25 size>=  0 TRAIN n  1050 win  35.0% pnl  +380.05 /$ +0.260 halves +220.60/+159.45 | TEST n   737 win  30.7% pnl  +216.90 /$ +0.238 halves  +94.40/+122.50
+ m=0.25 size>=  5 TRAIN n  1044 win  34.9% pnl  +364.55 /$ +0.250 halves +211.45/+153.10 | TEST n   735 win  30.5% pnl  +208.10 /$ +0.228 halves  +88.80/+119.30
+ m=0.25 size>= 20 TRAIN n  1020 win  34.5% pnl  +330.35 /$ +0.231 halves +189.80/+140.55 | TEST n   716 win  29.9% pnl  +181.40 /$ +0.204 halves  +74.80/+106.60
+LATENCY with size>=5, m=0.15/0.20
+ m=0.15 lat 1s TEST n  1092 win  34.1% pnl  +160.80 /$ +0.095 halves +114.25/ +46.55
+ m=0.15 lat 2s TEST n  1068 win  32.9% pnl   +96.20 /$ +0.058 halves  +79.05/ +17.15
+ m=0.15 lat 3s TEST n  1070 win  31.0% pnl   -37.25 /$ -0.022 halves   +8.85/ -46.10
+ m=0.20 lat 1s TEST n   926 win  32.8% pnl  +234.00 /$ +0.182 halves +143.65/ +90.35
+ m=0.20 lat 2s TEST n   899 win  31.0% pnl  +140.15 /$ +0.112 halves  +80.05/ +60.10
+ m=0.20 lat 3s TEST n   903 win  28.6% pnl    -1.70 /$ -0.001 halves  +11.25/ -12.95
+BY BID (m=0.15 size>=5, test): 0.05-0.20 n   154 win  21.4% pnl   +62.10 /$ +0.603 halves  +43.45/ +18.65 | 0.20-0.35 n   574 win  29.3% pnl   +31.30 /$ +0.039 halves  +50.60/ -19.30 | 0.35-0.50 n   298 win  41.6% pnl   +26.30 /$ +0.044 halves   -5.50/ +31.80 | 0.50-0.91 n    66 win  71.2% pnl   +41.10 /$ +0.212 halves   +3.45/ +37.65
